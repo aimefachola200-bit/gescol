@@ -11,7 +11,7 @@ on:
     tags: ["v*"]
 
 env:
-  VERSION: "1.4.0"
+  VERSION: "1.5.0"
 
 jobs:
   tests:
@@ -62,8 +62,10 @@ jobs:
           if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
           & $iscc "/DVersion=${env:VERSION}" packaging\windows\gescol.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup a échoué (GESCOL)" }
-          & $iscc "/DVersion=${env:VERSION}" "/DEdition=publique" packaging\windows\gescol.iss
-          if ($LASTEXITCODE -ne 0) { throw "Inno Setup a échoué (GESCOL Public)" }
+          foreach ($ed in @("publique", "cs", "ddemp")) {
+            & $iscc "/DVersion=${env:VERSION}" "/DEdition=$ed" packaging\windows\gescol.iss
+            if ($LASTEXITCODE -ne 0) { throw "Inno Setup a échoué ($ed)" }
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: GESCOL-Windows
@@ -126,6 +128,14 @@ jobs:
             id: bj.gescol.publique
             nom: GESCOL Public
             fichier: GESCOL-Public
+          - edition: cs
+            id: bj.gescol.circonscription
+            nom: GESCOL Circonscription
+            fichier: GESCOL-Circonscription
+          - edition: ddemp
+            id: bj.gescol.ddemp
+            nom: GESCOL DDEMP
+            fichier: GESCOL-DDEMP
     steps:
       - uses: actions/checkout@v4
       - name: Décompresser le code source (gescol_source.zip)
@@ -147,8 +157,8 @@ jobs:
       - name: Préparer le code Python (GESCOL + bibliothèques)
         run: |
           pip install pillow
-          if [ "${{ matrix.edition }}" = "publique" ]; then
-            python packaging/android_autonome/preparer.py --edition publique
+          if [ "${{ matrix.edition }}" != "privee" ]; then
+            python packaging/android_autonome/preparer.py --edition ${{ matrix.edition }}
           else
             python packaging/android_autonome/preparer.py
           fi
@@ -194,10 +204,14 @@ jobs:
         run: |
           cd fichiers
           cp GESCOL-Autonome-*.apk GESCOL-Autonome.apk
-          cp GESCOL-Public-*.apk GESCOL-Public.apk
+          cp GESCOL-Public-[0-9]*.apk GESCOL-Public.apk
           cp GESCOL-${VERSION}.apk GESCOL.apk
           cp GESCOL-Installation-*.exe GESCOL-Installation.exe
           cp GESCOL-Public-Installation-*.exe GESCOL-Public-Installation.exe
+          cp GESCOL-Circonscription-[0-9]*.apk GESCOL-Circonscription.apk
+          cp GESCOL-DDEMP-[0-9]*.apk GESCOL-DDEMP.apk
+          cp GESCOL-Circonscription-Installation-*.exe GESCOL-Circonscription-Installation.exe
+          cp GESCOL-DDEMP-Installation-*.exe GESCOL-DDEMP-Installation.exe
           ls -l
       - uses: softprops/action-gh-release@v2
         with:
@@ -208,6 +222,8 @@ jobs:
           body: |
             **Android autonome** : GESCOL-Autonome.apk fonctionne seul sur le téléphone ou la tablette, sans PC ni Internet.
             **GESCOL Public (écoles publiques)** : GESCOL-Public.apk (Android) et GESCOL-Public-Installation.exe (Windows).
+            **GESCOL Circonscription (CS)** : GESCOL-Circonscription.apk et GESCOL-Circonscription-Installation.exe.
+            **GESCOL DDEMP** : GESCOL-DDEMP.apk et GESCOL-DDEMP-Installation.exe.
             **Android connecté** : GESCOL.apk se connecte au serveur de l'école ou à la version en ligne.
             **Windows** : GESCOL-Installation.exe installe GESCOL sur un PC.
 
