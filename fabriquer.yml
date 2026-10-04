@@ -1,0 +1,241 @@
+# Fabrique automatiquement l'installateur Windows (.exe) et l'application Android (.apk).
+# Onglet « Actions » du dépôt GitHub > « Fabriquer GESCOL » > « Run workflow ».
+# Les fichiers apparaissent en bas de la page de l'exécution, rubrique « Artifacts ».
+# Pour une version publiée (page « Releases ») : créer une étiquette v1.1.0.
+name: Fabriquer GESCOL
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+env:
+  VERSION: "1.4.0"
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Décompresser le code source (gescol_source.zip)
+        shell: python
+        run: |
+          import os, zipfile
+          if os.path.exists("gescol_source.zip"):
+              zipfile.ZipFile("gescol_source.zip").extractall(".")
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Tests du moteur de calcul
+        run: python -m unittest discover tests -v
+
+  windows:
+    needs: tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Décompresser le code source (gescol_source.zip)
+        shell: python
+        run: |
+          import os, zipfile
+          if os.path.exists("gescol_source.zip"):
+              zipfile.ZipFile("gescol_source.zip").extractall(".")
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Dépendances
+        run: pip install -r requirements.txt pyinstaller
+      - name: Exécutable (PyInstaller)
+        run: pyinstaller packaging/windows/gescol.spec --noconfirm --distpath dist --workpath build
+      - name: Contrôle de l'exécutable
+        shell: pwsh
+        run: |
+          if (-not (Test-Path dist/GESCOL/GESCOL.exe)) { throw "GESCOL.exe absent" }
+          if (-not (Test-Path dist/GESCOL/_internal/templates/base.html)) { throw "templates absents" }
+      - name: Installateurs (Inno Setup) – GESCOL (écoles privées) et GESCOL Public (écoles publiques)
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
+          & $iscc "/DVersion=${env:VERSION}" packaging\windows\gescol.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup a échoué (GESCOL)" }
+          & $iscc "/DVersion=${env:VERSION}" "/DEdition=publique" packaging\windows\gescol.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup a échoué (GESCOL Public)" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GESCOL-Windows
+          path: dist/GESCOL-*Installation-*.exe
+
+  android:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Décompresser le code source (gescol_source.zip)
+        shell: python
+        run: |
+          import os, zipfile
+          if os.path.exists("gescol_source.zip"):
+              zipfile.ZipFile("gescol_source.zip").extractall(".")
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Clé de signature personnelle (facultatif, secret ANDROID_KEYSTORE_B64)
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS" ]; then
+            echo "$KS" | base64 -d > "$RUNNER_TEMP/cle.keystore"
+            echo "GESCOL_KEYSTORE=$RUNNER_TEMP/cle.keystore" >> "$GITHUB_ENV"
+          fi
+      - name: APK
+        env:
+          GESCOL_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          GESCOL_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          GESCOL_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          gradle -p packaging/android assembleRelease --no-daemon --stacktrace
+          mkdir -p sortie
+          cp packaging/android/app/build/outputs/apk/release/app-release.apk "sortie/GESCOL-${VERSION}.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GESCOL-Android
+          path: sortie/*.apk
+
+  android_autonome:
+    # Application Android AUTONOME : GESCOL complet sur le téléphone ou la tablette, sans PC ni Internet.
+    # Deux applications jumelles : GESCOL Autonome (écoles privées) et GESCOL Public (écoles publiques).
+    needs: tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - edition: privee
+            id: bj.gescol.autonome
+            nom: GESCOL Autonome
+            fichier: GESCOL-Autonome
+          - edition: publique
+            id: bj.gescol.publique
+            nom: GESCOL Public
+            fichier: GESCOL-Public
+    steps:
+      - uses: actions/checkout@v4
+      - name: Décompresser le code source (gescol_source.zip)
+        shell: python
+        run: |
+          import os, zipfile
+          if os.path.exists("gescol_source.zip"):
+              zipfile.ZipFile("gescol_source.zip").extractall(".")
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Préparer le code Python (GESCOL + bibliothèques)
+        run: |
+          pip install pillow
+          if [ "${{ matrix.edition }}" = "publique" ]; then
+            python packaging/android_autonome/preparer.py --edition publique
+          else
+            python packaging/android_autonome/preparer.py
+          fi
+      - name: Clé de signature personnelle (facultatif, secret ANDROID_KEYSTORE_B64)
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS" ]; then
+            echo "$KS" | base64 -d > "$RUNNER_TEMP/cle.keystore"
+            echo "GESCOL_KEYSTORE=$RUNNER_TEMP/cle.keystore" >> "$GITHUB_ENV"
+          fi
+      - name: APK autonome
+        env:
+          GESCOL_BUILD_PYTHON: python3.11
+          GESCOL_APP_ID: ${{ matrix.id }}
+          GESCOL_APP_NOM: ${{ matrix.nom }}
+          GESCOL_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          GESCOL_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          GESCOL_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          gradle -p packaging/android_autonome assembleRelease --no-daemon --stacktrace
+          mkdir -p sortie
+          cp packaging/android_autonome/app/build/outputs/apk/release/app-release.apk "sortie/${{ matrix.fichier }}-${VERSION}.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GESCOL-Android-${{ matrix.fichier }}
+          path: sortie/*.apk
+
+  publier:
+    # Publie les fichiers sur la page « Releases » avec des noms fixes : les liens de téléchargement ne changent jamais
+    #   https://github.com/<compte>/<depot>/releases/latest/download/GESCOL-Autonome.apk
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, android, android_autonome]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: fichiers
+          merge-multiple: true
+      - name: Noms fixes pour les liens
+        run: |
+          cd fichiers
+          cp GESCOL-Autonome-*.apk GESCOL-Autonome.apk
+          cp GESCOL-Public-*.apk GESCOL-Public.apk
+          cp GESCOL-${VERSION}.apk GESCOL.apk
+          cp GESCOL-Installation-*.exe GESCOL-Installation.exe
+          cp GESCOL-Public-Installation-*.exe GESCOL-Public-Installation.exe
+          ls -l
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: GESCOL ${{ env.VERSION }}
+          make_latest: "true"
+          files: fichiers/*
+          body: |
+            **Android autonome** : GESCOL-Autonome.apk fonctionne seul sur le téléphone ou la tablette, sans PC ni Internet.
+            **GESCOL Public (écoles publiques)** : GESCOL-Public.apk (Android) et GESCOL-Public-Installation.exe (Windows).
+            **Android connecté** : GESCOL.apk se connecte au serveur de l'école ou à la version en ligne.
+            **Windows** : GESCOL-Installation.exe installe GESCOL sur un PC.
+
+  page:
+    # Page de téléchargement : https://<compte>.github.io/<depot>/ (Settings > Pages > Source : GitHub Actions)
+    needs: publier
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Décompresser le code source (gescol_source.zip)
+        shell: python
+        run: |
+          import os, zipfile
+          if os.path.exists("gescol_source.zip"):
+              zipfile.ZipFile("gescol_source.zip").extractall(".")
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install reportlab
+      - run: python packaging/page/generer.py site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploiement
+        uses: actions/deploy-pages@v4
