@@ -407,7 +407,7 @@ with app.app_context():
 c = app.test_client(); c.post("/login", data={"identifiant": "admin", "mdp": "admin123"})
 h = html.unescape(c.get("/").data.decode())
 assert c.get("/").status_code == 200
-for mot in ("Tableau du fondateur", "Paiements de scolarité", "Transmission à la circonscription", "Écoles (ajout, modification)",
+for mot in ("Tableau du fondateur", "Paiements de scolarité", "Transmission à la circonscription", "Écoles (ajout, modification, suppression)",
             "Paramètres de paie", "Écoles candidates"):
     assert mot in h, mot
 for mot in ("École ouverte", "juridiction", "Examen blanc CS", "choix-ecole", "Vie de l'école"):
