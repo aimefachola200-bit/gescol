@@ -408,7 +408,7 @@ c = app.test_client(); c.post("/login", data={"identifiant": "admin", "mdp": "ad
 h = html.unescape(c.get("/").data.decode())
 assert c.get("/").status_code == 200
 for mot in ("Tableau du fondateur", "Paiements de scolarité", "Transmission à la circonscription", "Écoles (ajout, modification, suppression)",
-            "Paramètres de paie", "Écoles candidates"):
+            "Paramètres de paie", "Écoles, CS et DDEMP candidates"):
     assert mot in h, mot
 for mot in ("École ouverte", "juridiction", "Examen blanc CS", "choix-ecole", "Vie de l'école"):
     assert mot not in h, mot
