@@ -1,0 +1,68 @@
+{% extends "base.html" %}{% block titre %}Suivi des transmissions{% endblock %}
+{% block contenu %}
+<style>
+.js-code{font-family:monospace;white-space:nowrap}
+.js-barre{height:6px;background:#EAECF0;border-radius:3px;min-width:60px;margin-top:3px}
+.js-barre span{display:block;height:6px;border-radius:3px;background:#12B76A}
+.js-barre span.moyen{background:#F79009}.js-barre span.faible{background:#F04438}
+.js-rub{display:flex;flex-wrap:wrap;gap:3px}
+.js-rub .badge{font-size:.75em}
+</style>
+{% set CS_ = JUR_NIVEAU == 'cs' %}
+<div class="entete"><div><h1>Suivi des transmissions {{ annee }}</h1>
+  <p class="sous">{% if mode=='cs' %}Réception des paquets des circonscriptions du département{% elif cs_sel %}Écoles de la CS {{ cs_sel.nom }}{% else %}Réception des données des écoles{% endif %}</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_transmission_suivi', annee=annee, cs=cs_sel.id if cs_sel else None, export='xlsx') }}">⇩ Excel</a>
+    <a class="btn sec" href="{{ url_for('jur_transmission_suivi', annee=annee, cs=cs_sel.id if cs_sel else None, export='pdf') }}" target="_blank">⇩ PDF</a>
+    {% if cs_sel %}<a class="btn sec" href="{{ url_for('jur_transmission_suivi', annee=annee) }}">← Toutes les CS</a>{% endif %}
+  </div></div>
+<form method="get" class="filtres">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a==annee }}>{{ a }}</option>{% endfor %}</select></label>
+  {% if JUR_NIVEAU=='ddemp' %}<label>Circonscription<br><select name="cs" onchange="this.form.submit()"><option value="">Toutes (vue par CS)</option>
+    {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if cs_sel and cs_sel.id==c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+</form>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">{{ 'CS ayant transmis' if mode=='cs' else 'Écoles ayant transmis' }}</div><div class="v">{{ kpi.recues }} / {{ kpi.total }}</div><div class="d">{{ kpi.taux if kpi.taux is not none else '—' }} %</div></div>
+  <div class="kpi"><div class="l">{{ 'CS sans transmission' if mode=='cs' else 'Non reçues' }}</div><div class="v">{{ kpi.total - kpi.recues }}</div></div>
+  <div class="kpi"><div class="l">Complétude moyenne</div><div class="v">{{ kpi.completude|int if kpi.completude is not none else '—' }} %</div><div class="d">rubriques attendues reçues</div></div>
+  {% if mode=='cs' %}<div class="kpi"><div class="l">Écoles avec données</div><div class="v">{{ kpi.avec }} / {{ kpi.ecoles }}</div></div>
+  {% else %}<div class="kpi"><div class="l">Dossiers complets</div><div class="v">{{ kpi.completes }}</div></div>{% endif %}
+</div>
+
+{% macro barre(t) %}<div class="js-barre" aria-hidden="true"><span class="{{ 'faible' if t < 40 else ('moyen' if t < 80 else '') }}" style="width:{{ t|int }}%"></span></div>{% endmacro %}
+
+{% if mode=='cs' %}
+<div class="tw"><table class="t">
+  <tr><th>Circonscription</th><th>Paquet</th><th class="num">Écoles</th><th>Rubriques (écoles)</th><th>Complétude</th>{% if peut('jur_ecoles') %}<th>Code d'accès en ligne</th>{% endif %}<th>Relance</th></tr>
+  {% for l in lignes %}<tr>
+    <td><a href="{{ url_for('jur_transmission_suivi', annee=annee, cs=l.c.id) }}"><b>{{ l.c.nom }}</b></a><br><span class="aide">{{ l.c.ccs_nom or '' }} {{ l.c.telephone or '' }}</span></td>
+    <td>{% if l.recue %}<span class="badge ok">reçu</span><br><span class="aide">{{ l.date[:16] }}{% if l.envois > 1 %} · {{ l.envois }} envois{% endif %}</span>{% else %}<span class="badge ko">non reçu</span>{% endif %}</td>
+    <td class="num">{{ l.avec_donnees }} / {{ l.nb_ecoles }}</td>
+    <td><div class="js-rub">{% for k in sections %}<span class="badge {{ 'ok' if l.rub[k] and l.rub[k]==l.nb_ecoles else ('att' if l.rub[k] else 'ko') }}" title="{{ l.rub[k] }} école(s) sur {{ l.nb_ecoles }}">{{ noms[k] }} {{ l.rub[k] }}</span>{% endfor %}</div></td>
+    <td>{{ l.taux|int }} %{{ barre(l.taux) }}</td>
+    {% if peut('jur_ecoles') %}<td>{% if l.c.jeton %}<span class="js-code">{{ l.c.jeton }}</span>{% else %}<span class="gris">aucun</span>{% endif %}
+      <form method="post" style="display:inline"><input type="hidden" name="action" value="jeton_cs"><input type="hidden" name="cs_id" value="{{ l.c.id }}"><input type="hidden" name="annee" value="{{ annee }}">
+      <button class="btn sec petit" {% if l.c.jeton %}data-confirmer="Remplacer le code d'accès de la CS {{ l.c.nom }} ? L'ancien ne fonctionnera plus."{% endif %}>{{ 'Régénérer' if l.c.jeton else 'Générer' }}</button></form></td>{% endif %}
+    <td>{% if l.wa %}<a class="btn sec petit" href="{{ l.wa }}" target="_blank" rel="noopener">WhatsApp</a>{% elif not l.recue %}<span class="aide">téléphone de la CS manquant</span>{% endif %}</td>
+  </tr>{% else %}<tr><td colspan="7" class="gris">Aucune circonscription configurée.</td></tr>{% endfor %}
+</table></div>
+{% else %}
+<div class="tw"><table class="t">
+  <tr><th>École</th>{% if JUR_NIVEAU=='ddemp' and not cs_sel %}<th>CS</th>{% endif %}<th>Zone</th><th>Réception</th><th>Rubriques</th><th>Complétude</th>{% if voir_codes %}<th>Code d'accès en ligne</th>{% endif %}<th>Relance</th></tr>
+  {% for l in lignes %}<tr>
+    <td><a href="{{ url_for('jur_ecole_fiche', eid=l.e.id, annee=annee) }}"><b>{{ l.e.nom }}</b></a><br><span class="aide">{{ l.e.type }} · {{ JUR_SECTEURS[l.e.secteur] }} · {{ l.e.code }}</span></td>
+    {% if JUR_NIVEAU=='ddemp' and not cs_sel %}<td>{{ l.e.cs_nom or '' }}</td>{% endif %}
+    <td>{{ l.e.zone_nom or '—' }}</td>
+    <td>{% if l.recue %}<span class="badge ok">reçue</span><br><span class="aide">{{ l.date[:16] }}{% if l.mode %} · {{ 'en ligne' if l.mode=='en_ligne' else l.mode }}{% endif %}</span>{% else %}<span class="badge ko">non reçue</span>{% endif %}</td>
+    <td><div class="js-rub">{% for k in l.presentes %}<span class="badge ok">{{ noms[k] }}</span>{% endfor %}{% for k in l.manquantes %}<span class="badge att" title="rubrique attendue absente">{{ noms[k] }} ?</span>{% endfor %}</div></td>
+    <td>{{ l.taux|int }} %{{ barre(l.taux) }}</td>
+    {% if voir_codes %}<td>{% if l.e.jeton %}<span class="js-code">{{ l.e.jeton }}</span>{% else %}<span class="gris">aucun</span>{% endif %}
+      <form method="post" style="display:inline"><input type="hidden" name="action" value="jeton_ecole"><input type="hidden" name="ecole_id" value="{{ l.e.id }}"><input type="hidden" name="annee" value="{{ annee }}">
+      <button class="btn sec petit" {% if l.e.jeton %}data-confirmer="Remplacer le code d'accès de {{ l.e.nom }} ? L'ancien ne fonctionnera plus."{% endif %}>{{ 'Régénérer' if l.e.jeton else 'Générer' }}</button></form></td>{% endif %}
+    <td>{% if l.wa %}<a class="btn sec petit" href="{{ l.wa }}" target="_blank" rel="noopener">WhatsApp</a>{% elif not l.recue or l.manquantes %}<span class="aide">n° du directeur manquant</span>{% endif %}</td>
+  </tr>{% else %}<tr><td colspan="8" class="gris">Aucune école dans la juridiction. Ajoutez-les (menu Juridiction → Écoles) ou importez leurs fichiers de transmission.</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+<p class="aide">Complétude = part des rubriques attendues reçues (EP : effectifs, personnel, CEP, recensement, rapports ; EM / EE : effectifs, personnel, recensement, rapports).
+{% if CS_ %} Envoi en ligne : chaque école saisit, dans GESCOL (Données → Transmission à la circonscription), l'adresse Internet de cette application et son code d'accès.{% else %} Envoi en ligne : chaque CS saisit, dans GESCOL Circonscription (Transmissions → Envoyer à la DDEMP), l'adresse Internet de cette application et son code d'accès.{% endif %}</p>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% block titre %}{{ cl.nom }}{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>{{ cl.nom }}</h1><p class="sous">{{ cl.niveau }} · {{ cl.cycle|capitalize }} · {{ eleves|length }} élève(s) · scolarité {{ fcfa(cl.frais_scolarite) }}</p></div>
+  <div class="actions">
+    {% if peut('eleves') %}<a class="btn" href="{{ url_for('eleve_form', classe=cl.id) }}">+ Inscrire dans cette classe</a>{% endif %}
+    {% for p in PERIODES %}<a class="btn sec" href="{{ url_for('resultats', cid=cl.id, p=loop.index) }}">Résultats {{ p }}</a>{% endfor %}
+    {% if cl.niveau == 'CM2' and peut('documents') %}<a class="btn sec" href="{{ url_for('liste_cep', cid=cl.id) }}">Liste CEP (CSV)</a>{% endif %}
+  </div>
+</div>
+<div class="tw"><table class="t">
+  <tr><th>#</th><th>Matricule</th><th>Nom et prénoms</th><th>Sexe</th><th>Parent</th>
+  {% if peut('paiements') %}<th class="num">Payé</th><th class="num">Reste</th>{% endif %}</tr>
+  {% for e in eleves %}{% set s = soldes[e.id] %}
+  <tr><td>{{ loop.index }}</td><td>{{ e.matricule }}</td><td><a href="{{ url_for('eleve_detail', eid=e.id) }}">{{ e.nom }} {{ e.prenoms }}</a></td>
+    <td>{{ e.sexe }}</td><td>{{ e.parent_nom or '' }} <span class="gris">{{ e.parent_telephone or '' }}</span></td>
+    {% if peut('paiements') %}<td class="num">{{ fcfa(s[1]) }}</td><td class="num {{ 'rouge' if s[2] else 'vert' }}">{{ fcfa(s[2]) if s[2] else 'Soldé' }}</td>{% endif %}</tr>
+  {% else %}<tr><td colspan="7" class="gris">Aucun élève inscrit.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

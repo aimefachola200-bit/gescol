@@ -1,0 +1,62 @@
+{% extends "base.html" %}{% block titre %}Paramètres{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Paramètres de l'établissement</h1><p class="sous">Ces informations apparaissent sur tous les documents (bulletins, reçus, certificats).</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('utilisateurs') }}">Utilisateurs</a>
+    <a class="btn" href="{{ url_for('sauvegarde') }}">Télécharger une sauvegarde</a>
+    {% if ep_existe('en_ligne_page') %}<a class="btn sec" href="{{ url_for('en_ligne_page') }}">Mise en ligne, restauration</a>{% endif %}
+  </div>
+</div>
+<form method="post" enctype="multipart/form-data" class="f">
+<div class="carte">
+  <h2 style="margin-top:0">Identité</h2>
+  <div class="ligne">
+    {% for k, lib, obl in champs %}
+    <div><label>{{ lib }}{{ ' *' if obl }}</label><input name="{{ k }}" value="{{ v[k] or '' }}" {{ 'required' if obl }} maxlength="200"></div>
+    {% endfor %}
+  </div>
+</div>
+<div class="carte">
+  <h2 style="margin-top:0">Année scolaire</h2>
+  <div class="ligne">
+    <div><label>Année scolaire en cours *</label><input name="annee_active" value="{{ v.annee_active }}" required pattern="\d{4}-\d{4}" placeholder="2026-2027">
+      <p class="aide">Au changement d'année, les notes et paiements de l'année précédente restent consultables en base mais ne s'affichent plus.</p></div>
+    <div><label>Découpage de l'année</label><select name="periodes">
+      <option value="trimestres" {{ 'selected' if v.periodes=='trimestres' }}>3 trimestres</option>
+      <option value="semestres" {{ 'selected' if v.periodes=='semestres' }}>2 semestres</option></select></div>
+    <div><label>Édition de GESCOL</label>
+      {% if EDITION_IMPOSEE %}<p><b>{{ EDITIONS[EDITION] }}</b> <span class="aide">(fixée par l'installation)</span></p>
+      {% else %}<select name="edition">{% for k, lib in EDITIONS.items() %}<option value="{{ k }}" {{ 'selected' if EDITION==k }}>{{ lib }}</option>{% endfor %}</select>
+      <p class="aide">École publique : cantine, subventions et dépenses, gestion de carrière, recensement, visites, patrimoine, maître de semaine.</p>{% endif %}</div>
+  </div>
+</div>
+<div class="carte">
+  <h2 style="margin-top:0">Logo, cachet et signature</h2>
+  <p class="aide">Images PNG ou JPG. Un PNG à fond transparent donne le meilleur rendu pour le cachet et la signature.</p>
+  <div class="ligne">
+    {% for n, lib in images_lib.items() %}
+    <div>
+      <label>{{ lib }}</label>
+      {% if images[n] %}<img src="{{ url_for('image_ecole', nom=n) }}?t={{ range(1,99999)|random }}" alt="{{ lib }}" style="max-height:80px;max-width:100%;display:block;margin:4px 0;background:#fff;border:1px solid var(--bord);border-radius:6px;padding:4px">
+      <label style="font-weight:400;display:flex;gap:6px;align-items:center"><input type="checkbox" name="supprimer_{{ n }}"> Retirer</label>{% endif %}
+      <input type="file" name="{{ n }}" accept="image/png,image/jpeg">
+    </div>
+    {% endfor %}
+  </div>
+</div>
+<div class="carte">
+  <h2 style="margin-top:0">Vérification des documents</h2>
+  <label>Adresse publique de l'application (facultatif)</label>
+  <input name="url_publique" value="{{ v.url_publique or '' }}" placeholder="ex. https://monecole.pythonanywhere.com">
+  <p class="aide">Adresse inscrite dans les QR codes des documents. Laissez vide pour utiliser automatiquement l'adresse par laquelle vous consultez GESCOL.
+  Si GESCOL tourne sur le PC de l'école, les QR ne sont vérifiables que depuis le Wi-Fi de l'école.</p>
+</div>
+<p><button class="btn">Enregistrer les paramètres</button></p>
+</form>
+<div class="carte">
+  <h2 style="margin-top:0">Données</h2>
+  <p>Dossier des données sur ce serveur : <code>{{ dossier }}</code></p>
+  <p class="aide">Téléchargez une sauvegarde au moins une fois par semaine et copiez-la sur une clé USB ou dans le cloud. Version de GESCOL : {{ VERSION }}.</p>
+</div>
+{% endblock %}

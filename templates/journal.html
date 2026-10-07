@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block titre %}Journal{% endblock %}
+{% block contenu %}
+<h1>Journal d'activité</h1>
+<p class="sous">500 dernières actions</p>
+<div class="tw"><table class="t">
+  <tr><th>Date</th><th>Utilisateur</th><th>Action</th><th>Détails</th></tr>
+  {% for l in lst %}<tr><td style="white-space:nowrap">{{ l.cree_le }}</td><td>{{ l.identifiant or '—' }}</td><td>{{ l.action }}</td><td>{{ l.details or '' }}</td></tr>
+  {% else %}<tr><td colspan="4" class="gris">Aucune activité.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

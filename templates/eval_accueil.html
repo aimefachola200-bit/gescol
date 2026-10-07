@@ -1,0 +1,51 @@
+{% extends "base.html" %}{% block titre %}Saisie des notes – évaluations{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Saisie des notes par évaluation</h1>
+  <p class="sous">Évaluations diagnostiques, formatives, sommatives d'étape et certificatives · année {{ ANNEE }}</p></div>
+  {% if cl %}<div class="actions"><a class="btn" href="{{ url_for('eval_form', classe=cl.id) }}">＋ Nouvelle évaluation</a></div>{% endif %}
+</div>
+
+{% if not classes %}
+<div class="carte">Aucune classe ne vous est accessible. Demandez à l'administrateur de créer les classes ou de vous affecter à une classe.</div>
+{% else %}
+{{ M.choix_classe(classes, cid) }}
+
+{% if not cl %}
+<div class="carte"><p>Choisissez une classe pour voir ses évaluations et saisir les notes.</p>
+  <div class="grille">{% for c in classes %}<a class="btn sec" href="{{ url_for('eval_accueil', classe=c.id) }}">{{ c.nom }}</a>{% endfor %}</div></div>
+{% else %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Classe</div><div class="v">{{ cl.nom }}</div><div class="d">{{ cl.niveau }} · {{ {'primaire':'primaire','maternelle':'maternelle','secondaire':'secondaire'}[cl.cycle] }}</div></div>
+  <div class="kpi"><div class="l">Évaluations</div><div class="v">{{ lst|length }}</div><div class="d">année {{ ANNEE }}</div></div>
+  <div class="kpi"><div class="l">Effectif</div><div class="v">{{ lst[0].effectif if lst else '—' }}</div><div class="d">élèves inscrits</div></div>
+</div>
+<p class="aide">
+{% if cl.cycle == 'primaire' %}Règle : un élève a la <b>MAÎTRISE</b> s'il obtient au moins 10/20 dans le nombre de matières exigé (seuil de l'évaluation, sinon 2/3 des matières évaluées). C'est la seule condition de réussite ; la moyenne sert uniquement au classement.
+{% elif cl.cycle == 'secondaire' %}Secondaire : moyenne pondérée par les coefficients (sans coefficient en 6ème/5ème) ; réussite si la moyenne atteint 10/20.
+{% else %}Maternelle : appréciations A (acquis), ECA (en cours d'acquisition), NA (non acquis) par domaine.{% endif %}
+</p>
+<div class="tw"><table class="t">
+  <thead><tr><th>Évaluation</th><th>Type</th><th class="c">N°</th><th>Date</th><th class="c">Matières</th>
+    {% if cl.cycle != 'maternelle' %}<th class="c">Seuil</th>{% endif %}<th class="c">Notes saisies</th><th class="c">Ont composé</th>
+    <th class="c">{{ 'Taux de maîtrise' if cl.cycle == 'primaire' else 'Taux de réussite' }}</th><th></th></tr></thead>
+  <tbody>
+  {% for r in lst %}{% set ev = r.ev %}
+  <tr><td><a href="{{ url_for('eval_saisie', ev_id=ev.id) }}"><b>{{ ev.titre }}</b></a><br><span class="aide">{{ ev.libelle }}</span></td>
+    <td>{{ ev.type|capitalize }}</td><td class="c">{{ ev.numero }}</td>
+    <td>{{ date_fr(ev.date) if ev.date else '—' }}</td><td class="c">{{ r.nb_matieres }}</td>
+    {% if cl.cycle != 'maternelle' %}<td class="c">{{ r.seuil }}/{{ r.nb_matieres }}{% if r.seuil_auto %} <span class="aide">(2/3)</span>{% endif %}</td>{% endif %}
+    <td class="c">{{ r.nb_notes }}</td><td class="c">{{ r.composes }}/{{ r.effectif }}</td>
+    <td class="c">{% if r.taux is not none %}<span class="badge {{ 'ok' if r.taux >= 50 else 'ko' }}">{{ ('%.1f'|format(r.taux)).replace('.', ',') }} %</span>{% else %}—{% endif %}</td>
+    <td style="white-space:nowrap"><a class="btn petit" href="{{ url_for('eval_saisie', ev_id=ev.id) }}">Saisir</a>
+      <a class="btn sec petit" href="{{ url_for('eval_form', ev_id=ev.id) }}">Modifier</a></td></tr>
+  {% else %}
+  <tr><td colspan="10" class="gris">Aucune évaluation pour {{ cl.nom }} cette année. Cliquez sur « Nouvelle évaluation » pour commencer
+    (ex. Évaluation formative N° 1).</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+{% endif %}
+{% endblock %}

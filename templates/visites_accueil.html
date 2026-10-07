@@ -1,0 +1,55 @@
+{% extends "base.html" %}{% block titre %}Visites de classe et d'école{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Visites de classe et d'école</h1>
+  <p class="sous">Visites des conseillers pédagogiques (CP) et du chef de circonscription scolaire (CCS)</p></div>
+  <div class="actions">
+    {% if saisie %}<a class="btn" href="{{ url_for('visite_nouvelle') }}">＋ Nouvelle visite</a>{% endif %}
+    <a class="btn sec" href="{{ url_for('visites_recap') }}">Récapitulatif par enseignant</a>
+    <a class="btn sec" href="{{ url_for('visite_fiche_vierge') }}" target="_blank">📄 Fiche vierge</a>
+  </div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Visites</div><div class="v">{{ liste|length }}</div><div class="d">selon les filtres</div></div>
+  <div class="kpi"><div class="l">Par un CP</div><div class="v">{{ n.CP }}</div><div class="d">conseiller pédagogique</div></div>
+  <div class="kpi"><div class="l">Par le CCS</div><div class="v">{{ n.CCS }}</div><div class="d">chef de circonscription</div></div>
+  <div class="kpi"><div class="l">Visites de classe</div><div class="v">{{ nb_classe }}</div><div class="d">{{ liste|length - nb_classe }} visite(s) d'école</div></div>
+</div>
+
+<form method="get" class="filtres carte">
+  <label>Enseignant(e)<br><select name="enseignant"><option value="">Tous</option>
+    {% for p in pers %}<option value="{{ p.id }}" {{ 'selected' if f.enseignant == p.id }}>{{ nom_complet(p) }}</option>{% endfor %}</select></label>
+  <label>Visiteur<br><select name="qualite"><option value="">CP et CCS</option>
+    {% for k in QUALITES %}<option value="{{ k }}" {{ 'selected' if f.qualite == k }}>{{ k }}</option>{% endfor %}</select></label>
+  <label>Nom du visiteur<br><input name="visiteur" value="{{ f.visiteur }}" maxlength="60"></label>
+  <label>Type<br><select name="type"><option value="">Tous</option>
+    {% for k, lib in TYPES.items() %}<option value="{{ k }}" {{ 'selected' if f.type == k }}>{{ lib }}</option>{% endfor %}</select></label>
+  <label>Année<br><select name="annee"><option value="">Toutes</option>
+    {% for a in annees %}<option {{ 'selected' if f.annee == a }}>{{ a }}</option>{% endfor %}</select></label>
+  <label>Du<br><input type="date" name="du" value="{{ f.du }}"></label>
+  <label>Au<br><input type="date" name="au" value="{{ f.au }}"></label>
+  <button class="btn">Filtrer</button> <a class="btn sec" href="{{ url_for('visites_accueil') }}">Effacer</a>
+</form>
+
+{% if liste %}
+<div class="tw"><table class="t">
+  <thead><tr><th>Date</th><th>Type</th><th>Visiteur</th><th>Enseignant(e) · classe</th><th>Matière · séquence</th><th class="c">Présents</th><th class="c">Note</th><th></th></tr></thead>
+  <tbody>
+  {% for v in liste %}
+  <tr><td>{{ date_fr(v.date) }}<br><span class="aide">{{ v.heure_debut }}{% if v.heure_fin %}–{{ v.heure_fin }}{% endif %}</span></td>
+    <td>{{ TYPES[v.type] }}</td>
+    <td><span class="badge {{ 'ok' if v.visiteur_qualite == 'CCS' else '' }}">{{ v.visiteur_qualite }}</span> {{ v.visiteur_nom }}</td>
+    <td>{{ v.enseignant_nom or '—' }}<br><span class="aide">{{ v.classe_nom or '' }}</span></td>
+    <td>{{ v.matiere or '—' }}<br><span class="aide">{{ v.sequence or v.sa or '' }}</span></td>
+    <td class="c">{% if v.eff_t is not none %}{{ v.eff_t }}<br><span class="aide">{{ v.eff_g or 0 }} G / {{ v.eff_f or 0 }} F</span>{% else %}—{% endif %}</td>
+    <td class="c">{{ note_txt(v.note) or '—' }}</td>
+    <td class="actions"><a class="btn sec petit" href="{{ url_for('visite_modifier', vid=v.id) }}">Ouvrir</a>
+      <a class="btn sec petit" href="{{ url_for('visite_fiche_pdf', vid=v.id) }}" target="_blank">PDF</a></td></tr>
+  {% endfor %}
+  </tbody></table></div>
+{% else %}
+<div class="carte">Aucune visite enregistrée pour ces critères.{% if saisie %} <a href="{{ url_for('visite_nouvelle') }}">Enregistrer une visite</a>.{% endif %}</div>
+{% endif %}
+{% if not saisie %}<p class="aide">Consultation : la saisie est faite par la direction. Un enseignant dont le compte est relié à sa fiche du personnel peut enregistrer les visites qui le concernent.</p>{% endif %}
+{% endblock %}

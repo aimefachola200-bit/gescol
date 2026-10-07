@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block titre %}Registre d'appel{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Registre d'appel</h1><p class="sous">{{ date_longue(jour)|capitalize }}</p></div>
+  <form class="filtres" style="margin:0">
+    <a class="btn sec petit" href="{{ url_for('appel_accueil', date=veille) }}">← Veille</a>
+    <input type="date" name="date" value="{{ jour }}" onchange="this.form.submit()" style="width:auto">
+    <a class="btn sec petit" href="{{ url_for('appel_accueil', date=lendemain) }}">Lendemain →</a>
+    <a class="btn sec petit" href="{{ url_for('appel_stats') }}">Statistiques</a>
+  </form>
+</div>
+<div class="tw"><table class="t">
+  <tr><th>Classe</th><th class="num">Effectif</th><th>Appel</th><th class="num">Absents</th><th class="num">Retards</th><th></th></tr>
+  {% for c in classes %}
+  <tr><td><b>{{ c.nom }}</b></td><td class="num">{{ c.effectif }}</td>
+    <td>{% if c.fait_le %}<span class="badge ok">fait à {{ c.fait_le[11:16] }}</span>{% else %}<span class="badge att">à faire</span>{% endif %}</td>
+    <td class="num {{ 'rouge' if c.absents }}">{{ c.absents }}</td><td class="num">{{ c.retards }}</td>
+    <td class="num"><a class="btn {{ 'sec' if c.fait_le else '' }} petit" href="{{ url_for('appel_classe', cid=c.id, jour=jour) }}">{{ 'Modifier' if c.fait_le else "Faire l'appel" }}</a></td></tr>
+  {% else %}<tr><td colspan="6" class="gris">Aucune classe.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

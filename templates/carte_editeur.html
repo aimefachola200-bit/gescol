@@ -1,0 +1,201 @@
+{% extends "base.html" %}{% block titre %}Carte scolaire du candidat{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<style>
+/* Aperçu : mêmes unités que le PDF (mm / pt), agrandi par zoom */
+.ca-g{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:1100px){.ca-g{grid-template-columns:1fr}}
+.ca-apercu{position:sticky;top:70px}
+.ca-faces{display:flex;flex-direction:column;gap:14px;align-items:center}
+.ca-zoom{zoom:1.75}
+@media (max-width:600px){.ca-zoom{zoom:1.05}}
+.carte-c{position:relative;width:85.6mm;height:54mm;border-radius:2.5mm;overflow:hidden;font-family:Helvetica,Arial,sans-serif;
+  background:linear-gradient(90deg,#008751 0 33.33%,#FCD116 33.33% 66.66%,#E8112D 66.66%);box-shadow:0 1px 4px rgba(0,0,0,.25);color:#111827}
+.carte-c .fond{position:absolute;inset:1.3mm;background:#fff;border-radius:1.6mm}
+.carte-c .a{position:absolute;white-space:nowrap;line-height:1}
+.carte-c .cx{transform:translateX(-50%)}
+.ca-lib{color:#194730;font-weight:700;font-size:3.9pt}
+.ca-val{font-weight:700;font-size:5pt;overflow:hidden;text-overflow:ellipsis;max-width:21.8mm}
+.ca-photo{position:absolute;left:3.4mm;bottom:14.6mm;width:14.6mm;height:18.6mm;border:.6pt solid #194730;border-radius:1mm;background:#EDF1EE;
+  overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:4.5pt;color:#98A2B3;cursor:pointer}
+.ca-photo img{width:100%;height:100%;object-fit:contain}
+.ca-admin{position:absolute;left:59.6mm;bottom:12.6mm;width:22.8mm;height:24.6mm;border:.5pt solid #194730;border-radius:1.2mm}
+.ca-admin .h{position:absolute;left:.8mm;right:.8mm;top:.8mm;height:3.8mm;background:#194730;border-radius:.8mm;color:#fff;font-size:3.5pt;
+  font-weight:700;text-align:center;line-height:1.25;padding-top:.2mm}
+.ca-admin .it{position:absolute;left:1.5mm;right:1mm}
+.ca-admin .it b{display:block;color:#A3780D;font-size:3.7pt}
+.ca-admin .it>span{display:block;font-weight:700;font-size:4.4pt;overflow:hidden;text-overflow:ellipsis;margin-top:.5mm}
+.ca-pastille{background:#194730;color:#fff;font-weight:700;font-size:4.8pt;border-radius:1.6mm;width:30mm;height:3.2mm;text-align:center;line-height:3.2mm!important}
+.btn.vert{color:#fff}
+.ca-drapeau{position:absolute;right:4mm;top:4.2mm;width:10.2mm;height:6.8mm;background:linear-gradient(#FCD116 0 50%,#E8112D 50%);border:.2pt solid #98A2B3}
+.ca-drapeau:before{content:"";position:absolute;left:0;top:0;bottom:0;width:40%;background:#008751}
+.ca-sig{position:absolute;object-fit:contain}
+.ca-verso-h{position:absolute;left:2.6mm;right:2.6mm;top:2.6mm;height:10.8mm;background:#194730;border-radius:1.2mm;color:#fff}
+.ca-form h2{margin-top:0}
+.ca-cachet{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.ca-cachet img{width:110px;height:110px}
+.ca-sigs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.ca-sigs .sig-pad canvas{max-width:100%;height:auto}
+</style>
+
+<div class="entete">
+  <div><h1>Carte scolaire du candidat</h1>
+  <p class="sous">Format carte (85,6 × 54 mm) recto-verso · planche A4 de 10 cartes pour toute la classe · QR code de vérification</p></div>
+  {% if cl %}<div class="actions">
+    <a class="btn sec" href="{{ url_for('carte_planche', cid=cl.id) }}" target="_blank" rel="noopener">🗂 Planche A4 – toute la classe</a>
+  </div>{% endif %}
+</div>
+
+{% if not cls %}
+<div class="carte">Aucune classe accessible. Créez d'abord les classes et inscrivez les élèves.</div>
+{% else %}
+<form method="get" class="filtres">
+  <label>Classe<br><select name="classe" onchange="this.form.submit()">
+    {% for c in cls %}<option value="{{ c.id }}" {{ 'selected' if cl and c.id == cl.id }}>{{ c.nom }}</option>{% endfor %}</select></label>
+  {% if eleves %}<label>Élève<br><select name="eleve" onchange="this.form.submit()">
+    {% for x in eleves %}<option value="{{ x.id }}" {{ 'selected' if e and x.id == e.id }}>{{ x.nom }} {{ x.prenoms }}</option>{% endfor %}</select></label>{% endif %}
+</form>
+
+{% if not e %}
+<div class="carte">Aucun élève inscrit dans cette classe.</div>
+{% else %}
+<div class="ca-g">
+<form method="post" action="{{ url_for('carte_enregistrer', eid=e.id) }}" id="f-carte" class="ca-form" autocomplete="off"
+      data-defaut='{{ defaut_json }}' data-donnees="{{ url_for('carte_donnees', eid=e.id) }}">
+  {% call M.barre_doc(sauver=False, charger=False, reinit=False) %}
+    <button class="btn vert petit">💾 Enregistrer</button>
+    <button type="button" class="btn sec petit" id="ca-charger" title="Recharger les valeurs enregistrées">📂 Charger</button>
+    <button class="btn sec petit" formaction="{{ url_for('carte_pdf', eid=e.id) }}" formtarget="_blank" title="PDF avec les valeurs affichées (même non enregistrées)">📄 Télécharger PDF</button>
+    <button type="button" class="btn sec petit" id="ca-reinit" title="Remettre les données de l'inscription et de l'école dans le formulaire">↺ Réinitialiser</button>
+  {% endcall %}
+
+  <div class="carte">
+    <h2>Candidat(e)</h2>
+    <div class="grille-id">
+      <div><label for="k-table">N° de table</label><input id="k-table" name="numero_table" value="{{ v.numero_table }}" maxlength="30"></div>
+      <div><label for="k-mat">Matricule EducMaster</label><input id="k-mat" name="matricule_educmaster" value="{{ v.matricule_educmaster }}" maxlength="30"></div>
+      <div><label for="k-nip">NIP</label><input id="k-nip" name="nip" value="{{ v.nip }}" maxlength="30"></div>
+      <div><label for="k-nom">Nom</label><input id="k-nom" name="nom" value="{{ v.nom }}" maxlength="80"></div>
+      <div><label for="k-pre">Prénoms</label><input id="k-pre" name="prenoms" value="{{ v.prenoms }}" maxlength="120"></div>
+      <div><label for="k-sexe">Sexe</label><select id="k-sexe" name="sexe"><option value="M" {{ 'selected' if v.sexe == 'M' }}>M</option><option value="F" {{ 'selected' if v.sexe == 'F' }}>F</option></select></div>
+      <div><label for="k-dn">Date de naissance</label><input id="k-dn" type="date" name="date_naissance" value="{{ v.date_naissance }}"></div>
+      <div><label for="k-ln">Lieu de naissance</label><input id="k-ln" name="lieu_naissance" value="{{ v.lieu_naissance }}" maxlength="80"></div>
+      <div><label for="k-ce">Centre d'examen</label><input id="k-ce" name="centre_examen" value="{{ v.centre_examen }}" maxlength="100"></div>
+      <div><label for="k-cl">Classe</label><input id="k-cl" name="classe" value="{{ v.classe }}" maxlength="40"></div>
+    </div>
+    <h3>Photo</h3>
+    <div class="photo-capture" id="ca-photo-in" data-champ="photo_data" {% if photo %}data-src="{{ url_for('eleve_photo', eid=e.id) }}"{% endif %}></div>
+  </div>
+
+  <div class="carte">
+    <h2>Informations administratives <span class="aide">(communes à toutes les cartes)</span></h2>
+    <div class="grille-id">
+      <div><label for="id-ddemp">DDEMP</label><input id="id-ddemp" name="ddemp" data-dep list="dl-dep" value="{{ v.ddemp }}">
+        <datalist id="dl-dep">{% for d in DEPARTEMENTS %}<option value="{{ d }}">{% endfor %}</datalist></div>
+      <div><label for="id-cs">CS <span class="aide nb-cs"></span></label><input id="id-cs" name="cs" data-cs value="{{ v.cs }}"></div>
+      <div><label for="k-ecole">École</label><input id="k-ecole" name="ecole" value="{{ v.ecole }}"></div>
+      <div><label for="k-annee">Année scolaire</label><input id="k-annee" name="annee" value="{{ v.annee }}" pattern="\d{4}-\d{4}"></div>
+      <div><label for="k-dirt">Responsable</label><div class="duo"><select id="k-dirt" name="directeur_titre" aria-label="Titre">
+        {% for t in ('Directeur', 'Directrice') %}<option {{ 'selected' if v.directeur_titre == t }}>{{ t }}</option>{% endfor %}</select>
+        <input name="directeur_nom" value="{{ v.directeur_nom }}" placeholder="Nom et prénoms" aria-label="Nom du responsable"></div></div>
+    </div>
+    <h3>Cachet</h3>
+    <div class="ca-cachet">
+      <div class="grille-id" style="flex:1">
+        <div><label for="k-cc">Couleur</label><select id="k-cc" name="cachet_couleur">
+          <option value="bleu" {{ 'selected' if v.cachet_couleur == 'bleu' }}>Bleu</option><option value="rouge" {{ 'selected' if v.cachet_couleur == 'rouge' }}>Rouge</option></select></div>
+        <div><label for="k-cs1">Texte arc haut</label><input id="k-cs1" name="cachet_sup" value="{{ v.cachet_sup }}" maxlength="60"></div>
+        <div><label for="k-cs2">Texte arc bas</label><input id="k-cs2" name="cachet_inf" value="{{ v.cachet_inf }}" maxlength="60"></div>
+        <div><label for="k-cs3">Texte du centre</label><input id="k-cs3" name="cachet_centre" value="{{ v.cachet_centre }}" maxlength="40"></div>
+      </div>
+      <img id="ca-cachet-img" alt="Aperçu du cachet" src="{{ url_for('cachet_svg', sup=v.cachet_sup, inf=v.cachet_inf, centre=v.cachet_centre, couleur=v.cachet_couleur, taille=180) }}">
+    </div>
+    <div><label for="k-verso">Mention au verso</label><textarea id="k-verso" name="verso_note" rows="2" maxlength="300">{{ v.verso_note }}</textarea></div>
+  </div>
+
+  <div class="carte">
+    <h2>Signatures</h2>
+    <div class="ca-sigs">
+      {{ M.signature('eleve:%d' % e.id, "Signature de l'élève") }}
+      {{ M.signature('ecole:%d:directeur' % ECOLE_COURANTE.id if ECOLE_COURANTE else 'ecole:1:directeur', 'Signature du directeur / de la directrice') }}
+    </div>
+    <p class="aide">« Enregistrer » sous chaque cadre conserve la signature. Seuls le directeur et l'administrateur peuvent enregistrer la
+    signature du directeur. Le QR code (« Carte sécurisée ») renvoie à la page de vérification : code <b>{{ code }}</b>.</p>
+  </div>
+</form>
+
+<div class="ca-apercu carte">
+  <h2>Aperçu recto / verso</h2>
+  <div class="ca-faces"><div class="ca-zoom">
+  {# ---------------- RECTO ---------------- #}
+  <div class="carte-c" id="ca-recto" aria-label="Recto de la carte">
+    <div class="fond"></div>
+    <svg class="a" style="left:3.4mm;top:3.8mm;width:9.2mm;height:9.2mm" viewBox="-10 -10 20 20" aria-hidden="true">
+      <circle r="9.4" fill="#fff" stroke="#008751" stroke-width="1.2"/><circle r="7.9" fill="none" stroke="#C9962B" stroke-width=".35"/>
+      <polygon fill="#C9962B" points="0,-5.8 .6,-4.4 2,-4.4 .9,-3.5 1.3,-2.1 0,-2.9 -1.3,-2.1 -.9,-3.5 -2,-4.4 -.6,-4.4"/>
+      <path d="M0 2.6 L-5.2 1.7 L-5.2 -1.3 L0 -.5 Z M0 2.6 L5.2 1.7 L5.2 -1.3 L0 -.5 Z" fill="#fff" stroke="#194730" stroke-width=".5"/>
+      <rect x="-4.5" y="4" width="3" height="1.5" fill="#008751"/><rect x="-1.5" y="4" width="3" height="1.5" fill="#FCD116"/><rect x="1.5" y="4" width="3" height="1.5" fill="#E8112D"/>
+    </svg>
+    <div class="ca-drapeau"></div>
+    <div class="a cx" style="left:50%;top:3.1mm;font-size:4.6pt">RÉPUBLIQUE DU BÉNIN</div>
+    <div class="a cx" style="left:50%;top:5.2mm;font-size:4.9pt;font-weight:700">MINISTÈRE DES ENSEIGNEMENTS MATERNEL ET PRIMAIRE</div>
+    <div class="a cx" style="left:50%;top:7.5mm;font-size:7.6pt;font-weight:700;color:#194730">CARTE SCOLAIRE DU CANDIDAT(E)</div>
+    <div class="a cx ca-pastille" style="left:50%;top:10.9mm">ANNÉE SCOLAIRE&nbsp; <span data-k="annee"></span></div>
+    <div class="a" style="left:3mm;right:3mm;top:15.3mm;border-top:.5pt solid #C9962B"></div>
+    <div class="ca-photo" id="ca-photo" title="Cliquer pour changer la photo"><span>Photo élève</span></div>
+    {% set champs = [('N° DE TABLE','numero_table'),('MATRICULE','matricule_educmaster'),('NIP','nip'),('NOM','nom'),('PRÉNOM(S)','prenoms'),('SEXE','sexe'),('DATE DE NAISSANCE','date_naissance'),('LIEU DE NAISSANCE','lieu_naissance'),("CENTRE D'EXAMEN",'centre_examen'),('CLASSE','classe')] %}
+    {% for lib, k in champs %}{% set b = 18 + 2.28 * loop.index0 %}
+    <div class="a ca-lib" style="left:20.2mm;top:{{ '%.2f' % (b - 1.2) }}mm">{{ lib }}</div>
+    <div class="a ca-lib" style="left:35.2mm;top:{{ '%.2f' % (b - 1.2) }}mm">:</div>
+    <div class="a ca-val" style="left:36.3mm;top:{{ '%.2f' % (b - 1.5) }}mm" data-k="{{ k }}"></div>
+    <div class="a" style="left:20.2mm;width:38.1mm;top:{{ '%.2f' % (b + 0.7) }}mm;border-top:.2pt solid #E4E7EC"></div>
+    {% endfor %}
+    <div class="ca-admin"><div class="h">INFORMATIONS<br>ADMINISTRATIVES</div>
+      {% for lib, k in [('DDEMP','ddemp'),('CS','cs'),('ÉCOLE','ecole'),('CLASSE','classe')] %}
+      <div class="it" style="top:{{ '%.1f' % (5.8 + 4.4 * loop.index0) }}mm"><b>{{ lib }}</b><span>: <span data-k="{{ k }}"></span></span></div>{% endfor %}
+    </div>
+    <div class="a" style="left:3mm;right:3mm;bottom:12.1mm;border-top:.3pt solid #D0D5DD"></div>
+    <div class="a cx" style="left:19mm;bottom:10.4mm;font-size:3.8pt;font-weight:700;color:#344054">Signature de l'élève</div>
+    <img class="ca-sig" id="ca-sig-eleve" alt="" style="left:12mm;bottom:6.9mm;width:14mm;height:3.4mm" src="{{ url_for('signature_png', cle='eleve:%d' % e.id) }}" onerror="this.style.visibility='hidden'">
+    <div class="a" style="left:11.6mm;width:14.8mm;bottom:6.8mm;border-top:.3pt solid #D0D5DD"></div>
+    <img class="a" alt="QR code" style="left:2.6mm;bottom:1.8mm;width:8.4mm;height:8.4mm" src="{{ url_for('carte_qr', eid=e.id) }}">
+    <div class="a" style="left:11.8mm;bottom:4.2mm;font-size:3.4pt;font-weight:700;color:#194730">Carte sécurisée</div>
+    <div class="a" style="left:11.8mm;bottom:2.9mm;font-size:2.8pt;color:#194730">Code : {{ code }}</div>
+    <img class="a" id="ca-cachet-mini" alt="Cachet" style="left:38.8mm;bottom:1.2mm;width:10.4mm;height:10.4mm" src="{{ url_for('cachet_svg', sup=v.cachet_sup, inf=v.cachet_inf, centre=v.cachet_centre, couleur=v.cachet_couleur, taille=180) }}">
+    <div class="a cx" style="left:69mm;bottom:10.4mm;font-size:3.9pt;font-weight:700;color:#344054" data-k="dir_titre"></div>
+    <img class="ca-sig" id="ca-sig-dir" alt="" style="left:60mm;bottom:6.1mm;width:18mm;height:4mm" src="{{ url_for('signature_png', cle='ecole:%d:directeur' % (ECOLE_COURANTE.id if ECOLE_COURANTE else 1)) }}" onerror="this.style.visibility='hidden'">
+    <div class="a" style="left:59mm;width:20mm;bottom:6mm;border-top:.3pt solid #D0D5DD"></div>
+    <div class="a cx" style="left:69mm;bottom:3.5mm;font-size:4.3pt;font-weight:700" data-k="directeur_nom"></div>
+  </div>
+  {# ---------------- VERSO ---------------- #}
+  <div class="carte-c" id="ca-verso" aria-label="Verso de la carte" style="margin-top:4mm">
+    <div class="fond"></div>
+    <div class="ca-verso-h">
+      {% if ECOLE_COURANTE %}<img alt="" src="{{ url_for('ecole_logo', eid=ECOLE_COURANTE.id) }}" onerror="this.remove()" style="position:absolute;left:2.8mm;top:1.6mm;width:7.6mm;height:7.6mm;object-fit:contain;background:#fff;border-radius:50%">{% endif %}
+      <div class="a" style="left:12.8mm;top:2.4mm;font-size:7pt;font-weight:700;text-transform:uppercase" data-k="ecole"></div>
+      <div class="a" style="left:12.8mm;top:6.4mm;font-size:4.3pt">{{ [ECOLE_COURANTE.statut, ECOLE_COURANTE.ville]|select|join(' · ') if ECOLE_COURANTE else '' }}</div>
+    </div>
+    {% set lv = [('Adresse', ECOLE_COURANTE.adresse if ECOLE_COURANTE else ''), ('Boîte postale', ECOLE_COURANTE.bp if ECOLE_COURANTE else ''), ('Téléphone', ECOLE_COURANTE.telephone if ECOLE_COURANTE else ''), ('E-mail', ECOLE_COURANTE.email if ECOLE_COURANTE else '')] %}
+    {% set n = namespace(i=0) %}
+    {% for lib, val in lv if val %}
+    <div class="a ca-lib" style="left:5mm;top:{{ '%.1f' % (15.8 + 2.9 * n.i) }}mm;font-size:4.2pt">{{ lib }}</div>
+    <div class="a" style="left:24mm;top:{{ '%.1f' % (15.6 + 2.9 * n.i) }}mm;font-size:4.8pt">: {{ val }}</div>{% set n.i = n.i + 1 %}
+    {% endfor %}
+    <div class="a ca-lib" style="left:5mm;top:{{ '%.1f' % (15.8 + 2.9 * n.i) }}mm;font-size:4.2pt">DDEMP / CS</div>
+    <div class="a" style="left:24mm;top:{{ '%.1f' % (15.6 + 2.9 * n.i) }}mm;font-size:4.8pt">: <span data-k="ddemp"></span> / <span data-k="cs"></span></div>
+    <div class="a ca-lib" style="left:5mm;top:{{ '%.1f' % (15.8 + 2.9 * (n.i + 1)) }}mm;font-size:4.2pt">Centre d'examen</div>
+    <div class="a" style="left:24mm;top:{{ '%.1f' % (15.6 + 2.9 * (n.i + 1)) }}mm;font-size:4.8pt">: <span data-k="centre_examen"></span></div>
+    <div class="a" style="left:4mm;right:4mm;bottom:13.6mm;border-top:.4pt solid #C9962B"></div>
+    <div class="a" style="left:5mm;right:5mm;bottom:6.2mm;font-size:4.1pt;font-style:italic;color:#344054;white-space:normal;line-height:1.35" data-k="verso_note"></div>
+    {% set urg = ((e.parent_nom or '') ~ ' ' ~ (e.parent_telephone or ''))|trim %}
+    {% if urg %}<div class="a" style="left:5mm;bottom:3.8mm;font-size:4.2pt;font-weight:700;color:#E8112D">En cas d'urgence : {{ urg }}</div>{% endif %}
+    <div class="ca-drapeau" style="top:auto;bottom:3.4mm;right:5mm;width:7.5mm;height:5mm"></div>
+  </div>
+  </div></div>
+  <p class="aide">Aperçu indicatif : le PDF est la référence pour l'impression (format carte ou planche A4, découpe sur les traits).</p>
+</div>
+</div>
+{% endif %}
+{% endif %}
+<script src="{{ url_for('static', filename='cep.js') }}?v={{ VERSION }}" defer></script>
+{% endblock %}

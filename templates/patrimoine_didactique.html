@@ -1,0 +1,40 @@
+{% extends "base.html" %}{% block titre %}Patrimoine – matériel didactique{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Matériel didactique</h1>
+  <p class="sous">Manuels par niveau et discipline, guides, cartes, globes, matériel scientifique…</p></div>
+  <div class="actions"><a class="btn" href="{{ url_for('patrimoine_materiel', oid=0, categorie=cat or none) }}">＋ Ajouter</a></div>
+</div>
+{% include "patrimoine_onglets.html" %}
+{% set dd = s.didactique %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Manuels de l'élève</div><div class="v">{{ dd.manuels_total }}</div><div class="d">pour {{ s.effectifs.t }} élève(s)</div></div>
+  <div class="kpi"><div class="l">Ratio manuels / élève</div><div class="v">{{ ratio_txt(dd.ratio_global) }}</div><div class="d">manuels utilisables (toutes disciplines)</div></div>
+  <div class="kpi"><div class="l">Guides du maître</div><div class="v">{{ dd.par_categorie.guide.quantite }}</div><div class="d">{{ dd.par_categorie.programme.quantite }} programme(s) d'études</div></div>
+</div>
+
+<div class="carte">
+  <h2>Ratio manuels / élèves par niveau et discipline</h2>
+  {% if dd.manuels %}
+  <div class="tw"><table class="t compact"><thead><tr><th>Niveau</th><th>Discipline</th><th class="c">Manuels</th><th class="c">Utilisables</th><th class="c">Effectif</th><th class="c">Ratio</th><th class="c">Manquants</th></tr></thead><tbody>
+  {% for m in dd.manuels %}
+  <tr><td>{{ m.niveau }}</td><td>{{ m.discipline }}</td><td class="c">{{ m.quantite }}</td><td class="c">{{ m.utilisables }}</td><td class="c">{{ m.effectif }}</td>
+    <td class="c"><span class="badge {{ 'ok' if m.ratio is not none and m.ratio >= 1 else 'att' }}">{{ ratio_txt(m.ratio) }}</span></td><td class="c">{{ m.manquants or '—' }}</td></tr>
+  {% endfor %}</tbody></table></div>
+  <p class="aide">Ratio = manuels de l'élève en état bon ou passable ÷ élèves inscrits du niveau (1,00 = un manuel par élève). Le niveau doit correspondre à celui des classes (CI, CP, CE1…).</p>
+  {% else %}<p class="aide">Aucun manuel de l'élève enregistré (catégorie « Manuel de l'élève »).</p>{% endif %}
+</div>
+
+<form method="get" class="filtres"><label>Catégorie<br><select name="categorie" onchange="this.form.submit()"><option value="">Toutes</option>
+  {% for k, lib in CAT.items() %}<option value="{{ k }}" {{ 'selected' if cat == k }}>{{ lib }} ({{ dd.par_categorie[k].quantite }})</option>{% endfor %}</select></label></form>
+{% if liste %}
+<div class="tw"><table class="t compact"><thead><tr><th>Catégorie</th><th>Désignation</th><th>Discipline</th><th>Niveau</th><th class="c">Quantité</th><th>État</th><th class="c">Acquis en</th><th></th></tr></thead><tbody>
+{% for d in liste %}
+<tr><td>{{ CAT.get(d.categorie, d.categorie) }}</td><td><b>{{ d.designation }}</b></td><td>{{ d.discipline or '' }}</td><td>{{ d.niveau or '' }}</td>
+  <td class="c">{{ d.quantite }}</td><td><span class="badge {{ {'bon':'ok','passable':'att','mauvais':'ko'}.get(d.etat, '') }}">{{ ETATS.get(d.etat, '—') }}</span></td>
+  <td class="c">{{ d.annee_acquisition or '' }}</td>
+  <td class="actions"><a class="btn sec petit" href="{{ url_for('patrimoine_materiel', oid=d.id) }}">Modifier</a>
+    <a class="btn sec petit" href="{{ url_for('patrimoine_mouvements', objet='didactique:' ~ d.id) }}">Mouvement</a></td></tr>
+{% endfor %}</tbody></table></div>
+{% else %}<div class="carte">Aucun matériel enregistré{{ ' dans cette catégorie' if cat }}.</div>{% endif %}
+{% endblock %}

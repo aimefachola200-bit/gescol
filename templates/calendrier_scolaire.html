@@ -1,0 +1,154 @@
+{% extends "base.html" %}{% block titre %}Calendrier scolaire – {{ titre }}{% endblock %}
+{% block contenu %}
+<style>
+.btn.vert{color:#fff}
+.cal-nav{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.cal-nav .titre-periode{font-weight:700;font-size:17px;min-width:150px;text-align:center}
+.cal-nav input[type=month]{width:auto}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(96px,1fr));gap:6px;min-width:700px}
+.cal .jn{font-size:12px;font-weight:700;text-transform:uppercase;color:var(--gris);text-align:center;padding:4px 0}
+.cal .j{border:1px solid var(--bord);border-radius:8px;padding:6px;background:#fff;min-height:92px;display:flex;flex-direction:column;gap:4px}
+.cal .j.hors{background:transparent;border-style:dashed;opacity:.45}
+.cal .j.d2{border-left:5px solid #1B7F3B}.cal .j.d1{border-left:5px solid #E9A23B}.cal .j.d0{border-left:5px solid #98A2B3;background:#F2F4F7}
+.cal .j.exc{box-shadow:inset 0 0 0 2px #2E6DA4}
+.cal .j.auj .num{background:var(--bleu);color:#fff;border-radius:50%;width:24px;height:24px;display:inline-grid;place-items:center}
+.cal .j .haut{display:flex;justify-content:space-between;align-items:center}
+.cal .j .num{font-weight:700}
+.cal .j .dj{font-size:12px;font-weight:700;border-radius:10px;padding:1px 7px}
+.cal .j.d2 .dj{background:#ECFDF3;color:#067647}.cal .j.d1 .dj{background:#FFFAEB;color:#B54708}.cal .j.d0 .dj{background:#E4E7EC;color:#475467}
+.cal .j .motif{font-size:11.5px;color:var(--gris);line-height:1.2}
+.cal .j select,.cal .j input{padding:3px 5px;font-size:12px}
+.cal-legende{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--gris);margin:8px 0}
+.cal-legende i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:middle;margin-right:4px}
+.cal-outils{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.cal-outils form label{font-weight:600;font-size:12.5px;display:block;margin:6px 0 3px}
+tr.mois-actif td{background:#EEF4FA;font-weight:600}
+</style>
+
+<div class="entete">
+  <div><h1>Calendrier scolaire – jours de classe</h1>
+    <p class="sous">Année scolaire {{ annee }} · rentrée le {{ date_longue(params.rentree) }}, fin des cours le {{ date_longue(params.fin) }}</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('registre_accueil', mois=mois) }}">📋 Registre de présence</a>
+    <a class="btn sec petit" href="{{ url_for('releve_mensuel', annee=annee) }}">📊 Relevés mensuels</a></div>
+</div>
+
+{% set total_annee = recap|sum(attribute='dj') %}
+{% set jours_mois = namespace(n=0) %}{% for s in semaines %}{% for d in s %}{% if d.dans and d.n > 0 %}{% set jours_mois.n = jours_mois.n + 1 %}{% endif %}{% endfor %}{% endfor %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Demi-journées – {{ titre }}</div><div class="v">{{ total }}</div><div class="d">{{ jours_mois.n }} jour(s) de classe dans le mois</div></div>
+  <div class="kpi"><div class="l">Demi-journées – année</div><div class="v">{{ total_annee }}</div><div class="d">de septembre à juin</div></div>
+  <div class="kpi"><div class="l">Exceptions</div><div class="v">{{ exc|length }}</div><div class="d">congés, fériés, rattrapages ({{ annee }})</div></div>
+</div>
+
+<div class="carte">
+  <p class="aide" style="margin-top:0"><b>Règle automatique :</b> 2 demi-journées de classe par jour (matin et après-midi), <b>1 seule le mercredi</b> (matin), <b>0 le samedi et le dimanche</b>, 0 avant la rentrée et après la fin des cours.
+  {% if modifiable %}Pour un jour férié, un congé ou un rattrapage, choisissez une autre valeur dans la case du jour puis cliquez sur « Enregistrer le mois » : cette exception l'emporte sur la règle.{% else %}Seule la direction peut modifier le calendrier.{% endif %}</p>
+  <div class="cal-legende" aria-hidden="true">
+    <span><i style="background:#1B7F3B"></i>2 demi-journées</span><span><i style="background:#E9A23B"></i>1 demi-journée (matin)</span>
+    <span><i style="background:#98A2B3"></i>pas de classe</span><span><i style="box-shadow:inset 0 0 0 2px #2E6DA4"></i>exception enregistrée</span>
+  </div>
+
+  <form method="get" class="filtres">
+    <div class="cal-nav">
+      <a class="btn sec petit" href="{{ url_for('calendrier_scolaire', mois=prec) }}" aria-label="Mois précédent" title="Mois précédent">◀</a>
+      <span class="titre-periode">{{ titre }}</span>
+      <a class="btn sec petit" href="{{ url_for('calendrier_scolaire', mois=suiv) }}" aria-label="Mois suivant" title="Mois suivant">▶</a>
+      <label class="aide" for="cal-mois">Aller au mois</label><input id="cal-mois" type="month" name="mois" value="{{ mois }}" onchange="this.form.submit()">
+    </div>
+  </form>
+
+  <form method="post" action="{{ url_for('calendrier_enregistrer') }}" id="f-cal">
+    <input type="hidden" name="mois" value="{{ mois }}">
+    <div class="tw" style="border:none"><div class="cal">
+      {% for jn in ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'] %}<div class="jn">{{ jn }}</div>{% endfor %}
+      {% for s in semaines %}{% for d in s %}
+      <div class="j d{{ d.n }}{{ ' hors' if not d.dans }}{{ ' exc' if d.exc }}{{ ' auj' if d.auj }}" data-defaut="{{ d.defaut }}">
+        <div class="haut"><span class="num">{{ d.num }}</span>{% if d.dans %}<span class="dj" title="demi-journées de classe">{{ d.n }} ½j</span>{% endif %}</div>
+        {% if d.dans %}
+          {% if modifiable %}
+          <select name="j_{{ d.iso }}" aria-label="Demi-journées du {{ date_longue(d.iso) }}">
+            <option value="auto" {{ 'selected' if d.val == 'auto' }}>Auto (règle)</option>
+            <option value="2" {{ 'selected' if d.val == '2' }}>2 – journée</option>
+            <option value="1" {{ 'selected' if d.val == '1' }}>1 – matin</option>
+            <option value="0" {{ 'selected' if d.val == '0' }}>0 – pas classe</option>
+          </select>
+          <input name="m_{{ d.iso }}" value="{{ d.motif_exc }}" list="dl-motifs" placeholder="{{ d.motif if not d.exc and d.motif else 'Motif' }}" maxlength="80" aria-label="Motif du {{ date_longue(d.iso) }}">
+          {% elif d.motif %}<span class="motif">{{ d.motif }}</span>{% endif %}
+        {% endif %}
+      </div>
+      {% endfor %}{% endfor %}
+    </div></div>
+    <datalist id="dl-motifs">{% for m in motifs %}<option value="{{ m }}">{% endfor %}</datalist>
+    {% if modifiable %}<p class="actions" style="margin-top:12px"><button class="btn vert">💾 Enregistrer le mois de {{ titre }}</button>
+      <span class="aide">« Auto » = règle générale (supprime l'exception du jour).</span></p>{% endif %}
+  </form>
+</div>
+
+{% if modifiable %}
+<div class="cal-outils">
+  <form method="post" action="{{ url_for('calendrier_parametres') }}" class="carte">
+    <h3 style="margin-top:0">Rentrée et fin des cours</h3>
+    <input type="hidden" name="annee" value="{{ annee }}"><input type="hidden" name="retour" value="{{ url_for('calendrier_scolaire', mois=mois) }}">
+    <label for="cp-r">Date de la rentrée</label><input id="cp-r" type="date" name="rentree" value="{{ params.rentree }}" required>
+    <label for="cp-f">Fin des cours</label><input id="cp-f" type="date" name="fin" value="{{ params.fin }}" required>
+    <p style="margin-bottom:0"><button class="btn">Enregistrer</button></p>
+  </form>
+  <form method="post" action="{{ url_for('calendrier_periode') }}" class="carte">
+    <h3 style="margin-top:0">Vacances / congés sur une période</h3>
+    <input type="hidden" name="retour" value="{{ url_for('calendrier_scolaire', mois=mois) }}">
+    <div class="grille2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><label for="pe-du">Du</label><input id="pe-du" type="date" name="du" required></div>
+      <div><label for="pe-au">Au</label><input id="pe-au" type="date" name="au" required></div>
+    </div>
+    <label for="pe-m">Motif</label><input id="pe-m" name="motif" list="dl-motifs" placeholder="Ex. : Vacances de Noël" maxlength="80">
+    <label for="pe-v">Action</label><select id="pe-v" name="valeur"><option value="0">Marquer sans classe (0)</option><option value="auto">Revenir à la règle automatique</option></select>
+    <p style="margin-bottom:0"><button class="btn">Appliquer à la période</button></p>
+  </form>
+  <form method="post" action="{{ url_for('calendrier_feries') }}" class="carte">
+    <h3 style="margin-top:0">Jours fériés fixes du Bénin</h3>
+    <input type="hidden" name="annee" value="{{ annee }}"><input type="hidden" name="retour" value="{{ url_for('calendrier_scolaire', mois=mois) }}">
+    <ul class="aide" style="padding-left:18px;margin:6px 0">{% for mm, jj, lib in feries %}<li>{{ '%02d/%02d'|format(jj, mm) }} – {{ lib }}</li>{% endfor %}</ul>
+    <p class="aide">Les fêtes mobiles (Pâques, Ascension, Pentecôte, Tabaski, Ramadan, Maouloud) se marquent jour par jour dans le calendrier.</p>
+    <button class="btn sec">Ajouter les fériés fixes pour {{ annee }}</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="grille2" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">
+<div class="carte">
+  <h3 style="margin-top:0">Récapitulatif {{ annee }}</h3>
+  <div class="tw"><table class="t compact">
+    <thead><tr><th>Mois</th><th class="num">Jours de classe</th><th class="num">Demi-journées</th></tr></thead>
+    <tbody>{% for r in recap %}
+      <tr class="{{ 'mois-actif' if r.mois == mois }}"><td><a href="{{ url_for('calendrier_scolaire', mois=r.mois) }}">{{ r.lib }}</a></td><td class="num">{{ r.jours }}</td><td class="num">{{ r.dj }}</td></tr>
+    {% endfor %}</tbody>
+    <tfoot><tr><th>Total</th><th class="num">{{ recap|sum(attribute='jours') }}</th><th class="num">{{ total_annee }}</th></tr></tfoot>
+  </table></div>
+</div>
+<div class="carte">
+  <h3 style="margin-top:0">Exceptions enregistrées ({{ exc|length }})</h3>
+  {% if exc %}
+  <div class="tw" style="max-height:420px;overflow:auto"><table class="t compact">
+    <thead><tr><th>Date</th><th class="num">½ journées</th><th>Motif</th></tr></thead>
+    <tbody>{% for e in exc %}
+      <tr><td><a href="{{ url_for('calendrier_scolaire', mois=e.date[:7]) }}">{{ date_longue(e.date)|capitalize }}</a></td><td class="num">{{ e.demi_journees }}</td><td>{{ e.motif or '—' }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="aide">Aucune exception : le calendrier suit la règle automatique.{% if modifiable %} Commencez par « Ajouter les fériés fixes ».{% endif %}</p>{% endif %}
+</div>
+</div>
+
+{% if modifiable %}
+<script>
+// aperçu immédiat de la couleur du jour quand on change sa valeur
+document.querySelectorAll('#f-cal .j select').forEach(function (s) {
+  s.addEventListener('change', function () {
+    var j = s.closest('.j'), n = s.value === 'auto' ? j.dataset.defaut : s.value;
+    j.classList.remove('d0', 'd1', 'd2'); j.classList.add('d' + n);
+    j.classList.toggle('exc', s.value !== 'auto');
+    var b = j.querySelector('.dj'); if (b) b.textContent = n + ' ½j';
+  });
+});
+</script>
+{% endif %}
+{% endblock %}

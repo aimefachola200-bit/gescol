@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block titre %}Classes{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Classes</h1><p class="sous">{{ classes|length }} classe(s)</p></div>
+  {% if peut('classes') %}<a class="btn" href="{{ url_for('classe_form') }}">+ Nouvelle classe</a>{% endif %}
+</div>
+<div class="tw"><table class="t">
+  <tr><th>Classe</th><th>Niveau</th><th>Cycle</th><th class="num">Effectif</th><th class="num">Scolarité</th><th></th></tr>
+  {% for c in classes %}
+  <tr><td><a href="{{ url_for('classe_detail', cid=c.id) }}"><b>{{ c.nom }}</b></a></td><td>{{ c.niveau }}</td>
+      <td>{{ 'Maternelle' if c.niveau.startswith('Maternelle') else ('Primaire' if c.niveau in ['CI','CP','CE1','CE2','CM1','CM2'] else 'Secondaire') }}</td>
+      <td class="num">{{ c.effectif }}</td><td class="num">{{ fcfa(c.frais_scolarite) }}</td>
+      <td class="num">{% if peut('classes') %}<a class="btn sec petit" href="{{ url_for('classe_form', cid=c.id) }}">Modifier</a>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="6" class="gris">Aucune classe.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}{% block titre %}Fiche de carrière – {{ f.nom_complet }}{% endblock %}
+{% block contenu %}
+<style>
+.car-sections{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+.car-sections .carte{margin:0}
+.car-sections h2{font-size:16px;margin:0 0 8px;color:var(--bleu)}
+.car-sections dl.info{grid-template-columns:minmax(150px,45%) 1fr}
+.car-prop td,.car-prop th{font-size:14px}
+</style>
+<div class="entete">
+  <div><h1>Fiche individuelle de carrière</h1>
+    <p class="sous"><b>{{ f.nom_complet }}</b> · {{ f.fonction }}{% if f.grade %} · grade {{ f.grade }}{% endif %}{% if f.categorie_lib %} · {{ f.categorie_lib }}{% endif %} · {{ ECOLE.nom }}</p></div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('carriere_fiche_pdf', pid=f.id) }}" target="_blank">PDF</a>
+    {% if directeur %}<a class="btn sec" href="{{ url_for('personnel_form', pid=f.id) }}">Modifier</a>
+    <a class="btn sec" href="{{ url_for('carriere_accueil') }}">← Liste</a>
+    {% elif ep_existe('espace_enseignant') %}<a class="btn sec" href="{{ url_for('espace_enseignant') }}">← Mon espace</a>{% endif %}
+  </div>
+</div>
+
+{% include "carriere_tableau_agent.html" %}
+
+{% if f.incomplet %}<div class="flash warning">Dossier incomplet — à renseigner : {{ f.manquants|join(', ') }}.{% if soi and not directeur %} Adressez-vous au directeur (vous pouvez proposer vos diplômes ci-dessous).{% endif %}</div>{% endif %}
+
+{% if f.propositions_d %}
+<div class="carte">
+  <h2 style="margin-top:0">{{ 'Proposition de l’agent à valider' if directeur else 'Votre proposition en attente de validation' }} <span class="aide">(envoyée le {{ date_fr(f.propose_le[:10]) }})</span></h2>
+  <div class="tw"><table class="t car-prop"><tr><th>Rubrique</th><th>Valeur actuelle</th><th>Valeur proposée</th></tr>
+    {% for lib, avant, apres in prop_lignes %}<tr><td>{{ lib }}</td><td>{{ avant if avant not in (none, '') else '—' }}</td>
+      <td>{% if (avant or '')|string != (apres or '')|string %}<b>{{ apres if apres not in (none, '') else '—' }}</b>{% else %}{{ apres if apres not in (none, '') else '—' }}{% endif %}</td></tr>{% endfor %}
+  </table></div>
+  {% if directeur %}
+  <form method="post" action="{{ url_for('carriere_valider', pid=f.id) }}" class="actions" style="margin-top:10px">
+    <button class="btn vert" name="action" value="valider">Valider et mettre à jour la fiche</button>
+    <button class="btn danger" name="action" value="rejeter" data-confirmer="Rejeter cette proposition ?">Rejeter</button>
+  </form>{% endif %}
+</div>
+{% endif %}
+
+<div class="car-sections">
+  {% for titre, champs in sections %}
+  <section class="carte" aria-label="{{ titre }}"><h2>{{ titre }}</h2>
+    <dl class="info">{% for lib, val in champs %}<dt>{{ lib }}</dt><dd>{{ val if val else '—' }}</dd>{% endfor %}</dl>
+  </section>
+  {% endfor %}
+</div>
+
+{% if soi %}
+<div class="carte" style="margin-top:18px">
+  <h2 style="margin-top:0">Compléter mes diplômes</h2>
+  <p class="aide">Vous pouvez proposer votre diplôme académique le plus élevé et vos diplômes professionnels (CEAP, CAP) avec leur année d'obtention. Le directeur valide la proposition ; les autres renseignements (grade, indices, dates de prise de service…) sont tenus par le directeur.</p>
+  <form method="post" action="{{ url_for('carriere_proposer', pid=f.id) }}">
+    <div class="ligne">
+      <div><label for="p-dip">Diplôme académique le plus élevé</label><input id="p-dip" name="diplome_academique" list="p-diplomes" maxlength="80" value="{{ saisie.diplome_academique or '' }}">
+        <datalist id="p-diplomes">{% for d in CAR_DIPLOMES %}<option value="{{ d }}">{% endfor %}</datalist></div>
+      <div><label for="p-dipa">Année d'obtention</label><input id="p-dipa" name="diplome_academique_annee" inputmode="numeric" maxlength="4" value="{{ saisie.diplome_academique_annee or '' }}"></div>
+      <div><label for="p-ceap">CEAP</label><select id="p-ceap" name="ceap"><option value="">—</option><option value="oui" {{ 'selected' if saisie.ceap=='oui' }}>Oui</option><option value="non" {{ 'selected' if saisie.ceap=='non' }}>Non</option></select></div>
+      <div><label for="p-ceapa">Année du CEAP</label><input id="p-ceapa" name="ceap_annee" inputmode="numeric" maxlength="4" value="{{ saisie.ceap_annee or '' }}"></div>
+      <div><label for="p-cap">CAP</label><select id="p-cap" name="cap"><option value="">—</option><option value="oui" {{ 'selected' if saisie.cap=='oui' }}>Oui</option><option value="non" {{ 'selected' if saisie.cap=='non' }}>Non</option></select></div>
+      <div><label for="p-capa">Année du CAP</label><input id="p-capa" name="cap_annee" inputmode="numeric" maxlength="4" value="{{ saisie.cap_annee or '' }}"></div>
+    </div>
+    <div class="actions" style="margin-top:10px"><button class="btn">Envoyer au directeur</button></div>
+  </form>
+</div>
+{% endif %}
+<p class="aide">Anciennetés arrêtées au {{ f.reference.strftime('%d/%m/%Y') }} (jour inclus), en années et mois révolus. Retraite : date de naissance + 60 ans (grade A), 58 ans (grade B), 55 ans (grade C) ; si seule l'année de naissance est connue, 31/12 de l'année correspondante.</p>
+{% endblock %}

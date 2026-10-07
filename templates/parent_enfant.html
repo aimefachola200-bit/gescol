@@ -1,0 +1,50 @@
+{% extends "base.html" %}{% block titre %}{{ i.e.prenoms }}{% endblock %}
+{% block contenu %}
+{% set e = i.e %}
+<div class="entete">
+  <div><h1>{{ e.prenoms }} {{ e.nom }}</h1><p class="sous">{{ i.cl.nom if i.cl else '' }} · matricule {{ e.matricule }} · {{ ANNEE }}</p></div>
+  <a class="btn sec" href="{{ url_for('parent_accueil') }}">← Mes enfants</a>
+</div>
+
+<h2>Scolarité</h2>
+<div class="grille">
+  <div class="kpi"><div class="l">Montant de l'année</div><div class="v">{{ fcfa(i.du) }}</div></div>
+  <div class="kpi"><div class="l">Déjà payé</div><div class="v vert">{{ fcfa(i.paye) }}</div></div>
+  <div class="kpi"><div class="l">Reste à payer</div><div class="v {{ 'rouge' if i.reste else 'vert' }}">{{ fcfa(i.reste) if i.reste else 'Soldé' }}</div>
+    {% if i.reste and paiement_actif %}<a class="btn" style="margin-top:8px" href="{{ url_for('parent_payer', eid=e.id) }}">Payer en ligne (Mobile Money, carte)</a>{% endif %}</div>
+</div>
+{% if paiements %}
+<div class="tw"><table class="t">
+  <tr><th>Date</th><th>Reçu</th><th>Mode</th><th class="num">Montant</th><th></th></tr>
+  {% for p in paiements %}
+  <tr><td>{{ date_fr(p.date_paiement) }}</td><td>{{ p.numero_recu }}</td><td>{{ MODES_PAIEMENT.get(p.mode, p.mode) }}</td>
+    <td class="num">{{ fcfa(p.montant) }}</td><td class="num"><a class="btn sec petit" href="{{ url_for('parent_recu', pid=p.id) }}" target="_blank">Reçu PDF</a></td></tr>
+  {% endfor %}
+</table></div>
+{% endif %}
+
+<h2>Résultats</h2>
+{% if resultats %}
+<div class="tw"><table class="t">
+  <tr><th>Période</th>{% if i.cl.cycle != 'maternelle' %}<th class="num">Moyenne</th><th>Rang</th><th>Mention</th>{% endif %}<th>{{ 'Bilan' if i.cl.cycle=='maternelle' else 'Décision' }}</th><th>Observation</th><th></th></tr>
+  {% for n, per, r, st in resultats %}
+  <tr><td>{{ per }}</td>
+    {% if i.cl.cycle != 'maternelle' %}<td class="num"><b>{{ '%.2f'|format(r.moyenne) if r.moyenne is not none else '—' }}</b></td><td>{{ r.rang_texte }}</td><td>{{ r.mention }}</td>{% endif %}
+    <td><span class="badge {{ 'ok' if r.admis else 'ko' }}">{{ r.decision }}</span></td>
+    <td class="aide">{{ r.details.observation or '' }}</td>
+    <td class="num"><a class="btn sec petit" target="_blank" href="{{ url_for('parent_bulletin', eid=e.id, p=n) }}">{{ 'Livret' if i.cl.cycle=='maternelle' else 'Bulletin' }} PDF</a></td></tr>
+  {% endfor %}
+</table></div>
+{% else %}<div class="carte gris">Aucun bulletin n'a encore été publié par l'école pour cette année.</div>{% endif %}
+
+<h2>Absences et retards</h2>
+<p class="sous">{{ i.absences.absent }} absence(s) dont {{ i.absences.justifie }} justifiée(s) · {{ i.absences.retard }} retard(s) depuis la rentrée.</p>
+{% if absences %}
+<div class="tw"><table class="t">
+  <tr><th>Date</th><th>Type</th><th>Motif</th><th>Justifiée</th></tr>
+  {% for a in absences %}<tr><td>{{ date_longue(a.date) }}</td><td>{{ 'Absence' if a.statut=='absent' else 'Retard' }}</td><td>{{ a.motif or '' }}</td>
+    <td>{% if a.justifie %}<span class="badge ok">oui</span>{% else %}<span class="badge att">non</span>{% endif %}</td></tr>{% endfor %}
+</table></div>
+<p class="aide">Pour justifier une absence, envoyez un message à l'école depuis l'onglet <a href="{{ url_for('parent_messages') }}">Messages</a>.</p>
+{% endif %}
+{% endblock %}

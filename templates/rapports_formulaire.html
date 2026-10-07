@@ -1,0 +1,193 @@
+{% extends "base.html" %}{% block titre %}{{ info.court }} {{ annee }}{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<style>
+.rp-champs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 16px}
+.rp-champs .long{grid-column:1/-1}
+.rp-champs label{display:block;font-size:13px;color:#344054;margin-bottom:3px}
+.rp-champs .num{font-weight:700;color:#1F4E79;margin-right:4px}
+.rp-champs input,.rp-champs select{width:100%}
+.rp-sous{grid-column:1/-1;font-weight:600;color:#1F4E79;margin-top:4px}
+.rp input::placeholder{color:#344054;opacity:.8}
+.rp .manuel{background:#FFFAEB!important;border-color:#E9A23B!important}
+table.rp-t{min-width:640px;border-collapse:collapse}
+table.rp-t th{font-size:11.5px;text-transform:none;letter-spacing:0;text-align:center;background:#1F4E79;color:#fff;border:1px solid #fff;padding:4px}
+table.rp-t td{padding:2px;border:1px solid #EAECF0;text-align:center}
+table.rp-t td.lib{text-align:left;font-size:12.5px;min-width:150px;padding:4px 6px;background:#F9FAFB}
+table.rp-t input,table.rp-t select{width:100%;min-width:42px;padding:4px 3px;text-align:center}
+table.rp-t input.calc{background:#EEF2F6;font-weight:700;border-color:#EEF2F6}
+table.rp-p input,table.rp-p select{min-width:62px}
+table.rp-p input.nom{min-width:170px;text-align:left}
+.rp-alertes li{margin:2px 0}
+.rp-alertes .danger{color:#B42318}.rp-alertes .warning{color:#B54708}
+.rp-legende{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--gris);margin:4px 0 10px}
+.rp-legende i{display:inline-block;width:22px;height:14px;border:1px solid #D0D5DD;border-radius:3px;vertical-align:middle;margin-right:4px}
+.rp-ann table{font-size:12.5px}
+</style>
+
+<div class="entete">
+  <div><h1>{{ info.titre }}</h1><p class="sous">Année scolaire {{ annee }} · modèle officiel « {{ info.fiche }} »</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('rapports_accueil', annee=annee) }}">← Tous les rapports</a>
+    <a class="btn sec petit" href="{{ url_for('rapports_formulaire', doc=soeur, annee=annee) }}">↔ {{ RAPPORTS_DOCS[soeur].court }}</a></div>
+</div>
+
+<nav class="onglets" aria-label="Documents">{% for d, i in RAPPORTS_DOCS.items() %}<a href="{{ url_for('rapports_formulaire', doc=d, annee=annee) }}" class="{{ 'actif' if d == doc }}">{{ i.court }}</a>{% endfor %}</nav>
+
+<form method="get" class="filtres">
+  <label for="rp-annee">Année scolaire<br><select id="rp-annee" name="annee" onchange="this.form.submit()">
+    {% for a in annees %}<option value="{{ a }}" {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+</form>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Élèves inscrits</div><div class="v">{{ ind.eleves if ind.eleves is defined else '—' }}</div><div class="d">{{ ind.classes if ind.classes is defined else '—' }} classe(s) du cycle</div></div>
+  <div class="kpi"><div class="l">Personnel enseignant</div><div class="v">{{ ind.personnel if ind.personnel is defined else '—' }}</div><div class="d">état nominatif : {{ n_pers }} ligne(s)</div></div>
+  <div class="kpi"><div class="l">Corrections manuelles</div><div class="v">{{ over|length }}</div><div class="d">{% if stock.maj %}enregistré le {{ stock.maj[:16] }}{% else %}non enregistré{% endif %}</div></div>
+  <div class="kpi"><div class="l">Contrôles</div><div class="v">{{ controles|length }}</div><div class="d">{{ 'point(s) à vérifier' if controles else 'aucune incohérence' }}</div></div>
+</div>
+
+{% if not active %}<div class="flash info">Année {{ annee }} : les effectifs ne sont pas historisés dans GESCOL ; les valeurs proposées sont celles du dernier enregistrement de ce rapport (sinon à saisir).</div>{% endif %}
+{% if controles %}<div class="carte"><h3 style="margin-top:0">Contrôles de cohérence</h3><ul class="rp-alertes">{% for niv, m in controles %}<li class="{{ niv }}">{{ '⛔' if niv == 'danger' else '⚠' }} {{ m }}</li>{% endfor %}</ul></div>{% endif %}
+
+{% macro val_in(k, typ='texte', classe='') -%}
+{%- set a = auto.get(k, '') -%}
+<input name="{{ k }}" id="f-{{ k|replace('.', '-') }}" value="{{ over.get(k, '') }}" placeholder="{{ a }}" class="{{ classe }}" data-auto="{{ a }}"
+  {% if typ in ('nombre','annee') %}inputmode="numeric"{% endif %} {% if typ == 'email' %}type="email"{% endif %}
+  title="{% if k in origine %}Repris de : {{ origine[k] }}{% elif a %}Valeur calculée par GESCOL : {{ a }}{% else %}À saisir{% endif %}">
+{%- endmacro %}
+{% macro sel_in(k, options, lab='') -%}
+{%- set a = auto.get(k, '') -%}
+<select name="{{ k }}" id="f-{{ k|replace('.', '-') }}" data-auto="{{ a }}" {% if lab %}aria-label="{{ lab }}"{% endif %}>
+  <option value="">{{ ('Auto : ' ~ a) if a else '—' }}</option>
+  {% for o in options %}<option {{ 'selected' if over.get(k) == o }}>{{ o }}</option>{% endfor %}
+  <option value="-" {{ 'selected' if over.get(k) == '-' }}>(sans objet)</option>
+</select>
+{%- endmacro %}
+
+<form method="post" class="rp" id="rp-form" autocomplete="off" action="{{ url_for('rapports_formulaire', doc=doc, annee=annee) }}">
+{% call M.barre_doc(sauver=False, charger=False, reinit=False) %}
+  <button type="submit" name="action" value="sauver" class="btn vert petit">💾 Sauvegarder</button>
+  <a class="btn sec petit" href="{{ url_for('rapports_formulaire', doc=doc, annee=annee) }}" title="Recharger la version enregistrée (abandonne les modifications non sauvegardées)">📂 Charger</a>
+  <button type="submit" name="action" value="reinit" class="btn sec petit" data-confirmer="Effacer toutes les corrections manuelles de ce rapport et revenir aux valeurs calculées par GESCOL ?">↺ Réinitialiser</button>
+  <span class="sep"></span>
+  <button type="submit" name="action" value="pdf" class="btn petit" formtarget="_blank">📄 Enregistrer et PDF</button>
+  <button type="submit" name="action" value="pdf_annexe" class="btn sec petit" formtarget="_blank" title="PDF officiel + page d'annexe GESCOL (résultats, présence, âges, cantine)">📄 PDF + annexe</button>
+  <a class="btn sec petit" href="{{ url_for('rapports_pdf', doc=doc, vierge=1) }}" target="_blank">📄 PDF vierge</a>
+  <a class="btn sec petit" href="{{ url_for('rapports_excel', doc=doc, annee=annee) }}">📊 Excel</a>
+  <a class="btn sec petit" href="#televersement">⬆ Téléverser</a>
+{% endcall %}
+
+<p class="aide">Les valeurs en gris sont <b>calculées par GESCOL</b> (ou reprises d'un autre rapport) ; tapez dans une case pour la
+<b>corriger</b> (case jaune), videz-la pour revenir au calcul, tapez « - » pour une case sans objet. Les totaux (T, ENSEMBLE, a+b) se calculent seuls.</p>
+<div class="rp-legende" aria-hidden="true"><span><i style="background:#fff"></i>valeur calculée</span><span><i style="background:#FFFAEB;border-color:#E9A23B"></i>corrigée à la main</span><span><i style="background:#EEF2F6"></i>total automatique</span></div>
+
+{% for s in sections %}
+<section class="carte" id="s-{{ s.id }}">
+  <h2 style="margin-top:0;font-size:17px">{{ s.titre }}</h2>
+  {% if s.annexe %}<p class="aide">Cette rubrique ne figure pas sur le modèle officiel : elle alimente la page d'annexe GESCOL (bouton « PDF + annexe »).</p>{% endif %}
+  {% set champs_ouverts = namespace(v=false) %}
+  <div class="rp-champs">
+  {% for b in s.blocs %}
+    {% if b.t == 'champ' and b.type == 'titre' %}<div class="rp-sous">{{ b.lib_titre }}</div>
+    {% elif b.t == 'champ' %}
+      <div class="{{ 'long' if b.larg == 'long' }}"><label for="f-{{ b.k|replace('.', '-') }}">{% if b.num %}<span class="num">{{ b.num }}</span>{% endif %}{{ b.lib }}</label>
+      {% if b.type == 'choix' %}{{ sel_in(b.k, b.options) }}{% else %}{{ val_in(b.k, b.type) }}{% endif %}</div>
+    {% elif b.t == 'tableau' %}
+      <div class="long"><div class="tw"><table class="rp-t">
+        <thead>
+          <tr><th rowspan="{{ 2 if b.sous else 1 }}"></th>{% for gr in b.groupes %}<th {% if b.sous %}colspan="{{ b.sous|length }}"{% endif %}>{{ gr.l }}</th>{% endfor %}</tr>
+          {% if b.sous %}<tr>{% for gr in b.groupes %}{% for sc, sl in b.sous %}<th>{{ sl }}</th>{% endfor %}{% endfor %}</tr>{% endif %}
+        </thead>
+        <tbody>{% for lc, llib in b.lignes %}<tr><td class="lib">{{ llib }}</td>
+          {% for gr in b.groupes %}{% for sc in (b.sous|map('first')|list if b.sous else [none]) %}
+            {% set k = b.k ~ '.' ~ lc ~ '.' ~ gr.c ~ (('_' ~ sc) if sc else '') %}
+            <td>{% if k in calc %}<input class="calc" readonly tabindex="-1" id="f-{{ k|replace('.', '-') }}" value="{{ v.get(k, '') }}" data-somme="{{ calc[k]|join(' ') }}" aria-label="{{ llib }} – {{ gr.l }} {{ sc or '' }} (total)">
+            {% else %}{{ val_in(k, 'nombre') }}{% endif %}</td>
+          {% endfor %}{% endfor %}</tr>{% endfor %}</tbody>
+      </table></div></div>
+    {% elif b.t == 'structure_ep' %}
+      <div class="long"><div class="rp-sous">{{ b.titre }}</div><div class="tw"><table class="rp-t">
+        <thead><tr><th></th>{% for n in niv_ep %}<th>{{ n }}</th>{% endfor %}<th>Nombre de salles utilisées</th></tr></thead>
+        <tbody>
+          <tr><td class="lib">Simple</td>{% for n in niv_ep %}<td>{{ val_in('sp.simple.' ~ n, 'nombre') }}</td>{% endfor %}<td>{{ val_in('sp.simple.salles', 'nombre') }}</td></tr>
+          <tr><td class="lib">Jumelée</td><td colspan="6" style="text-align:left">{% for c, lib in b.jumelees %}<label style="display:inline-block;margin:2px 6px;font-size:12px">{{ lib }} <span style="display:inline-block;width:60px">{{ val_in('sp.jumelee.' ~ c, 'nombre') }}</span></label>{% endfor %}</td><td>{{ val_in('sp.jumelee.salles', 'nombre') }}</td></tr>
+          <tr><td class="lib">Multigrade</td>{% for n in niv_ep %}<td>{{ val_in('sp.multi.' ~ n, 'nombre') }}</td>{% endfor %}<td>{{ val_in('sp.multi.salles', 'nombre') }}</td></tr>
+        </tbody></table></div></div>
+    {% elif b.t == 'personnel' %}
+      <div class="long">
+        <label for="f-pers_n">Nombre de lignes de l'état nominatif (au moins {{ b.min }}, comme le modèle)</label>
+        <div class="ligne" style="max-width:340px"><input id="f-pers_n" name="pers_n" value="{{ over.get('pers_n', '') }}" placeholder="{{ auto.get('pers_n', b.min) }}" data-auto="{{ auto.get('pers_n', b.min) }}" inputmode="numeric"></div>
+        <p class="aide">Ajouter des lignes : augmentez ce nombre puis « Sauvegarder ». Fonction : « Directeur »/« Directrice » ou « Adjoint ». {% if b.cols|selectattr('c','equalto','cours')|list %}Cours tenus : ex. « CE1, CE2 ».{% endif %}</p>
+        <datalist id="dl-statuts">{% for st in statuts_agent %}<option value="{{ st }}">{% endfor %}</datalist>
+        <div class="tw"><table class="rp-t rp-p">
+          <thead><tr><th>N°</th>{% for col in b.cols %}<th>{{ col.l }}</th>{% endfor %}</tr></thead>
+          <tbody>{% for i in range(1, n_pers + 1) %}<tr><td class="lib" style="min-width:30px">{{ i }}</td>
+            {% for col in b.cols %}{% set k = 'pers.' ~ i ~ '.' ~ col.c %}<td>
+              {% if col.type == 'choix' %}{{ sel_in(k, col.options, col.l ~ ' ligne ' ~ i) }}
+              {% else %}{%- set a = auto.get(k, '') -%}<input name="{{ k }}" value="{{ over.get(k, '') }}" placeholder="{{ a }}" data-auto="{{ a }}" class="{{ 'nom' if col.c == 'nom' }}" aria-label="{{ col.l }} ligne {{ i }}" {% if col.liste %}list="dl-statuts"{% endif %} title="{% if k in origine %}Repris de : {{ origine[k] }}{% elif a %}GESCOL : {{ a }}{% endif %}">{% endif %}
+            </td>{% endfor %}</tr>{% endfor %}</tbody>
+        </table></div>
+      </div>
+    {% endif %}
+  {% endfor %}
+  </div>
+</section>
+{% endfor %}
+<div class="actions" style="margin-bottom:16px"><button type="submit" name="action" value="sauver" class="btn vert">💾 Sauvegarder le rapport</button></div>
+</form>
+
+<section class="carte rp-ann" id="annexe">
+  <h2 style="margin-top:0;font-size:17px">Indicateurs GESCOL (annexe facultative du PDF)</h2>
+  {% if ind.inactive %}<p class="aide">Indicateurs disponibles uniquement pour l'année active.</p>{% else %}
+  <div class="grille2">
+    <div><h3>Résultats scolaires (dernière évaluation)</h3>
+      {% if ind.resultats %}<div class="tw"><table class="t compact"><thead><tr><th>Classe</th><th>Évaluation</th><th>Maîtrise G/F/T</th><th>Taux</th><th>Admis (bilan)</th></tr></thead><tbody>
+      {% for r in ind.resultats %}<tr><td>{{ r.classe }}</td><td>{{ r.evaluation }}</td><td>{{ r.reussis.G }}/{{ r.reussis.F }}/{{ r.reussis.T }}</td><td>{{ '%.1f'|format(r.taux.T)|replace('.', ',') }} %</td><td>{{ r.admis.T }}</td></tr>{% endfor %}
+      </tbody></table></div>{% else %}<p class="aide">Aucune évaluation saisie cette année.</p>{% endif %}</div>
+    <div><h3>Taux de présence (registre)</h3>
+      {% if ind.presence %}<div class="tw"><table class="t compact"><thead><tr><th>Classe</th><th>Effectif</th><th>Absences</th><th>Taux</th></tr></thead><tbody>
+      {% for p in ind.presence %}<tr><td>{{ p.classe }}</td><td>{{ p.effectif }}</td><td>{{ p.absences }}</td><td>{{ ('%.1f'|format(p.taux)|replace('.', ',') ~ ' %') if p.taux is not none else '—' }}</td></tr>{% endfor %}
+      </tbody></table></div>{% else %}<p class="aide">Pas de registre de présence.</p>{% endif %}</div>
+    {% if ind.cep_blanc %}<div><h3>CEP blanc</h3><div class="tw"><table class="t compact"><thead><tr><th>Session</th><th>Présents</th><th>Maîtrise</th><th>Taux</th></tr></thead><tbody>
+      {% for s in ind.cep_blanc %}<tr><td>N° {{ s.numero }} {{ s.centre }}</td><td>{{ s.presents.T }}</td><td>{{ s.maitrise.T }}</td><td>{{ '%.1f'|format(s.taux.T)|replace('.', ',') }} %</td></tr>{% endfor %}
+      </tbody></table></div></div>{% endif %}
+    <div><h3>Cantine</h3>
+      {% if ind.cantine %}<div class="tw"><table class="t compact"><thead><tr><th>Classe</th><th>Élèves</th><th>Repas payés</th><th>Montant</th></tr></thead><tbody>
+      {% for x in ind.cantine %}<tr><td>{{ x.classe }}</td><td>{{ x.eleves }}</td><td>{{ x.repas }}</td><td>{{ fcfa(x.montant) }}</td></tr>{% endfor %}
+      </tbody></table></div>{% else %}<p class="aide">Aucune donnée de cantine.</p>{% endif %}</div>
+  </div>
+  {% endif %}
+</section>
+
+<section class="carte" id="televersement">
+  <h2 style="margin-top:0;font-size:17px">Rapport officiel signé (scan) – archive {{ annee }}</h2>
+  {% if fichiers %}<ul>{% for f in fichiers %}<li><a href="{{ url_for('rapports_fichier', fid=f.id) }}" target="_blank">📎 {{ f.nom_origine }}</a>
+    <span class="aide">{{ f.televerse_le[:16] }}{% if f.commentaire %} – {{ f.commentaire }}{% endif %}</span>
+    <a class="btn sec petit" href="{{ url_for('rapports_fichier', fid=f.id, telecharger=1) }}">Télécharger</a>
+    <form method="post" action="{{ url_for('rapports_fichier_supprimer', fid=f.id) }}" style="display:inline"><input type="hidden" name="suivant" value="{{ url_for('rapports_formulaire', doc=doc, annee=annee) }}#televersement"><button class="btn danger petit" data-confirmer="Supprimer ce fichier de l'archive ?">Supprimer</button></form></li>{% endfor %}</ul>
+  {% else %}<p class="aide">Aucun fichier archivé pour ce rapport et cette année.</p>{% endif %}
+  <form method="post" action="{{ url_for('rapports_televerser', doc=doc, annee=annee) }}" enctype="multipart/form-data" class="grille2">
+    <div><label for="rp-fic">Fichier (PDF, JPG ou PNG, 15 Mo au plus)</label><input id="rp-fic" type="file" name="fichier" accept="application/pdf,image/jpeg,image/png" required></div>
+    <div><label for="rp-com">Commentaire (facultatif)</label><input id="rp-com" name="commentaire" maxlength="200" placeholder="ex. version visée par le CCS"></div>
+    <div><button class="btn petit">⬆ Téléverser</button></div>
+  </form>
+</section>
+
+<script>
+(function () {
+  var f = document.getElementById('rp-form'); if (!f) return;
+  function num(el) { var s = (el.value || el.placeholder || '').trim(); return /^\d+$/.test(s) ? parseInt(s, 10) : null; }
+  function marquer(el) { var m = el.value !== '' && el.value !== el.dataset.auto; el.classList.toggle('manuel', m); }
+  var calcs = Array.prototype.slice.call(f.querySelectorAll('input[data-somme]'));
+  function totaux() {
+    for (var passe = 0; passe < 3; passe++) calcs.forEach(function (c) {
+      var t = 0, vu = false;
+      c.dataset.somme.split(' ').forEach(function (k) { var e = document.getElementById('f-' + k.replace(/\./g, '-')); if (e) { var n = num(e); if (n !== null) { t += n; vu = true; } } });
+      c.value = vu ? t : '';
+    });
+  }
+  f.querySelectorAll('input[data-auto],select[data-auto]').forEach(marquer);
+  f.addEventListener('input', function (e) { if (e.target.dataset.auto !== undefined) marquer(e.target); totaux(); });
+  f.addEventListener('change', function (e) { if (e.target.dataset.auto !== undefined) marquer(e.target); });
+})();
+</script>
+{% endblock %}

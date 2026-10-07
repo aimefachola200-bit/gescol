@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block titre %}Absences{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Absences et retards – {{ ANNEE }}</h1><p class="sous">{{ jours_appel }} jour(s) d'appel enregistré(s) · élèves ayant au moins une absence ou un retard</p></div>
+  <a class="btn sec" href="{{ url_for('appel_accueil') }}">Registre d'appel</a>
+</div>
+<form class="filtres"><select name="classe" onchange="this.form.submit()"><option value="">Toutes les classes</option>
+  {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if c.id==cid }}>{{ c.nom }}</option>{% endfor %}</select></form>
+<div class="tw"><table class="t">
+  <tr><th>Élève</th><th>Classe</th><th class="num">Absences</th><th class="num">dont justifiées</th><th class="num">Retards</th><th>Dernière</th><th></th></tr>
+  {% for e in lst %}
+  <tr><td><a href="{{ url_for('eleve_detail', eid=e.id) }}"><b>{{ e.nom }}</b> {{ e.prenoms }}</a></td><td>{{ e.classe_nom }}</td>
+    <td class="num {{ 'rouge' if e.absences >= 5 }}"><b>{{ e.absences }}</b></td><td class="num">{{ e.justifiees }}</td><td class="num">{{ e.retards }}</td>
+    <td>{{ date_fr(e.derniere) }}</td><td class="num"><a class="btn sec petit" href="{{ url_for('absences_eleve_page', eid=e.id) }}">Détail</a></td></tr>
+  {% else %}<tr><td colspan="7" class="gris">Aucune absence enregistrée.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

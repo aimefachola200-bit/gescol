@@ -1,0 +1,69 @@
+{% extends "base.html" %}{% block titre %}Mon espace{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<style>
+.ens-classes{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.ens-classe{background:#fff;border:1px solid var(--bord);border-radius:12px;padding:14px 16px}
+.ens-classe h2{margin:0 0 2px;font-size:19px}
+.ens-classe .liens{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.ens-sig{max-width:460px}
+</style>
+<div class="entete">
+  <div><h1>Mon espace</h1>
+    <p class="sous">{{ g.user.nom }} · {{ ROLES[g.user.role] }} · {{ ECOLE.nom }} · {{ ANNEE }}</p></div>
+</div>
+{% if g.user.role == 'enseignant' and not affecte %}
+<div class="flash info">Aucune classe ne vous est encore affectée : toutes les classes de l'école sont affichées. Demandez à l'administration de vous affecter vos classes (menu Utilisateurs et affectations).</div>
+{% endif %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">{{ 'Mes classes' if affecte else 'Classes' }}</div><div class="v">{{ lignes|length }}</div></div>
+  <div class="kpi"><div class="l">Élèves</div><div class="v">{{ lignes|sum(attribute='n') }}</div>
+    <div class="d">{{ lignes|sum(attribute='f') }} filles · {{ lignes|sum(attribute='m') }} garçons</div></div>
+  <div class="kpi"><div class="l">Évaluations créées</div><div class="v">{{ lignes|sum(attribute='nb_ev') }}</div><div class="d">année {{ ANNEE }}</div></div>
+</div>
+
+{% if PUBLIQUE and carriere_moi is defined %}{% set f = carriere_moi() %}
+<section aria-labelledby="ma-carriere" style="margin-bottom:18px">
+  <div class="entete" style="margin-bottom:6px"><h2 id="ma-carriere" style="margin:0">Ma carrière (tableau d'affichage)</h2>
+    {% if f %}<div class="actions"><a class="btn petit" href="{{ url_for('carriere_fiche', pid=f.id) }}">Ma fiche de carrière</a>
+      <a class="btn sec petit" href="{{ url_for('carriere_fiche_pdf', pid=f.id) }}" target="_blank">PDF</a></div>{% endif %}</div>
+  {% if f %}
+  {% include "carriere_tableau_agent.html" %}
+  {% if f.propositions_d %}<p class="aide">Votre proposition de diplômes du {{ date_fr(f.propose_le[:10]) }} attend la validation du directeur.</p>
+  {% elif f.incomplet %}<p class="aide">Fiche incomplète ({{ f.manquants|join(', ')|lower }}) : complétez vos diplômes depuis <a href="{{ url_for('carriere_fiche', pid=f.id) }}">votre fiche</a> ; le reste est renseigné par le directeur.</p>{% endif %}
+  {% else %}
+  <div class="carte gris">Votre compte n'est pas encore lié à une fiche du personnel : demandez au directeur de faire le lien (fiche du personnel → « Compte utilisateur de l'agent ») pour voir ici votre grade, vos anciennetés et votre date de départ à la retraite.</div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if lignes %}
+<div class="ens-classes">
+  {% for x in lignes %}{% set c = x.c %}
+  <section class="ens-classe" aria-labelledby="cl-{{ c.id }}">
+    <h2 id="cl-{{ c.id }}">{{ c.nom }}</h2>
+    <div class="aide">{{ c.niveau }} · {{ x.n }} élève(s) ({{ x.f }} F, {{ x.m }} G){% if x.matieres %} · {{ x.matieres|join(', ') }}{% endif %}</div>
+    {% if c.titulaire_nom %}<div class="aide">{{ c.titulaire_titre or 'Titulaire' }} : {{ c.titulaire_nom }}</div>{% endif %}
+    <div class="liens">
+      {% if ep_existe('eval_accueil') and peut('evaluations') %}<a class="btn petit" href="{{ url_for('eval_accueil', classe=c.id) }}">Saisie des notes</a>{% endif %}
+      {% if ep_existe('notes_saisie') and peut('notes') %}<a class="btn sec petit" href="{{ url_for('notes_saisie', cid=c.id, p=1) }}">Notes par période</a>{% endif %}
+      {% if ep_existe('registre_accueil') and peut('registre') %}<a class="btn sec petit" href="{{ url_for('registre_accueil', classe=c.id) }}">Registre de présence</a>{% endif %}
+      {% if ep_existe('appel_classe') and peut('appel') %}<a class="btn sec petit" href="{{ url_for('appel_classe', cid=c.id, jour=aujourdhui) }}">Appel du jour</a>{% endif %}
+      {% if ep_existe('eval_statistiques') and peut('evaluations') %}<a class="btn sec petit" href="{{ url_for('eval_statistiques', classe=c.id) }}">Statistiques</a>{% endif %}
+      {% if ep_existe('bilan_annuel') and peut('evaluations') %}<a class="btn sec petit" href="{{ url_for('bilan_annuel', classe=c.id) }}">Bilan annuel</a>{% endif %}
+      {% if ep_existe('affichage_accueil') and peut('affichage') %}<a class="btn sec petit" href="{{ url_for('affichage_accueil', classe=c.id) }}">Tableau d'affichage</a>{% endif %}
+      {% if ep_existe('classe_detail') %}<a class="btn sec petit" href="{{ url_for('classe_detail', cid=c.id) }}">Liste de la classe</a>{% endif %}
+      {% if ep_existe('insc_photo') and peut('eleves') %}<a class="btn sec petit" href="{{ url_for('insc_photo', classe=c.id) }}">Photos</a>{% endif %}
+    </div>
+    {% if peut_signer and (g.user.role != 'enseignant' or affecte) %}
+    <details style="margin-top:10px"><summary>Ma signature de titulaire ({{ c.nom }})</summary>
+      <div class="ens-sig">{{ M.signature('classe:' ~ c.id ~ ':titulaire', 'Signature du titulaire – ' ~ c.nom) }}</div>
+      <p class="aide">Elle est apposée sur les documents de la classe (bulletins, relevés) qui prévoient la signature du titulaire.</p>
+    </details>{% endif %}
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+<div class="carte gris">Aucune classe n'est créée dans cette école.</div>
+{% endif %}
+{% endblock %}

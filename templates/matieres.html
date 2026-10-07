@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% block titre %}Matières{% endblock %}
+{% block contenu %}
+<h1>Référentiel des matières</h1>
+<p class="sous">Coefficients et modes de calcul utilisés pour les moyennes. {% if not peut('parametres') %}Lecture seule.{% endif %}</p>
+{% set ro = not peut('parametres') %}
+<form method="post">
+{% for titre, liste in [('Maternelle', mat), ('Primaire', prim), ('Secondaire', sec)] %}
+<h2>{{ titre }}</h2>
+<div class="tw"><table class="t">
+  <tr><th>Ordre</th><th>Code</th><th>Nom</th><th>Coef.</th><th>Mode de calcul</th><th class="c">Active</th></tr>
+  {% for m in liste %}
+  <tr><td style="width:70px"><input name="ordre_{{ m.id }}" value="{{ m.ordre }}" {{ 'disabled' if ro }}></td>
+    <td>{{ m.code }}</td>
+    <td><input name="nom_{{ m.id }}" value="{{ m.nom }}" {{ 'disabled' if ro }}></td>
+    <td style="width:80px"><input name="coef_{{ m.id }}" value="{{ '%g'|format(m.coefficient) }}" {{ 'disabled' if ro }}></td>
+    <td>{% if titre=='Primaire' %}<select name="mode_{{ m.id }}" {{ 'disabled' if ro }}>
+        {% for k,v in modes.items() %}<option value="{{ k }}" {{ 'selected' if k==m.mode_calcul }}>{{ v }}</option>{% endfor %}</select>
+        {% else %}<input type="hidden" name="mode_{{ m.id }}" value="standard"><span class="gris">{{ 'Appréciation A / ECA / NA' if titre=='Maternelle' else 'Moyenne pondérée' }}</span>{% endif %}</td>
+    <td class="c"><input type="checkbox" name="actif_{{ m.id }}" {{ 'checked' if m.actif }} {{ 'disabled' if ro }}></td></tr>
+  {% endfor %}
+</table></div>
+{% endfor %}
+{% if not ro %}
+<h2>Ajouter une matière</h2>
+<div class="carte filtres">
+  <select name="new_cycle"><option value="maternelle">Maternelle (domaine)</option><option value="primaire" selected>Primaire</option><option value="secondaire">Secondaire</option></select>
+  <input name="new_code" placeholder="Code (ex. INFO)" style="width:130px">
+  <input name="new_nom" placeholder="Nom de la matière" style="min-width:240px">
+  <input name="new_coef" placeholder="Coef." style="width:80px">
+  <select name="new_mode">{% for k,v in modes.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select>
+</div>
+<p class="aide">Au primaire le coefficient n'est pas utilisé (moyenne simple). Au secondaire, une matière sans note pour un élève (ex. Allemand pour un élève qui fait Espagnol) est simplement ignorée.</p>
+<button class="btn">Enregistrer</button>
+{% endif %}
+</form>
+{% endblock %}

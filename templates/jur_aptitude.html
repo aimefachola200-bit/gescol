@@ -1,0 +1,49 @@
+{% extends "base.html" %}{% block titre %}Visites d'aptitude et diplômes{% endblock %}
+{% block contenu %}
+<style>.ap-t td,.ap-t th{white-space:nowrap;font-size:13px}.ap-t td.l{white-space:normal;min-width:140px}
+.onglets a .n{font-size:12px;color:var(--gris);margin-left:3px}</style>
+<div class="entete">
+  <div><h1>Visites d'aptitude et diplômes</h1>
+    <p class="sous">{{ nb_ens }} enseignant(s) (directeurs, adjoints, enseignants des écoles) · année {{ a.annee }}</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_aptitude', export='pdf', liste=liste, **qs) }}" target="_blank">PDF (liste affichée)</a>
+    <a class="btn sec" href="{{ url_for('jur_aptitude', export='xlsx', **qs) }}">Excel (toutes les listes)</a>
+  </div>
+</div>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Visite d'aptitude effectuée</div><div class="v">{{ st.n }}</div>
+    <div class="d">{{ (100 * st.n / nb_ens)|round(1) if nb_ens else 0 }} % des enseignants · H : {{ st.h }} · F : {{ st.f }}</div></div>
+  <div class="kpi"><div class="l">Réussite (note ≥ 10)</div><div class="v">{{ st.taux if st.taux is not none else '—' }}{% if st.taux is not none %} %{% endif %}</div>
+    <div class="d">{{ st.reussis }} sur {{ st.notes }} noté(s)</div></div>
+  <div class="kpi"><div class="l">Moyenne des notes</div><div class="v">{{ st.moyenne if st.moyenne is not none else '—' }}</div><div class="d">sur 20</div></div>
+  <div class="kpi"><div class="l">Sans diplôme professionnel</div><div class="v {{ 'rouge' if compte.autres + compte.aucun }}">{{ compte.autres + compte.aucun }}</div>
+    <div class="d">CAP : {{ compte.cap_ep + compte.cap_em }} · CEAP : {{ compte.ceap_ep + compte.ceap_em }}</div></div>
+</div>
+
+{% include "jur_personnel_filtres.html" with context %}
+
+<nav class="onglets" aria-label="Listes">
+  {% for k, lib in listes %}<a href="{{ url_for('jur_aptitude', liste=k, **qs) }}" class="{{ 'actif' if liste == k }}">{{ lib }}<span class="n">({{ compte[k] }})</span></a>{% endfor %}
+</nav>
+
+{% if vide %}
+<div class="carte"><p>Aucun enseignant transmis pour {{ a.annee }} : importez les fichiers de transmission des écoles (menu « Transmissions »).</p></div>
+{% elif not lignes %}
+<div class="carte"><p class="gris">Aucun enseignant dans cette liste avec ces filtres.</p></div>
+{% else %}
+<div class="tw"><table class="t ap-t">
+  <tr>{% for c in cols %}<th>{{ c }}</th>{% endfor %}</tr>
+  {% for l in lignes %}{% set f = fiches[loop.index0] %}
+  <tr>{% for v in l %}
+    {% if loop.index0 == 1 %}<td class="l"><a href="{{ url_for('jur_personnel_fiche', cle=f.cle, annee=a.annee, retour=request.full_path) }}">{{ v }}</a></td>
+    {% elif loop.index0 in (4, 5) %}<td class="l">{{ v or '—' }}</td>
+    {% elif loop.index0 == 11 and f.note_apt is not none %}<td><span class="badge {{ 'ok' if f.note_apt >= 10 else 'ko' }}">{{ v }}</span></td>
+    {% else %}<td>{{ v if v not in (none, '') else '—' }}</td>{% endif %}
+  {% endfor %}</tr>
+  {% endfor %}
+</table></div>
+{% endif %}
+<p class="aide">Réussite à la visite d'aptitude : note supérieure ou égale à 10/20. CAP / CEAP « EP » ou « EM » : type déclaré par l'école,
+  à défaut type de l'école (maternelle et espace enfance → EM). « Diplôme académique seul » : ni CEAP ni CAP, mais un diplôme
+  académique renseigné ; « aucun diplôme renseigné » : ni CEAP, ni CAP, ni diplôme académique.</p>
+{% endblock %}

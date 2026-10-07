@@ -1,0 +1,97 @@
+{% extends "base.html" %}{% block titre %}Fiche CEP – {{ e.nom }} {{ e.prenoms }}{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<style>
+.btn.vert{color:#fff} /* .vert (couleur de texte) l'emporte sinon sur .btn */
+.cep-g{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:16px}
+@media (max-width:820px){.cep-g{grid-template-columns:1fr}}
+.cep-ro{background:#F9FAFB;border:1px solid #EAECF0;border-radius:8px;padding:10px 12px;font-size:13.5px}
+.cep-ro dl{display:grid;grid-template-columns:160px 1fr;gap:4px 10px;margin:0}
+.cep-ro dt{font-weight:600;color:#475467}
+.cep-radio{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.cep-radio label{font-weight:400;display:inline-flex;gap:5px;align-items:center}
+.cep-nav{display:flex;gap:6px;flex-wrap:wrap}
+</style>
+<div class="entete">
+  <div><h1>Fiche d'inscription au CEP</h1>
+  <p class="sous"><b>{{ e.nom }} {{ e.prenoms }}</b> · {{ cl.nom }}{% if rang %} · élève {{ rang }} sur {{ total }}{% endif %}</p></div>
+  <div class="actions cep-nav">
+    {% if prec %}<a class="btn sec petit" href="{{ url_for('cep_fiche', eid=prec) }}">← Précédent</a>{% endif %}
+    {% if suiv %}<a class="btn sec petit" href="{{ url_for('cep_fiche', eid=suiv) }}">Suivant →</a>{% endif %}
+    <a class="btn sec petit" href="{{ url_for('cep_fiche_pdf', eid=e.id) }}" target="_blank" rel="noopener">📄 PDF</a>
+    <a class="btn sec petit" href="{{ url_for('cep_accueil', classe=cl.id) }}">← Liste</a>
+  </div>
+</div>
+
+<form method="post" autocomplete="off">
+<div class="cep-g">
+<div>
+  <div class="carte">
+    <h2>Examen</h2>
+    <div class="grille-id">
+      <div><label for="f-session">Session de</label><input id="f-session" name="session" value="{{ v.session }}" maxlength="40"></div>
+      <div><label for="f-centre">Centre de</label><input id="f-centre" name="centre" value="{{ v.centre }}" maxlength="80"></div>
+      <div><label for="f-option">Option</label><select id="f-option" name="option">{% for o in options %}<option {{ 'selected' if o == v.option }}>{{ o }}</option>{% endfor %}</select></div>
+      <div><label for="f-em">Numéro EducMaster</label><input id="f-em" name="matricule_educmaster" value="{{ e.matricule_educmaster or '' }}" maxlength="30"></div>
+    </div>
+  </div>
+
+  <div class="carte">
+    <h2>Établissements choisis <span class="aide">(trois, par ordre de préférence, sans abréviation)</span></h2>
+    <div class="grille-id">
+      {% for i in (1, 2, 3) %}<div><label for="f-etab{{ i }}">Établissement n° {{ i }}</label>
+        <input id="f-etab{{ i }}" name="etab{{ i }}" value="{{ v['etab%d' % i] }}" maxlength="120"></div>{% endfor %}
+    </div>
+  </div>
+
+  <div class="carte">
+    <h2>Parents et dispenses</h2>
+    <div class="grille-id">
+      <div><label for="f-res">Résidence des parents</label><input id="f-res" name="residence_parents" value="{{ v.residence_parents }}" maxlength="120"></div>
+      <div><label for="f-lien">Degré de parenté du parent</label><input id="f-lien" name="parent_lien" list="dl-liens" value="{{ v.parent_lien }}" maxlength="30" placeholder="Père, Mère, Tuteur…">
+        <datalist id="dl-liens">{% for l in liens %}<option value="{{ l }}">{% endfor %}</datalist></div>
+      <div><span class="lbl"><b>Dispense d'âge</b></span><div class="cep-radio">
+        <label><input type="radio" name="dispense_age" value="1" {{ 'checked' if v.dispense_age }}> Oui</label>
+        <label><input type="radio" name="dispense_age" value="0" {{ 'checked' if not v.dispense_age }}> Non</label></div></div>
+      <div><span class="lbl"><b>Dispense de sport</b></span><div class="cep-radio">
+        <label><input type="radio" name="dispense_sport" value="1" {{ 'checked' if v.dispense_sport }}> Oui</label>
+        <label><input type="radio" name="dispense_sport" value="0" {{ 'checked' if not v.dispense_sport }}> Non</label></div></div>
+      <div><label for="f-fait">Fait à</label><input id="f-fait" name="fait_a" value="{{ v.fait_a }}" maxlength="60"></div>
+      <div><label for="f-le">Le</label><input id="f-le" type="date" name="fait_le" value="{{ v.fait_le }}"></div>
+    </div>
+  </div>
+
+  <div class="carte cep-ro">
+    <h2>Repris de l'inscription et de la fiche de l'école</h2>
+    <dl>
+      <dt>Nom</dt><dd>{{ e.nom|upper }}</dd><dt>Prénoms</dt><dd>{{ e.prenoms }}</dd>
+      <dt>Sexe</dt><dd>{{ d.sexe }}</dd><dt>Date et lieu de naissance</dt><dd>{{ d.naissance or '—' }}</dd>
+      <dt>Parent</dt><dd>{{ d.parent_nom or '—' }}</dd><dt>Contact du parent</dt><dd>{{ e.parent_telephone or '—' }}</dd>
+      <dt>École</dt><dd>{{ d.ecole }} ({{ d.statut or 'statut non précisé' }})</dd>
+      <dt>Commune / CS</dt><dd>{{ d.commune or '—' }} / {{ d.cs or '—' }}</dd>
+      <dt>Directeur(trice)</dt><dd>{{ d.directeur or '—' }} · {{ d.directeur_tel or '—' }}</dd>
+    </dl>
+    {% if ep_existe('eleve_form') %}<p class="aide">Pour corriger ces informations : <a href="{{ url_for('eleve_form', eid=e.id) }}">modifier l'inscription de l'élève</a>.</p>{% endif %}
+  </div>
+</div>
+
+<div>
+  <div class="carte">
+    <h2>Photo du candidat</h2>
+    <div class="photo-capture" data-champ="photo_data" {% if e.photo %}data-src="{{ url_for('eleve_photo', eid=e.id) }}"{% endif %}></div>
+    <p class="aide">Cliquez sur le cadre ou utilisez « Caméra ». La photo est enregistrée avec la fiche.</p>
+  </div>
+  <div class="carte">
+    <h2>Signature du candidat</h2>
+    {{ M.signature('eleve:%d' % e.id, 'Signature du (de la) candidat(e)') }}
+  </div>
+</div>
+</div>
+
+<div class="actions" style="margin:14px 0">
+  <button class="btn vert" name="suite" value="liste">💾 Enregistrer</button>
+  {% if suiv %}<button class="btn sec" name="suite" value="suivant">💾 Enregistrer et élève suivant →</button>{% endif %}
+  <button class="btn sec" name="suite" value="pdf">💾 Enregistrer et voir le PDF</button>
+</div>
+</form>
+{% endblock %}

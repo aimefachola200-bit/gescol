@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% block titre %}École{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ 'Modifier une école' if eid else 'Ajouter une école' }}</h1></div>
+<a class="btn sec" href="{{ url_for('jur_ecoles') }}">← Écoles</a></div>
+<form method="post" class="carte">
+  <div class="grille-id">
+    <div><label for="nom">Nom de l'école *</label><input id="nom" name="nom" required value="{{ e.nom or '' }}" placeholder="EPP Adjégounlè"></div>
+    <div><label for="code">Code (laisser vide = automatique)</label><input id="code" name="code" value="{{ e.code or '' }}"></div>
+    <div><label for="type">Type *</label><select id="type" name="type">{% for k, v in JUR_TYPES.items() %}<option value="{{ k }}" {{ 'selected' if e.type==k }}>{{ v }}</option>{% endfor %}</select></div>
+    <div><label for="sec">Secteur *</label><select id="sec" name="secteur">{% for k, v in JUR_SECTEURS.items() %}<option value="{{ k }}" {{ 'selected' if e.secteur==k }}>{{ v }}</option>{% endfor %}</select></div>
+    <div><label for="cs">Circonscription *</label><select id="cs" name="cs_id" onchange="filtrerZones()">
+      {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if e.cs_id|string == c.id|string }}>{{ c.nom }}</option>{% endfor %}</select></div>
+    <div><label for="zone">Zone pédagogique</label><select id="zone" name="zone_id"><option value="">—</option>
+      {% for z in zones %}<option value="{{ z.id }}" data-cs="{{ z.cs_id }}" {{ 'selected' if e.zone_id|string == z.id|string }}>{{ z.nom }}</option>{% endfor %}</select></div>
+    <div><label for="com">Commune</label><input id="com" name="commune" value="{{ e.commune or '' }}"></div>
+    <div><label for="arr">Arrondissement</label><input id="arr" name="arrondissement" value="{{ e.arrondissement or '' }}"></div>
+    <div><label for="loc">Localité / village</label><input id="loc" name="localite" value="{{ e.localite or '' }}"></div>
+    <div><label for="adr">Adresse</label><input id="adr" name="adresse" value="{{ e.adresse or '' }}"></div>
+    <div><label for="dt">Titre</label><select id="dt" name="directeur_titre">{% for t in ('Directeur','Directrice') %}<option {{ 'selected' if e.directeur_titre==t }}>{{ t }}</option>{% endfor %}</select></div>
+    <div><label for="dn">Nom du directeur / de la directrice</label><input id="dn" name="directeur_nom" value="{{ e.directeur_nom or '' }}"></div>
+    <div><label for="dtel">Téléphone du directeur</label><input id="dtel" name="directeur_tel" value="{{ e.directeur_tel or '' }}"></div>
+    <div><label for="tel">Téléphone de l'école</label><input id="tel" name="telephone" value="{{ e.telephone or '' }}"></div>
+    <div><label for="mail">E-mail</label><input id="mail" name="email" type="email" value="{{ e.email or '' }}"></div>
+    <div><label for="an">Année de création</label><input id="an" name="annee_creation" inputmode="numeric" value="{{ e.annee_creation or '' }}"></div>
+  </div>
+  <p class="actions"><button class="btn">Enregistrer</button></p>
+</form>
+{% if eid and peut('jur_ecoles') %}
+<form method="post" action="{{ url_for('jur_ecole_supprimer', eid=eid) }}" class="carte"><p>Retirer l'école de la liste (ses données reçues sont conservées).</p>
+<button class="btn danger" data-confirmer="Retirer cette école de la liste ?">Retirer l'école</button></form>{% endif %}
+<script>
+function filtrerZones(){var c=document.getElementById('cs').value,z=document.getElementById('zone');
+ Array.prototype.forEach.call(z.options,function(o){if(o.value){o.hidden=o.dataset.cs!==c; if(o.hidden&&o.selected)z.value='';}});}
+filtrerZones();
+</script>
+{% endblock %}

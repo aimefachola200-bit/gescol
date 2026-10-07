@@ -1,0 +1,114 @@
+{% extends "base.html" %}{% block titre %}{{ 'Visite du ' ~ date_fr(visite.date) if visite else 'Nouvelle visite' }}{% endblock %}
+{% block contenu %}
+<style>
+.vis-form fieldset{border:1px solid var(--bord);border-radius:10px;padding:10px 14px;margin:0 0 14px}
+.vis-form legend{font-weight:700;padding:0 6px;color:var(--bleu)}
+.vis-form label{font-weight:600;font-size:13px;display:block;margin:6px 0 3px}
+.vis-radios{display:flex;gap:14px;flex-wrap:wrap}.vis-radios label{font-weight:normal;display:flex;gap:5px;align-items:center}
+.vis-eff{display:grid;grid-template-columns:repeat(3,minmax(80px,140px));gap:8px}
+.vis-form textarea{min-height:90px}
+</style>
+<div class="entete">
+  <div><h1>{% if visite %}{{ TYPES[visite.type] }} du {{ date_fr(visite.date) }}{% else %}Nouvelle visite{% endif %}</h1>
+  <p class="sous">{% if visite %}{{ visite.visiteur_qualite }} {{ visite.visiteur_nom }}{% if visite.enseignant_nom %} — {{ visite.enseignant_nom }}{% endif %}{% if visite.classe_nom %} ({{ visite.classe_nom }}){% endif %}{% else %}Visite d'un conseiller pédagogique (CP) ou du CCS{% endif %}</p></div>
+  <div class="actions">
+    {% if visite %}<a class="btn petit" href="{{ url_for('visite_fiche_pdf', vid=visite.id) }}" target="_blank">📄 Fiche PDF</a>{% endif %}
+    <a class="btn sec petit" href="{{ url_for('visites_accueil') }}">← Liste des visites</a>
+  </div>
+</div>
+{% if not saisie %}<div class="flash info">Consultation seulement.</div>{% endif %}
+
+<form method="post" class="vis-form">
+  <fieldset {{ 'disabled' if not saisie }}>
+    <legend>Visite</legend>
+    <div class="ligne">
+      <div><label>Type de visite</label><div class="vis-radios">
+        {% for k, lib in TYPES.items() %}<label><input type="radio" name="type" value="{{ k }}" {{ 'checked' if v.type == k }} required> {{ lib }}</label>{% endfor %}</div></div>
+      <div><label for="vd">Date</label><input id="vd" type="date" name="date" value="{{ v.date or '' }}" max="{{ aujourdhui }}" required></div>
+      <div><label>Heure de début – de fin</label><div class="duo"><input type="time" name="heure_debut" value="{{ v.heure_debut or '' }}" aria-label="Heure de début"><input type="time" name="heure_fin" value="{{ v.heure_fin or '' }}" aria-label="Heure de fin"></div></div>
+    </div>
+    <div class="ligne">
+      <div><label>Visiteur</label><div class="vis-radios">
+        {% for k, lib in QUALITES.items() %}<label><input type="radio" name="visiteur_qualite" value="{{ k }}" {{ 'checked' if v.visiteur_qualite == k }} required> {{ lib }}</label>{% endfor %}</div></div>
+      <div><label for="vn">Nom du visiteur</label><input id="vn" name="visiteur_nom" value="{{ v.visiteur_nom or '' }}" maxlength="120" required data-ccs="{{ ccs_nom }}"></div>
+    </div>
+  </fieldset>
+
+  <fieldset {{ 'disabled' if not saisie }}>
+    <legend>Enseignant(e) et classe visités</legend>
+    <div class="ligne">
+      <div><label for="ve">Enseignant(e) visité(e)</label>
+        {% if direction %}
+        <select id="ve" name="personnel_id"><option value="">— choisir dans le personnel —</option>
+          {% for p in pers %}<option value="{{ p.id }}" {{ 'selected' if v.personnel_id|string == p.id|string }}>{{ nom_complet(p) }} ({{ p.fonction }})</option>{% endfor %}</select>
+        <input name="enseignant_nom" value="{{ v.enseignant_nom or '' if not v.personnel_id else '' }}" placeholder="ou nom (s'il n'est pas dans le personnel)" maxlength="120" aria-label="Nom de l'enseignant hors personnel" style="margin-top:4px">
+        {% else %}
+        <input type="hidden" name="personnel_id" value="{{ moi or '' }}">
+        <input id="ve" value="{{ v.enseignant_nom or 'Vous-même' }}" disabled>
+        {% endif %}</div>
+      <div><label for="vc">Classe</label>
+        <select id="vc" name="classe_id"><option value="">— aucune (visite d'école) —</option>
+          {% for c in cls %}<option value="{{ c.id }}" {{ 'selected' if v.classe_id|string == c.id|string }}>{{ c.nom }}</option>{% endfor %}</select></div>
+      <div><label for="vm">Matière visitée</label><input id="vm" name="matiere" list="dl-mat" value="{{ v.matiere or '' }}" maxlength="120">
+        <datalist id="dl-mat">{% for m in mats %}<option value="{{ m }}">{% endfor %}</datalist></div>
+    </div>
+    <div class="ligne">
+      <div><label for="vu">Unité</label><input id="vu" name="unite" value="{{ v.unite or '' }}" maxlength="200"></div>
+      <div><label for="vdo">Dossier</label><input id="vdo" name="dossier" value="{{ v.dossier or '' }}" maxlength="200"></div>
+      <div><label for="vsa">Situation d'apprentissage (SA)</label><input id="vsa" name="sa" value="{{ v.sa or '' }}" maxlength="300"></div>
+      <div><label for="vs">Séquence</label><input id="vs" name="sequence" value="{{ v.sequence or '' }}" maxlength="300"></div>
+    </div>
+    <label>Effectif présent <span class="aide" id="ins-info"></span></label>
+    <div class="vis-eff">
+      <div><label for="eg">Garçons</label><input id="eg" name="eff_g" inputmode="numeric" value="{{ v.eff_g if v.eff_g is not none else '' }}"></div>
+      <div><label for="ef">Filles</label><input id="ef" name="eff_f" inputmode="numeric" value="{{ v.eff_f if v.eff_f is not none else '' }}"></div>
+      <div><label for="et">Total</label><input id="et" value="{{ v.eff_t if v.eff_t is not none else '' }}" readonly tabindex="-1"></div>
+    </div>
+    <p class="aide">Pré-rempli avec l'effectif inscrit de la classe (modifiable : n'indiquez que les élèves présents). Le total est calculé.</p>
+  </fieldset>
+
+  <fieldset {{ 'disabled' if not saisie }}>
+    <legend>Constats, conseils et suites</legend>
+    <label for="vco">Constats</label><textarea id="vco" name="constats" maxlength="4000">{{ v.constats or '' }}</textarea>
+    <label for="vre">Recommandations et conseils</label><textarea id="vre" name="recommandations" maxlength="4000">{{ v.recommandations or '' }}</textarea>
+    <div class="ligne">
+      <div><label for="vno">Note éventuelle (sur 20)</label><input id="vno" name="note" inputmode="decimal" value="{{ ('%g' % v.note) if v.note not in (none, '') and v.note is number else (v.note or '') }}" placeholder="ex. 14,5"></div>
+      <div><label for="vap">Appréciation</label><input id="vap" name="appreciation" value="{{ v.appreciation or '' }}" maxlength="120" placeholder="ex. Assez bien"></div>
+    </div>
+    <label for="vsu">Suites données</label><textarea id="vsu" name="suites" maxlength="4000">{{ v.suites or '' }}</textarea>
+  </fieldset>
+  {% if saisie %}<p class="actions"><button class="btn vert">💾 Enregistrer la visite</button></p>{% endif %}
+</form>
+{% if visite and direction %}
+<form method="post" action="{{ url_for('visite_supprimer', vid=visite.id) }}"><button class="btn danger petit" data-confirmer="Supprimer définitivement cette visite ?">Supprimer la visite</button></form>
+{% endif %}
+
+<script>
+(function () {
+  var eff = {{ eff_json|safe }};
+  var sel = document.getElementById('vc'), g = document.getElementById('eg'), f = document.getElementById('ef'),
+      t = document.getElementById('et'), info = document.getElementById('ins-info'), prec = null;
+  function total() { var a = parseInt(g.value, 10), b = parseInt(f.value, 10);
+    t.value = (isNaN(a) && isNaN(b)) ? '' : (isNaN(a) ? 0 : a) + (isNaN(b) ? 0 : b); }
+  function classe(init) {
+    var e = eff[sel.value];
+    info.textContent = e ? '— inscrits : ' + e.g + ' G / ' + e.f + ' F (' + e.t + ')' : '';
+    if (!e || init) { prec = e; return; }
+    // on remplace les valeurs vides ou celles pré-remplies pour la classe précédente
+    if (g.value === '' || (prec && +g.value === prec.g)) g.value = e.g;
+    if (f.value === '' || (prec && +f.value === prec.f)) f.value = e.f;
+    prec = e; total();
+  }
+  sel.addEventListener('change', function () { classe(false); });
+  g.addEventListener('input', total); f.addEventListener('input', total);
+  classe(true);
+  if (g.value === '' && f.value === '' && eff[sel.value] && !{{ 'true' if visite else 'false' }}) { g.value = eff[sel.value].g; f.value = eff[sel.value].f; }
+  total();
+  // nom du CCS de la fiche de l'école proposé quand « CCS » est choisi
+  var nom = document.getElementById('vn');
+  document.querySelectorAll('input[name=visiteur_qualite]').forEach(function (r) {
+    r.addEventListener('change', function () { if (r.checked && r.value === 'CCS' && !nom.value && nom.dataset.ccs) nom.value = nom.dataset.ccs; });
+  });
+})();
+</script>
+{% endblock %}

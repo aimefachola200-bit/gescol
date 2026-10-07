@@ -1,0 +1,57 @@
+{% extends "base.html" %}{% block titre %}Mise en ligne et sauvegardes{% endblock %}
+{% block contenu %}
+<h1>Mise en ligne et sauvegardes</h1>
+<p class="sous">GESCOL peut fonctionner sur le PC de l'école (Wi-Fi de l'école) ou chez un hébergeur Internet : il est alors accessible partout (maison, téléphone, autre école), sans dépendre du Wi-Fi de l'école.</p>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Fonctionnement actuel</div><div class="v" style="font-size:18px">{{ hebergeur }}</div>
+    <div class="d">{% if en_ligne %}<span class="badge ok">en ligne</span>{% else %}<span class="badge att">réseau local</span>{% endif %}</div></div>
+  <div class="kpi"><div class="l">Adresse</div><div class="v" style="font-size:15px;word-break:break-all">{{ adresse }}</div>
+    <div class="d">{% if https %}<span class="badge ok">connexion sécurisée (https)</span>{% else %}<span class="badge att">non chiffrée (http)</span>{% endif %}</div></div>
+  <div class="kpi"><div class="l">Sauvegardes disponibles</div><div class="v">{{ sauvegardes|length }}</div><div class="d">automatique chaque jour (14 dernières gardées)</div></div>
+</div>
+
+{% if not en_ligne %}
+<div class="carte">
+  <h2 style="margin-top:0">Mettre GESCOL en ligne</h2>
+  <ol>
+    <li>Choisissez un hébergeur : <b>PythonAnywhere</b> (gratuit pour commencer, le plus simple), <b>Render</b> (déploiement automatique depuis GitHub) ou un <b>serveur VPS</b> (le plus puissant, votre nom de domaine). Le guide <b>EN_LIGNE.md</b> fourni avec GESCOL détaille chaque étape.</li>
+    <li>Ici, cliquez sur <b>Créer une sauvegarde maintenant</b> puis téléchargez-la.</li>
+    <li>Sur la version en ligne : connectez-vous, ouvrez cette même page et utilisez <b>Restaurer une sauvegarde</b> : élèves, notes, paiements, photos et réglages sont repris.</li>
+    <li>Sur les tablettes, téléphones et dans l'application Android, remplacez l'adresse du PC par l'adresse en ligne (https://…).</li>
+  </ol>
+  <p class="aide">Le PC de l'école peut rester en <b>secours</b> (sans Internet), mais ses données sont séparées de la version en ligne : pour le remettre à jour, restaurez-y une sauvegarde téléchargée depuis la version en ligne.</p>
+</div>
+{% else %}
+<div class="flash info">GESCOL est en ligne : il fonctionne partout où il y a Internet. Téléchargez régulièrement une sauvegarde et gardez-en une copie (clé USB, PC de l'école en secours).</div>
+{% endif %}
+
+<div class="grille2">
+<div class="carte">
+  <h2 style="margin-top:0">Sauvegardes</h2>
+  <div class="actions" style="margin-bottom:10px">
+    <form method="post" action="{{ url_for('sauvegarde_maintenant') }}"><button class="btn">Créer une sauvegarde maintenant</button></form>
+    <a class="btn sec" href="{{ url_for('sauvegarde') }}">Télécharger l'état actuel</a>
+  </div>
+  {% if sauvegardes %}
+  <div class="tw"><table class="t compact">
+    <tr><th>Fichier</th><th>Date</th><th class="num">Taille</th><th></th></tr>
+    {% for s in sauvegardes %}<tr><td>{{ s.nom }}</td><td>{{ s.date }}</td><td class="num">{{ (s.taille/1024)|round(0)|int }} Ko</td>
+      <td class="num"><a class="btn sec petit" href="{{ url_for('sauvegarde_telecharger', nom=s.nom) }}">Télécharger</a></td></tr>{% endfor %}
+  </table></div>
+  {% else %}<p class="aide">Aucune sauvegarde pour le moment.</p>{% endif %}
+  <p class="aide">Dossier des données : {{ dossier }}</p>
+</div>
+<div class="carte">
+  <h2 style="margin-top:0">Restaurer une sauvegarde</h2>
+  <p>Remplace <b>toutes</b> les données de cette installation par celles d'une sauvegarde GESCOL (.zip). L'état actuel est d'abord sauvegardé automatiquement (« avant_restauration »).</p>
+  <form method="post" action="{{ url_for('restaurer') }}" enctype="multipart/form-data" class="f">
+    <label for="fichier">Fichier de sauvegarde (.zip)</label>
+    <input id="fichier" type="file" name="fichier" accept=".zip" required>
+    <label for="conf">Pour confirmer, tapez RESTAURER</label>
+    <input id="conf" name="confirmation" autocomplete="off" required placeholder="RESTAURER">
+    <div class="actions" style="margin-top:10px"><button class="btn danger" data-confirmer="Remplacer toutes les données par cette sauvegarde ?">Restaurer</button></div>
+  </form>
+</div>
+</div>
+{% endblock %}

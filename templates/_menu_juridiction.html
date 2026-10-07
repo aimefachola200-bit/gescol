@@ -1,0 +1,50 @@
+{# Menu des applications GESCOL Circonscription (CS) et GESCOL DDEMP — inclus par base.html #}
+{% set CS_ = JUR_NIVEAU == 'cs' %}
+{{ lien('jur_tableau', 'Tableau de bord', ep=='jur_tableau', '⌂') }}
+{% call groupe('jstat', 'Statistiques', ep.startswith('jur_stats'), '📊') %}
+  {{ lien('jur_stats_ecoles', 'Écoles (nombre, classement)', ep=='jur_stats_ecoles') }}
+  {{ lien('jur_stats_effectifs', 'Effectifs des apprenants', ep=='jur_stats_effectifs') }}
+  {{ lien('jur_stats_enseignants', 'Enseignants (besoins, écarts)', ep=='jur_stats_enseignants') }}
+{% endcall %}
+{% call groupe('jcep', 'Examens (CEP)', ep.startswith('jur_cep'), '🎓') %}
+  {{ lien('jur_cep', 'Candidats et résultats', ep=='jur_cep' or ep=='jur_cep_ecole') }}
+  {{ lien('jur_cep_prevision', 'Prévision (année suivante)', ep=='jur_cep_prevision') }}
+  {{ lien('jur_cep_frais', 'Frais de relevés', ep=='jur_cep_frais') }}
+{% endcall %}
+{% call groupe('jpers', 'Personnel et carrière', ep.startswith('jur_personnel') or ep.startswith('jur_retraite') or ep.startswith('jur_aptitude') or ep.startswith('jur_agent'), '👥') %}
+  {{ lien('jur_personnel', 'Gestion de carrière (par catégorie)', ep.startswith('jur_personnel')) }}
+  {{ lien('jur_aptitude', "Visites d'aptitude et diplômes", ep.startswith('jur_aptitude')) }}
+  {{ lien('jur_retraite', 'Départs à la retraite', ep.startswith('jur_retraite')) }}
+  {{ lien('jur_agents', 'Agents de la ' ~ ('circonscription' if CS_ else 'DDEMP'), ep.startswith('jur_agent')) }}
+{% endcall %}
+{% call groupe('jpeda', 'Animation pédagogique', ep.startswith('jur_visite') or ep.startswith('jur_bilan'), '🔎') %}
+  {{ lien('jur_visites', "Visites d'école et de classe", ep.startswith('jur_visite')) }}
+  {{ lien('jur_bilan_activites', 'Bilan des activités des CP et CCS', ep.startswith('jur_bilan')) }}
+{% endcall %}
+{% call groupe('jfiche', 'Fiches des écoles', ep.startswith('jur_fiche'), '📋') %}
+  {{ lien('jur_fiches', 'Recensement, rentrée, fin d’année', ep.startswith('jur_fiche') and ep!='jur_fiches_synthese') }}
+  {{ lien('jur_fiches_synthese', 'Synthèse ' ~ ('de la CS' if CS_ else 'départementale'), ep=='jur_fiches_synthese') }}
+{% endcall %}
+{% call groupe('jtrans', 'Transmissions', ep.startswith('jur_transmission'), '⇅') %}
+  {{ lien('jur_transmissions', 'Recevoir (fichiers, en ligne)', ep in ('jur_transmissions','jur_transmission_detail')) }}
+  {{ lien('jur_transmission_suivi', 'Suivi des envois', ep=='jur_transmission_suivi') }}
+  {% if CS_ %}{{ lien('jur_transmission_envoi', 'Envoyer à la DDEMP', ep=='jur_transmission_envoi') }}{% endif %}
+{% endcall %}
+{% call groupe('jstruct', 'Services et documents', ep.startswith('jur_organigramme') or ep.startswith('jur_service') or ep.startswith('jur_cachet') or ep.startswith('jur_document'), '🏛') %}
+  {{ lien('jur_organigramme', 'Services et attributions', ep.startswith('jur_organigramme') or ep.startswith('jur_service')) }}
+  {{ lien('jur_cachets', 'Cachets et signatures', ep.startswith('jur_cachet')) }}
+  {{ lien('jur_documents', 'Attestations et certificats', ep.startswith('jur_document')) }}
+{% endcall %}
+{% call groupe('jjur', 'Juridiction', ep in ('jur_ecoles','jur_ecole_form','jur_ecole_fiche','jur_ecoles_import','jur_zones','jur_structure'), '🗺') %}
+  {{ lien('jur_ecoles', 'Écoles', ep.startswith('jur_ecole')) }}
+  {{ lien('jur_zones', 'Circonscriptions et zones' if not CS_ else 'Zones pédagogiques', ep=='jur_zones') }}
+  {% if peut('jur_structure') %}{{ lien('jur_structure', 'Identité de la structure', ep=='jur_structure') }}{% endif %}
+{% endcall %}
+{% if peut('parametres') %}
+{% call groupe('adm', 'Administration', ep in ('utilisateurs','journal_page','parametres','en_ligne_page','affectations'), '⚙') %}
+  {{ lien('parametres', 'Paramètres généraux', ep=='parametres') }}
+  {{ lien('en_ligne_page', 'Mise en ligne et sauvegardes', ep=='en_ligne_page') }}
+  {{ lien('utilisateurs', 'Utilisateurs', ep in ('utilisateurs','affectations')) }}
+  {{ lien('journal_page', "Journal d'activité", ep=='journal_page') }}
+{% endcall %}{% endif %}
+{{ lien('verifier', 'Vérifier un document', ep=='verifier', '✔') }}

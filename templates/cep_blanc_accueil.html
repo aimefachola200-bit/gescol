@@ -1,0 +1,40 @@
+{% extends "base.html" %}{% block titre %}Examen blanc CEP{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Examen blanc du CEP</h1>
+  <p class="sous">Gestion du centre : candidats, notes, maîtrise, ordre de mérite, relevés de notes</p></div>
+  <div class="actions">
+    <form method="post" action="{{ url_for('cep_blanc_nouvelle') }}" class="ligne" style="gap:6px;align-items:flex-end">
+      <label>N° de l'examen blanc<br><input type="number" name="numero" min="1" max="99" value="{{ (sessions[0].numero + 1) if sessions else 1 }}" style="width:90px"></label>
+      <button class="btn">＋ Nouvel examen blanc</button>
+    </form>
+  </div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Examens blancs</div><div class="v">{{ sessions|length }}</div><div class="d">{{ ECOLE_COURANTE.nom if ECOLE_COURANTE else '' }}</div></div>
+  <div class="kpi"><div class="l">Candidats</div><div class="v">{{ sessions|sum(attribute='nb') }}</div><div class="d">toutes sessions</div></div>
+</div>
+
+{% if not sessions %}
+<div class="carte"><p>Aucun examen blanc pour le moment.</p>
+  <p class="aide">Cliquez sur « Nouvel examen blanc » : le centre, la DDEMP, la CS et la commune sont repris de la fiche de l'école
+  et les matières du primaire sont proposées ({{ matieres|join(', ') }}). Vous pourrez tout modifier ensuite.</p></div>
+{% else %}
+<div class="tw"><table class="t">
+  <thead><tr><th class="c">N°</th><th>Année</th><th>Centre</th><th>DDEMP / CS</th><th class="c">Matières</th><th class="c">Seuil</th>
+    <th class="c">Candidats</th><th>Créé le</th><th></th></tr></thead>
+  <tbody>{% for s in sessions %}
+  <tr><td class="c"><b>{{ s.numero }}</b></td><td>{{ s.annee }}</td>
+    <td><a href="{{ url_for('cep_blanc_session', sid=s.id) }}"><b>{{ s.centre or '—' }}</b></a><br><span class="aide">Chef centre : {{ s.chef_centre or '—' }}</span></td>
+    <td>{{ s.ddemp or '—' }} / {{ s.cs or '—' }}</td><td class="c">{{ s.mats|length }}</td><td class="c">{{ s.seuil_eff }}/{{ s.mats|length }}</td>
+    <td class="c">{{ s.nb }}</td><td>{{ date_fr(s.cree_le) }}</td>
+    <td style="white-space:nowrap"><a class="btn petit" href="{{ url_for('cep_blanc_session', sid=s.id) }}">Ouvrir</a>
+      <form method="post" action="{{ url_for('cep_blanc_supprimer', sid=s.id) }}" style="display:inline">
+        <button class="btn danger petit" data-confirmer="Supprimer DÉFINITIVEMENT l'examen blanc N° {{ s.numero }} et ses {{ s.nb }} candidat(s) ?">Supprimer</button></form></td></tr>
+  {% endfor %}</tbody>
+</table></div>
+{% endif %}
+<p class="aide">Règle du primaire : un candidat a la <b>MAÎTRISE</b> s'il obtient au moins 10/20 dans le nombre de matières fixé par le
+seuil (2/3 des matières par défaut). La moyenne ne sert qu'au classement (ordre de mérite).</p>
+{% endblock %}

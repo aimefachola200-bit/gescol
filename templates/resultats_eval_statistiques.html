@@ -1,0 +1,131 @@
+{% extends "base.html" %}{% block titre %}Statistiques d'une évaluation{% endblock %}
+{% import "_macros.html" as M with context %}
+{% import "resultats_eval_entete.html" as R with context %}
+{% block contenu %}
+{{ R.styles() }}
+<div class="entete">
+  <div><h1>Statistiques d'une évaluation</h1>
+  <p class="sous">Participation, réussite, moyennes et écarts-types par sexe, tranches, matières · année {{ ANNEE }}</p></div>
+</div>
+
+{{ R.choix_classe_ev(classes, cl, evs, ev, 'eval_statistiques') }}
+{{ R.vide(classes, cl, evs, 'eval_statistiques') }}
+
+{% if cl and ev %}
+<form method="get" action="{{ url_for('eval_statistiques_pdf') }}" data-doc="{{ cle_entete }}" target="_blank">
+  <input type="hidden" name="classe" value="{{ cl.id }}"><input type="hidden" name="ev" value="{{ ev.id }}">
+  {% call M.barre_doc() %}
+    <button class="btn petit" formaction="{{ url_for('eval_statistiques_pdf') }}">📄 Export PDF</button>
+    <button class="btn sec petit" formaction="{{ url_for('eval_statistiques_xlsx') }}" formtarget="_self">📊 Export Excel</button>
+    <a class="btn sec petit" href="{{ url_for('eval_analyse', classe=cl.id, ev=ev.id) }}">📝 Analyse et rapport</a>
+    <a class="btn sec petit" href="{{ url_for('honneur_accueil', classe=cl.id, ev=ev.id) }}">🏅 Tableau d'honneur</a>
+    {% if ep_existe('eval_saisie') %}<a class="btn sec petit" href="{{ url_for('eval_saisie', ev_id=ev.id) }}">✎ Notes</a>{% endif %}
+  {% endcall %}
+  {{ R.entete_docs(v, cl) }}
+</form>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Inscrits</div><div class="v">{{ s.inscrits.T }}</div><div class="d">{{ s.inscrits.G }} G · {{ s.inscrits.F }} F</div></div>
+  <div class="kpi"><div class="l">Ont composé</div><div class="v">{{ s.composes.T }}</div><div class="d">{{ s.absents.T }} absent(s) · participation {{ s.participation.T|res_pc }}</div></div>
+  <div class="kpi"><div class="l">{{ V.taux }}</div><div class="v">{{ s.taux_reussite.T|res_pc }}</div><div class="d">G {{ s.taux_reussite.G|res_pc }} · F {{ s.taux_reussite.F|res_pc }}</div></div>
+  {% if cl.cycle != 'maternelle' %}
+  <div class="kpi"><div class="l">Moyenne de la classe</div><div class="v">{{ s.moyenne.T|res_nb }}</div><div class="d">G {{ s.moyenne.G|res_nb }} · F {{ s.moyenne.F|res_nb }}</div></div>
+  <div class="kpi"><div class="l">Écart-type</div><div class="v">{{ s.ecart_type.T|res_nb }}</div><div class="d">G {{ s.ecart_type.G|res_nb }} · F {{ s.ecart_type.F|res_nb }}</div></div>
+  {% endif %}
+</div>
+
+<div class="carte"><div class="tw"><table class="t compact">
+  <tbody>{% for lib, val in infos %}{% if loop.index0 is even %}<tr>{% endif %}<th scope="row">{{ lib }}</th><td>{{ val }}</td>{% if loop.index0 is odd or loop.last %}</tr>{% endif %}{% endfor %}</tbody>
+</table></div></div>
+
+{% if not s.composes.T %}
+<div class="flash warning">Aucune note n'est encore saisie pour cette évaluation : tous les élèves sont comptés absents.
+  {% if ep_existe('eval_saisie') %}<a href="{{ url_for('eval_saisie', ev_id=ev.id) }}">Saisir les notes</a>.{% endif %}</div>
+{% endif %}
+
+<h2 class="res-h">1. Participation, réussite et moyennes par sexe</h2>
+<div class="grille2">
+  <div class="tw"><table class="t">
+    <thead><tr><th>Indicateur</th>{% for k, lib in SEXES %}<th class="num">{{ lib }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for row in ind %}<tr><td>{{ row[0] }}</td>{% for x in row[1:] %}<td class="num">{{ x }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+  </table></div>
+  <div class="res-graph"><h3>Taux de réussite et d'échec (%)</h3>{{ graph.sexe }}</div>
+</div>
+<p class="aide">Réussite : {{ V.regle }}{% if cl.cycle == 'primaire' %} (« maîtrise »){% endif %}. Un élève sans aucune note est compté absent. Écart-type calculé sur les moyennes des élèves ayant composé.</p>
+
+{% if cl.cycle != 'maternelle' %}
+<h2 class="res-h">2. Répartition par tranches de moyenne</h2>
+<div class="grille2">
+  <div class="tw"><table class="t">
+    <thead><tr><th rowspan="2">Tranche</th>{% for k, lib in SEXES %}<th class="c" colspan="2">{{ lib }}</th>{% endfor %}</tr>
+      <tr>{% for k, lib in SEXES %}<th class="num">Effectif</th><th class="num">%</th>{% endfor %}</tr></thead>
+    <tbody>{% for row in tranches %}<tr><td>{{ row[0] }}</td>{% for x in row[1:] %}<td class="num">{{ x }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+  </table></div>
+  <div class="res-graph"><h3>Effectifs par tranche</h3>{{ graph.tranches }}</div>
+</div>
+<p class="aide">« dont &lt; 8 » est inclus dans « &lt; 10 ». Pourcentages calculés sur les élèves ayant composé.</p>
+
+<h2 class="res-h">3. Matière la plus forte et matière la plus faible</h2>
+<div class="res-extremes">
+  {% for k, lib in (('T','Ensemble de la classe'), ('G','Garçons'), ('F','Filles')) %}
+  <div class="x"><h4>{{ lib }}</h4>
+    {% if s.forte[k] %}
+    <div>Plus forte : <span class="fort">{{ s.forte[k].matiere }}</span> — moyenne {{ s.forte[k].moyenne|res_nb }}/20 ({{ s.forte[k].taux|res_pc }} de réussite)</div>
+    <div>Plus faible : <span class="faible">{{ s.faible[k].matiere }}</span> — moyenne {{ s.faible[k].moyenne|res_nb }}/20 ({{ s.faible[k].taux|res_pc }} de réussite)</div>
+    {% else %}<div class="gris">Pas de note.</div>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<h2 class="res-h">4. Participation et réussite par matière et par sexe</h2>
+<div class="tw"><table class="t compact">
+  <thead>
+    <tr><th rowspan="2">Matière</th><th class="c" colspan="3">Ont composé</th><th class="c" colspan="3">% participation</th>
+      <th class="c" colspan="3">Ont réussi (≥ 10)</th><th class="c" colspan="3">% de réussite</th><th class="c" colspan="3">Moyenne</th><th rowspan="2">Observation</th></tr>
+    <tr>{% for i in range(5) %}<th class="num">G</th><th class="num">F</th><th class="num">T</th>{% endfor %}</tr>
+  </thead>
+  <tbody>
+  {% for row in par_mat %}
+    <tr class="{{ 'res-renf' if row[-1] }}"><td>{{ row[0] }}</td>{% for x in row[1:-1] %}<td class="num">{{ x }}</td>{% endfor %}
+      <td>{% if row[-1] %}<span class="badge ko">{{ row[-1] }}</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="17" class="gris">Aucune matière évaluée.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% if renf %}<p class="aide">Matière(s) à renforcer (moins de 50 % de réussite) : <b>{{ renf|join(', ') }}</b>.</p>{% endif %}
+<div class="grille2">
+  <div class="res-graph"><h3>Taux de réussite par matière (%)</h3>{{ graph.matieres or '<p class="gris">Pas de note.</p>'|safe }}</div>
+  <div class="res-graph"><h3>Moyenne par matière (/20)</h3>{{ graph.moyennes or '<p class="gris">Pas de note.</p>'|safe }}</div>
+</div>
+{% else %}
+<h2 class="res-h">2. Appréciations par domaine (maternelle)</h2>
+<div class="tw"><table class="t compact">
+  <thead><tr><th rowspan="2">Domaine</th><th class="c" colspan="3">Garçons</th><th class="c" colspan="3">Filles</th><th class="c" colspan="3">Total</th><th rowspan="2" class="num">% A</th></tr>
+    <tr>{% for i in range(3) %}<th class="num">A</th><th class="num">ECA</th><th class="num">NA</th>{% endfor %}</tr></thead>
+  <tbody>{% for row in lignes_mat %}<tr><td>{{ row[0] }}</td>{% for x in row[1:] %}<td class="num">{{ x }}</td>{% endfor %}</tr>
+  {% else %}<tr><td colspan="11" class="gris">Aucun domaine évalué.</td></tr>{% endfor %}</tbody>
+</table></div>
+<p class="aide">A = acquis, ECA = en cours d'acquisition, NA = non acquis. Progrès satisfaisants si au moins la moitié des points (A = 2, ECA = 1).</p>
+{% if graph.maternelle %}<div class="res-graph">{{ graph.maternelle }}</div>{% endif %}
+{% endif %}
+
+<h2 class="res-h">{{ '5' if cl.cycle != 'maternelle' else '3' }}. Résultats des élèves</h2>
+<div class="tw"><table class="t compact">
+  <thead><tr><th>Rang</th><th>Nom et prénoms</th><th class="c">Sexe</th>{% if cl.cycle != 'maternelle' %}<th class="num">Moyenne</th>{% endif %}
+    {% if cl.cycle == 'primaire' %}<th class="c">Matières ≥ 10 / seuil</th>{% endif %}<th>Résultat</th></tr></thead>
+  <tbody>
+  {% for l in lignes|selectattr('rang')|sort(attribute='eleve.nom')|sort(attribute='rang') %}
+    <tr><td>{{ l.rang_texte }}</td><td>{{ l.eleve.nom }} {{ l.eleve.prenoms }}</td><td class="c">{{ l.eleve.sexe }}</td>
+      {% if cl.cycle != 'maternelle' %}<td class="num">{{ l.moyenne|res_nb }}</td>{% endif %}
+      {% if cl.cycle == 'primaire' %}<td class="c">{{ l.reussies }}/{{ l.seuil }}</td>{% endif %}
+      <td><span class="badge {{ 'ok' if l.maitrise else 'ko' }}">{{ l.decision }}</span></td></tr>
+  {% endfor %}
+  {% for l in lignes if not l.rang %}
+    <tr><td>—</td><td>{{ l.eleve.nom }} {{ l.eleve.prenoms }}</td><td class="c">{{ l.eleve.sexe }}</td>
+      {% if cl.cycle != 'maternelle' %}<td class="num">—</td>{% endif %}{% if cl.cycle == 'primaire' %}<td class="c">—</td>{% endif %}
+      <td><span class="badge {{ 'ok' if l.maitrise else ('att' if l.decision == 'ABSENT' else 'ko') }}">{{ l.decision }}</span></td></tr>
+  {% endfor %}
+  {% if not lignes %}<tr><td colspan="6" class="gris">Aucun élève inscrit dans cette classe.</td></tr>{% endif %}
+  </tbody>
+</table></div>
+{% endif %}
+{% endblock %}

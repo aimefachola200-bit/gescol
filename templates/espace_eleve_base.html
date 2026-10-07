@@ -1,0 +1,56 @@
+<!doctype html>
+{# Mise en page de l'espace élève : indépendante de base.html (qui affiche l'en-tête public quand g.user est vide).
+   Même feuille de style et même script que le reste de GESCOL. #}
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block titre %}Espace élève{% endblock %} – {{ ECOLE.sigle or ECOLE.nom }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ VERSION }}">
+<script src="{{ url_for('static', filename='gescol.js') }}?v={{ VERSION }}" defer></script>
+<link rel="manifest" href="{{ url_for('manifeste') }}">
+<meta name="theme-color" content="#5B2C83">
+<link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+<style>
+header.top.eleve{background:#5B2C83}
+.ee-salut{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.ee-photo{width:74px;height:92px;border-radius:8px;object-fit:cover;border:1px solid var(--bord);background:#F2F4F7}
+.ee-photo.vide{display:flex;align-items:center;justify-content:center;color:var(--gris);font-size:12px;text-align:center}
+.ee-tuiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin:16px 0}
+.ee-tuiles a{display:block;background:#fff;border:1px solid var(--bord);border-radius:10px;padding:16px;color:var(--txt)}
+.ee-tuiles a:hover{border-color:#5B2C83;text-decoration:none}
+.ee-tuiles b{display:block;font-size:16px;margin-bottom:4px;color:#5B2C83}
+{% block style %}{% endblock %}
+</style>
+</head>
+<body>
+{% set ep = request.endpoint or '' %}
+{% set moi = g.get('eleve_session') %}
+<header class="top eleve">
+  <a class="marque" href="{{ url_for('eleve_accueil') if moi else url_for('eleve_login') }}">GESCOL · Espace élève</a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu" onclick="var n=document.getElementById('menu');var o=n.classList.toggle('ouvert');this.setAttribute('aria-expanded',o)">☰ Menu</button>
+  <nav id="menu" aria-label="Menu de l'espace élève">
+    {% if moi %}
+    <a href="{{ url_for('eleve_accueil') }}" class="{{ 'actif' if ep=='eleve_accueil' }}">Accueil</a>
+    <a href="{{ url_for('eleve_resultats') }}" class="{{ 'actif' if ep=='eleve_resultats' }}">Résultats et bulletins</a>
+    <a href="{{ url_for('eleve_absences') }}" class="{{ 'actif' if ep=='eleve_absences' }}">Absences</a>
+    <a href="{{ url_for('eleve_carte') }}" class="{{ 'actif' if ep=='eleve_carte' }}">Ma carte</a>
+    <div class="user">{{ moi.prenoms }} {{ moi.nom }} · <a href="{{ url_for('eleve_mdp') }}">Mot de passe</a> · <a href="{{ url_for('eleve_logout') }}">Déconnexion</a></div>
+    {% else %}
+    <a href="{{ url_for('eleve_login') }}" class="{{ 'actif' if ep=='eleve_login' }}">Espace élève</a>
+    {% if ep_existe('parent_login') %}<a href="{{ url_for('parent_login') }}">Espace parents</a>{% endif %}
+    <a href="{{ url_for('login') }}">Connexion personnel</a>
+    <a href="{{ url_for('installer') }}">Installer l'application</a>
+    {% endif %}
+  </nav>
+</header>
+<main>
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+  {% endwith %}
+  {% block contenu %}{% endblock %}
+  <footer class="credit">GESCOL {{ VERSION }} · {{ ECOLE.nom }} · Conception : {{ CONCEPTEUR }}</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,76 @@
+{% extends "base.html" %}{% block titre %}Messages aux parents{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Messages et WhatsApp</h1><p class="sous">
+    SMS automatiques : {% if p.notif_sms == '1' and p.sms_url %}<span class="badge ok">activés</span>{% else %}<span class="badge">désactivés</span>{% endif %}
+    · WhatsApp : {% if p.notif_whatsapp == '1' %}<span class="badge ok">préparés automatiquement</span>{% else %}<span class="badge">désactivé</span>{% endif %}</p></div>
+  <div class="actions">{% if peut('parametres') %}<a class="btn sec" href="{{ url_for('reglages_messages') }}">Réglages WhatsApp / SMS</a>{% endif %}</div>
+</div>
+<div class="actions" style="margin-bottom:14px">
+  <a class="btn {{ '' if onglet=='ecrire' else 'sec' }}" href="{{ url_for('communication', onglet='ecrire') }}">Écrire aux parents</a>
+  <a class="btn {{ '' if onglet=='whatsapp' else 'sec' }}" href="{{ url_for('communication', onglet='whatsapp') }}">WhatsApp à envoyer{% if wa %}<span class="pastille">{{ wa|length }}</span>{% endif %}</a>
+  <a class="btn {{ '' if onglet=='recus' else 'sec' }}" href="{{ url_for('communication', onglet='recus') }}">Messages des parents{% set nl = recus|selectattr('lu','equalto',0)|list|length %}{% if nl %}<span class="pastille">{{ nl }}</span>{% endif %}</a>
+  <a class="btn {{ '' if onglet=='historique' else 'sec' }}" href="{{ url_for('communication', onglet='historique') }}">Historique</a>
+</div>
+
+{% if onglet == 'ecrire' %}
+<div class="carte" style="max-width:760px">
+<form method="post" action="{{ url_for('diffuser') }}" class="f">
+  <label>Destinataires</label>
+  <select name="cible"><option value="tous">Tous les parents</option>
+    {% for c in classes %}<option value="classe:{{ c.id }}">Parents de {{ c.nom }}</option>{% endfor %}</select>
+  <label>Sujet</label><input name="sujet" required maxlength="150" placeholder="ex. Réunion des parents d'élèves">
+  <label>Message</label><textarea name="texte" rows="5" required maxlength="1000" placeholder="ex. La réunion des parents aura lieu samedi 10 octobre à 9 h dans la cour de l'école."></textarea>
+  <label>Envoyer par</label>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin:6px 0 12px">
+    <label style="font-weight:400;display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" name="canaux" value="portail" checked> Espace parents</label>
+    <label style="font-weight:400;display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" name="canaux" value="whatsapp" checked> WhatsApp (envoi en 1 clic par message)</label>
+    <label style="font-weight:400;display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" name="canaux" value="sms" {{ 'disabled' if not p.sms_url }}> SMS {{ '(passerelle non configurée)' if not p.sms_url }}</label>
+  </div>
+  <button class="btn">Préparer / envoyer</button>
+</form>
+</div>
+
+{% elif onglet == 'whatsapp' %}
+<p class="aide">Cliquez sur « Ouvrir WhatsApp » : le message est pré-rempli, il suffit d'appuyer sur Envoyer dans WhatsApp. Utilisez de préférence WhatsApp Business installé sur le téléphone ou l'ordinateur de l'école.</p>
+<div class="tw"><table class="t" id="t-wa">
+  <tr><th>Date</th><th>Destinataire</th><th>Motif</th><th>Message</th><th></th></tr>
+  {% for n in wa %}
+  <tr id="wa-{{ n.id }}"><td style="white-space:nowrap">{{ date_fr(n.cree_le) }}</td>
+    <td>{{ n.parent_nom or ('Parent de ' ~ (n.prenoms or '')) }}<br><span class="gris">{{ affiche_tel(n.telephone) }}</span></td>
+    <td>{{ EVENEMENTS.get(n.evenement, n.evenement) }}{% if n.prenoms %}<br><span class="gris">{{ n.prenoms }} {{ n.eleve_nom }}</span>{% endif %}</td>
+    <td class="aide" style="max-width:420px">{{ n.texte }}</td>
+    <td class="num" style="white-space:nowrap">
+      <a class="btn wa petit" href="{{ lien_wa(n.telephone, n.texte) }}" target="_blank" rel="noopener" onclick="marquer({{ n.id }})">Ouvrir WhatsApp</a>
+      <form method="post" action="{{ url_for('whatsapp_envoye', nid=n.id) }}" style="display:inline"><button class="btn sec petit" name="action" value="ignorer" title="Ne pas envoyer">✕</button></form></td></tr>
+  {% else %}<tr><td colspan="5" class="gris">Aucun message WhatsApp en attente.</td></tr>{% endfor %}
+</table></div>
+<script>
+function marquer(id){fetch('{{ url_for('whatsapp_envoye', nid=0) }}'.replace('/0','/'+id),{method:'POST',headers:{'X-Requested-With':'fetch'}}).then(function(){var l=document.getElementById('wa-'+id);if(l){l.style.opacity=.4}})}
+</script>
+
+{% elif onglet == 'recus' %}
+{% for m in recus %}
+<div class="carte" style="{{ 'border-left:4px solid #2E6DA4' if not m.lu }}">
+  <div class="entete" style="margin-bottom:6px"><div><b>{{ m.sujet }}</b> {% if not m.lu %}<span class="badge att">nouveau</span>{% endif %}<br>
+    <span class="gris">{{ m.parent_nom }} · {{ affiche_tel(m.telephone) }}{% if m.prenoms %} · au sujet de {{ m.prenoms }} {{ m.eleve_nom }}{% endif %} · {{ date_fr(m.cree_le) }} {{ m.cree_le[11:16] }}</span></div>
+    <a class="btn wa petit" href="{{ lien_wa(m.telephone, 'Bonjour ' ~ m.parent_nom ~ ', ') }}" target="_blank" rel="noopener">WhatsApp</a></div>
+  <p style="white-space:pre-wrap;margin:0 0 10px">{{ m.texte }}</p>
+  <form method="post" action="{{ url_for('repondre_parent', mid=m.id) }}" class="filtres" style="margin:0">
+    <input name="reponse" placeholder="Répondre dans l'espace parents…" style="flex:1;min-width:240px">
+    <button class="btn petit">{{ 'Répondre' }}</button>{% if not m.lu %}<button class="btn sec petit" name="reponse" value="">Marquer lu</button>{% endif %}
+  </form>
+</div>
+{% else %}<div class="carte gris">Aucun message reçu des parents.</div>{% endfor %}
+
+{% else %}
+<div class="tw"><table class="t">
+  <tr><th>Date</th><th>Canal</th><th>Téléphone</th><th>Élève</th><th>Message</th><th>Résultat</th></tr>
+  {% for n in histo %}
+  <tr><td style="white-space:nowrap">{{ date_fr(n.cree_le) }}</td><td>{{ 'SMS' if n.canal=='sms' else 'WhatsApp' }}</td><td>{{ affiche_tel(n.telephone) }}</td>
+    <td>{{ (n.prenoms or '') ~ ' ' ~ (n.eleve_nom or '') }}</td><td class="aide" style="max-width:380px">{{ n.texte }}</td>
+    <td>{% if n.statut=='envoye' %}<span class="badge ok">envoyé</span>{% else %}<span class="badge ko" title="{{ n.erreur or '' }}">{{ n.erreur or 'échec' }}</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="6" class="gris">Aucun envoi.</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+{% endblock %}

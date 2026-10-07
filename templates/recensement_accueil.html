@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block titre %}Carte d'identité de l'école{% endblock %}
+{% block contenu %}
+<style>
+.rc-id{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 18px;margin:0}
+.rc-id div{border-bottom:1px dashed #E4E7EC;padding:4px 0}
+.rc-id dt{font-size:12px;color:#667085}.rc-id dd{margin:0;font-weight:600}
+.rc-docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.rc-docs .carte{margin:0;display:flex;flex-direction:column;gap:8px}
+.rc-barre{height:8px;background:#E4E7EC;border-radius:6px;overflow:hidden}
+.rc-barre span{display:block;height:100%;background:#1B7F3B}
+.rc-docs .actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto}
+</style>
+<div class="entete">
+  <div><h1>Carte d'identité de l'école</h1>
+  <p class="sous">Fiches de recensement annuel (primaire, maternelle inclusive) remplies automatiquement, rapports de rentrée et de fin d'année, archives des fiches officielles déposées.</p></div>
+  <form method="get" class="filtres"><label for="rc-a">Année scolaire</label>
+    <select id="rc-a" name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a==annee }}>{{ a }}</option>{% endfor %}</select></form>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Élèves – primaire</div><div class="v">{{ (par_cycle.primaire or {}).eleves or 0 }}</div><div class="d">{{ (par_cycle.primaire or {}).classes or 0 }} classe(s)</div></div>
+  <div class="kpi"><div class="l">Enfants – maternelle</div><div class="v">{{ (par_cycle.maternelle or {}).eleves or 0 }}</div><div class="d">{{ (par_cycle.maternelle or {}).classes or 0 }} section(s)</div></div>
+  <div class="kpi"><div class="l">Personnel</div><div class="v">{{ n_pers }}</div><div class="d">agents actifs</div></div>
+  <div class="kpi"><div class="l">Documents archivés</div><div class="v">{{ depots|length }}</div><div class="d">fiches et rapports déposés</div></div>
+</div>
+
+<section class="carte">
+  <h2>Fiche d'identité</h2>
+  {% if e %}
+  <dl class="rc-id">
+    {% for lib, v in [("Nom de l'école", e.nom), ("Sigle", e.sigle), ("Statut", e.statut), ("Ordre d'enseignement", e.ordre),
+                      ("Département (DDEMP)", e.departement), ("Commune", e.commune), ("Circonscription scolaire", e.cs),
+                      ("Zone pédagogique", e.zone), ("Unité pédagogique", e.up), ("Adresse", e.adresse), ("BP", e.bp),
+                      ("Ville", e.ville), ("Téléphone", e.telephone), ("E-mail", e.email),
+                      ((e.directeur_titre or 'Directeur'), e.directeur_nom), ("Téléphone du directeur", e.directeur_tel)] %}
+    <div><dt>{{ lib }}</dt><dd>{{ v or '—' }}</dd></div>
+    {% endfor %}
+  </dl>
+  {% if ep_existe('ecole_form') and peut('ecoles') %}<p><a class="btn sec petit" href="{{ url_for('ecole_form', eid=e.id) }}">✎ Modifier la fiche de l'école</a></p>{% endif %}
+  <p class="aide">Ces informations alimentent automatiquement la rubrique 1 des fiches de recensement.</p>
+  {% else %}<p>Aucune école n'est encore enregistrée.</p>{% endif %}
+</section>
+
+<h2>Documents de l'année {{ annee }}</h2>
+<div class="rc-docs">
+  {% for f in fiches %}
+  <div class="carte">
+    <h3 style="margin:0">{{ f.titre }}</h3>
+    <div class="rc-barre" role="img" aria-label="{{ f.pct }} % rempli"><span style="width:{{ f.pct }}%"></span></div>
+    <p class="aide" style="margin:0">{{ f.pct }} % des cases remplies — {{ f.ctx.n_calcules }} calculée(s), {{ f.ctx.n_saisis }} saisie(s){% if f.ctx.maj %} — enregistrée le {{ f.ctx.maj[:16] }}{% endif %}.</p>
+    {% if f.ctx.ctrl %}<span class="badge att">{{ f.ctx.ctrl|length }} contrôle(s) à revoir</span>{% else %}<span class="badge ok">Cohérente</span>{% endif %}
+    <div class="actions">
+      <a class="btn petit" href="{{ url_for('recensement_fiche', typ=f.typ, annee=annee) }}">✎ Remplir</a>
+      <a class="btn sec petit" href="{{ url_for('recensement_pdf', typ=f.typ, annee=annee) }}" target="_blank" rel="noopener">📄 PDF rempli</a>
+      <a class="btn sec petit" href="{{ url_for('recensement_pdf', typ=f.typ, annee=annee, vierge=1) }}" target="_blank" rel="noopener">📄 Vierge</a>
+      <a class="btn sec petit" href="{{ url_for('recensement_excel', typ=f.typ, annee=annee) }}">📊 Excel</a>
+    </div>
+  </div>
+  {% endfor %}
+  <div class="carte">
+    <h3 style="margin:0">Rapports de rentrée et de fin d'année (EP / EM)</h3>
+    {% if ep_existe('rapports_accueil') %}
+    <p class="aide" style="margin:0">Rapports de rentrée et de fin d'année des écoles primaires et maternelles, au format officiel.</p>
+    <div class="actions"><a class="btn petit" href="{{ url_for('rapports_accueil') }}">Ouvrir les rapports</a></div>
+    {% else %}
+    <p class="aide" style="margin:0">Le module des rapports n'est pas installé sur ce poste. Vous pouvez néanmoins déposer ci-dessous les rapports remplis à la main.</p>
+    {% endif %}
+  </div>
+</div>
+
+<section class="carte" style="margin-top:16px">
+  <h2>Téléverser un document officiel</h2>
+  <form method="post" enctype="multipart/form-data" action="{{ url_for('recensement_depot') }}" class="grille-id">
+    <div><label for="d-type">Document</label><select id="d-type" name="type_doc">{% for k, v in TYPES_DEPOT.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+    <div><label for="d-annee">Année scolaire</label><select id="d-annee" name="annee">{% for a in annees %}<option {{ 'selected' if a==annee }}>{{ a }}</option>{% endfor %}</select></div>
+    <div><label for="d-lib">Libellé (facultatif)</label><input id="d-lib" name="libelle" maxlength="120" placeholder="ex. fiche signée par le CP"></div>
+    <div><label for="d-f">Fichier (PDF ou image, 15 Mo max.)</label><input id="d-f" type="file" name="fichier" accept=".pdf,image/*" required></div>
+    <div><button class="btn">⬆ Téléverser</button></div>
+  </form>
+  <h3>Archives</h3>
+  {% if depots %}
+  <div class="tw"><table class="t">
+    <thead><tr><th>Année</th><th>Document</th><th>Fichier</th><th>Déposé le</th><th>Par</th><th></th></tr></thead>
+    <tbody>{% for d in depots %}
+    <tr><td>{{ d.annee }}</td><td>{{ d.libelle }}</td><td>{{ d.nom_original }} <span class="aide">({{ (d.taille / 1024)|round|int }} Ko)</span></td>
+      <td>{{ d.depose_le[:16] }}</td><td>{{ d.depose_par or '' }}</td>
+      <td class="actions"><a class="btn petit sec" href="{{ url_for('recensement_depot_fichier', did=d.id) }}" target="_blank" rel="noopener">Voir</a>
+        <a class="btn petit sec" href="{{ url_for('recensement_depot_fichier', did=d.id, telecharger=1) }}">Télécharger</a>
+        <form method="post" action="{{ url_for('recensement_depot_supprimer', did=d.id) }}" style="display:inline"><button class="btn petit danger" data-confirmer="Supprimer définitivement ce document ?">Supprimer</button></form></td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}<p class="aide">Aucun document déposé pour le moment.</p>{% endif %}
+</section>
+{% endblock %}

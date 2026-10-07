@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% block titre %}{{ 'Modifier le service' if svc else 'Ajouter un service' }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ ('Service : ' ~ svc.nom) if svc else 'Ajouter un service oublié' }}</h1>
+<p class="sous">Nom, sigle, rattachement dans l'organigramme, responsable et attributions.</p></div>
+<a class="btn sec" href="{{ url_for('jur_organigramme') }}">← Services et attributions</a></div>
+<form method="post" class="carte">
+  <div class="grille-id">
+    <div><label for="nom">Nom du service *</label><input id="nom" name="nom" required maxlength="150" value="{{ v.nom or '' }}" placeholder="ex. Division des Examens"></div>
+    <div><label for="sigle">Sigle</label><input id="sigle" name="sigle" maxlength="20" value="{{ v.sigle or '' }}" placeholder="ex. CDE"></div>
+    <div><label for="ordre">Ordre d'affichage</label><input id="ordre" name="ordre" type="number" min="0" max="999" value="{{ v.ordre or 0 }}"></div>
+    <div><label for="parent">Service de rattachement</label>
+      <select id="parent" name="parent_code" {{ 'disabled' if svc and svc.code in ('ccs','direction') }}>
+        {% for x in services if not svc or x.code != svc.code %}<option value="{{ x.code }}" {{ 'selected' if v.parent_code==x.code }}>{{ x.sigle or '' }} – {{ x.nom }}{{ '' if x.actif else ' (désactivé)' }}</option>{% endfor %}
+      </select></div>
+    <div><label for="resp">Responsable (agent de la structure)</label>
+      <select id="resp" name="responsable_id"><option value="">— non désigné —</option>
+        {% for a in agents %}<option value="{{ a.id }}" {{ 'selected' if v.responsable_id==a.id }}>{{ a.nom }} {{ a.prenoms or '' }}{% if a.poste %} – {{ a.poste }}{% endif %}</option>{% endfor %}
+      </select>
+      {% if not agents %}<p class="aide">Aucun agent enregistré : ajoutez-les dans « Agents de la {{ 'circonscription' if JUR_NIVEAU=='cs' else 'DDEMP' }} ».</p>{% endif %}</div>
+    <div><label for="st">Titre du signataire (documents)</label><input id="st" name="signataire_titre" maxlength="150" value="{{ v.signataire_titre or '' }}" placeholder="ex. Le Chef de la Division du Secrétariat"></div>
+    <div><label for="ref">Texte de référence</label><input id="ref" name="reference" maxlength="80" value="{{ v.reference or '' }}" placeholder="ex. Article 11"></div>
+  </div>
+  <label for="attr">Attributions (une ligne par attribution ; « - » ou « • » en début de ligne)</label>
+  <textarea id="attr" name="attributions" rows="12" style="width:100%">{{ v.attributions or '' }}</textarea>
+  <label for="note">Note (texte complémentaire, ex. article 14)</label>
+  <textarea id="note" name="note" rows="3" style="width:100%">{{ v.note or '' }}</textarea>
+  {% if not svc or svc.code not in ('ccs','direction') %}
+  <p><label><input type="checkbox" name="actif" value="1" {{ 'checked' if v.actif }}> Service actif (figure dans l'organigramme)</label></p>{% endif %}
+  <div class="actions"><button class="btn">Enregistrer</button><a class="btn sec" href="{{ url_for('jur_organigramme') }}">Annuler</a></div>
+</form>
+{% endblock %}

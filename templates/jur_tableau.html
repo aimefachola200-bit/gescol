@@ -1,0 +1,154 @@
+{% extends "base.html" %}{% import "jur_tableau_commun.html" as T with context %}
+{% block titre %}Tableau de bord{% endblock %}
+{% block contenu %}
+{{ T.styles() }}
+{% set e = tot.ens %}{% set cp = tot.cep %}
+<div class="entete"><div><h1>Tableau de bord {{ 'de la circonscription' if JUR_NIVEAU == 'cs' else 'départemental' }}</h1>
+  <p class="sous">{{ JUR.nom or NOM_APPLI }} · année scolaire {{ flt.annee }}{% if JUR_NIVEAU == 'ddemp' %} · regroupement par {{ lib_groupe|lower }}{% endif %}</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_stats_ecoles', **args) }}">📊 Statistiques détaillées</a>
+    <button class="btn sec" type="button" onclick="window.print()">🖶 Imprimer</button></div></div>
+{{ T.filtres(flt, 'jur_tableau', zone=False, type_=False, secteur=False) }}
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Écoles ayant transmis</div><div class="v">{{ tot.transmis }} <small>/ {{ tot.ecoles }}</small></div>
+    <div class="d">{% if tot.ecoles %}{{ (100 * tot.transmis / tot.ecoles)|round|int }} % des écoles attendues{% else %}aucune école enregistrée{% endif %}</div></div>
+  <div class="kpi"><div class="l">Apprenants</div><div class="v">{{ tot.t|jur_nb }}</div><div class="d">{{ tot.pct_f|jur_pct }} de filles · IP {{ tot.ip|jur_nb(2) }}</div></div>
+  <div class="kpi"><div class="l">Enseignants</div><div class="v">{{ e.t|jur_nb }}</div><div class="d">{{ e.pct_f|jur_pct }} de femmes</div></div>
+  <div class="kpi"><div class="l">Élèves / enseignant</div><div class="v">{{ e.ratio|jur_nb(1) }}</div><div class="d">manque {{ e.manque }} · surplus {{ e.surplus }}</div></div>
+  <div class="kpi"><div class="l">Réussite au CEP</div><div class="v">{{ cp.taux|jur_pct }}</div><div class="d">{{ cp.admis|jur_nb }} admis / {{ cp.candidats_connus|jur_nb }} candidats</div></div>
+</div>
+
+{% if not tot.ecoles %}
+<div class="carte"><h2>Aucune école</h2>
+  <p>Aucune école n'est encore enregistrée {{ 'dans cette circonscription' if JUR_NIVEAU == 'cs' else 'pour ce périmètre' }}.
+  Ajoutez les écoles (menu « Juridiction › Écoles ») puis importez les fichiers de transmission qu'elles envoient : le tableau de bord se remplira automatiquement.</p>
+  {% if ep_existe('jur_ecoles') %}<a class="btn" href="{{ url_for('jur_ecoles') }}">Voir les écoles</a>{% endif %}
+  {% if ep_existe('jur_transmissions') %}<a class="btn sec" href="{{ url_for('jur_transmissions') }}">Recevoir des transmissions</a>{% endif %}</div>
+{% else %}
+
+{# ---------------------------------------------------------------- 1. écoles #}
+<div class="carte"><h2>1. Écoles</h2>
+  <p class="aide">Nombre d'écoles par type et secteur, et écoles ayant transmis leurs données pour {{ flt.annee }}.</p>
+  <div class="tw"><table class="t serre">
+    <tr><th>{{ lib_groupe }}</th>{% for c in COLONNES_ECOLES %}<th class="num">{{ c[2] }}</th>{% endfor %}<th class="num">Total</th><th class="num">Transmis / attendues</th></tr>
+    {% for k, nom, ll, a in grp %}
+    <tr><td>{{ nom }}</td>{% for t, s, _l in COLONNES_ECOLES %}<td class="num">{{ a.par_type[t ~ '_' ~ (s or 'tous')] }}</td>{% endfor %}
+      <td class="num"><b>{{ a.ecoles }}</b></td><td class="num">{{ a.transmis }} / {{ a.ecoles }}{% if a.transmis < a.ecoles %} <span class="badge att">{{ a.ecoles - a.transmis }} en attente</span>{% endif %}</td></tr>
+    {% endfor %}
+    <tr class="b"><td>Total</td>{% for t, s, _l in COLONNES_ECOLES %}<td class="num">{{ tot.par_type[t ~ '_' ~ (s or 'tous')] }}</td>{% endfor %}
+      <td class="num">{{ tot.ecoles }}</td><td class="num">{{ tot.transmis }} / {{ tot.ecoles }}</td></tr>
+  </table></div>
+</div>
+
+{# ---------------------------------------------------------------- 2. effectifs #}
+<div class="carte"><h2>2. Effectifs des apprenants</h2>
+  <p class="aide">IP = indice de parité filles/garçons. Classe pléthorique : plus de {{ SEUILS.plethore.EP }} élèves (primaire), plus de {{ SEUILS.plethore.EM }} (maternelle, espace enfance).</p>
+  <div class="tw"><table class="t serre">
+    <tr><th>Secteur / type</th><th class="num">Écoles</th><th class="num">G</th><th class="num">F</th><th class="num">Total</th><th class="num">% filles</th><th class="num">% garçons</th><th class="num">IP F/G</th>
+      <th class="num">Classes</th><th class="num">Moy. / classe</th><th class="num">Écart-type / classe</th><th class="num">Écart-type / école</th><th class="num">Classes pléthoriques</th></tr>
+    {% for r in secteurs %}{% set a = r.agg %}
+    <tr class="{{ r.st }}"><td>{{ r.lib }}</td><td class="num">{{ a.ecoles }}</td><td class="num">{{ a.g|jur_nb }}</td><td class="num">{{ a.f|jur_nb }}</td><td class="num">{{ a.t|jur_nb }}</td>
+      <td class="num">{{ a.pct_f|jur_pct }}</td><td class="num">{{ a.pct_g|jur_pct }}</td><td class="num">{{ a.ip|jur_nb(2) }}</td><td class="num">{{ a.classes }}</td>
+      <td class="num">{{ a.moy_classe|jur_nb(1) }}</td><td class="num">{{ a.et_classes|jur_nb(1) }}</td><td class="num">{{ a.et_ecoles|jur_nb(1) }}</td><td class="num">{{ a.plethoriques }}</td></tr>
+    {% endfor %}
+    <tr class="b"><td>Ensemble</td><td class="num">{{ tot.ecoles }}</td><td class="num">{{ tot.g|jur_nb }}</td><td class="num">{{ tot.f|jur_nb }}</td><td class="num">{{ tot.t|jur_nb }}</td>
+      <td class="num">{{ tot.pct_f|jur_pct }}</td><td class="num">{{ tot.pct_g|jur_pct }}</td><td class="num">{{ tot.ip|jur_nb(2) }}</td><td class="num">{{ tot.classes }}</td>
+      <td class="num">{{ tot.moy_classe|jur_nb(1) }}</td><td class="num">{{ tot.et_classes|jur_nb(1) }}</td><td class="num">{{ tot.et_ecoles|jur_nb(1) }}</td><td class="num">{{ tot.plethoriques }}</td></tr>
+  </table></div>
+  <h3>Effectifs par {{ lib_groupe|lower }}</h3>{{ graph_eff }}
+  <div class="deux" style="margin-top:14px">
+    <div><h3>Répartition filles / garçons</h3>{{ graph_rep }}
+      <div class="tw" style="margin-top:10px"><table class="t serre">
+        <tr><th>{{ lib_groupe }}</th><th class="num">G</th><th class="num">F</th><th class="num">Total</th><th class="num">% F</th><th class="num">IP</th></tr>
+        {% for k, nom, ll, a in grp %}<tr><td>{{ nom }}</td><td class="num">{{ a.g|jur_nb }}</td><td class="num">{{ a.f|jur_nb }}</td><td class="num">{{ a.t|jur_nb }}</td><td class="num">{{ a.pct_f|jur_pct }}</td><td class="num">{{ a.ip|jur_nb(2) }}</td></tr>{% endfor %}
+      </table></div></div>
+    <div></div>
+  </div>
+</div>
+
+{# ---------------------------------------------------------------- 3. enseignants #}
+<div class="carte"><h2>3. Enseignants</h2>
+  <p class="aide">Enseignants en poste (directeurs, adjoints, enseignants). Besoin = nombre de groupes pédagogiques (classes) ; manque et surplus sont comptés école par école ; ratio = élèves / enseignants tenant une classe.</p>
+  <div class="tw"><table class="t serre">
+    <tr><th>{{ lib_groupe }}</th><th class="num">Total</th><th class="num">% H</th><th class="num">% F</th><th class="num">Écart H-F</th>
+      {% for k, l in CATEGORIES %}<th class="num">{{ l }}</th>{% endfor %}<th class="num">Besoin</th><th class="num">Manque</th><th class="num">Surplus</th><th class="num">Élèves / ens.</th></tr>
+    {% for k, nom, ll, a in grp %}{% set x = a.ens %}
+    <tr><td>{{ nom }}</td><td class="num">{{ x.t }}</td><td class="num">{{ x.pct_h|jur_pct }}</td><td class="num">{{ x.pct_f|jur_pct }}</td><td class="num">{{ x.ecart }}</td>
+      {% for c, l in CATEGORIES %}<td class="num">{{ x.par_categorie.get(c, 0) }}</td>{% endfor %}
+      <td class="num">{{ x.besoin }}</td><td class="num {{ 'rouge' if x.manque }}">{{ x.manque }}</td><td class="num">{{ x.surplus }}</td><td class="num">{{ x.ratio|jur_nb(1) }}</td></tr>
+    {% endfor %}
+    <tr class="b"><td>Total</td><td class="num">{{ e.t }}</td><td class="num">{{ e.pct_h|jur_pct }}</td><td class="num">{{ e.pct_f|jur_pct }}</td><td class="num">{{ e.ecart }}</td>
+      {% for c, l in CATEGORIES %}<td class="num">{{ e.par_categorie.get(c, 0) }}</td>{% endfor %}
+      <td class="num">{{ e.besoin }}</td><td class="num">{{ e.manque }}</td><td class="num">{{ e.surplus }}</td><td class="num">{{ e.ratio|jur_nb(1) }}</td></tr>
+  </table></div>
+  <h3>Élèves par enseignant</h3>{{ graph_ratio }}
+</div>
+
+{# ---------------------------------------------------------------- 4. CEP #}
+<div class="carte"><h2>4. Certificat d'études primaires (CEP)</h2>
+  {% if not cp.ecoles %}{{ T.vide("Aucune donnée CEP transmise pour cette année.") }}{% else %}
+  <p class="aide">{{ cp.ecoles }} école(s) ont présenté des candidats ; résultats connus pour {{ cp.ecoles_resultats }}. Les taux sont calculés sur les écoles dont les résultats sont connus.</p>
+  <div class="tw"><table class="t serre">
+    <tr><th rowspan="2">{{ lib_groupe }}</th><th rowspan="2" class="num">Écoles</th><th colspan="3" class="grp">Candidats présentés</th><th colspan="3" class="grp">Admis</th><th colspan="3" class="grp">Taux de réussite</th></tr>
+    <tr><th class="num">G</th><th class="num">F</th><th class="num">T</th><th class="num">G</th><th class="num">F</th><th class="num">T</th><th class="num">G</th><th class="num">F</th><th class="num">T</th></tr>
+    {% for k, nom, ll, a in grp %}{% set c = a.cep %}
+    <tr><td>{{ nom }}</td><td class="num">{{ c.ecoles }}</td><td class="num">{{ c.candidats_g }}</td><td class="num">{{ c.candidats_f }}</td><td class="num">{{ c.candidats }}</td>
+      <td class="num">{{ c.admis_g|jur_nb }}</td><td class="num">{{ c.admis_f|jur_nb }}</td><td class="num">{{ c.admis|jur_nb }}</td>
+      <td class="num">{{ c.taux_g|jur_pct }}</td><td class="num">{{ c.taux_f|jur_pct }}</td><td class="num"><b>{{ c.taux|jur_pct }}</b></td></tr>
+    {% endfor %}
+    <tr class="b"><td>Taux global</td><td class="num">{{ cp.ecoles }}</td><td class="num">{{ cp.candidats_g }}</td><td class="num">{{ cp.candidats_f }}</td><td class="num">{{ cp.candidats }}</td>
+      <td class="num">{{ cp.admis_g|jur_nb }}</td><td class="num">{{ cp.admis_f|jur_nb }}</td><td class="num">{{ cp.admis|jur_nb }}</td>
+      <td class="num">{{ cp.taux_g|jur_pct }}</td><td class="num">{{ cp.taux_f|jur_pct }}</td><td class="num">{{ cp.taux|jur_pct }}</td></tr>
+  </table></div>
+  <h3>Taux de réussite par {{ lib_groupe|lower }}</h3>{{ graph_cep }}
+  <div class="deux">
+    <div><h3>Écoles à fort taux (≥ {{ SEUILS.fort|int }} %) ayant plus de {{ SEUILS.cand }} candidats</h3>
+      {% if cep_forts %}<div class="tw"><table class="t serre"><tr><th>École</th><th class="num">Candidats</th><th class="num">Admis</th><th class="num">Taux</th></tr>
+        {% for l in cep_forts %}<tr><td>{{ l.nom }}<br><span class="aide">{{ l.cs_nom if JUR_NIVEAU == 'ddemp' else l.zone_nom }}</span></td><td class="num">{{ l.cep.candidats }}</td><td class="num">{{ l.cep.admis }}</td><td class="num vert"><b>{{ l.cep.taux|jur_pct }}</b></td></tr>{% endfor %}
+      </table></div>{% else %}{{ T.vide("Aucune école ne remplit ces deux conditions.") }}{% endif %}</div>
+    <div><h3>Écoles à moins de {{ SEUILS.faible|int }} % de réussite</h3>
+      {% if cep_faibles %}<div class="tw"><table class="t serre"><tr><th>École</th><th class="num">Candidats</th><th class="num">Admis</th><th class="num">Taux</th></tr>
+        {% for l in cep_faibles %}<tr><td>{{ l.nom }}<br><span class="aide">{{ l.cs_nom if JUR_NIVEAU == 'ddemp' else l.zone_nom }}</span></td><td class="num">{{ l.cep.candidats }}</td><td class="num">{{ l.cep.admis }}</td><td class="num rouge"><b>{{ l.cep.taux|jur_pct }}</b></td></tr>{% endfor %}
+      </table></div>{% else %}{{ T.vide("Aucune école sous ce seuil.") }}{% endif %}</div>
+  </div>
+  {% endif %}
+</div>
+
+{# ---------------------------------------------------------------- 5. visites #}
+<div class="carte"><h2>5. Bilan des activités des CP et du CCS</h2>
+  {% if bilan %}
+  <p class="aide">{{ tot_bilan.visites_classe }} visite(s) de classe, {{ tot_bilan.visites_ecole }} visite(s) d'école, {{ tot_bilan.enseignants }} enseignant(s) visité(s) en {{ flt.annee }}{% if source_bilan == 'ecoles' %} (d'après les visites transmises par les écoles){% endif %}.</p>
+  <div class="tw"><table class="t serre">
+    <tr><th>Visiteur</th><th>Fonction</th>{% if JUR_NIVEAU == 'ddemp' %}<th>CS</th>{% endif %}<th class="num">Visites de classe</th><th class="num">Visites d'école</th><th class="num">Écoles visitées</th><th class="num">Enseignants visités</th><th class="num">Note moyenne</th></tr>
+    {% for b in bilan %}<tr><td>{{ b.visiteur }}</td><td>{{ b.fonction }}</td>{% if JUR_NIVEAU == 'ddemp' %}<td>{{ b.cs_nom }}</td>{% endif %}
+      <td class="num">{{ b.visites_classe }}</td><td class="num">{{ b.visites_ecole }}</td><td class="num">{{ b.ecoles }}</td><td class="num">{{ b.enseignants }}</td><td class="num">{{ b.note_moyenne|jur_nb(1) }}</td></tr>{% endfor %}
+  </table></div>
+  {% else %}{{ T.vide("Aucune visite de CP ou de CCS enregistrée pour cette année.") }}{% endif %}
+  {% if ep_existe('jur_bilan_activites') %}<p><a href="{{ url_for('jur_bilan_activites') }}">Voir le bilan détaillé des activités →</a></p>{% endif %}
+</div>
+
+{# ---------------------------------------------------------------- 6. alertes #}
+<div class="carte"><h2>6. Alertes</h2>
+  <div class="deux">
+    <div><h3>⚠ Écoles sans transmission ({{ alertes.sans_transmission|length }})</h3>
+      {% if alertes.sans_transmission %}<ul class="alerte-liste">{% for l in alertes.sans_transmission[:40] %}<li><a href="{{ url_for('jur_ecole_fiche', eid=l.id) }}">{{ l.nom }}</a> <span class="aide">{{ l.cs_nom if JUR_NIVEAU == 'ddemp' else l.zone_nom }}{% if l.directeur_nom %} · {{ l.directeur_nom }}{% endif %}</span></li>{% endfor %}
+        {% if alertes.sans_transmission|length > 40 %}<li class="aide">… et {{ alertes.sans_transmission|length - 40 }} autre(s)</li>{% endif %}</ul>
+      {% else %}<p><span class="badge ok">✓ Toutes les écoles ont transmis</span></p>{% endif %}</div>
+    <div><h3>⚠ Écoles sans enseignant pour une classe ({{ alertes.sans_enseignant|length }})</h3>
+      {% if alertes.sans_enseignant %}<ul class="alerte-liste">{% for l in alertes.sans_enseignant %}<li><a href="{{ url_for('jur_ecole_fiche', eid=l.id) }}">{{ l.nom }}</a> : {{ l.besoin.classes }} classe(s), {{ l.besoin.enseignants }} enseignant(s) — <b class="rouge">manque {{ l.besoin.manque }}</b></li>{% endfor %}</ul>
+      {% else %}<p><span class="badge ok">✓ Chaque classe a son enseignant</span></p>{% endif %}</div>
+    <div><h3>⚠ Écoles ayant des classes pléthoriques ({{ alertes.plethoriques|length }})</h3>
+      {% if alertes.plethoriques %}<ul class="alerte-liste">{% for l in alertes.plethoriques %}<li>{{ l.nom }} : {{ l.plethoriques }} classe(s) de plus de {{ l.seuil }} élèves</li>{% endfor %}</ul>
+      {% else %}<p><span class="badge ok">✓ Aucune classe pléthorique</span></p>{% endif %}</div>
+    <div><h3>⏳ Départs à la retraite dans les 2 ans ({{ alertes.retraites|length }})</h3>
+      {% if alertes.retraites %}<div class="tw"><table class="t serre"><tr><th>Agent</th><th>Grade</th><th>Poste</th><th>Départ</th></tr>
+        {% for r in alertes.retraites[:15] %}<tr><td>{% if r.cle and ep_existe('jur_personnel_fiche') %}<a href="{{ url_for('jur_personnel_fiche', cle=r.cle) }}">{{ r.nom }}</a>{% else %}{{ r.nom }}{% endif %}</td><td>{{ r.grade }}</td><td>{{ r.ecole }}{% if JUR_NIVEAU == 'ddemp' and r.cs_nom %}<br><span class="aide">{{ r.cs_nom }}</span>{% endif %}</td>
+          <td>{{ r.depart }}{% if r.depasse %} <span class="badge ko">âge atteint</span>{% elif r.restant %}<br><span class="aide">{{ r.restant }}</span>{% endif %}</td></tr>{% endfor %}</table></div>
+        {% if alertes.retraites|length > 15 %}<p class="aide">… et {{ alertes.retraites|length - 15 }} autre(s) : voir la liste complète.</p>{% endif %}
+        <p class="aide">Règle : grade A → 60 ans, B → 58 ans, C → 55 ans ; départ au 31 décembre de l'année des N ans.</p>
+      {% else %}<p><span class="badge ok">✓ Aucun départ prévu</span></p>{% endif %}
+      {% if ep_existe('jur_retraite') %}<p><a href="{{ url_for('jur_retraite') }}">Départs à la retraite →</a></p>{% endif %}</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

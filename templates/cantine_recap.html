@@ -1,0 +1,58 @@
+{% extends "base.html" %}{% block titre %}Cantine – récapitulatifs{% endblock %}
+{% block contenu %}
+<style>
+.cant-onglets{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.cant-f{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+</style>
+<div class="entete">
+  <div><h1>Récapitulatifs de la cantine</h1>
+  <p class="sous">{{ r.titre }} — {{ r.portee }}</p></div>
+  <div class="actions">
+    <a class="btn petit" href="{{ url_for('cantine_recap_pdf', **request.args) }}" target="_blank" rel="noopener">📄 Télécharger le PDF</a>
+    <a class="btn sec petit" href="{{ url_for('cantine_accueil') }}">← Paiements</a>
+  </div>
+</div>
+
+<nav class="onglets" aria-label="Type de récapitulatif">
+  {% for k, lib in types.items() %}<a href="{{ url_for('cantine_recap', type=k, classe=r.cid or None, date=r.date, mois=r.mois, annee=r.annee) }}" class="{{ 'actif' if k == r.type }}">{{ lib }}</a>{% endfor %}
+</nav>
+
+<form method="get" class="filtres cant-f">
+  <input type="hidden" name="type" value="{{ r.type }}">
+  <label>Classe<br><select name="classe"><option value="">Toutes les classes</option>
+    {% for c in r.cls %}<option value="{{ c.id }}" {{ 'selected' if c.id == r.cid }}>{{ c.nom }}</option>{% endfor %}</select></label>
+  {% if r.type in ('jour', 'semaine') %}<label>{{ 'Jour' if r.type == 'jour' else 'Un jour de la semaine' }}<br><input type="date" name="date" value="{{ r.date }}"></label>
+  {% elif r.type == 'mois' %}<label>Mois<br><input type="month" name="mois" value="{{ r.mois }}"></label>
+  {% elif r.type == 'annee' %}<label>Année scolaire<br><input name="annee" value="{{ r.annee }}" pattern="\d{4}-\d{4}" size="10"></label>{% endif %}
+  <button class="btn petit">Afficher</button>
+  {% if r.prec %}<a class="btn sec petit" href="{{ url_for('cantine_recap', type=r.type, classe=r.cid or None, **r.prec) }}">← Précédent</a>
+  <a class="btn sec petit" href="{{ url_for('cantine_recap', type=r.type, classe=r.cid or None, **r.suiv) }}">Suivant →</a>{% endif %}
+</form>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Repas payés</div><div class="v">{{ r.tot.t }}</div><div class="d">F : {{ r.tot.f }} · G : {{ r.tot.g }}</div></div>
+  <div class="kpi"><div class="l">Montant encaissé</div><div class="v">{{ milliers(r.tot.montant) }}</div><div class="d">FCFA</div></div>
+  <div class="kpi"><div class="l">Inscrits</div><div class="v">{{ r.tot_classes.it }}</div><div class="d">F : {{ r.tot_classes['if'] }} · G : {{ r.tot_classes.ig }}</div></div>
+</div>
+
+<div class="carte">
+  <h3 style="margin-top:0">{{ types[r.type] }}</h3>
+  {% if not r.lignes %}<p class="aide">Aucun paiement enregistré.</p>{% else %}
+  <div class="tw"><table class="t compact">
+    <thead><tr><th>{{ {'jour':'Jour','semaine':'Jour','mois':'Semaine','annee':'Mois','total':'Année scolaire'}[r.type] }}</th><th class="c">Repas F</th><th class="c">Repas G</th><th class="c">Total repas</th><th class="c">Montant (FCFA)</th></tr></thead>
+    <tbody>{% for l in r.lignes %}<tr><td>{{ l.lib }}</td><td class="c">{{ l.f }}</td><td class="c">{{ l.g }}</td><td class="c">{{ l.t }}</td><td class="c">{{ milliers(l.montant) }}</td></tr>{% endfor %}
+    <tr><th>TOTAL</th><th class="c">{{ r.tot.f }}</th><th class="c">{{ r.tot.g }}</th><th class="c">{{ r.tot.t }}</th><th class="c">{{ milliers(r.tot.montant) }}</th></tr></tbody>
+  </table></div>{% endif %}
+</div>
+
+<div class="carte">
+  <h3 style="margin-top:0">Par classe</h3>
+  {% if not r.par_classe %}<p class="aide">Aucune classe.</p>{% else %}
+  <div class="tw"><table class="t compact">
+    <thead><tr><th>Classe</th><th class="c">Inscrits F</th><th class="c">Inscrits G</th><th class="c">Inscrits</th><th class="c">Repas F</th><th class="c">Repas G</th><th class="c">Repas</th><th class="c">Montant (FCFA)</th></tr></thead>
+    <tbody>{% for x in r.par_classe %}<tr><td><a href="{{ url_for('cantine_classe', cid=x.c.id) }}">{{ x.c.nom }}</a></td><td class="c">{{ x['if'] }}</td><td class="c">{{ x.ig }}</td><td class="c">{{ x.it }}</td><td class="c">{{ x.f }}</td><td class="c">{{ x.g }}</td><td class="c">{{ x.t }}</td><td class="c">{{ milliers(x.montant) }}</td></tr>{% endfor %}
+    {% set t = r.tot_classes %}<tr><th>TOTAL</th><th class="c">{{ t['if'] }}</th><th class="c">{{ t.ig }}</th><th class="c">{{ t.it }}</th><th class="c">{{ t.f }}</th><th class="c">{{ t.g }}</th><th class="c">{{ t.t }}</th><th class="c">{{ milliers(t.montant) }}</th></tr></tbody>
+  </table></div>{% endif %}
+  <p class="aide">Repas = paiements journaliers enregistrés (un par élève et par jour) sur la période.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}{% block titre %}Dépenses{% endblock %}
+{% block contenu %}
+<style>
+.dep-j tr.jour td{background:#EEF2F6;font-weight:600}
+.dep-j tr.annulee td{color:#98A2B3;text-decoration:line-through}
+.dep-j tr.annulee td.motif{text-decoration:none;color:#B42318}
+.dep-j form.annul{display:flex;gap:4px;margin:0;flex-wrap:wrap}
+.dep-j form.annul input{width:130px;padding:4px 6px;font-size:12px}
+.dep-nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+</style>
+<div class="entete">
+  <div><h1>Dépenses</h1>
+  <p class="sous">Journal des dépenses de l'école (fonds de cantine, fournitures, entretien…), jour par jour, avec totaux et récapitulatif par catégorie.</p></div>
+  <div class="actions">
+    <a class="btn orange" href="{{ url_for('depense_nouvelle') }}">– Enregistrer une dépense</a>
+    <a class="btn sec" href="{{ url_for('recettes_accueil') }}">Subventions et recettes</a>
+  </div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Dépenses – {{ j.titre|lower if j.periode != 'jour' else 'ce jour' }}</div><div class="v rouge">{{ milliers(j.total) }}</div><div class="d">FCFA · {{ j.nb }} dépense(s){% if j.cantine %} · cantine {{ milliers(j.cantine) }}{% endif %}</div></div>
+  <div class="kpi"><div class="l">Dépenses d'aujourd'hui</div><div class="v">{{ milliers(jour_total) }}</div><div class="d">FCFA</div></div>
+  <div class="kpi"><div class="l">Dépenses de l'année</div><div class="v">{{ milliers(b.depenses) }}</div><div class="d">FCFA · {{ ANNEE }}</div></div>
+  <div class="kpi"><div class="l">Solde en caisse</div><div class="v {{ 'rouge' if b.solde < 0 else 'vert' }}">{{ milliers(b.solde) }}</div><div class="d">FCFA · reçu {{ milliers(b.recu) }}</div></div>
+</div>
+
+<form class="f carte" method="get">
+  <div class="ligne">
+    <div><label for="f-per">Période</label><select id="f-per" name="periode">{% for k, lib in periodes.items() %}<option value="{{ k }}" {{ 'selected' if k == j.periode }}>{{ lib }}</option>{% endfor %}</select></div>
+    <div><label for="f-date">Date (dans la période)</label><input id="f-date" type="date" name="date" value="{{ j.date }}"></div>
+    <div><label for="f-cat">Catégorie</label><select id="f-cat" name="categorie"><option value="">Toutes les catégories</option>{% for c in categories %}<option {{ 'selected' if c == j.categorie }}>{{ c }}</option>{% endfor %}</select></div>
+    <div><label class="choix" style="margin-top:28px!important"><input type="checkbox" name="annulees" value="1" {{ 'checked' if j.annulees }}> Afficher les dépenses annulées</label></div>
+  </div>
+  <p style="margin:8px 0 0"><button class="btn sec">Afficher</button></p>
+</form>
+
+{% set prm = dict(periode=j.periode, categorie=j.categorie or None, annulees='1' if j.annulees else None) %}
+<div class="dep-nav">
+  <a class="btn sec petit" href="{{ url_for('depenses_accueil', date=j.prec, **prm) }}">← Précédent</a>
+  <b>{{ j.titre }}</b>
+  <a class="btn sec petit" href="{{ url_for('depenses_accueil', date=j.suiv, **prm) }}">Suivant →</a>
+  <span style="flex:1"></span>
+  <a class="btn sec petit" href="{{ url_for('depenses_pdf', date=j.date, **prm) }}" target="_blank">PDF du journal</a>
+  <a class="btn sec petit" href="{{ url_for('depenses_xlsx', date=j.date, **prm) }}">Excel</a>
+</div>
+
+{% if not j.lignes %}
+<div class="carte">Aucune dépense enregistrée sur cette période{{ ' pour cette catégorie' if j.categorie }}.
+  <a href="{{ url_for('depense_nouvelle') }}">Enregistrer une dépense</a>.</div>
+{% else %}
+<div class="tw"><table class="t dep-j">
+  <thead><tr><th>Date</th><th>Catégorie</th><th>Libellé</th><th>Fournisseur / bénéficiaire</th><th>Mode</th><th>Pièce</th><th class="num">Montant</th><th></th></tr></thead>
+  <tbody>
+  {% for jour in j.jours %}
+    {% for l in jour.lignes %}
+    <tr class="{{ 'annulee' if l.annule }}"><td style="white-space:nowrap">{{ date_fr(l.date) }}</td><td>{{ l.categorie }}</td>
+      <td>{{ l.libelle }}{% if l.reference %}<br><span class="gris">{{ l.reference }}</span>{% endif %}</td>
+      <td>{{ l.beneficiaire or '' }}</td><td>{{ modes.get(l.mode or '', l.mode or '') }}</td>
+      <td>{% if l.piece %}<a href="{{ url_for('depense_piece', did=l.id) }}" target="_blank" title="{{ l.piece_nom }}">📎 Voir</a>{% endif %}</td>
+      <td class="num">{{ milliers(l.montant) }}</td>
+      {% if l.annule %}<td class="motif">Annulée : {{ l.annule_motif }}</td>
+      {% else %}<td><form class="annul" method="post" action="{{ url_for('depense_annuler', did=l.id) }}">
+        <input type="hidden" name="retour" value="{{ request.full_path }}">
+        <label class="aide" for="m-{{ l.id }}" style="display:none">Motif</label>
+        <input id="m-{{ l.id }}" name="motif" placeholder="motif d'annulation" required maxlength="200">
+        <button class="btn danger petit" data-confirmer="Annuler cette dépense ({{ milliers(l.montant) }} FCFA) ? Elle restera visible, barrée, dans le journal.">Annuler</button>
+      </form></td>{% endif %}</tr>
+    {% endfor %}
+    {% if j.periode != 'jour' %}<tr class="jour"><td colspan="6">Total du {{ date_fr(jour.date) }}</td><td class="num">{{ milliers(jour.total) }}</td><td></td></tr>{% endif %}
+  {% endfor %}
+  </tbody>
+  <tfoot><tr><th colspan="6" style="text-align:left">TOTAL DE LA PÉRIODE ({{ j.nb }} dépense(s))</th><th class="num">{{ milliers(j.total) }}</th><th></th></tr></tfoot>
+</table></div>
+
+<h2>Récapitulatif par catégorie</h2>
+<div class="tw"><table class="t">
+  <thead><tr><th>Catégorie</th><th class="c">Nombre</th><th class="num">Montant (FCFA)</th><th class="num">%</th><th style="width:30%"></th></tr></thead>
+  <tbody>{% for r in j.recap %}
+  <tr><td>{{ r.cat }}</td><td class="c">{{ r.n }}</td><td class="num">{{ milliers(r.montant) }}</td><td class="num">{{ r.pct }}</td>
+    <td><div class="barre"><i style="width:{{ r.pct }}%;background:#B54708"></i></div></td></tr>
+  {% endfor %}</tbody>
+  <tfoot><tr><th>TOTAL</th><th class="c">{{ j.nb }}</th><th class="num">{{ milliers(j.total) }}</th><th class="num">100</th><th></th></tr></tfoot>
+</table></div>
+{% endif %}
+<p class="aide">Une dépense n'est jamais supprimée : elle est annulée avec un motif et reste visible (barrée) quand « Afficher les dépenses annulées » est coché. Les dépenses alimentent aussi la trésorerie et le bilan.</p>
+{% endblock %}

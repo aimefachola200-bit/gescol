@@ -1,0 +1,56 @@
+{% extends "base.html" %}{% block titre %}Fiches des écoles{% endblock %}
+{% block contenu %}
+<style>
+.jf-t td.f{text-align:center;white-space:nowrap}
+.jf-t td.f .aide{display:block;font-size:11px}
+.jf-t td.f a{font-size:12px;margin:0 2px}
+.jf-lot{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+</style>
+<div class="entete"><div><h1>Fiches officielles des écoles</h1>
+  <p class="sous">Recensement, rapports de rentrée et de fin d'année transmis par les écoles · année {{ annee }}</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_fiches_synthese', annee=annee) }}">Σ Fiches consolidées</a></div>
+</div>
+<div class="grille indicateurs">
+  {% for c in codes %}<div class="kpi"><div class="l">{{ FICHES[c][4] }}</div>
+    <div class="v">{{ stats[c].recue }}<small> / {{ stats[c].recue + stats[c].incomplete + stats[c].absente }}</small></div>
+    <div class="d">{{ stats[c].incomplete }} incomplète(s) · {{ stats[c].absente }} absente(s)</div></div>{% endfor %}
+</div>
+<form method="get" class="filtres">
+  <label for="jf-annee">Année<br><select id="jf-annee" name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  {% if JUR_NIVEAU=='ddemp' %}<label for="jf-cs">Circonscription<br><select id="jf-cs" name="cs" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if cs_id == c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+  <label for="jf-zone">Zone pédagogique<br><select id="jf-zone" name="zone" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for z in zones %}<option value="{{ z.id }}" {{ 'selected' if zone_id == z.id }}>{% if JUR_NIVEAU=='ddemp' and not cs_id %}{{ z.cs_nom }} – {% endif %}{{ z.nom }}</option>{% endfor %}</select></label>
+  <label for="jf-type">Type d'école<br><select id="jf-type" name="type" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for k, v in JUR_TYPES.items() %}<option value="{{ k }}" {{ 'selected' if f.get('type')==k }}>{{ v }}</option>{% endfor %}</select></label>
+  <label for="jf-sect">Secteur<br><select id="jf-sect" name="secteur" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for k, v in JUR_SECTEURS.items() %}<option value="{{ k }}" {{ 'selected' if f.get('secteur')==k }}>{{ v }}</option>{% endfor %}</select></label>
+  <label for="jf-fiche">Fiche<br><select id="jf-fiche" name="fiche" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for k, v in FICHES.items() %}<option value="{{ k }}" {{ 'selected' if f.get('fiche')==k }}>{{ v[3] }}</option>{% endfor %}</select></label>
+  <label for="jf-etat">État<br><select id="jf-etat" name="etat" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for k, v in ETATS.items() if k != 'sans_objet' %}<option value="{{ k }}" {{ 'selected' if f.get('etat')==k }}>{{ v }}</option>{% endfor %}</select></label>
+  <button class="btn sec petit">Filtrer</button>
+</form>
+<div class="carte"><h3>Téléchargement groupé</h3>
+  <form method="get" action="{{ url_for('jur_fiches_lot') }}" class="jf-lot">
+    {% for k in ('annee','cs','zone','type','secteur') %}{% if f.get(k) or k == 'annee' %}<input type="hidden" name="{{ k }}" value="{{ f.get(k) or annee }}">{% endif %}{% endfor %}
+    <label for="jf-lf">Fiche<br><select id="jf-lf" name="fiche">{% for k, v in FICHES.items() %}<option value="{{ k }}" {{ 'selected' if f.get('fiche')==k }}>{{ v[3] }}</option>{% endfor %}</select></label>
+    <button class="btn sec petit" name="format" value="pdf">⇩ Un PDF (sélection)</button>
+    <button class="btn sec petit" name="format" value="zip">⇩ .zip ({{ 'un PDF par CS' if JUR_NIVEAU=='ddemp' and not cs_id else 'un PDF par zone' }} + un par école)</button>
+  </form>
+  <p class="aide">Seules les fiches reçues sont incluses, dans la forme officielle (en-tête MEMP, NIP).</p>
+</div>
+<div class="tw"><table class="t jf-t">
+  <tr><th>École</th>{% if JUR_NIVEAU=='ddemp' %}<th>CS</th>{% endif %}<th>Zone</th>{% for c in codes %}<th>{{ FICHES[c][4] }}</th>{% endfor %}</tr>
+  {% for l in lignes %}{% set e = l.e %}
+  <tr><td><b>{{ e.nom }}</b><br><span class="aide">{{ e.code }} · {{ e.type }} · {{ JUR_SECTEURS[e.secteur] }}</span></td>
+    {% if JUR_NIVEAU=='ddemp' %}<td>{{ e.cs_nom or '—' }}</td>{% endif %}<td>{{ e.zone_nom or '—' }}</td>
+    {% for c in codes %}{% set x = l.fiches[c] %}<td class="f">
+      {% if x.etat == 'sans_objet' %}<span class="aide">—</span>
+      {% elif x.etat == 'absente' %}<span class="badge ko">Absente</span>
+      {% else %}<span class="badge {{ 'ok' if x.etat == 'recue' else 'att' }}" {% if x.manquants %}title="Manque : {{ x.manquants|join(', ') }}"{% endif %}>{{ ETATS[x.etat] }}</span>
+        <span class="aide">{{ x.date[:10] }}</span>
+        <a href="{{ url_for('jur_fiche_voir', ecole_id=e.id, fiche=c, annee=annee) }}" title="Voir la fiche">👁 Voir</a><a href="{{ url_for('jur_fiche_pdf', ecole_id=e.id, fiche=c, annee=annee) }}" title="Fiche officielle (PDF)">PDF</a>{% endif %}</td>{% endfor %}</tr>
+  {% else %}<tr><td colspan="{{ codes|length + 3 }}" class="gris">Aucune école pour ces filtres. Les fiches arrivent avec les fichiers de transmission des écoles (menu Transmissions).</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

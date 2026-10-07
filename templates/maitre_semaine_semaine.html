@@ -1,0 +1,66 @@
+{% extends "base.html" %}{% block titre %}Rapport hebdomadaire du maître de semaine{% endblock %}
+{% block contenu %}
+{% import "_macros.html" as M with context %}
+<style>.ms-sem td{vertical-align:top;font-size:13px}.ms-sem td.v{white-space:pre-line}</style>
+<div class="entete">
+  <div><h1>Rapport hebdomadaire</h1>
+  <p class="sous">Semaine du {{ lun.strftime('%d/%m/%Y') }} au {{ ven.strftime('%d/%m/%Y') }} — maître de semaine : <b>{{ (pl.maitre_nom if pl else '') or 'non désigné' }}</b></p></div>
+  <div class="actions">
+    <a class="btn sec petit" href="{{ url_for('maitre_semaine_semaine', semaine=prec) }}">← Précédente</a>
+    <a class="btn sec petit" href="{{ url_for('maitre_semaine_semaine') }}">Cette semaine</a>
+    <a class="btn sec petit" href="{{ url_for('maitre_semaine_semaine', semaine=suiv) }}">Suivante →</a>
+    <a class="btn petit" href="{{ url_for('maitre_semaine_rapport_pdf', semaine=lun.isoformat()) }}" target="_blank">📄 Rapport PDF</a>
+  </div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Jours renseignés</div><div class="v">{{ s.jx|length }}</div><div class="d">{{ s.jx.values()|selectattr('visa_le')|list|length }} visé(s)</div></div>
+  <div class="kpi"><div class="l">Élèves absents</div><div class="v">{{ s.tot.eleves_abs_g + s.tot.eleves_abs_f }}</div><div class="d">{{ s.tot.eleves_abs_g }} G / {{ s.tot.eleves_abs_f }} F</div></div>
+  <div class="kpi"><div class="l">Élèves en retard</div><div class="v">{{ s.tot.eleves_ret_g + s.tot.eleves_ret_f }}</div><div class="d">{{ s.tot.eleves_ret_g }} G / {{ s.tot.eleves_ret_f }} F</div></div>
+</div>
+
+<div class="tw"><table class="t ms-sem">
+  <thead><tr><th>Jour</th><th>Couleurs</th><th>Propreté</th><th>Discipline</th><th>Enseignants</th><th>Élèves abs./ret.</th><th>Visites · incidents</th><th>Activités · observations</th><th>Visa</th></tr></thead>
+  <tbody>
+  {% for x in s.jours %}{% set j = x.j %}
+  <tr>
+    <td><a href="{{ url_for('maitre_semaine_journal', date=x.d.isoformat()) }}"><b>{{ x.lib }}</b><br>{{ x.d.strftime('%d/%m') }}</a></td>
+    {% if j %}
+    <td>{{ j.heure_couleurs or '—' }}<br><span class="aide">{{ SALUT.get(j.salut_couleurs, '') }}</span></td>
+    <td>Cour : {{ ETATS.get(j.proprete_cour, '—') }}<br>Classes : {{ ETATS.get(j.proprete_classes, '—') }}</td>
+    <td class="v">{{ ETATS.get(j.discipline_etat, '') }}{% if j.discipline %}
+{{ j.discipline }}{% endif %}</td>
+    <td class="v">{% if j.retards_ens %}Retards : {{ j.retards_ens }}
+{% endif %}{% if j.absences_ens %}Absences : {{ j.absences_ens }}{% endif %}</td>
+    <td>{{ j.eleves_abs_g or 0 }} G / {{ j.eleves_abs_f or 0 }} F<br><span class="aide">ret. {{ j.eleves_ret_g or 0 }} G / {{ j.eleves_ret_f or 0 }} F</span></td>
+    <td class="v">{{ j.visites or '' }}{% if j.incidents %}
+<b>Incident :</b> {{ j.incidents }}{% endif %}</td>
+    <td class="v">{{ x.acts|join(', ') }}{% if j.activites_details %}
+{{ j.activites_details }}{% endif %}{% if j.observations %}
+<i>{{ j.observations }}</i>{% endif %}</td>
+    <td>{% if j.visa_le %}<span class="badge ok">Visé</span>{% else %}<span class="badge att">À viser</span>
+      {% if direction %}<form method="post" action="{{ url_for('maitre_semaine_viser', jid=j.id) }}"><input type="hidden" name="retour" value="semaine"><button class="btn vert petit" name="action" value="viser">Viser</button></form>{% endif %}{% endif %}</td>
+    {% else %}
+    <td colspan="8" class="aide">{{ x.ferme or 'Non renseigné' }} — <a href="{{ url_for('maitre_semaine_journal', date=x.d.isoformat()) }}">ouvrir le journal</a></td>
+    {% endif %}
+  </tr>
+  {% endfor %}
+  </tbody></table></div>
+{% if direction and s.jx and not s.tous_vises %}
+<form method="post" action="{{ url_for('maitre_semaine_viser_semaine') }}"><input type="hidden" name="semaine" value="{{ lun.isoformat() }}">
+  <button class="btn vert">✔ Viser toutes les journées de la semaine</button></form>
+{% endif %}
+
+<form method="post" class="carte" style="margin-top:16px">
+  <h2>Observations générales et signature du maître de semaine</h2>
+  <input type="hidden" name="semaine" value="{{ lun.isoformat() }}">
+  <label for="obs">Observations générales de la semaine (reprises dans le rapport PDF)</label>
+  <textarea id="obs" name="observations" maxlength="2000" style="min-height:80px">{{ (pl.observations if pl else '') or '' }}</textarea>
+  <div class="grille2" style="margin-top:10px">
+    <div>{{ M.signature(champ='signature_maitre', titre='Signature du maître de semaine', valeur=(pl.signature_maitre if pl else '') or '') }}</div>
+    {% if direction %}<div>{{ M.signature('ecole:' ~ g.ecole.id ~ ':directeur', 'Signature du directeur / de la directrice') }}
+      <p class="aide">Apposée avec le cachet sur le rapport lorsque toutes les journées sont visées.</p></div>{% endif %}
+  </div>
+  <p class="actions"><button class="btn vert">💾 Enregistrer</button></p>
+</form>
+{% endblock %}

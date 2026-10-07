@@ -1,0 +1,4 @@
+{# Édition publique : NIP et catégorie, juste après Nom et Prénoms (inclus par personnel_form.html) #}
+  <div><label for="car-nip">NIP</label><input id="car-nip" name="nip" maxlength="30" value="{{ car.nip or '' }}" placeholder="Numéro d'identification personnel"></div>
+  <div><label for="car-cat">Catégorie</label><select id="car-cat" name="categorie"><option value="">—</option>
+    {% for c, lib in car_categories %}<option value="{{ c }}" {{ 'selected' if car.categorie == c }}>{{ lib }}</option>{% endfor %}</select></div>

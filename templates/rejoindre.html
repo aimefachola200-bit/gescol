@@ -1,0 +1,57 @@
+{% extends "base.html" %}{% block titre %}Inscrire mon école{% endblock %}
+{% block contenu %}
+<div style="max-width:860px;margin:0 auto">
+<h1>Inscrire mon école à GESCOL</h1>
+<p class="sous">Votre établissement souhaite gérer ses élèves, notes, bulletins et paiements avec GESCOL ? Renseignez ce formulaire : l'équipe vous recontacte pour une démonstration.</p>
+
+{% if ok %}
+<div class="flash success"><b>Merci !</b> La demande pour {{ ok }} est enregistrée.{% if telephone %} L'équipe GESCOL vous contactera au {{ telephone }}.{% endif %}</div>
+{% endif %}
+{% if erreurs %}<div class="flash danger">Complétez {{ erreurs|join(', ') }}.</div>{% endif %}
+
+<form method="post" class="f">
+<div class="carte">
+  <h2 style="margin-top:0">L'établissement</h2>
+  <label>Nom de l'établissement *</label><input name="ecole" required maxlength="200" value="{{ f.ecole or '' }}" placeholder="ex. Complexe Scolaire La Grâce">
+  <div class="ligne">
+    <div><label>Ordre d'enseignement *</label><select name="type" required><option value="">— choisir —</option>
+      {% for o in ordres %}<option {{ 'selected' if f.type==o }}>{{ o }}</option>{% endfor %}</select></div>
+    <div><label>Statut</label><select name="statut_etab"><option value="">— choisir —</option>
+      {% for o in statuts_etab %}<option {{ 'selected' if f.statut_etab==o }}>{{ o }}</option>{% endfor %}</select></div>
+    <div><label>Département *</label><select name="departement" required><option value="">— choisir —</option>
+      {% for o in departements %}<option {{ 'selected' if f.departement==o }}>{{ o }}</option>{% endfor %}</select></div>
+    <div><label>Commune / ville *</label><input name="commune" required value="{{ f.commune or '' }}"></div>
+    <div><label>Nombre d'élèves</label><input name="effectif" inputmode="numeric" value="{{ f.effectif or '' }}"></div>
+    <div><label>Nombre d'enseignants</label><input name="enseignants" inputmode="numeric" value="{{ f.enseignants or '' }}"></div>
+  </div>
+</div>
+<div class="carte">
+  <h2 style="margin-top:0">Personne à contacter</h2>
+  <div class="ligne">
+    <div><label>Nom et prénoms *</label><input name="contact" required value="{{ f.contact or '' }}"></div>
+    <div><label>Fonction</label><select name="fonction"><option value="">— choisir —</option>
+      {% for o in fonctions %}<option {{ 'selected' if f.fonction==o }}>{{ o }}</option>{% endfor %}</select></div>
+    <div><label>Téléphone *</label><input name="telephone" type="tel" required value="{{ f.telephone or '' }}" placeholder="+229 01 …"></div>
+    <div><label>WhatsApp (si différent)</label><input name="whatsapp" type="tel" value="{{ f.whatsapp or '' }}"></div>
+    <div><label>E-mail</label><input name="email" type="email" value="{{ f.email or '' }}"></div>
+  </div>
+</div>
+<div class="carte">
+  <h2 style="margin-top:0">Vos besoins</h2>
+  <div style="display:flex;flex-wrap:wrap;gap:6px 18px">
+    {% for m in modules %}<label style="font-weight:400;display:flex;gap:6px;align-items:center;margin:4px 0"><input type="checkbox" name="modules" value="{{ m }}" {{ 'checked' if m in (f.modules or []) }}> {{ m }}</label>{% endfor %}
+  </div>
+  <div class="ligne">
+    <div><label>Démarrage souhaité</label><select name="demarrage"><option value="">— choisir —</option>
+      {% for o in demarrages %}<option {{ 'selected' if f.demarrage==o }}>{{ o }}</option>{% endfor %}</select></div>
+    <div><label>Outil actuel</label><select name="outil"><option value="">— choisir —</option>
+      {% for o in outils %}<option {{ 'selected' if f.outil==o }}>{{ o }}</option>{% endfor %}</select></div>
+  </div>
+  <label>Message (facultatif)</label><textarea name="message" rows="3" maxlength="1500">{{ f.message or '' }}</textarea>
+  <div style="position:absolute;left:-9999px" aria-hidden="true"><label>Site web</label><input name="site_web" tabindex="-1" autocomplete="off"></div>
+  <label style="font-weight:400;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" name="accord" style="margin-top:4px"> J'accepte que l'équipe GESCOL utilise ces coordonnées pour me recontacter au sujet de l'application.</label>
+</div>
+<button class="btn">Envoyer la demande</button>
+</form>
+</div>
+{% endblock %}

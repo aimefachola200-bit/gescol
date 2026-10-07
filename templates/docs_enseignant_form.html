@@ -1,0 +1,183 @@
+{% extends "base.html" %}{% block titre %}{{ d.titre }}{% endblock %}
+{% block contenu %}
+<style>
+.de-sec{border:1px solid var(--bord);border-radius:10px;padding:10px 14px 14px;margin:0 0 14px;background:#fff}
+.de-sec legend{font-weight:700;padding:0 6px}
+.de-sec .plein{grid-column:1/-1}
+.de-sec textarea{width:100%;min-height:74px}
+.de-notes td,.de-notes th{vertical-align:middle}
+.de-notes input[type=number]{width:84px}
+.de-notes .tot{font-weight:700;font-size:18px;text-align:center;white-space:nowrap}
+.de-gescol{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 16px;margin:0}
+.de-gescol dt{font-size:12px;color:var(--gris);margin-top:4px}.de-gescol dd{margin:0;font-weight:600}
+.de-barre{position:sticky;bottom:0;background:var(--fond,#f7f8fa);padding:10px 0;border-top:1px solid var(--bord);z-index:5}
+.de-liste{max-height:300px;overflow:auto;border:1px solid var(--bord);border-radius:8px;padding:6px 10px;background:#fff}
+.de-liste label{display:block;padding:3px 0;font-weight:normal}
+</style>
+<div class="entete">
+  <div><h1>{{ d.titre }}</h1><p class="sous">{{ d.desc }}</p></div>
+  <div class="actions">
+    <a class="btn sec petit" href="{{ url_for('docs_enseignant_accueil') }}">← Documents</a>
+    <a class="btn sec petit" href="{{ url_for('docs_enseignant_vierge', doc=doc) }}" target="_blank" rel="noopener">📄 PDF vierge</a>
+    <a class="btn sec petit" href="{{ url_for('docs_enseignant_historique', type=doc) }}">🗂 Historique</a>
+  </div>
+</div>
+
+{# ------------------------------------------------ choix de la personne #}
+<div class="carte">
+{% if d.cible == 'eleve' %}
+  {% if not classes %}<p>Aucune classe disponible. Créez d'abord les classes (menu Classes) ou demandez vos affectations.</p>
+  {% else %}
+  <form method="get" class="filtres">
+    <label>Classe<br><select name="classe" onchange="this.form.p && (this.form.p.value=''); this.form.submit()">
+      <option value="">— choisir —</option>
+      {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if classe and c.id==classe.id }}>{{ c.nom }}</option>{% endfor %}
+    </select></label>
+    {% if classe %}
+    <label>Élève<br><select name="p" onchange="this.form.submit()">
+      <option value="">— choisir l'élève —</option>
+      {% for e in personnes %}<option value="{{ e.id }}" {{ 'selected' if e.id==pid }}>{{ e.nom }} {{ e.prenoms }}{% if e.statut != 'inscrit' %} ({{ e.statut }}){% endif %}</option>{% endfor %}
+    </select></label>
+    {% endif %}
+    <noscript><button class="btn petit">Afficher</button></noscript>
+  </form>
+  {% if classe and not personnes %}<p class="aide">Aucun élève dans cette classe.</p>{% endif %}
+  {% endif %}
+{% else %}
+  {% if not personnes %}
+  <p>{% if peut('carriere') or peut('paie') %}Aucun agent actif enregistré pour cette école : ajoutez le personnel (menu Personnel).
+     {% else %}Aucune fiche du personnel n'est liée à votre compte : demandez à la direction de vous rattacher à votre fiche.{% endif %}</p>
+  {% else %}
+  <form method="get" class="filtres">
+    <label>Agent concerné<br><select name="p" onchange="this.form.submit()">
+      <option value="">— choisir l'agent —</option>
+      {% for a in personnes %}<option value="{{ a.id }}" {{ 'selected' if a.id==pid }}>{{ a.nom }} {{ a.prenoms }} — {{ a.fonction }}</option>{% endfor %}
+    </select></label>
+    <noscript><button class="btn petit">Afficher</button></noscript>
+  </form>
+  {% endif %}
+{% endif %}
+{% if personne and gescol %}
+  <h3 style="margin:10px 0 4px">Données connues de GESCOL</h3>
+  <dl class="de-gescol">{% for lib, val in gescol %}<div><dt>{{ lib }}</dt><dd>{{ val }}</dd></div>{% endfor %}</dl>
+  {% if infos_car %}
+  <details style="margin-top:8px"><summary>Dossier de carrière ({{ infos_car|length }} renseignement{{ 's' if infos_car|length > 1 }})</summary>
+    <dl class="de-gescol">{% for lib, val in infos_car %}<div><dt>{{ lib }}</dt><dd>{{ val }}</dd></div>{% endfor %}</dl></details>
+  {% elif d.cible == 'agent' %}
+  <p class="aide">{% if carriere_table %}Le dossier de carrière de cet agent n'est pas encore rempli{% else %}Le module « Gestion de carrière » n'est pas encore installé{% endif %} :
+  complétez ci-dessous grade, catégorie, échelle, NIP… — votre saisie est mémorisée pour les prochains documents.</p>
+  {% endif %}
+{% endif %}
+</div>
+
+{% if personne %}
+<form method="post" id="de-form" novalidate>
+  <input type="hidden" name="p" value="{{ pid }}">{% if classe %}<input type="hidden" name="classe" value="{{ classe.id }}">{% endif %}
+  {% for titre, cles in sections %}
+  {% if titre == '3 - Évaluation' or titre == 'Signataires' and d.famille == 'eval' and False %}{% endif %}
+  <fieldset class="de-sec"><legend>{{ titre }}</legend>
+    <div class="grille-id">
+    {% for k in cles %}{% set lib, typ = CHAMPS[k] %}
+      <div class="{{ 'plein' if typ == 'z' }}">
+        <label for="f-{{ k }}">{{ lib }}</label>
+        {% if typ == 'z' %}<textarea id="f-{{ k }}" name="{{ k }}" rows="3">{{ v.get(k, '') }}</textarea>
+        {% elif typ == 'date' %}<input id="f-{{ k }}" name="{{ k }}" value="{{ v.get(k, '') }}" placeholder="jj/mm/aaaa" pattern="\d{2}/\d{2}/\d{4}" inputmode="numeric">
+        {% elif typ == 'civ' %}<select id="f-{{ k }}" name="{{ k }}">{% for o in ['', 'M.', 'Mme', 'Mlle'] %}<option value="{{ o }}" {{ 'selected' if v.get(k)==o }}>{{ o or '— (Mr ou Mme)' }}</option>{% endfor %}</select>
+        {% elif typ == 'sexe' %}<select id="f-{{ k }}" name="{{ k }}"><option value="">—</option><option value="M" {{ 'selected' if v.get(k)=='M' }}>Masculin</option><option value="F" {{ 'selected' if v.get(k)=='F' }}>Féminin</option></select>
+        {% elif typ == 'dir' %}<select id="f-{{ k }}" name="{{ k }}">{% for o in ['Directeur', 'Directrice'] %}<option {{ 'selected' if v.get(k)==o }}>{{ o }}</option>{% endfor %}</select>
+        {% else %}<input id="f-{{ k }}" name="{{ k }}" value="{{ v.get(k, '') }}">{% endif %}
+      </div>
+    {% endfor %}
+    </div>
+    {% if titre.startswith('3') and d.famille == 'eval' %}
+      {% for t, ttitre in TABLES_NOTES %}
+      <h3 style="margin:16px 0 6px">{{ ttitre }}</h3>
+      <div class="tw"><table class="t compact de-notes" data-table="{{ t }}">
+        <thead><tr><th colspan="2">Critères de performance</th><th class="c">Note par critère</th><th class="c">Total</th><th>Classe de performance</th></tr></thead>
+        <tbody>
+        {% set nlig = namespace(i=0) %}
+        {% for grp, crits in criteres %}{% for k, lib, bar in crits %}
+        <tr>{% if loop.first %}<td rowspan="{{ crits|length }}"><b>{{ grp }}</b></td>{% endif %}
+          <td><label for="n-{{ t }}-{{ k }}">{{ lib }}</label></td>
+          <td class="c" style="white-space:nowrap"><input type="number" id="n-{{ t }}-{{ k }}" name="{{ t }}_{{ k }}" value="{{ (v.get(t ~ '_' ~ k) or '')|replace(',', '.') }}" min="0" max="{{ bar }}" step="0.25" data-bar="{{ bar }}"> / {{ fmt_note(bar) }}</td>
+          {% if nlig.i == 0 %}<td rowspan="8" class="tot"><span data-total="{{ t }}">{{ fmt_note(totaux.get(t)) if totaux.get(t) is not none else '—' }}</span> / 20</td>
+          <td rowspan="8"><input name="{{ t }}_classe" list="dl-perf" value="{{ v.get(t ~ '_classe', '') }}" data-classe="{{ t }}" aria-label="Classe de performance" placeholder="calculée automatiquement"></td>{% endif %}
+        </tr>{% set nlig.i = nlig.i + 1 %}
+        {% endfor %}{% endfor %}
+        </tbody></table></div>
+      {% endfor %}
+      <datalist id="dl-perf">{% for s, lib in CLASSES_PERF %}<option value="{{ lib }}">{% endfor %}</datalist>
+      <p class="aide">Total sur 20 calculé automatiquement ; la classe de performance est proposée selon le barème
+      {% for s, lib in CLASSES_PERF %}{{ lib }}{% if s %} (≥ {{ s }}){% endif %}{{ ', ' if not loop.last else '.' }}{% endfor %} Vous pouvez la modifier.</p>
+    {% endif %}
+  </fieldset>
+  {% endfor %}
+
+  <div class="de-barre actions">
+    {% if peut_signer %}<label style="font-weight:normal"><input type="checkbox" name="signer" value="1" checked> Apposer cachet et signature{% if d.qr %} (+ QR de vérification){% endif %}</label>
+    {% else %}<span class="aide">Document imprimé sans cachet ni signature (à faire signer).</span>{% endif %}
+    <button class="btn" name="action" value="pdf" formtarget="_blank">📄 Générer le PDF</button>
+    <button class="btn vert" name="action" value="sauver">💾 Enregistrer la saisie</button>
+    <a class="btn sec" href="{{ url_for('docs_enseignant_form', doc=doc, p=pid, classe=classe.id if classe else None, reinit=1) }}" data-confirmer="Revenir aux données de GESCOL (la saisie non enregistrée sera perdue) ?">↺ Revenir aux données GESCOL</a>
+  </div>
+</form>
+{% elif personnes %}
+<p class="aide">Choisissez {{ "l'élève" if d.cible == 'eleve' else "l'agent" }} : son identité et tout ce que GESCOL connaît seront pré-remplis ; le reste se saisit avant l'impression.</p>
+{% endif %}
+
+{# ------------------------------------------------ génération groupée #}
+{% if personnes %}
+<div class="carte">
+  <h2 style="margin-top:0">Génération groupée</h2>
+  <p class="aide">Un seul PDF pour {{ 'les élèves cochés de la classe ' ~ classe.nom if d.cible == 'eleve' else 'les agents cochés' }},
+  avec les données GESCOL et les saisies déjà enregistrées pour chacun.</p>
+  <form method="post" action="{{ url_for('docs_enseignant_groupe', doc=doc) }}" target="_blank" data-coches>
+    {% if classe %}<input type="hidden" name="classe" value="{{ classe.id }}">{% endif %}
+    <div class="actions" style="margin-bottom:6px">
+      <button type="button" class="btn sec petit" data-cocher="1">Tout cocher</button>
+      <button type="button" class="btn sec petit" data-cocher="0">Tout décocher</button>
+      <span class="aide"><span class="nb-coches"></span> sélectionné(s)</span>
+    </div>
+    <div class="de-liste">
+    {% for p in personnes %}{% if d.cible == 'agent' or p.statut == 'inscrit' %}
+      <label><input type="checkbox" name="ids" value="{{ p.id }}" checked> {{ p.nom }} {{ p.prenoms }}{% if d.cible == 'agent' %} — {{ p.fonction }}{% endif %}</label>
+    {% endif %}{% endfor %}
+    </div>
+    <div class="actions" style="margin-top:10px">
+      {% if peut_signer %}<label style="font-weight:normal"><input type="checkbox" name="signer" value="1" checked> Cachet et signature</label>{% endif %}
+      <button class="btn">📚 PDF groupé</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+{% if d.famille == 'eval' and personne %}
+<script>
+(function () {
+  var paliers = {{ CLASSES_PERF|tojson }};
+  function fmt(n) { return (Math.round(n * 100) / 100).toString().replace('.', ','); }
+  function calcul(t) {
+    var total = 0, nb = 0;
+    document.querySelectorAll('table[data-table="' + t + '"] input[type=number]').forEach(function (i) {
+      var v = parseFloat((i.value || '').replace(',', '.'));
+      var bar = parseFloat(i.dataset.bar);
+      i.setCustomValidity(!isNaN(v) && (v < 0 || v > bar) ? 'Note entre 0 et ' + bar : '');
+      if (!isNaN(v) && v >= 0 && v <= bar) { total += v; nb++; }
+    });
+    document.querySelector('[data-total="' + t + '"]').textContent = nb ? fmt(total) : '—';
+    var ch = document.querySelector('[data-classe="' + t + '"]');
+    if (nb && (!ch.value || ch.dataset.auto === '1')) {
+      for (var k = 0; k < paliers.length; k++) { if (total >= paliers[k][0]) { ch.value = paliers[k][1]; break; } }
+      ch.dataset.auto = '1';
+    }
+  }
+  document.querySelectorAll('[data-classe]').forEach(function (ch) { ch.addEventListener('input', function () { ch.dataset.auto = '0'; }); });
+  ['sh', 'cd'].forEach(function (t) {
+    document.querySelectorAll('table[data-table="' + t + '"] input[type=number]').forEach(function (i) {
+      i.addEventListener('input', function () { calcul(t); });
+    });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

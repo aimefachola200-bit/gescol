@@ -1,0 +1,265 @@
+{% extends "base.html" %}{% import "_macros.html" as M with context %}
+{% block titre %}{{ schema.titre_court }} – {{ annee }}{% endblock %}
+{% block contenu %}
+<style>
+.rc-legende{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin:6px 0 10px}
+.rc-legende span{display:inline-flex;align-items:center;gap:5px}
+.o-calculée,.rc-calc{background:#EAF2FB;color:#1F4E79}
+.o-saisie,.rc-saisi{background:#FFF6D6;color:#7A5200}
+.rc-badge{font-size:11px;border-radius:8px;padding:1px 7px;white-space:nowrap}
+.rc-sec{display:block}
+.js .rc-sec{display:none}.js .rc-sec.actif{display:block}
+.rc-l{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:5px 0;border-bottom:1px dashed #E4E7EC}
+.rc-l .num{min-width:3.2em;font-weight:600;color:#1F4E79}
+.rc-l .txt{font-weight:500}
+.rc-l.ind{padding-left:2.2em}
+.rc-l input[type=text]{width:auto;min-width:5em;padding:4px 6px}
+.rc-l input.nb{width:7em}.rc-l input.tx{min-width:12em;flex:1 1 14em;max-width:34em}
+.rc-l select{width:auto;padding:4px}
+.rc-l label.choix{margin:0 6px 0 0!important}
+.rc-p{font-size:13px;color:#475467;padding:4px 0 4px 3.2em}
+.rc-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px 14px;padding:4px 0 4px 3.2em}
+.rc-g label{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:14px}
+.rc-g input{width:5.5em}
+.rc-sous{font-weight:600;margin:10px 0 4px}
+table.rc-t{border-collapse:collapse;font-size:12px;margin:6px 0 10px}
+table.rc-t th,table.rc-t td{border:1px solid #98A2B3;padding:1px 2px;text-align:center}
+table.rc-t th{background:#F2F4F7;font-weight:500}
+table.rc-t th.v{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;vertical-align:bottom;padding:4px 1px;font-size:11px}
+table.rc-t td.lib{text-align:left;white-space:nowrap;padding:1px 6px;background:#FCFCFD}
+table.rc-t td.grp{writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;background:#FCFCFD}
+table.rc-t td.gris{background:#948A85}
+table.rc-t td.fus{background:#F2F4F7;font-weight:600}
+table.rc-t tr.tot td{font-weight:700}
+table.rc-t input[type=text]{width:3.4em;padding:2px 3px;border:1px solid transparent;text-align:center;font-size:12px;background:transparent}
+table.rc-t input.t{width:8em;text-align:left}
+table.rc-t td.cle-nom input{width:13em}
+table.rc-t input:focus{border-color:#2E6DA4;background:#fff}
+table.rc-t input.rc-calc::placeholder{color:#1F4E79;opacity:1;font-style:italic}
+table.rc-t input.rc-saisi{background:#FFF6D6;font-weight:700}
+.rc-l input.rc-calc::placeholder{color:#1F4E79;opacity:1;font-style:italic}
+.rc-l input.rc-saisi{background:#FFF6D6}
+.rc-ctrl{max-height:220px;overflow:auto;margin:0;padding-left:20px}
+@media (max-width:700px){.rc-l .num{min-width:2.4em}.rc-l.ind{padding-left:1em}.rc-p,.rc-g{padding-left:0}}
+</style>
+
+<div class="entete">
+  <div><h1>{{ schema.titre_court }}</h1>
+  <p class="sous">Année scolaire {{ annee }} — même forme que la fiche officielle du Ministère (rubriques, numérotation, tableaux). Les valeurs calculées par GESCOL sont proposées ; tout reste modifiable.</p></div>
+  <div class="actions">
+    <a class="btn sec petit" href="{{ url_for('recensement_accueil', annee=annee) }}">← Carte d'identité</a>
+    <form method="get" class="filtres" style="margin:0"><label for="rc-annee" class="sr">Année</label>
+      <select id="rc-annee" name="annee" onchange="this.form.submit()" aria-label="Année scolaire">
+      {% for a in annees %}<option {{ 'selected' if a==annee }}>{{ a }}</option>{% endfor %}</select></form>
+  </div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Champs calculés</div><div class="v">{{ n_calcules }}</div><div class="d">remplis par GESCOL</div></div>
+  <div class="kpi"><div class="l">Champs saisis</div><div class="v">{{ n_saisis }}</div><div class="d">{% if maj %}enregistré le {{ maj[:16] }}{% if par %} par {{ par }}{% endif %}{% else %}rien d'enregistré{% endif %}</div></div>
+  <div class="kpi"><div class="l">Remplissage</div><div class="v">{{ (100 * n_rempli / (n_total or 1))|round|int }} %</div><div class="d">{{ n_rempli }} / {{ n_total }} cases</div></div>
+  <div class="kpi"><div class="l">Contrôles</div><div class="v">{{ ctrl|length }}</div><div class="d">{{ 'incohérence(s)' if ctrl else 'tout est cohérent' }}</div></div>
+</div>
+
+{% for m in infos %}<div class="flash info">{{ m }}</div>{% endfor %}
+{% if ctrl %}
+<details class="carte" open><summary><b>Contrôles de cohérence ({{ ctrl|length }})</b> — G + F = T, totaux de lignes et de colonnes, concordance entre rubriques</summary>
+<ul class="rc-ctrl">{% for m in ctrl %}<li>{{ m }}</li>{% endfor %}</ul></details>
+{% endif %}
+
+{# ------------------------------------------------------------ champs simples #}
+{% macro champ(ch) %}
+{% set k = ch.k %}{% set s = saisies.get(k) %}{% set c = calc.get(k) %}{% set o = orig.get(k) %}{% set e = eff.get(k) %}
+{% if ch.lib and ch.t not in ('case',) %}<span>{{ ch.lib }}</span>{% endif %}
+{% if ch.t == 'on' or (ch.t == 'ch' and not ch.multi) %}
+  <select name="{{ k }}" aria-label="{{ ch.lib or k }}" class="{{ 'rc-saisi' if o=='saisie' }}">
+    <option value="">— {{ ('calculé : ' ~ c) if c else 'non renseigné' }} —</option>
+    {% for opt in (OUINON if ch.t == 'on' else ch.opts) %}<option value="{{ opt }}" {{ 'selected' if s == opt }}>{{ opt }}</option>{% endfor %}
+  </select>
+{% elif ch.t == 'ch' %}
+  <span data-multi="{{ k }}" data-auto='{{ (c or [])|tojson }}'>{% for opt in ch.opts %}<label class="choix"><input type="checkbox" name="{{ k }}" value="{{ opt }}" {{ 'checked' if e and opt in e }}> {{ opt }}</label>{% endfor %}</span>
+{% elif ch.t == 'case' %}
+  <label class="choix"><input type="checkbox" name="{{ k }}" value="1" data-case data-auto="{{ '1' if c == '1' }}" {{ 'checked' if e == '1' }}> {{ ch.lib }}</label>
+{% else %}
+  <input type="text" name="{{ k }}" value="{{ s or '' }}" placeholder="{{ c or '' }}" aria-label="{{ ch.lib or k }}"
+    class="{{ 'tx' if ch.t == 'tx' else 'nb' }} {{ 'rc-saisi' if o=='saisie' else ('rc-calc' if c) }}"
+    {% if ch.t in ('nb','mt') %}inputmode="decimal"{% endif %}{% if ch.somme %} data-somme="{{ ch.somme|join('|') }}"{% endif %}>
+  {% if ch.unite %}<span>{{ ch.unite }}</span>{% endif %}{% if ch.t == 'mt' %}<span>FCFA</span>{% endif %}
+{% endif %}
+{% if o %}<span class="rc-badge o-{{ o }}" title="{{ 'Valeur calculée par GESCOL : laissez vide pour la garder, tapez une autre valeur pour la corriger' if o == 'calculée' else 'Valeur saisie (correction) — videz le champ pour revenir à la valeur calculée' }}{% if o == 'saisie' and c and ch.t not in ('ch','case') %} (calculée : {{ c }}){% endif %}">{{ o }}</span>{% endif %}
+{% endmacro %}
+
+{# ------------------------------------------------------------ tableaux #}
+{% macro tableau(tv) %}
+{% if tv.titre %}<p class="rc-sous">{{ tv.titre }}</p>{% endif %}
+<div class="tw"><table class="rc-t" data-table="{{ tv.k }}">
+  <thead>{% for ligne in tv.entete %}<tr>{% for h in ligne %}<th colspan="{{ h.cs }}" rowspan="{{ h.rs }}" class="{{ 'v' if h.v }}" scope="col">{{ h.txt }}</th>{% endfor %}</tr>{% endfor %}</thead>
+  <tbody>
+  {% for l in tv.lignes %}
+  <tr class="{{ 'tot' if l.total }}" data-ligne="{{ l.k }}">
+    {% if l.groupe and l.groupe != 'suite' %}<td class="grp" rowspan="{{ l.groupe.rs }}">{{ l.groupe.txt }}</td>{% endif %}
+    <td class="lib" {% if tv.nlab == 2 and not l.groupe %}colspan="2"{% endif %}>{{ l.lib }}</td>
+    {% for c in l.cells %}
+      {% if c.grise %}<td class="gris" aria-label="non applicable"></td>
+      {% elif c.fusion %}<td class="fus" colspan="{{ c.cs }}">{{ c.fusion }}</td>
+      {% elif c.t == 'c' %}<td colspan="{{ c.cs }}"><input type="checkbox" name="{{ c.key }}" value="1" data-case data-auto="{{ '1' if c.c == '1' }}" {{ 'checked' if (c.s == '1') or (c.s == '' and c.c == '1') }} aria-label="{{ c.lib }}"></td>
+      {% else %}<td colspan="{{ c.cs }}" class="{{ 'cle-nom' if c.key.endswith('.nom') }}"><input type="text" name="{{ c.key }}" value="{{ c.s }}" placeholder="{{ c.c }}" aria-label="{{ c.lib }}"
+        class="{{ 't' if c.t == 't' }} {{ 'rc-saisi' if c.o == 'saisie' else ('rc-calc' if c.c) }}" {% if c.t != 't' %}inputmode="decimal"{% endif %}
+        {% if c.somme %}data-somme="{{ c.somme }}" title="Total calculé automatiquement"{% endif %}></td>{% endif %}
+    {% endfor %}
+  </tr>
+  {% endfor %}
+  </tbody></table></div>
+{% if tv.dyn %}<button type="button" class="btn sec petit" data-ajout="{{ tv.k }}">➕ Ajouter une ligne</button>{% endif %}
+{% endmacro %}
+
+{% macro items(liste) %}
+{% for it in liste %}
+  {% if it.i == 'L' %}
+  <div class="rc-l {{ 'ind' if it.ind or not it.num }}">{% if it.num %}<span class="num">{{ it.num }}</span>{% endif %}{% if it.texte %}<span class="txt">{{ it.texte }}</span>{% endif %}
+    {% for ch in it.champs %}{% if ch is string %}<span class="aide">{{ ch }}</span>{% else %}{{ champ(ch) }}{% endif %}{% endfor %}</div>
+  {% elif it.i == 'P' %}<p class="rc-p">{{ it.texte }}</p>
+  {% elif it.i == 'G' %}<div class="rc-g">{% for ch in it.champs %}<label>{{ ch.lib }} <input type="text" name="{{ ch.k }}" value="{{ saisies.get(ch.k, '') }}" placeholder="{{ calc.get(ch.k, '') }}" inputmode="numeric" class="{{ 'rc-saisi' if orig.get(ch.k)=='saisie' else ('rc-calc' if calc.get(ch.k)) }}"></label>{% endfor %}</div>
+  {% elif it.i == 'T' %}{{ tableau(tables[it.k]) }}
+  {% elif it.i == 'C2' %}{{ items(it.g) }}{{ items(it.d) }}
+  {% elif it.i == 'SIG' %}<p class="aide">Signatures et visas : {{ 'Directeur, RUP, Conseiller Pédagogique, Chef Région Pédagogique' if it.kind == 'primaire' else 'Responsable d’Unité Pédagogique, Conseiller Pédagogique, chef de la Circonscription scolaire' }} (sur le document imprimé). La signature digitale du directeur enregistrée dans GESCOL est reproduite sur le PDF.</p>
+  {% endif %}
+{% endfor %}
+{% endmacro %}
+
+<form id="rc-form" class="carte" data-typ="{{ typ }}" data-annee="{{ annee }}" data-url="{{ url_for('recensement_enregistrer', typ=typ) }}" onsubmit="return false">
+  {% call M.barre_doc() %}
+    <a class="btn petit" href="{{ url_for('recensement_pdf', typ=typ, annee=annee) }}" target="_blank" rel="noopener">📄 PDF rempli</a>
+    <a class="btn sec petit" href="{{ url_for('recensement_pdf', typ=typ, annee=annee, vierge=1) }}" target="_blank" rel="noopener">📄 PDF vierge</a>
+    <a class="btn sec petit" href="{{ url_for('recensement_excel', typ=typ, annee=annee) }}">📊 Excel</a>
+  {% endcall %}
+  <div class="rc-legende" aria-label="Légende">
+    <span><span class="rc-badge o-calculée">calculée</span> valeur proposée par GESCOL (laisser vide pour la garder)</span>
+    <span><span class="rc-badge o-saisie">saisie</span> valeur tapée ou corrigée</span>
+    <span>Totaux (T, ENSEMBLE, TOTAL) recalculés automatiquement</span>
+  </div>
+  <nav class="onglets" aria-label="Rubriques">
+    <a href="#ident" data-onglet="ident">Réservé à l'administration</a>
+    {% for s in sections %}<a href="#r{{ s.num }}" data-onglet="r{{ s.num }}">{{ s.onglet }}</a>{% endfor %}
+  </nav>
+  <section class="rc-sec" id="ident"><h2>Réservé à l'administration</h2>
+    <div class="rc-l">{% for ch in schema.admin %}{{ champ(ch) }}{% endfor %}</div>
+    <p class="aide">Le code et le géo-référencement sont réservés à l'administration ; vous pouvez les reporter ici s'ils vous ont été communiqués.</p>
+  </section>
+  {% for s in sections %}
+  <section class="rc-sec" id="r{{ s.num }}"><h2>{{ s.num }}. {{ s.titre }}</h2>
+    {{ items(s['items']) }}
+  </section>
+  {% endfor %}
+  <p class="aide">Âges calculés au 31 décembre {{ (annee[:4]|int) + 1 }} (seconde année de l'année scolaire). « Sauvegarder » enregistre seulement les valeurs saisies ; les cases vides reprennent la valeur calculée. « Charger » recharge la dernière version enregistrée ; « Réinitialiser » vide le formulaire (retour aux valeurs calculées) — pensez à sauvegarder ensuite.</p>
+</form>
+
+<div class="grille2">
+  <form class="carte" method="post" enctype="multipart/form-data" action="{{ url_for('recensement_import', typ=typ, annee=annee) }}">
+    <h3>Importer depuis Excel</h3>
+    <p class="aide">Exportez la fiche (📊 Excel), modifiez la feuille « Données (import) » puis réimportez-la.</p>
+    <label for="rc-xlsx">Fichier Excel (.xlsx)</label><input id="rc-xlsx" type="file" name="fichier" accept=".xlsx" required>
+    <button class="btn petit">Importer</button>
+  </form>
+  <form class="carte" method="post" enctype="multipart/form-data" action="{{ url_for('recensement_depot', annee=annee) }}">
+    <h3>Téléverser la fiche officielle</h3>
+    <p class="aide">Fiche remplie et signée, scannée ou photographiée (PDF, JPEG, PNG, WebP — 15 Mo au maximum). Elle est archivée pour l'année {{ annee }}.</p>
+    <input type="hidden" name="type_doc" value="fiche_{{ typ }}">
+    <input type="hidden" name="retour" value="{{ url_for('recensement_fiche', typ=typ, annee=annee) }}">
+    <label for="rc-fic">Fichier</label><input id="rc-fic" type="file" name="fichier" accept=".pdf,image/*" required>
+    <button class="btn petit">Téléverser</button>
+  </form>
+</div>
+
+<script>
+(function () {
+  var form = document.getElementById('rc-form');
+  document.documentElement.classList.add('js');
+  var secs = form.querySelectorAll('.rc-sec'), liens = form.querySelectorAll('[data-onglet]');
+  function montrer(id) {
+    if (!document.getElementById(id)) id = secs[1] ? secs[1].id : secs[0].id;
+    secs.forEach(function (s) { s.classList.toggle('actif', s.id === id); });
+    liens.forEach(function (a) { a.classList.toggle('actif', a.dataset.onglet === id); });
+  }
+  liens.forEach(function (a) { a.addEventListener('click', function (e) { e.preventDefault(); history.replaceState(null, '', '#' + a.dataset.onglet); montrer(a.dataset.onglet); }); });
+  montrer((location.hash || '#r1').slice(1));
+
+  function num(v) { v = String(v || '').replace(/\s/g, '').replace(',', '.'); return v === '' || isNaN(+v) ? null : +v; }
+  function fmt(x) { return Number.isInteger(x) ? String(x) : String(Math.round(x * 100) / 100).replace('.', ','); }
+  function el(k) { return form.querySelector('[name="' + k + '"]'); }
+  function valeur(k) { var e = el(k); if (!e) return null; return num(e.value !== '' ? e.value : e.placeholder); }
+  var derives = form.querySelectorAll('[data-somme]');
+  function recalculer() {   // totaux en direct (placeholder = valeur calculée)
+    for (var passe = 0; passe < 3; passe++) derives.forEach(function (d) {
+      var t = 0, vu = false;
+      d.dataset.somme.split('|').forEach(function (k) { var v = valeur(k); if (v !== null) { t += v; vu = true; } });
+      d.placeholder = vu ? fmt(t) : '';
+      d.classList.toggle('rc-calc', d.value === '' && vu);
+    });
+  }
+  form.addEventListener('input', function (e) {
+    if (e.target.type === 'text') { e.target.classList.toggle('rc-saisi', e.target.value !== ''); e.target.classList.toggle('rc-calc', e.target.value === '' && !!e.target.placeholder); }
+    recalculer();
+  });
+
+  function collecter() {
+    var o = {}, multis = {};
+    form.querySelectorAll('input,select').forEach(function (e) {
+      if (!e.name || e.type === 'file') return;
+      if (e.type === 'checkbox') {
+        var m = e.closest('[data-multi]');
+        if (m) { (multis[e.name] = multis[e.name] || { el: m, l: [] }); if (e.checked) multis[e.name].l.push(e.value); return; }
+        var auto = e.dataset.auto === '1';
+        if (e.checked !== auto) o[e.name] = e.checked ? '1' : '0';
+        return;
+      }
+      if (e.value.trim() !== '') o[e.name] = e.value.trim();
+    });
+    Object.keys(multis).forEach(function (k) {
+      var auto = JSON.parse(multis[k].el.dataset.auto || '[]');
+      if (JSON.stringify(auto.slice().sort()) !== JSON.stringify(multis[k].l.slice().sort())) o[k] = multis[k].l;
+    });
+    return o;
+  }
+  form.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-doc-action],[data-ajout]'); if (!b) return;
+    e.preventDefault();
+    if (b.dataset.ajout) return ajouter(b.dataset.ajout);
+    var a = b.dataset.docAction;
+    if (a === 'sauver') {
+      fetch(form.dataset.url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ annee: form.dataset.annee, valeurs: collecter() }) })
+        .then(function (r) { return r.json(); })
+        .then(function (r) {
+          if (r.ok) { GESCOL.toast('Fiche enregistrée (' + r.n + ' valeur(s) saisie(s)).', true); setTimeout(function () { location.reload(); }, 700); }
+          else GESCOL.toast((r.erreurs || ['Erreur']).slice(0, 3).join(' — '), false);
+        }).catch(function () { GESCOL.toast('Enregistrement impossible (connexion ?).', false); });
+    } else if (a === 'charger') {
+      location.reload();
+    } else if (a === 'reinit') {
+      if (!confirm('Vider le formulaire et revenir aux valeurs calculées ? (rien n\'est supprimé tant que vous ne sauvegardez pas)')) return;
+      form.querySelectorAll('input,select').forEach(function (e) {
+        if (e.type === 'file' || e.dataset.garder !== undefined) return;
+        if (e.type === 'checkbox') {
+          var m = e.closest('[data-multi]');
+          e.checked = m ? JSON.parse(m.dataset.auto || '[]').indexOf(e.value) >= 0 : e.dataset.auto === '1';
+        } else { e.value = ''; e.classList.remove('rc-saisi'); }
+      });
+      recalculer();
+    }
+  });
+  function ajouter(tk) {
+    var tb = form.querySelector('[data-table="' + tk + '"] tbody'), der = tb.lastElementChild;
+    var n = tb.children.length + 1, tr = der.cloneNode(true);
+    tr.dataset.ligne = n;
+    tr.querySelector('.lib').textContent = n;
+    tr.querySelectorAll('input').forEach(function (e) {
+      e.name = e.name.replace(/^([a-z0-9]+)\.\d+\./, '$1.' + n + '.');
+      if (e.type === 'checkbox') { e.checked = false; e.dataset.auto = ''; } else { e.value = ''; e.placeholder = /\.fonction$/.test(e.name) ? 'Adjoint' : ''; e.className = e.className.replace('rc-saisi', ''); }
+    });
+    tb.appendChild(tr);
+  }
+  recalculer();
+})();
+</script>
+{% endblock %}

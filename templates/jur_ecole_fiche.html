@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% block titre %}{{ e.nom }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ e.nom }}</h1><p class="sous">{{ JUR_TYPES[e.type] }} {{ JUR_SECTEURS[e.secteur]|lower }} · CS {{ e.cs_nom }}{% if e.zone_nom %} · {{ e.zone_nom }}{% endif %} · code {{ e.code }}</p></div>
+<div class="actions">{% if peut('jur_ecoles') %}<a class="btn sec" href="{{ url_for('jur_ecole_form', eid=e.id) }}">Modifier</a>{% endif %}<a class="btn sec" href="{{ url_for('jur_ecoles') }}">← Écoles</a></div></div>
+<form method="get" class="filtres"><label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a==annee }}>{{ a }}</option>{% endfor %}</select></label></form>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Élèves</div><div class="v">{{ g_ + f_ }}</div><div class="d">{{ f_ }} filles · {{ g_ }} garçons</div></div>
+  <div class="kpi"><div class="l">Classes</div><div class="v">{{ (eff.classes or [])|length }}</div></div>
+  <div class="kpi"><div class="l">Personnel</div><div class="v">{{ pers|length }}</div></div>
+  <div class="kpi"><div class="l">Rubriques reçues</div><div class="v">{{ secs|length }} / {{ noms_sections|length }}</div></div>
+</div>
+<div class="grille2">
+<div class="carte"><h2>Identité</h2><table class="t compact">
+  <tr><th>Directeur</th><td>{{ e.directeur_titre or '' }} {{ e.directeur_nom or '—' }} {{ e.directeur_tel or '' }}</td></tr>
+  <tr><th>Commune</th><td>{{ e.commune or '—' }}{% if e.arrondissement %} · {{ e.arrondissement }}{% endif %}{% if e.localite %} · {{ e.localite }}{% endif %}</td></tr>
+  <tr><th>Contact</th><td>{{ e.telephone or '' }} {{ e.email or '' }}</td></tr>
+  <tr><th>Création</th><td>{{ e.annee_creation or '—' }}</td></tr>
+  <tr><th>Dernière transmission</th><td>{{ e.derniere_transmission or 'jamais' }}</td></tr>
+</table></div>
+<div class="carte"><h2>Données reçues ({{ annee }})</h2><table class="t compact">
+  {% for k, lib in noms_sections.items() %}<tr><td>{{ lib }}</td><td>{% if secs.get(k) %}<span class="badge ok">reçu</span> <span class="aide">{{ secs[k].maj[:16] }} · {{ 'transmission' if secs[k].source=='transmission' else 'saisie CS' }}</span>{% else %}<span class="badge att">absent</span>{% endif %}</td></tr>{% endfor %}
+</table></div>
+</div>
+{% if eff.classes %}<div class="carte"><h2>Effectifs par classe</h2><div class="tw"><table class="t compact">
+<tr><th>Classe</th><th>Niveau</th><th class="num">G</th><th class="num">F</th><th class="num">Total</th><th class="num">Redoublants</th><th>Titulaire</th></tr>
+{% for c in eff.classes %}<tr><td>{{ c.nom }}</td><td>{{ c.niveau }}</td><td class="num">{{ c.garcons }}</td><td class="num">{{ c.filles }}</td><td class="num"><b>{{ (c.garcons|int) + (c.filles|int) }}</b></td>
+<td class="num">{{ (c.redoublants_g|int) + (c.redoublants_f|int) }}</td><td>{{ c.titulaire_nom or '' }}</td></tr>{% endfor %}
+</table></div></div>{% endif %}
+{% if pers %}<div class="carte"><h2>Personnel</h2><div class="tw"><table class="t compact">
+<tr><th>Nom et prénoms</th><th>NIP</th><th>Fonction</th><th>Catégorie</th><th>Grade</th><th>Classe</th></tr>
+{% for p in pers %}<tr><td>{{ p.nom }} {{ p.prenoms }}</td><td>{{ p.nip or '' }}</td><td>{{ p.fonction or p.role }}</td><td>{{ p.categorie or '' }}</td><td>{{ p.grade or '' }}</td><td>{{ p.classe or '' }}</td></tr>{% endfor %}
+</table></div></div>{% endif %}
+{% if paquets %}<div class="carte"><h2>Historique des transmissions</h2><table class="t compact">
+{% for p in paquets %}<tr><td>{{ p.recu_le }}</td><td>{{ p.annee }}</td><td>{{ 'en ligne' if p.mode=='en_ligne' else p.mode }}</td><td class="aide">{{ p.recu_par or '' }}</td></tr>{% endfor %}
+</table></div>{% endif %}
+{% endblock %}

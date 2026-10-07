@@ -1,0 +1,87 @@
+{% extends "base.html" %}{% block titre %}Gestion de carrière des enseignants{% endblock %}
+{% block contenu %}
+<style>
+.car-t td,.car-t th{white-space:nowrap}
+.car-t tr.alerte td{background:#FEF6EE}
+.car-alertes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:18px}
+.car-alertes .carte{margin:0;padding:12px 14px}
+.car-alertes h2{font-size:15px;margin:0 0 6px}
+.car-alertes ul{margin:0;padding-left:18px;font-size:13.5px}
+</style>
+{% set qs = {'categorie': a.categorie, 'lettre': a.lettre, 'alerte': a.alerte, 'q': a.q, 'tous': a.tous} %}
+<div class="entete">
+  <div><h1>Gestion de carrière des enseignants</h1>
+    <p class="sous">{{ stats.total }} agent(s){% if a.tous != '1' %} en activité{% endif %} · anciennetés au {{ reference.strftime('%d/%m/%Y') }} · départs à la retraite : A = {{ ages.A }} ans, B = {{ ages.B }} ans, C = {{ ages.C }} ans</p></div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('personnel_form') }}">+ Ajouter un agent</a>
+    <a class="btn sec" href="{{ url_for('carriere_pdf', **qs) }}" target="_blank">PDF</a>
+    <a class="btn sec" href="{{ url_for('carriere_xlsx', **qs) }}">Excel</a>
+  </div>
+</div>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Agents</div><div class="v">{{ stats.total }}</div>
+    <div class="d">{% for c, lib in categories %}{{ lib }} : {{ stats.categories[c] }}{{ ' · ' if not loop.last }}{% endfor %}</div></div>
+  <div class="kpi"><div class="l">Retraite ≤ 2 ans</div><div class="v {{ 'rouge' if stats.retraite }}">{{ stats.retraite }}</div><div class="d">départ proche ou atteint</div></div>
+  <div class="kpi"><div class="l">Visite d'aptitude</div><div class="v {{ 'rouge' if stats.aptitude }}">{{ stats.aptitude }}</div><div class="d">agent(s) sans visite d'aptitude</div></div>
+  <div class="kpi"><div class="l">Dossiers incomplets</div><div class="v {{ 'rouge' if stats.incomplet }}">{{ stats.incomplet }}</div><div class="d">{{ stats.proposition }} proposition(s) à valider</div></div>
+</div>
+
+{% set ret = ensemble|selectattr('alerte_retraite')|list %}
+{% set apt = ensemble|selectattr('aptitude_manquante')|list %}
+{% set inc = ensemble|selectattr('incomplet')|list %}
+{% set prop = ensemble|selectattr('propositions_d')|list %}
+{% if ret or apt or inc or prop %}
+<div class="car-alertes">
+  {% if ret %}<div class="carte"><h2 class="rouge">Départs à la retraite proches ({{ ret|length }})</h2><ul>
+    {% for f in ret %}<li><a href="{{ url_for('carriere_fiche', pid=f.id) }}">{{ f.nom_complet }}</a> : {{ f.retraite_txt }} — {{ 'départ atteint' if f.retraite_atteinte else 'reste ' ~ f.restant_txt }}</li>{% endfor %}</ul></div>{% endif %}
+  {% if apt %}<div class="carte"><h2>Visites d'aptitude manquantes ({{ apt|length }})</h2><ul>
+    {% for f in apt[:8] %}<li><a href="{{ url_for('carriere_fiche', pid=f.id) }}">{{ f.nom_complet }}</a>{% if f.visite_aptitude == 'non' %} (non)</li>{% else %} (non renseignée)</li>{% endif %}{% endfor %}
+    {% if apt|length > 8 %}<li><a href="{{ url_for('carriere_accueil', alerte='aptitude') }}">… voir les {{ apt|length }}</a></li>{% endif %}</ul></div>{% endif %}
+  {% if inc %}<div class="carte"><h2>Dossiers incomplets ({{ inc|length }})</h2><ul>
+    {% for f in inc[:8] %}<li><a href="{{ url_for('personnel_form', pid=f.id) }}">{{ f.nom_complet }}</a> : <span title="{{ f.manquants|join(', ') }}">{{ f.manquants|length }} renseignement(s) manquant(s)</span></li>{% endfor %}
+    {% if inc|length > 8 %}<li><a href="{{ url_for('carriere_accueil', alerte='incomplet') }}">… voir les {{ inc|length }}</a></li>{% endif %}</ul></div>{% endif %}
+  {% if prop %}<div class="carte"><h2>Propositions des agents à valider ({{ prop|length }})</h2><ul>
+    {% for f in prop %}<li><a href="{{ url_for('carriere_fiche', pid=f.id) }}">{{ f.nom_complet }}</a> (le {{ date_fr(f.propose_le[:10]) }})</li>{% endfor %}</ul></div>{% endif %}
+</div>
+{% endif %}
+
+<form class="filtres" method="get" role="search">
+  <div><label for="f-q">Recherche</label><input id="f-q" name="q" value="{{ a.q }}" placeholder="Nom, NIP, fonction…"></div>
+  <div><label for="f-cat">Catégorie</label><select id="f-cat" name="categorie"><option value="">Toutes</option>
+    {% for c, lib in categories %}<option value="{{ c }}" {{ 'selected' if a.categorie == c }}>{{ lib }}</option>{% endfor %}</select></div>
+  <div><label for="f-l">Grade</label><select id="f-l" name="lettre"><option value="">Tous</option>
+    {% for l in ('A', 'B', 'C') %}<option value="{{ l }}" {{ 'selected' if a.lettre == l }}>Catégorie {{ l }}</option>{% endfor %}</select></div>
+  <div><label for="f-a">Alerte</label><select id="f-a" name="alerte"><option value="">Toutes les fiches</option>
+    {% for k, lib in filtres_alerte.items() %}<option value="{{ k }}" {{ 'selected' if a.alerte == k }}>{{ lib }}</option>{% endfor %}</select></div>
+  <div><label style="font-weight:400;display:flex;gap:6px;align-items:center"><input type="checkbox" name="tous" value="1" style="width:auto" {{ 'checked' if a.tous == '1' }}> Inclure les anciens</label></div>
+  <div><button class="btn">Filtrer</button> <a class="btn sec" href="{{ url_for('carriere_accueil') }}">Effacer</a></div>
+</form>
+
+{% if lst %}
+<div class="tw"><table class="t car-t">
+  <tr><th>Nom et prénoms</th><th>NIP</th><th>Catégorie</th><th>Grade</th><th class="num">Indice payé</th><th class="num">Indice réel</th>
+    <th>Anc. générale</th><th>Anc. département</th><th>Anc. commune</th><th>Anc. école</th><th>Naissance</th><th>Retraite probable</th><th>Aptitude</th><th>Dossier</th><th></th></tr>
+  {% for f in lst %}
+  <tr class="{{ 'alerte' if f.alerte_retraite }}" style="{{ 'opacity:.55' if not f.actif }}">
+    <td><a href="{{ url_for('carriere_fiche', pid=f.id) }}"><b>{{ f.nom }}</b> {{ f.prenoms }}</a><br><span class="aide">{{ f.fonction }}</span></td>
+    <td>{{ f.nip or '—' }}</td><td>{{ f.categorie_lib or '—' }}</td><td>{{ f.grade or '—' }}</td>
+    <td class="num">{{ f.indice_paye if f.indice_paye is not none else '—' }}</td><td class="num">{{ f.indice_reel if f.indice_reel is not none else '—' }}</td>
+    <td>{{ f.anc_txt.generale }}</td><td>{{ f.anc_txt.departement }}</td><td>{{ f.anc_txt.commune }}</td><td>{{ f.anc_txt.ecole }}</td>
+    <td>{{ f.naissance_txt or '—' }}</td>
+    <td>{% if f.retraite %}{{ f.retraite_txt }}<br>{% if f.retraite_atteinte %}<span class="badge ko">départ atteint</span>{% elif f.alerte_retraite %}<span class="badge ko">reste {{ f.restant_txt }}</span>{% else %}<span class="aide">reste {{ f.restant_txt }}</span>{% endif %}
+      {% else %}<span class="aide">{{ f.retraite_raison }}</span>{% endif %}</td>
+    <td>{% if f.visite_aptitude == 'oui' %}<span class="badge ok">oui{% if f.visite_aptitude_note is not none %} · {{ car_fmt_nombre(f.visite_aptitude_note) }}/20{% endif %}</span>{% else %}<span class="badge att">{{ 'non' if f.visite_aptitude == 'non' else 'à renseigner' }}</span>{% endif %}</td>
+    <td>{% if f.incomplet %}<span class="badge att" title="Manque : {{ f.manquants|join(', ') }}">incomplet ({{ f.manquants|length }})</span>{% else %}<span class="badge ok">complet</span>{% endif %}
+      {% if f.propositions_d %}<br><span class="badge att">proposition à valider</span>{% endif %}</td>
+    <td class="num"><a class="btn sec petit" href="{{ url_for('carriere_fiche', pid=f.id) }}">Fiche</a>
+      <a class="btn sec petit" href="{{ url_for('carriere_fiche_pdf', pid=f.id) }}" target="_blank">PDF</a>
+      <a class="btn sec petit" href="{{ url_for('personnel_form', pid=f.id) }}">Modifier</a></td></tr>
+  {% endfor %}
+</table></div>
+{% elif stats.total %}
+<div class="carte gris">Aucun agent ne correspond à ces filtres.</div>
+{% else %}
+<div class="carte gris">Aucun agent enregistré pour cette école. Ajoutez les enseignants depuis <a href="{{ url_for('personnel_form') }}">la fiche du personnel</a> : les renseignements de carrière (NIP, catégorie, grade, dates de prise de service…) y sont saisis.</div>
+{% endif %}
+<p class="aide">Anciennetés arrêtées au 31 décembre de l'année en cours (jour inclus), en années et mois révolus. Retraite : date de naissance + âge limite du grade (si seule l'année de naissance est connue : 31/12 de cette année + âge). Lignes orangées : départ dans 2 ans ou moins. Dossier complet = NIP, catégorie, grade, date de naissance, première prise de service, prise de service dans l'école et diplôme académique renseignés.</p>
+{% endblock %}

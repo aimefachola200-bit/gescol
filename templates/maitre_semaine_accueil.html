@@ -1,0 +1,79 @@
+{% extends "base.html" %}{% block titre %}Maître de semaine{% endblock %}
+{% block contenu %}
+<style>
+.ms-jours{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.ms-jour{border:1px solid var(--bord);border-radius:10px;padding:12px;background:#fff}
+.ms-jour.fait{border-color:#12B76A;background:#F6FEF9}
+.ms-jour.ferme{background:#F2F4F7;color:var(--gris)}
+.ms-jour.auj{box-shadow:0 0 0 2px var(--bleu) inset}
+.ms-jour h3{margin:0 0 4px;font-size:15px}
+.ms-jour p{margin:4px 0;font-size:13px}
+</style>
+<div class="entete">
+  <div><h1>Maître de semaine</h1>
+  <p class="sous">Journal des activités de l'école — semaine du {{ lun.strftime('%d/%m/%Y') }} au {{ ven.strftime('%d/%m/%Y') }}</p></div>
+  <div class="actions">
+    <a class="btn sec petit" href="{{ url_for('maitre_semaine_accueil', semaine=prec) }}">← Semaine précédente</a>
+    <a class="btn sec petit" href="{{ url_for('maitre_semaine_accueil') }}">Cette semaine</a>
+    <a class="btn sec petit" href="{{ url_for('maitre_semaine_accueil', semaine=suiv) }}">Semaine suivante →</a>
+  </div>
+</div>
+
+<div class="onglets">
+  <a class="actif" href="{{ url_for('maitre_semaine_accueil', semaine=lun.isoformat()) }}">Semaine</a>
+  <a href="{{ url_for('maitre_semaine_journal') }}">Journal du jour</a>
+  <a href="{{ url_for('maitre_semaine_semaine', semaine=lun.isoformat()) }}">Rapport hebdomadaire</a>
+  <a href="{{ url_for('maitre_semaine_planning') }}">Planning</a>
+  <a href="{{ url_for('maitre_semaine_historique') }}">Historique et recherche</a>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Maître de semaine</div><div class="v" style="font-size:18px">{{ (pl.maitre_nom if pl else '') or '—' }}</div><div class="d">{{ maitre.fonction if maitre else ('non désigné' if not pl or not pl.maitre_nom else '') }}</div></div>
+  <div class="kpi"><div class="l">Jours renseignés</div><div class="v">{{ stats.saisis }}</div><div class="d">dont {{ stats.vises }} visé(s)</div></div>
+  <div class="kpi"><div class="l">Incidents signalés</div><div class="v">{{ stats.incidents }}</div><div class="d">cette semaine</div></div>
+  <div class="kpi"><div class="l">Absences d'élèves</div><div class="v">{{ stats.abs }}</div><div class="d">cumul des jours renseignés</div></div>
+</div>
+
+{% if not pl or not pl.personnel_id %}
+<div class="flash info">Aucun maître de semaine n'est désigné pour cette semaine.
+  {% if peut_planning %}<a href="{{ url_for('maitre_semaine_planning') }}">Établir le planning</a> (rotation automatique possible).{% endif %}</div>
+{% endif %}
+
+<div class="carte">
+  <h2>Journal de la semaine</h2>
+  <div class="ms-jours">
+  {% for x in jours %}
+    <div class="ms-jour {{ 'fait' if x.j }} {{ 'ferme' if x.ferme and not x.j }} {{ 'auj' if x.d == aujourdhui }}">
+      <h3>{{ x.lib }} {{ x.d.strftime('%d/%m') }}</h3>
+      {% if x.j %}
+        <p>{% if x.j.visa_le %}<span class="badge ok">Visé</span>{% else %}<span class="badge att">En attente de visa</span>{% endif %}</p>
+        <p>Couleurs : {{ x.j.heure_couleurs or '—' }} · Discipline : {{ ETATS.get(x.j.discipline_etat, '—') }}</p>
+        {% if x.j.incidents %}<p><b>Incident :</b> {{ x.j.incidents[:60] }}{{ '…' if x.j.incidents|length > 60 }}</p>{% endif %}
+        <a class="btn sec petit" href="{{ url_for('maitre_semaine_journal', date=x.d.isoformat()) }}">Ouvrir</a>
+      {% elif x.ferme %}
+        <p>{{ x.ferme }}</p>
+      {% elif x.d <= aujourdhui %}
+        <p><span class="badge ko">Non renseigné</span></p>
+        <a class="btn petit" href="{{ url_for('maitre_semaine_journal', date=x.d.isoformat()) }}">Renseigner</a>
+      {% else %}
+        <p class="aide">À venir</p>
+      {% endif %}
+    </div>
+  {% endfor %}
+  </div>
+  <p class="actions" style="margin-top:12px">
+    <a class="btn" href="{{ url_for('maitre_semaine_journal') }}">✎ Journal d'aujourd'hui</a>
+    <a class="btn sec" href="{{ url_for('maitre_semaine_semaine', semaine=lun.isoformat()) }}">Rapport de la semaine</a>
+    <a class="btn sec" href="{{ url_for('maitre_semaine_rapport_pdf', semaine=lun.isoformat()) }}" target="_blank">📄 Rapport PDF</a>
+  </p>
+</div>
+
+<div class="carte">
+  <h2>Prochains maîtres de semaine</h2>
+  {% if prochaines %}
+  <div class="tw"><table class="t compact"><thead><tr><th>Semaine</th><th>Maître de semaine</th></tr></thead><tbody>
+  {% for p in prochaines %}<tr><td>du {{ date_fr(p.lundi) }}</td><td>{{ p.maitre_nom or '—' }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<p class="aide">Aucune semaine suivante n'est encore attribuée.</p>{% endif %}
+</div>
+{% endblock %}

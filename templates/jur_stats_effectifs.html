@@ -1,0 +1,92 @@
+{% extends "base.html" %}{% import "jur_tableau_commun.html" as T with context %}
+{% block titre %}Effectifs des apprenants{% endblock %}
+{% block contenu %}
+{{ T.styles() }}
+<div class="entete"><div><h1>Effectifs des apprenants</h1>
+  <p class="sous">{{ tot.ecoles }} école(s) · {{ tot.classes }} classe(s) · année scolaire {{ flt.annee }}</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_stats_effectifs', export='xlsx', **args) }}">⇩ Excel (plusieurs feuilles)</a>
+    <a class="btn sec" href="{{ url_for('jur_stats_effectifs', export='pdf', **args) }}" target="_blank">🖶 PDF</a></div></div>
+{{ T.filtres(flt, 'jur_stats_effectifs') }}
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Apprenants</div><div class="v">{{ tot.t|jur_nb }}</div><div class="d">{{ tot.g|jur_nb }} G · {{ tot.f|jur_nb }} F</div></div>
+  <div class="kpi"><div class="l">Filles / garçons</div><div class="v">{{ tot.pct_f|jur_pct }}</div><div class="d">{{ tot.pct_g|jur_pct }} de garçons · IP {{ tot.ip|jur_nb(2) }}</div></div>
+  <div class="kpi"><div class="l">Moyenne par classe</div><div class="v">{{ tot.moy_classe|jur_nb(1) }}</div><div class="d">écart-type {{ tot.et_classes|jur_nb(1) }}</div></div>
+  <div class="kpi"><div class="l">Classes pléthoriques</div><div class="v">{{ tot.plethoriques }}</div><div class="d">sur {{ tot.classes }} classe(s)</div></div>
+  <div class="kpi"><div class="l">Redoublants</div><div class="v">{{ tot.redoublants|jur_nb }}</div><div class="d">{{ tot.taux_redoublement|jur_pct }} des effectifs</div></div>
+</div>
+
+{% if not tot.t %}
+<div class="carte">{{ T.vide("Aucun effectif transmis pour ces critères. Les effectifs apparaissent dès que les écoles ont envoyé leurs données (fichier de transmission).") }}</div>
+{% else %}
+<div class="carte"><h2>1. Effectifs par niveau, sexe et secteur</h2>
+  <div class="tw"><table class="t serre">
+    <tr><th rowspan="2">Niveau</th><th colspan="3" class="grp">Public</th><th colspan="3" class="grp">Privé</th><th colspan="3" class="grp">Ensemble</th>
+      <th rowspan="2" class="num">% F</th><th rowspan="2" class="num">% G</th><th rowspan="2" class="num">IP F/G</th><th colspan="3" class="grp">Redoublants</th><th rowspan="2" class="num">Taux redoubl.</th></tr>
+    <tr>{% for i in range(4) %}<th class="num">G</th><th class="num">F</th><th class="num">T</th>{% endfor %}</tr>
+    {% for n in niv + [niv_tot] %}
+    <tr class="{{ 'b' if loop.last }}"><td>{{ n.niveau }}</td>{% for v in n.pub + n.pri + n.ens %}<td class="num">{{ v|jur_nb }}</td>{% endfor %}
+      <td class="num">{{ n.pct_f|jur_pct }}</td><td class="num">{{ n.pct_g|jur_pct }}</td><td class="num">{{ n.ip|jur_nb(2) }}</td>
+      {% for v in n.red %}<td class="num">{{ v|jur_nb }}</td>{% endfor %}<td class="num">{{ n.t_red|jur_pct }}</td></tr>
+    {% endfor %}
+  </table></div>
+  <h3>Effectifs par niveau</h3>{{ graph_niv }}
+  <h3>Répartition filles / garçons</h3>{{ graph_rep }}
+</div>
+
+<div class="carte"><h2>2. Effectifs par {{ lib_groupe|lower }} et par secteur</h2>
+  <p class="aide">Écart-type par classe : dispersion des effectifs des classes ; par école : dispersion des effectifs totaux des écoles.</p>
+  <div class="tw"><table class="t serre">
+    <tr><th>{{ lib_groupe }}</th><th>Secteur</th><th class="num">Écoles</th><th class="num">Classes</th><th class="num">G</th><th class="num">F</th><th class="num">Total</th>
+      <th class="num">% F</th><th class="num">% G</th><th class="num">IP</th><th class="num">Moy. / classe</th><th class="num">É.-t. / classe</th><th class="num">É.-t. / école</th><th class="num">Pléthoriques</th><th class="num">Redoublants</th></tr>
+    {% for x in grp %}{% set a = x.agg %}
+    <tr class="{{ x.st }}"><td>{{ x.nom if x.st or loop.first or grp[loop.index0 - 1].nom != x.nom else '' }}</td><td>{{ x.secteur }}</td><td class="num">{{ a.ecoles }}</td><td class="num">{{ a.classes }}</td>
+      <td class="num">{{ a.g|jur_nb }}</td><td class="num">{{ a.f|jur_nb }}</td><td class="num">{{ a.t|jur_nb }}</td><td class="num">{{ a.pct_f|jur_pct }}</td><td class="num">{{ a.pct_g|jur_pct }}</td>
+      <td class="num">{{ a.ip|jur_nb(2) }}</td><td class="num">{{ a.moy_classe|jur_nb(1) }}</td><td class="num">{{ a.et_classes|jur_nb(1) }}</td><td class="num">{{ a.et_ecoles|jur_nb(1) }}</td>
+      <td class="num">{{ a.plethoriques }}</td><td class="num">{{ a.redoublants }}</td></tr>
+    {% endfor %}
+    <tr class="b"><td>Total</td><td>Ensemble</td><td class="num">{{ tot.ecoles }}</td><td class="num">{{ tot.classes }}</td><td class="num">{{ tot.g|jur_nb }}</td><td class="num">{{ tot.f|jur_nb }}</td><td class="num">{{ tot.t|jur_nb }}</td>
+      <td class="num">{{ tot.pct_f|jur_pct }}</td><td class="num">{{ tot.pct_g|jur_pct }}</td><td class="num">{{ tot.ip|jur_nb(2) }}</td><td class="num">{{ tot.moy_classe|jur_nb(1) }}</td>
+      <td class="num">{{ tot.et_classes|jur_nb(1) }}</td><td class="num">{{ tot.et_ecoles|jur_nb(1) }}</td><td class="num">{{ tot.plethoriques }}</td><td class="num">{{ tot.redoublants }}</td></tr>
+  </table></div>
+</div>
+
+<div class="carte"><h2>3. Effectifs par niveau et par {{ lib_groupe|lower }}</h2>
+  <div class="tw"><table class="t serre">
+    <tr><th rowspan="2">{{ lib_groupe }}</th>{% for n in npg.niveaux %}<th colspan="3" class="grp">{{ n }}</th>{% endfor %}<th colspan="3" class="grp">Total</th></tr>
+    <tr>{% for n in npg.niveaux + ['T'] %}<th class="num">G</th><th class="num">F</th><th class="num">T</th>{% endfor %}</tr>
+    {% for nom, d, t in npg.lignes %}<tr><td>{{ nom }}</td>{% for n in npg.niveaux %}{% set v = d.get(n, [0, 0]) %}<td class="num">{{ v[0] }}</td><td class="num">{{ v[1] }}</td><td class="num">{{ v[0] + v[1] }}</td>{% endfor %}
+      <td class="num"><b>{{ t[0] }}</b></td><td class="num"><b>{{ t[1] }}</b></td><td class="num"><b>{{ t[2] }}</b></td></tr>{% endfor %}
+  </table></div>
+</div>
+
+<div class="carte"><h2>4. Pyramide des âges</h2>
+  {% if graph_pyr %}{{ graph_pyr }}<p class="aide">Âges au 31 décembre, tous niveaux confondus, d'après les répartitions par âge transmises par les écoles.</p>
+  {% else %}{{ T.vide("Les écoles n'ont pas transmis de répartition par âge.") }}{% endif %}
+</div>
+
+<div class="carte"><h2>5. Tableau des effectifs tel que la fiche de recensement (écoles primaires)</h2>
+  <p class="aide">Agrégation des {{ rec.ecoles }} école(s) primaire(s) du périmètre. 7.2 par âge : d'après les fiches de recensement transmises ; le reste figure en « âge non précisé ».</p>
+  <div class="deux">
+    <div><h3>7.1. Effectif global</h3>
+      <table class="t serre" style="max-width:260px"><tr><td>Masculin</td><td class="num">{{ rec.t71[0]|jur_nb }}</td></tr><tr><td>Féminin</td><td class="num">{{ rec.t71[1]|jur_nb }}</td></tr><tr class="b"><td>Total</td><td class="num">{{ rec.t71[2]|jur_nb }}</td></tr></table></div>
+    <div><h3>7.2. Nouveaux inscrits au CI</h3>
+      <table class="t serre" style="max-width:420px"><tr><th>i. Âge</th><th class="num">G</th><th class="num">F</th><th class="num">T</th></tr>
+        {% for r in rec.t72 %}<tr class="{{ r.st }}"><td>{{ r.lib }}</td><td class="num">{{ r.g }}</td><td class="num">{{ r.f }}</td><td class="num">{{ r.t }}</td></tr>{% endfor %}
+        <tr><td>ii. Ayant suivi l'enseignement maternel</td>{% for v in rec.t72b %}<td class="num">{{ v }}</td>{% endfor %}</tr></table></div>
+  </div>
+  <h3>7.3. Répartition des élèves par âge, selon le genre et par année d'étude</h3>
+  {% for tab, nivs in ((rec.t73, NIVEAUX_EP), (mat, NIVEAUX_MAT)) %}
+  {% if loop.index == 2 %}<h3>Maternelle et espaces enfance : répartition par âge, selon le genre et par niveau</h3>{% endif %}
+  {% if tab.vide %}{{ T.vide("Aucun effectif pour ces niveaux.") }}{% else %}
+  {% if tab.incoherent %}<p class="flash warning">Dans certaines écoles, la répartition par âge et par sexe dépasse l'effectif des classes : la ligne « âges déclarés en trop » indique l'écart à faire corriger par les écoles (Total = somme des âges + âge non précisé − âges en trop).</p>{% endif %}
+  <div class="tw"><table class="t serre">
+    <tr><th rowspan="2">Âge</th>{% for n in nivs %}<th colspan="3" class="grp">{{ n }}</th>{% endfor %}<th colspan="3" class="grp">ENSEMBLE</th><th colspan="3" class="grp">DONT E.H</th></tr>
+    <tr>{% for n in nivs|list + ['E', 'H'] %}<th class="num">G</th><th class="num">F</th><th class="num">T</th>{% endfor %}</tr>
+    {% for r in tab.lignes %}<tr class="{{ r.st }}"><td>{{ r.lib }}</td>{% for v in r.cols %}<td class="num">{{ v }}</td>{% endfor %}</tr>{% endfor %}
+  </table></div>{% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

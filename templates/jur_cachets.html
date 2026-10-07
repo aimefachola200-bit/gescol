@@ -1,0 +1,49 @@
+{% extends "base.html" %}{% block titre %}Cachets et signatures{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<style>
+.cachet-ligne{display:grid;grid-template-columns:170px 1fr 1fr;gap:16px;align-items:start}
+.cachet-ligne .apercu img{width:150px;height:150px;display:block}
+@media (max-width:860px){.cachet-ligne{grid-template-columns:1fr}}
+</style>
+<div class="entete"><div><h1>Cachets et signatures</h1>
+<p class="sous">Cachet et signature numérique de la structure et de chaque service : ils sont apposés sur les attestations, certificats et documents signés.</p></div>
+<div class="actions"><a class="btn sec" href="{{ url_for('jur_cachets', export='pdf') }}" target="_blank">PDF de tous les cachets</a>
+<a class="btn sec" href="{{ url_for('jur_organigramme') }}">Services</a></div></div>
+{% if not s %}<div class="flash info">Configurez d'abord l'identité de la structure : les cachets par défaut en dépendent.</div>{% endif %}
+<p class="aide">Texte du centre : séparez les lignes par « | » (ex. <code>LE CHEF|CS POBE</code>). Laissez les champs vides puis « Rétablir par défaut » pour revenir au cachet automatique.</p>
+{% for l in lignes %}
+<section class="carte" id="c-{{ l.cible }}">
+  <h2>{{ l.nom }} {% if l.perso %}<span class="badge ok">personnalisé</span>{% else %}<span class="badge">par défaut</span>{% endif %}</h2>
+  <div class="cachet-ligne">
+    <div class="apercu"><img alt="Aperçu du cachet" data-apercu src="{{ url_for('jur_cachet_apercu', sup=l.cachet[0], inf=l.cachet[1], centre=l.cachet[2], couleur=l.cachet[3]) }}">
+      <a class="btn sec petit" target="_blank" href="{{ url_for('jur_cachet_apercu_pdf', service=l.code or None) }}">Aperçu PDF (impression)</a></div>
+    <form method="post" data-cachet>
+      <input type="hidden" name="cible" value="{{ l.cible }}">
+      <label>Texte en arc supérieur<input name="sup" maxlength="80" value="{{ l.cachet[0] }}"></label>
+      <label>Texte en arc inférieur<input name="inf" maxlength="80" value="{{ l.cachet[1] }}"></label>
+      <label>Texte du centre<input name="centre" maxlength="80" value="{{ l.cachet[2] }}"></label>
+      <label>Couleur<select name="couleur">{% for k, lib in COULEURS.items() %}<option value="{{ k }}" {{ 'selected' if l.cachet[3]==k }}>{{ lib }}</option>{% endfor %}</select></label>
+      {% if l.titre_mod %}<label>Titre du signataire<input name="signataire_titre" maxlength="150" value="{{ l.titre }}"></label>{% endif %}
+      <div class="actions"><button class="btn petit">Enregistrer le cachet</button>
+        <button class="btn sec petit" name="action" value="defaut">Rétablir par défaut</button></div>
+    </form>
+    <div>
+      <p><b>{{ l.sig[0] }}</b><br>{{ l.sig[1] or 'Nom non renseigné (responsable à désigner)' }}</p>
+      {{ M.signature(cle=l.cle_sig, titre='Signature : ' ~ l.sig[0]) }}
+    </div>
+  </div>
+</section>
+{% endfor %}
+<script>
+// Aperçu instantané du cachet pendant la saisie
+document.querySelectorAll('form[data-cachet]').forEach(function (f) {
+  var img = f.parentNode.querySelector('img[data-apercu]');
+  function maj() {
+    var p = new URLSearchParams({sup: f.sup.value, inf: f.inf.value, centre: f.centre.value, couleur: f.couleur.value});
+    img.src = '{{ url_for("jur_cachet_apercu") }}?' + p.toString();
+  }
+  f.addEventListener('input', maj); f.addEventListener('change', maj);
+});
+</script>
+{% endblock %}

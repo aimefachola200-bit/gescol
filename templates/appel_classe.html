@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% block titre %}Appel {{ cl.nom }}{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Appel – {{ cl.nom }}</h1><p class="sous">{{ date_longue(jour)|capitalize }} · {{ eleves|length }} élève(s){% if fait %} · déjà fait à {{ fait.fait_le[11:16] }}{% endif %}</p></div>
+  <a class="btn sec" href="{{ url_for('appel_accueil', date=jour) }}">← Toutes les classes</a>
+</div>
+{% if not eleves %}<div class="carte">Aucun élève inscrit.</div>{% else %}
+<form method="post">
+<p class="aide">Tous les élèves sont « présents » par défaut : touchez seulement les absents et les retardataires.</p>
+<div class="tw"><table class="t">
+  <tr><th>#</th><th>Élève</th><th>Présence</th><th>Motif</th><th class="c">Justifié</th></tr>
+  {% for e in eleves %}{% set a = avant.get(e.id) %}{% set st = a.statut if a else 'present' %}
+  <tr class="statut-{{ st }}" id="l{{ e.id }}"><td>{{ loop.index }}</td><td><b>{{ e.nom }}</b> {{ e.prenoms }}</td>
+    <td><div class="choix-appel">
+      <label class="p"><input type="radio" name="s_{{ e.id }}" value="present" {{ 'checked' if st=='present' }}> Présent</label>
+      <label class="a"><input type="radio" name="s_{{ e.id }}" value="absent" {{ 'checked' if st=='absent' }}> Absent</label>
+      <label class="r"><input type="radio" name="s_{{ e.id }}" value="retard" {{ 'checked' if st=='retard' }}> Retard</label>
+    </div></td>
+    <td><input name="m_{{ e.id }}" value="{{ a.motif if a and a.motif else '' }}" placeholder="facultatif" style="min-width:150px"></td>
+    <td class="c"><input type="checkbox" name="j_{{ e.id }}" {{ 'checked' if a and a.justifie }}></td></tr>
+  {% endfor %}
+</table></div>
+<p class="actions" style="margin-top:14px">
+  <button class="btn">Enregistrer l'appel</button>
+  <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="prevenir" value="1" checked> Prévenir les parents des nouveaux absents et retards</label>
+</p>
+</form>
+<script>
+document.querySelectorAll('.choix-appel input').forEach(function(r){r.addEventListener('change',function(){
+  var tr=r.closest('tr');tr.className='statut-'+r.value;});});
+</script>
+{% endif %}
+{% endblock %}

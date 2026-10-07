@@ -1,0 +1,75 @@
+{% extends "base.html" %}{% block titre %}{{ 'Modifier un agent' if aid else 'Ajouter un agent' }}{% endblock %}
+{% block contenu %}
+{% macro champ(k, lib, type='text', aide='', attrs='') %}
+<div><label for="c-{{ k }}">{{ lib }}</label><input id="c-{{ k }}" name="{{ k }}" type="{{ type }}" value="{{ v.get(k) if v.get(k) is not none else '' }}" {{ attrs|safe }}>{% if aide %}<span class="aide">{{ aide }}</span>{% endif %}</div>
+{% endmacro %}
+{% macro oui_non(k, lib) %}
+<div><label for="c-{{ k }}">{{ lib }}</label><select id="c-{{ k }}" name="{{ k }}"><option value="">—</option>
+  {% for o in ('oui', 'non') %}<option {{ 'selected' if v.get(k) == o or (v.get(k) is sameas true and o == 'oui') or (v.get(k) is sameas false and o == 'non') }}>{{ o }}</option>{% endfor %}</select></div>
+{% endmacro %}
+<div class="entete"><div><h1>{{ 'Modifier un agent' if aid else 'Ajouter un agent' }}</h1>
+  {% if f %}<p class="sous">Ancienneté générale : {{ f.anc_txt.generale or '—' }} · retraite probable : {{ f.retraite_txt or f.retraite_raison }}{% if f.restant_txt %} ({{ f.restant_txt }}){% endif %}</p>{% endif %}</div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_agents') }}">← Agents</a>
+  {% if aid %}<a class="btn sec" href="{{ url_for('jur_personnel_fiche', cle='a%d' % aid) }}">Fiche de carrière</a>{% endif %}</div></div>
+<form method="post" class="carte">
+  <h2>Identification</h2>
+  <div class="grille-id">
+    {{ champ('nom', 'Nom *', attrs='required') }}{{ champ('prenoms', 'Prénoms') }}
+    <div><label for="c-sexe">Sexe</label><select id="c-sexe" name="sexe"><option value="">—</option>
+      <option value="M" {{ 'selected' if v.sexe == 'M' }}>Masculin</option><option value="F" {{ 'selected' if v.sexe == 'F' }}>Féminin</option></select></div>
+    {{ champ('nip', 'NIP (12 chiffres max.)', attrs='inputmode="numeric" maxlength="12" pattern="[0-9 ]{0,14}"') }}
+    {{ champ('matricule', 'Matricule') }}
+    {{ champ('date_naissance', 'Date de naissance', aide='jj/mm/aaaa ou l\'année seule', attrs='placeholder="15/03/1975"') }}
+    {{ champ('telephone', 'Téléphone', 'tel') }}{{ champ('email', 'E-mail', 'email') }}
+  </div>
+  <h2>Affectation</h2>
+  <div class="grille-id">
+    <div><label for="c-svc">Service</label><select id="c-svc" name="service_code"><option value="">—</option>
+      {% for c, n in services %}<option value="{{ c }}" {{ 'selected' if v.service_code == c }}>{{ n }}</option>{% endfor %}</select></div>
+    {{ champ('poste', 'Poste', attrs='list="postes"') }}<datalist id="postes">{% for p in postes %}<option value="{{ p }}">{% endfor %}</datalist>
+    {{ champ('fonction', 'Fonction (libellé libre)') }}
+    <div><label for="c-role">Rôle (onglet du personnel)</label><select id="c-role" name="role">
+      {% for k, l in roles.items() %}<option value="{{ k }}" {{ 'selected' if (v.role or 'administratif') == k }}>{{ l }}</option>{% endfor %}</select></div>
+    <div><label for="c-actif">En activité</label><select id="c-actif" name="actif">
+      <option value="oui" {{ 'selected' if v.actif }}>oui</option><option value="non" {{ 'selected' if not v.actif }}>non (retiré)</option></select></div>
+    <div><label for="c-user">Compte utilisateur lié</label><select id="c-user" name="user_id"><option value="">— aucun —</option>
+      {% for u in comptes %}<option value="{{ u.id }}" {{ 'selected' if v.user_id|string == u.id|string }}>{{ u.nom }} ({{ u.identifiant }})</option>{% endfor %}</select></div>
+  </div>
+  <h2>Carrière</h2>
+  <div class="grille-id">
+    <div><label for="c-cat">Catégorie</label><select id="c-cat" name="categorie"><option value="">—</option>
+      {% for k, l in categories.items() %}<option value="{{ k }}" {{ 'selected' if v.categorie == k }}>{{ l }}</option>{% endfor %}</select></div>
+    {{ champ('grade', 'Grade', aide='ex. A1-5, B2-12, C3-1', attrs='list="grades"') }}<datalist id="grades">{% for gr in grades %}<option value="{{ gr }}">{% endfor %}</datalist>
+    {{ champ('indice_paye', 'Indice payé', attrs='inputmode="numeric"') }}{{ champ('indice_reel', 'Indice réel', attrs='inputmode="numeric"') }}
+    {{ champ('date_premiere_ps', '1re prise de service', attrs='placeholder="jj/mm/aaaa"') }}
+    {{ champ('date_ps_departement', 'Prise de service (département)', attrs='placeholder="jj/mm/aaaa"') }}
+    {{ champ('date_ps_commune', 'Prise de service (commune)', attrs='placeholder="jj/mm/aaaa"') }}
+    {{ champ('date_ps_ecole', 'Prise de service au poste / service', attrs='placeholder="jj/mm/aaaa"') }}
+    <div><label for="c-dep">Département à servir</label><select id="c-dep" name="departement_a_servir"><option value="">—</option>
+      {% for d in departements %}<option {{ 'selected' if v.departement_a_servir == d }}>{{ d }}</option>{% endfor %}</select></div>
+  </div>
+  <h2>Diplômes</h2>
+  <div class="grille-id">
+    {{ champ('diplome_academique', 'Diplôme académique', attrs='list="dipl"') }}<datalist id="dipl">{% for d in diplomes %}<option value="{{ d }}">{% endfor %}</datalist>
+    {{ champ('annee_diplome', 'Année du diplôme', attrs='inputmode="numeric" maxlength="4"') }}
+    {{ oui_non('ceap', 'CEAP') }}{{ champ('annee_ceap', 'Année du CEAP', attrs='inputmode="numeric" maxlength="4"') }}
+    {{ oui_non('cap', 'CAP') }}{{ champ('annee_cap', 'Année du CAP', attrs='inputmode="numeric" maxlength="4"') }}
+    <div><label for="c-tcap">Type de CAP</label><select id="c-tcap" name="type_cap"><option value="">—</option>
+      {% for t in ('EP', 'EM') %}<option {{ 'selected' if v.type_cap == t }}>{{ t }}</option>{% endfor %}</select></div>
+  </div>
+  <h2>Aptitude, suivi et évaluation</h2>
+  <div class="grille-id">
+    {{ oui_non('visite_aptitude', "Visite d'aptitude") }}
+    {{ champ('note_aptitude', 'Note de la visite (/20)', attrs='inputmode="decimal"') }}
+    {{ champ('annee_aptitude', 'Année de la visite', attrs='inputmode="numeric" maxlength="4"') }}
+    {{ champ('nb_visites_cp', 'Visites du CP', attrs='inputmode="numeric"') }}{{ champ('nb_visites_ccs', 'Visites du CCS', attrs='inputmode="numeric"') }}
+    {{ champ('participation_up', "Participation à l'UP (%)", attrs='inputmode="decimal"') }}
+    {{ champ('gestion_collegiale', 'Gestion collégiale') }}
+    {{ champ('note_evaluation', "Note d'évaluation (/20)", attrs='inputmode="decimal"') }}
+  </div>
+  <p class="actions"><button class="btn">Enregistrer</button></p>
+</form>
+{% if aid and v.actif %}
+<form method="post" action="{{ url_for('jur_agent_supprimer', aid=aid) }}" class="carte"><p>Retirer l'agent de la liste (sa fiche est conservée et peut être réactivée avec « En activité : oui »).</p>
+<button class="btn danger" data-confirmer="Retirer cet agent de la liste ?">Retirer l'agent</button></form>{% endif %}
+{% endblock %}

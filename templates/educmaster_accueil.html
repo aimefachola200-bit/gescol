@@ -1,0 +1,132 @@
+{% extends "base.html" %}{% block titre %}Import-export EducMaster{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<style>
+.em-ok{background:#ECFDF3}.em-mat{background:#EEF4FB}
+table.em th,table.em td{padding:4px 6px;font-size:12.5px;border:1px solid #EAECF0;white-space:nowrap}
+table.em select{max-width:260px}
+.zone-depot{display:block}.zone-depot input[type=file]{display:none}
+</style>
+<div class="entete">
+  <div><h1>Import-export EducMaster</h1>
+  <p class="sous">Mettre à jour les élèves à partir du fichier EducMaster et remplir ce même fichier avec les notes de GESCOL</p></div>
+</div>
+
+<nav class="onglets" aria-label="Cycle">
+  {% for k, lib in CYCLES.items() %}<a href="{{ url_for('educmaster_accueil', cycle=k) }}" class="{{ 'actif' if k == cycle }}">{{ lib }}</a>{% endfor %}
+</nav>
+
+<div class="carte">
+  <h2 style="margin-top:0">1. Déposer le fichier EducMaster ({{ CYCLES[cycle] }})</h2>
+  <form method="post" action="{{ url_for('educmaster_deposer') }}" enctype="multipart/form-data" id="f-depot">
+    <input type="hidden" name="cycle" value="{{ cycle }}">
+    <label class="zone-depot" id="zone-depot" for="em-fichier">
+      <b>Déposer ici le fichier Excel EducMaster</b><br>
+      <span class="aide">Modèle .xlsx téléchargé depuis la plateforme EducMaster (liste des élèves / fiche de notes)</span><br><br>
+      <span class="btn sec petit">📂 Choisir un fichier</span>
+      <input type="file" id="em-fichier" name="fichier" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+    </label>
+    <noscript><button class="btn" style="margin-top:8px">Envoyer</button></noscript>
+  </form>
+  {% if e %}<p style="margin-bottom:0">Fichier en cours : <b>{{ e.nom }}</b> (déposé le {{ e.depose_le }}).
+    <form method="post" action="{{ url_for('educmaster_retirer') }}" style="display:inline"><input type="hidden" name="cycle" value="{{ cycle }}">
+      <button class="btn sec petit" data-confirmer="Retirer ce fichier ?">Retirer</button></form></p>{% endif %}
+</div>
+
+{% if erreur %}<div class="flash danger">{{ erreur }}</div>{% endif %}
+
+{% if an %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Feuille</div><div class="v" style="font-size:18px">{{ an.feuille }}</div><div class="d">en-têtes en ligne {{ an.ligne_entete }}</div></div>
+  <div class="kpi"><div class="l">Lignes</div><div class="v">{{ an.nb_lignes }}</div><div class="d">sous les en-têtes</div></div>
+  <div class="kpi"><div class="l">Identité reconnue</div><div class="v" style="font-size:16px">{{ an.roles|length }} colonne(s)</div><div class="d">{{ 'élèves identifiables' if an.identifiable else 'élèves NON identifiables' }}</div></div>
+  <div class="kpi"><div class="l">Matières reconnues</div><div class="v">{{ an.matieres|length }}</div><div class="d">colonnes de notes</div></div>
+</div>
+
+<div class="carte">
+  <h2 style="margin-top:0">2. Rapport de reconnaissance et correspondance des colonnes</h2>
+  <p>{% if an.roles %}Reconnu : {% for k, j in an.roles.items() %}<b>{{ LIB_ID[k] }}</b> (col. {{ an.colonnes[j].lettre }}){{ ', ' if not loop.last }}{% endfor %}.{% else %}<span class="rouge">Aucune colonne d'identité reconnue.</span>{% endif %}
+  {% if an.matieres %} Matières : {% for j, m in an.matieres.items() %}<b>{{ m.nom }}</b> (col. {{ an.colonnes[j].lettre }}){{ ', ' if not loop.last }}{% endfor %}.{% endif %}</p>
+  {% set non = an.colonnes|selectattr('role', 'equalto', '')|selectattr('entete')|list %}
+  {% if non %}<p class="aide">Colonnes non utilisées : {% for c in non %}{{ c.lettre }} « {{ c.entete }} »{{ ', ' if not loop.last }}{% endfor %}. Si l'une d'elles contient des notes ou une information d'identité, choisissez-la ci-dessous.</p>{% endif %}
+  <form method="post" action="{{ url_for('educmaster_mapping') }}" data-doc="educmaster:{{ cycle }}:mapping">
+    <input type="hidden" name="cycle" value="{{ cycle }}">
+    {% call M.barre_doc() %}
+      <button class="btn petit" title="Utiliser cette correspondance pour le fichier déposé">✔ Appliquer</button>
+      <label style="font-size:13px"><input type="checkbox" name="memoriser" value="1" data-nosave> mémoriser pour les prochains fichiers</label>
+    {% endcall %}
+    {% if an.feuilles|length > 1 %}<p><label for="em-feuille">Feuille du classeur</label>
+      <select id="em-feuille" name="feuille" data-nosave data-garder>{% for f in an.feuilles %}<option {{ 'selected' if f == an.feuille }}>{{ f }}</option>{% endfor %}</select></p>{% endif %}
+    <div class="tw"><table class="em">
+      <thead><tr><th>Col.</th><th>Intitulé dans le fichier</th><th>Utilisée comme</th><th>Exemples de valeurs</th></tr></thead>
+      <tbody>{% for c in an.colonnes %}{% if c.entete or c.exemples %}
+        <tr class="{{ 'em-ok' if c.role.startswith('id:') else ('em-mat' if c.role.startswith('mat:') else '') }}">
+          <td class="c">{{ c.lettre }}</td><td>{{ c.entete or '(sans intitulé)' }}</td>
+          <td><select name="{{ c.cle }}" aria-label="Rôle de la colonne {{ c.lettre }}">
+            {% for v, lib in choix %}<option value="{{ v }}" {{ 'selected' if (c.force and v == c.role) or (not c.force and v == '' ) }}>{{ lib }}{% if v == '' and c.auto %} ({{ (LIB_ID[c.auto[3:]] if c.auto.startswith('id:') else 'matière ' ~ c.auto[4:]) }}){% endif %}</option>{% endfor %}
+          </select>{% if c.role and c.role != c.auto and not c.force %}<br><span class="aide">→ {{ c.role }}</span>{% endif %}</td>
+          <td class="gris">{{ c.exemples|join(' · ') }}</td></tr>
+      {% endif %}{% endfor %}</tbody>
+    </table></div>
+    <p class="aide">« Sauvegarde » mémorise cette correspondance (par intitulé de colonne) ; « Charger » la rétablit ; « Réinitialiser » revient à la détection automatique. Cliquez ensuite sur « Appliquer ».</p>
+  </form>
+</div>
+
+<div class="carte" id="apercu">
+  <h2 style="margin-top:0">Aperçu ({{ an.apercu|length }} première(s) ligne(s) sur {{ an.nb_lignes }})</h2>
+  <div class="tw"><table class="em">
+    <thead><tr><th>Ligne</th>{% for c in an.colonnes %}<th class="{{ 'em-ok' if c.role.startswith('id:') else ('em-mat' if c.role.startswith('mat:') else '') }}">{{ c.lettre }}<br>{{ c.entete }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for k, r in an.apercu %}<tr><td class="c gris">{{ k }}</td>{% for v in r %}<td>{{ '' if v is none else (v.strftime('%d/%m/%Y') if v.strftime is defined else v) }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="aide">Vert : colonnes d'identité ; bleu : colonnes de notes.</p>
+</div>
+
+<div class="grille2">
+  <div class="carte">
+    <h2 style="margin-top:0">3 a. Mettre à jour / créer les élèves</h2>
+    <p>Les élèves sont retrouvés par matricule EducMaster, matricule, NIP ou nom + prénoms. Sont mis à jour : matricule EducMaster, NIP, sexe, date et lieu de naissance.</p>
+    <form method="post" action="{{ url_for('educmaster_eleves') }}">
+      <input type="hidden" name="cycle" value="{{ cycle }}">
+      <p><label><input type="checkbox" name="creer" value="1"> créer les élèves absents de GESCOL</label></p>
+      <p><label for="em-cl">Classe par défaut (si la colonne « Classe » manque ou n'est pas reconnue)</label><br>
+        <select id="em-cl" name="classe_defaut"><option value="">— aucune —</option>{% for c in classes %}<option value="{{ c.id }}">{{ c.nom }}</option>{% endfor %}</select></p>
+      <div class="actions"><button class="btn sec" name="simuler" value="1">Simuler (sans enregistrer)</button>
+        <button class="btn" data-confirmer="Mettre à jour les élèves de GESCOL à partir de ce fichier ?">Mettre à jour les élèves</button></div>
+    </form>
+  </div>
+  <div class="carte">
+    <h2 style="margin-top:0">3 b. Remplir les notes dans le fichier EducMaster</h2>
+    <p>Les notes GESCOL de l'évaluation choisie sont écrites dans les colonnes de matières reconnues du fichier déposé ; le reste du fichier (mise en forme, autres colonnes) est conservé. Rechargez ensuite le fichier sur EducMaster.</p>
+    {% if evaluations %}
+    <form method="post" action="{{ url_for('educmaster_notes') }}">
+      <input type="hidden" name="cycle" value="{{ cycle }}">
+      <p><label for="em-ev">Évaluation</label><br><select id="em-ev" name="evaluation" required>
+        <option value="">— choisir —</option>{% for ev in evaluations %}<option value="{{ ev.id }}">{{ ev.libelle }}</option>{% endfor %}</select></p>
+      <button class="btn">⬇ Remplir et télécharger le fichier</button>
+    </form>
+    {% else %}<p class="gris">Aucune évaluation n'existe pour les classes du {{ CYCLES[cycle]|lower }} : créez-la dans « Saisie des notes – évaluations ».</p>{% endif %}
+  </div>
+</div>
+{% elif not e %}
+<div class="carte aide">Déposez le fichier .xlsx téléchargé depuis EducMaster : GESCOL repère lui-même la ligne des en-têtes (même avec des lignes de titre au-dessus) et les colonnes utiles, puis vous montre ce qu'il a reconnu avant toute modification.</div>
+{% endif %}
+
+{% if rapport %}
+<div class="carte" id="rapport"><h2 style="margin-top:0">Dernier rapport : {{ rapport.titre }}</h2>
+  <p>{{ rapport.stats.maj }} mis à jour · {{ rapport.stats.crees }} créé(s) · {{ rapport.stats.inchanges }} inchangé(s) · {{ rapport.stats.ignores }} ignoré(s)</p>
+  {% if rapport.details %}<div class="tw"><table class="t compact"><thead><tr><th>Ligne</th><th>Élève</th><th>Résultat</th><th>Détail</th></tr></thead>
+  <tbody>{% for k, qui, res, det in rapport.details %}<tr><td>{{ k }}</td><td>{{ qui }}</td><td><span class="badge {{ 'ok' if res in ('Mis à jour','Créé') else 'att' }}">{{ res }}</span></td><td>{{ det }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+</div>
+{% endif %}
+
+<script>
+(function () {
+  var z = document.getElementById('zone-depot'), inp = document.getElementById('em-fichier'), f = document.getElementById('f-depot');
+  if (!z) return;
+  inp.addEventListener('change', function () { if (inp.files.length) f.submit(); });
+  ['dragenter', 'dragover'].forEach(function (t) { z.addEventListener(t, function (e) { e.preventDefault(); z.classList.add('survol'); }); });
+  ['dragleave', 'drop'].forEach(function (t) { z.addEventListener(t, function (e) { e.preventDefault(); z.classList.remove('survol'); }); });
+  z.addEventListener('drop', function (e) { if (e.dataTransfer.files.length) { inp.files = e.dataTransfer.files; f.submit(); } });
+})();
+</script>
+{% endblock %}

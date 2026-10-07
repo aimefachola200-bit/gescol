@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% block titre %}Fiche du personnel{% endblock %}
+{% block contenu %}
+<h1>{{ 'Modifier : ' ~ p.nom ~ ' ' ~ p.prenoms if p.id else 'Nouveau membre du personnel' }}</h1>
+<form method="post" class="f">
+<div class="carte"><div class="ligne">
+  <div><label>Nom *</label><input name="nom" required value="{{ p.nom or '' }}"></div>
+  <div><label>Prénoms *</label><input name="prenoms" required value="{{ p.prenoms or '' }}"></div>
+  {% if car is defined %}{% include "carriere_champs_identite.html" %}{% endif %}
+  <div><label>Sexe</label><select name="sexe"><option value="">—</option><option value="M" {{ 'selected' if p.sexe=='M' }}>Masculin</option><option value="F" {{ 'selected' if p.sexe=='F' }}>Féminin</option></select></div>
+  <div><label>Fonction *</label><input name="fonction" required list="fonctions" value="{{ p.fonction or '' }}"><datalist id="fonctions">{% for f in fonctions %}<option value="{{ f }}">{% endfor %}</datalist></div>
+  <div><label>Téléphone</label><input name="telephone" value="{{ p.telephone or '' }}"></div>
+  <div><label>E-mail</label><input name="email" type="email" value="{{ p.email or '' }}"></div>
+</div></div>
+{% if car is defined %}{% include "carriere_champs_personnel.html" %}{% endif %}
+<div class="carte"><div class="ligne">
+  <div><label>Type de contrat</label><select name="type_contrat" id="tc">{% for t in types %}<option {{ 'selected' if p.type_contrat==t }}>{{ t }}</option>{% endfor %}</select></div>
+  <div><label>Date d'embauche</label><input type="date" name="date_embauche" value="{{ p.date_embauche or '' }}"></div>
+  <div><label>Salaire de base mensuel (FCFA)</label><input name="salaire_base" inputmode="numeric" value="{{ p.salaire_base or 0 }}"></div>
+  <div><label>Taux horaire (vacataires, FCFA)</label><input name="taux_horaire" inputmode="numeric" value="{{ p.taux_horaire or 0 }}"></div>
+  <div><label>N° CNSS</label><input name="numero_cnss" value="{{ p.numero_cnss or '' }}"></div>
+  <div><label>N° Mobile Money pour le salaire</label><input name="numero_paiement" value="{{ p.numero_paiement or '' }}"></div>
+</div>
+<div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px">
+  <label style="font-weight:400;display:flex;gap:6px;align-items:center"><input type="checkbox" name="assujetti_cnss" {{ 'checked' if p.assujetti_cnss }}> Cotise à la CNSS</label>
+  <label style="font-weight:400;display:flex;gap:6px;align-items:center"><input type="checkbox" name="assujetti_its" {{ 'checked' if p.assujetti_its }}> Soumis à l'ITS</label>
+  {% if p.id %}<label style="font-weight:400;display:flex;gap:6px;align-items:center"><input type="hidden" name="actif" value=""><input type="checkbox" name="actif" value="1" {{ 'checked' if p.actif }}> En activité</label>{% else %}<input type="hidden" name="actif" value="1">{% endif %}
+</div>
+<p class="aide">Vacataire : le salaire brut = heures du mois × taux horaire (+ primes). Autres contrats : salaire de base (+ primes).</p>
+</div>
+<div class="actions"><button class="btn">Enregistrer</button><a class="btn sec" href="{{ url_for('personnel') }}">Annuler</a></div>
+</form>
+{% endblock %}

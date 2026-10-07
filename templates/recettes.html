@@ -1,0 +1,89 @@
+{% extends "base.html" %}{% block titre %}Subventions et recettes{% endblock %}
+{% block contenu %}
+<style>
+.rec-t tr.annulee td{color:#98A2B3;text-decoration:line-through}
+.rec-t tr.annulee td.motif{text-decoration:none;color:#B42318}
+.rec-t form.annul{display:flex;gap:4px;margin:0;flex-wrap:wrap}
+.rec-t form.annul input{width:130px;padding:4px 6px;font-size:12px}
+</style>
+<div class="entete">
+  <div><h1>Subventions et recettes – {{ ANNEE }}</h1>
+  <p class="sous">Fonds reçus par l'école : subventions de l'État et de la commune, dons des partenaires (PAM, ONG…), cotisations APE… et solde d'ouverture de l'année.</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('recettes_pdf', origine=r.origine or None, annulees='1' if r.annulees else None) }}" target="_blank">PDF</a>
+    <a class="btn sec" href="{{ url_for('recettes_xlsx', origine=r.origine or None, annulees='1' if r.annulees else None) }}">Excel</a>
+    <a class="btn sec" href="{{ url_for('depenses_accueil') }}">Dépenses</a>
+  </div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Fonds reçus ({{ ANNEE }})</div><div class="v vert">{{ milliers(b.recu) }}</div>
+    <div class="d">recettes {{ milliers(b.recettes) }} · cantine {{ milliers(b.cantine) }} · CEP {{ milliers(b.cep) }}</div></div>
+  <div class="kpi"><div class="l">Dépenses de l'année</div><div class="v rouge">{{ milliers(b.depenses) }}</div><div class="d">FCFA</div></div>
+  <div class="kpi"><div class="l">Solde d'ouverture</div><div class="v">{{ milliers(b.ouverture) }}</div><div class="d">report de l'année précédente</div></div>
+  <div class="kpi"><div class="l">Solde en caisse</div><div class="v {{ 'rouge' if b.solde < 0 else 'vert' }}">{{ milliers(b.solde) }}</div><div class="d">ouverture + reçu − dépenses</div></div>
+</div>
+
+<div class="grille2">
+<details class="carte" open style="align-self:start">
+  <summary style="cursor:pointer;font-weight:600">+ Enregistrer une subvention ou une recette</summary>
+  <form method="post" class="f">
+    <div class="ligne">
+      <div><label for="r-date">Date *</label><input id="r-date" type="date" name="date" value="{{ aujourdhui }}" max="{{ aujourdhui }}" required></div>
+      <div><label for="r-or">Origine *</label><select id="r-or" name="origine" required>{% for o in origines %}<option>{{ o }}</option>{% endfor %}</select></div>
+      <div><label for="r-mt">Montant (FCFA) *</label><input id="r-mt" name="montant" inputmode="numeric" required placeholder="ex. 250 000"></div>
+    </div>
+    <label for="r-lib">Libellé *</label><input id="r-lib" name="libelle" maxlength="200" required placeholder="ex. Subvention de fonctionnement 1er trimestre">
+    <div class="ligne">
+      <div><label for="r-pro">Provenance (précision)</label><input id="r-pro" name="provenance" maxlength="120" placeholder="ex. PAM, Mairie de Kalalé, ONG…"></div>
+      <div><label for="r-ref">Référence</label><input id="r-ref" name="reference" maxlength="100" placeholder="n° de bordereau, lettre…"></div>
+      <div><label for="r-mode">Mode</label><select id="r-mode" name="mode">{% for k, lib in modes.items() %}<option value="{{ k }}">{{ lib }}</option>{% endfor %}</select></div>
+    </div>
+    <p><button class="btn">Enregistrer la recette</button></p>
+  </form>
+</details>
+<form method="post" class="f carte" style="align-self:start">
+  <input type="hidden" name="action" value="ouverture">
+  <b>Solde d'ouverture de l'année {{ ANNEE }}</b>
+  <p class="aide">Montant en caisse au début de l'année scolaire (report de l'année précédente). Il s'ajoute au solde en caisse.</p>
+  <label for="r-ouv">Montant (FCFA)</label>
+  <input id="r-ouv" name="solde_ouverture" inputmode="numeric" value="{{ p.solde_ouverture }}">
+  <p><button class="btn sec">Enregistrer le solde d'ouverture</button></p>
+</form>
+</div>
+
+<h2>Répartition par origine</h2>
+<div class="tw"><table class="t">
+  <thead><tr><th>Origine</th><th class="c">Nombre</th><th class="num">Montant (FCFA)</th></tr></thead>
+  <tbody>
+  {% for o in origines %}{% set x = r.par_origine.get(o) %}
+  <tr><td><a href="{{ url_for('recettes_accueil', origine=o) }}">{{ o }}</a></td><td class="c">{{ x[0] if x else 0 }}</td><td class="num">{{ milliers(x[1]) if x else '—' }}</td></tr>
+  {% endfor %}
+  <tr><td>Paiements de cantine des élèves (<a href="{{ url_for('cantine_recap', type='annee') }}">détail</a>)</td><td class="c"></td><td class="num">{{ milliers(b.cantine) }}</td></tr>
+  <tr><td>Frais de dépôt de dossier CEP (<a href="{{ url_for('cep_frais') }}">détail</a>)</td><td class="c"></td><td class="num">{{ milliers(b.cep) }}</td></tr>
+  </tbody>
+  <tfoot><tr><th>TOTAL DES FONDS REÇUS</th><th></th><th class="num">{{ milliers(b.recu) }}</th></tr></tfoot>
+</table></div>
+
+<h2>Recettes enregistrées{{ ' – ' ~ r.origine if r.origine }}</h2>
+<form class="filtres" method="get" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+  <label for="f-or" class="aide">Origine</label>
+  <select id="f-or" name="origine" style="width:auto"><option value="">Toutes les origines</option>{% for o in origines %}<option {{ 'selected' if o == r.origine }}>{{ o }}</option>{% endfor %}</select>
+  <label class="choix"><input type="checkbox" name="annulees" value="1" {{ 'checked' if r.annulees }}> Afficher les recettes annulées</label>
+  <button class="btn sec petit">Afficher</button>
+</form>
+{% if r.lignes %}
+<div class="tw"><table class="t rec-t">
+  <thead><tr><th>Date</th><th>Origine</th><th>Libellé</th><th>Provenance</th><th>Référence</th><th class="num">Montant</th><th></th></tr></thead>
+  <tbody>{% for l in r.lignes %}
+  <tr class="{{ 'annulee' if l.annule }}"><td style="white-space:nowrap">{{ date_fr(l.date) }}</td><td>{{ l.origine }}</td><td>{{ l.libelle }}</td>
+    <td>{{ l.provenance or '' }}</td><td>{{ l.reference or '' }}</td><td class="num">{{ milliers(l.montant) }}</td>
+    {% if l.annule %}<td class="motif">Annulée : {{ l.annule_motif }}</td>
+    {% else %}<td><form class="annul" method="post" action="{{ url_for('recette_annuler', rid=l.id) }}">
+      <input name="motif" placeholder="motif d'annulation" required maxlength="200" aria-label="Motif d'annulation">
+      <button class="btn danger petit" data-confirmer="Annuler cette recette ({{ milliers(l.montant) }} FCFA) ?">Annuler</button></form></td>{% endif %}</tr>
+  {% endfor %}</tbody>
+  <tfoot><tr><th colspan="5" style="text-align:left">TOTAL (hors annulées)</th><th class="num">{{ milliers(r.total) }}</th><th></th></tr></tfoot>
+</table></div>
+{% else %}<div class="carte gris">Aucune recette enregistrée pour {{ ANNEE }}{{ ' (' ~ r.origine ~ ')' if r.origine }}. Utilisez le formulaire ci-dessus.</div>{% endif %}
+{% endblock %}

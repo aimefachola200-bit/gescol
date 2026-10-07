@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% block titre %}Paiements en ligne{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Paiements en ligne</h1><p class="sous">Paiements lancés par les parents depuis leur espace.
+    {% if actifs %}Actif : {{ actifs|map('replace','fedapay','FedaPay')|map('replace','kkiapay','KkiaPay')|join(', ') }}.{% else %}<span class="badge att">non activé</span>{% endif %}</p></div>
+  {% if peut('parametres') %}<a class="btn sec" href="{{ url_for('reglages_paiement_en_ligne') }}">Réglages</a>{% endif %}
+</div>
+<div class="tw"><table class="t">
+  <tr><th>Date</th><th>Référence</th><th>Élève</th><th>Service</th><th>Transaction</th><th class="num">Montant</th><th>État</th><th></th></tr>
+  {% for p in lst %}
+  <tr><td style="white-space:nowrap">{{ date_fr(p.cree_le) }} {{ p.cree_le[11:16] }}</td><td>{{ p.reference }}</td>
+    <td><a href="{{ url_for('eleve_detail', eid=p.eleve_id) }}">{{ p.nom }} {{ p.prenoms }}</a></td>
+    <td>{{ 'FedaPay' if p.fournisseur=='fedapay' else 'KkiaPay' }}</td><td class="aide">{{ p.transaction_id or '—' }}</td>
+    <td class="num">{{ fcfa(p.montant) }}</td>
+    <td>{% if p.statut=='approuve' %}<span class="badge ok">payé</span> {% if p.numero_recu %}<a href="{{ url_for('recu', pid=p.paiement_id) }}" target="_blank">{{ p.numero_recu }}</a>{% endif %}
+        {% elif p.statut=='echoue' %}<span class="badge ko">échoué</span>{% else %}<span class="badge att">en attente</span>{% endif %}</td>
+    <td class="num">{% if p.statut=='en_attente' and p.transaction_id %}<form method="post"><input type="hidden" name="id" value="{{ p.id }}"><button class="btn sec petit">Vérifier</button></form>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="8" class="gris">Aucun paiement en ligne pour l'instant.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

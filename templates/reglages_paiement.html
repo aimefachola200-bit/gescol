@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% block titre %}Paiement en ligne{% endblock %}
+{% block contenu %}
+<h1>Paiement en ligne de la scolarité</h1>
+<p class="sous">Les parents paient depuis leur espace par MTN MoMo, Moov Money, Celtiis Cash ou carte. L'argent arrive sur le compte marchand de l'école chez le service choisi ; GESCOL enregistre le paiement et le reçu après vérification auprès du service.</p>
+<div class="flash info" style="max-width:860px">
+  <b>À savoir avant d'activer :</b>
+  <ul style="margin:6px 0 0 18px;padding:0">
+    <li>L'école ouvre elle-même un compte marchand (pièces de l'établissement) sur <b>fedapay.com</b> ou <b>kkiapay.me</b>, puis recopie ici les clés de son tableau de bord.</li>
+    <li>Commencez en <b>mode test</b> (clés « sandbox ») : aucun argent réel n'est prélevé.</li>
+    <li>Le paiement en ligne suppose que GESCOL soit <b>accessible sur Internet</b> (version en ligne, en https). Adresse actuelle : <code>{{ base }}</code></li>
+    <li>Adresse de notification à déclarer dans le tableau de bord du service (« webhook ») :<br>
+      FedaPay : <code>{{ base }}/webhooks/fedapay</code> · KkiaPay : <code>{{ base }}/webhooks/kkiapay</code></li>
+  </ul>
+</div>
+<form method="post" class="f" style="max-width:860px">
+<div class="grille2">
+  <div class="carte">
+    <h2 style="margin-top:0">FedaPay {% if 'fedapay' in actifs %}<span class="badge ok">actif</span>{% endif %}</h2>
+    <label style="font-weight:400;display:flex;gap:8px;align-items:center"><input type="checkbox" name="pel_fedapay_actif" {{ 'checked' if v.pel_fedapay_actif=='1' }}> Activer FedaPay</label>
+    <label>Environnement</label>
+    <select name="pel_fedapay_mode"><option value="sandbox" {{ 'selected' if v.pel_fedapay_mode!='live' }}>Test (sandbox)</option><option value="live" {{ 'selected' if v.pel_fedapay_mode=='live' }}>Réel (live)</option></select>
+    <label>Clé secrète (sk_sandbox_… ou sk_live_…)</label>
+    <input name="pel_fedapay_cle_secrete" autocomplete="off" placeholder="{{ masque.pel_fedapay_cle_secrete or 'sk_sandbox_…' }}">
+    <p class="aide">Laissez vide pour garder la clé enregistrée.</p>
+  </div>
+  <div class="carte">
+    <h2 style="margin-top:0">KkiaPay {% if 'kkiapay' in actifs %}<span class="badge ok">actif</span>{% endif %}</h2>
+    <label style="font-weight:400;display:flex;gap:8px;align-items:center"><input type="checkbox" name="pel_kkiapay_actif" {{ 'checked' if v.pel_kkiapay_actif=='1' }}> Activer KkiaPay</label>
+    <label style="font-weight:400;display:flex;gap:8px;align-items:center"><input type="checkbox" name="pel_kkiapay_sandbox" {{ 'checked' if v.pel_kkiapay_sandbox=='1' }}> Mode test (sandbox)</label>
+    <label>Clé publique</label><input name="pel_kkiapay_cle_publique" value="{{ v.pel_kkiapay_cle_publique }}" autocomplete="off">
+    <label>Clé privée</label><input name="pel_kkiapay_cle_privee" autocomplete="off" placeholder="{{ masque.pel_kkiapay_cle_privee or '' }}">
+    <label>Clé secrète</label><input name="pel_kkiapay_secret" autocomplete="off" placeholder="{{ masque.pel_kkiapay_secret or '' }}">
+  </div>
+</div>
+<button class="btn">Enregistrer</button>
+</form>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}{% block titre %}Départs à la retraite{% endblock %}
+{% block contenu %}
+<style>.re-t td,.re-t th{white-space:nowrap;font-size:13px}.re-t tr.tot td{font-weight:700;background:#F2F6FB}
+.re-t td.l{white-space:normal;min-width:140px}.re-t tr.depasse td{background:#FDECEC}</style>
+<div class="entete">
+  <div><h1>Départs à la retraite</h1>
+    <p class="sous">{{ nb }} personne(s) dans le périmètre · horizon {{ periode[0] }} à {{ periode[-1] }} · A = {{ ages.A }} ans, B = {{ ages.B }} ans, C = {{ ages.C }} ans</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_retraite', export='pdf', **qs) }}" target="_blank">PDF</a>
+    <a class="btn sec" href="{{ url_for('jur_retraite', export='xlsx', **qs) }}">Excel</a>
+  </div>
+</div>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Départs {{ periode[0] }}</div><div class="v {{ 'rouge' if par_an[periode[0]] }}">{{ par_an[periode[0]]|length }}</div><div class="d">cette année</div></div>
+  <div class="kpi"><div class="l">Départs {{ periode[0] }}–{{ periode[-1] }}</div><div class="v">{{ st.t }}</div><div class="d">H : {{ st.h }} · F : {{ st.f }}</div></div>
+  <div class="kpi"><div class="l">Départ déjà dépassé</div><div class="v {{ 'rouge' if depasses }}">{{ depasses|length }}</div><div class="d">toujours déclaré(s) en poste</div></div>
+  <div class="kpi"><div class="l">Cas à vérifier</div><div class="v {{ 'rouge' if sans_naiss or grade_inconnu }}">{{ sans_naiss|length + grade_inconnu|length }}</div>
+    <div class="d">{{ sans_naiss|length }} sans naissance · {{ grade_inconnu|length }} grade inconnu</div></div>
+</div>
+
+{% set caches = {'horizon': horizon} %}
+{% include "jur_personnel_filtres.html" with context %}
+<form method="get" class="filtres">
+  {% for k, v in qs.items() %}{% if k != 'horizon' %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endif %}{% endfor %}
+  <div><label for="hz">Horizon (cette année + N ans)</label><select id="hz" name="horizon" onchange="this.form.submit()">
+    {% for n in range(1, 11) %}<option value="{{ n }}" {{ 'selected' if n == horizon }}>{{ n }} an{{ 's' if n > 1 }} ({{ periode[0] }}–{{ periode[0] + n }})</option>{% endfor %}</select></div>
+</form>
+
+{% if vide %}
+<div class="carte"><p>Aucune donnée du personnel pour {{ a.annee }}.</p></div>
+{% else %}
+<div class="carte"><h2>Effectifs par grade et sorties prévues par année</h2>
+{% if lignes_grade %}
+<div class="tw"><table class="t re-t">
+  <tr><th>Grade</th><th class="num">Effectif</th><th class="num">Départ dépassé</th>{% for y in periode %}<th class="num">{{ y }}</th>{% endfor %}<th class="num">Sorties</th><th class="num">Restant en {{ periode[-1] + 1 }}</th></tr>
+  {% for l in lignes_grade + [total_general] %}
+  <tr class="{{ 'tot' if l.total }}"><td>{{ l.grade }}</td><td class="num">{{ l.eff }}</td><td class="num">{{ l.dep or '' }}</td>
+    {% for y in periode %}<td class="num">{{ l.an[y] or '' }}</td>{% endfor %}<td class="num">{{ l.sorties }}</td><td class="num">{{ l.restant }}</td></tr>
+  {% endfor %}
+</table></div>
+{% else %}<p class="gris">Aucun agent dont le grade (A, B ou C) est renseigné.</p>{% endif %}
+</div>
+
+<div class="carte"><h2>Départs par année de naissance</h2>
+{% if lignes_naiss %}
+<div class="tw"><table class="t re-t">
+  <tr><th>Année de naissance</th><th class="num">Grade A</th><th class="num">Grade B</th><th class="num">Grade C</th><th class="num">Total</th><th class="num">Hommes</th><th class="num">Femmes</th><th>Année de départ</th></tr>
+  {% for l in lignes_naiss %}<tr><td>{{ l.annee }}</td><td class="num">{{ l.A or '' }}</td><td class="num">{{ l.B or '' }}</td><td class="num">{{ l.C or '' }}</td>
+    <td class="num"><b>{{ l.t }}</b></td><td class="num">{{ l.h }}</td><td class="num">{{ l.f }}</td><td>{{ l.departs }}</td></tr>{% endfor %}
+</table></div>
+{% else %}<p class="gris">Aucun départ sur la période.</p>{% endif %}
+</div>
+
+<div class="carte"><h2>Liste nominative des départs</h2>
+{% set lst = depasses + departs %}
+{% if lst %}
+<div class="tw"><table class="t re-t">
+  <tr><th>N°</th><th>Nom et prénoms</th><th>Sexe</th><th>École / service</th><th>Zone{% if ddemp %} / CS{% endif %}</th><th>Catégorie</th><th>Grade</th><th>Naissance</th><th>Départ probable</th><th>Temps restant</th></tr>
+  {% for f in lst %}
+  <tr class="{{ 'depasse' if f in depasses }}"><td class="num">{{ loop.index }}</td>
+    <td class="l"><a href="{{ url_for('jur_personnel_fiche', cle=f.cle, annee=a.annee, retour=request.full_path) }}">{{ f.nom_complet }}</a></td>
+    <td>{{ f.sexe }}</td><td class="l">{{ f.ecole_service }}</td><td>{{ f.zone_nom or '' }}{% if ddemp and f.cs_nom %} · {{ f.cs_nom }}{% endif %}</td>
+    <td>{{ f.categorie_lib }}</td><td>{{ f.grade }}</td><td>{{ f.naissance_txt }}</td><td><b>{{ f.retraite_txt }}</b> <span class="aide">({{ f.age_retraite }} ans)</span></td>
+    <td>{% if f.retraite_atteinte %}<span class="badge ko">départ atteint</span>{% else %}{{ f.restant_txt }}{% endif %}</td></tr>
+  {% endfor %}
+</table></div>
+{% else %}<p class="gris">Aucun départ à la retraite sur la période.</p>{% endif %}
+</div>
+
+{% if sans_naiss or grade_inconnu %}
+<div class="carte"><h2>Cas à vérifier</h2>
+<div class="tw"><table class="t re-t">
+  <tr><th>Nom et prénoms</th><th>École / service</th><th>Catégorie</th><th>Grade</th><th>Naissance</th><th>Problème</th></tr>
+  {% for f in sans_naiss %}<tr><td class="l"><a href="{{ url_for('jur_personnel_fiche', cle=f.cle, annee=a.annee) }}">{{ f.nom_complet }}</a></td><td class="l">{{ f.ecole_service }}</td><td>{{ f.categorie_lib }}</td><td>{{ f.grade }}</td><td>—</td><td><span class="badge att">date de naissance inconnue</span></td></tr>{% endfor %}
+  {% for f in grade_inconnu %}<tr><td class="l"><a href="{{ url_for('jur_personnel_fiche', cle=f.cle, annee=a.annee) }}">{{ f.nom_complet }}</a></td><td class="l">{{ f.ecole_service }}</td><td>{{ f.categorie_lib }}</td><td>{{ f.grade or '—' }}</td><td>{{ f.naissance_txt or '—' }}</td><td><span class="badge att">grade inconnu ou hors A, B, C</span></td></tr>{% endfor %}
+</table></div></div>
+{% endif %}
+{% endif %}
+<p class="aide">Par défaut, seul le secteur public est pris en compte (le personnel du privé n'a pas de grade de la fonction publique) ;
+  choisissez « Tous » dans « Secteur » pour l'inclure. Règle : naissance + 60 ans (grade A), 58 ans (B), 55 ans (C) ; année de naissance
+  seule : 31/12 ; né(e) un 29/02 : 28/02 si l'année de départ n'est pas bissextile.</p>
+{% endblock %}

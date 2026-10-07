@@ -1,0 +1,66 @@
+{% extends "base.html" %}{% import "jur_tableau_commun.html" as T with context %}
+{% block titre %}Statistiques des enseignants{% endblock %}
+{% block contenu %}
+{{ T.styles() }}
+{% set e = tot.ens %}
+<div class="entete"><div><h1>Enseignants : effectifs, besoins et écarts</h1>
+  <p class="sous">{{ tot.ecoles }} école(s) · année scolaire {{ flt.annee }}</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_stats_enseignants', export='xlsx', **args) }}">⇩ Excel</a>
+    <a class="btn sec" href="{{ url_for('jur_stats_enseignants', export='pdf', **args) }}" target="_blank">🖶 PDF</a></div></div>
+{{ T.filtres(flt, 'jur_stats_enseignants', recherche=True) }}
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Enseignants</div><div class="v">{{ e.t|jur_nb }}</div><div class="d">{{ e.h }} hommes · {{ e.f }} femmes</div></div>
+  <div class="kpi"><div class="l">Hommes / femmes</div><div class="v">{{ e.pct_h|jur_pct }}</div><div class="d">{{ e.pct_f|jur_pct }} de femmes · écart H-F {{ e.ecart }}</div></div>
+  <div class="kpi"><div class="l">Besoin (groupes péd.)</div><div class="v">{{ e.besoin }}</div><div class="d">{{ e.disponibles }} enseignant(s) en classe</div></div>
+  <div class="kpi"><div class="l">Manque / surplus</div><div class="v"><span class="{{ 'rouge' if e.manque }}">{{ e.manque }}</span> <small>/ {{ e.surplus }}</small></div><div class="d">{{ e.ecoles_manque }} école(s) en manque · {{ e.ecoles_surplus }} en surplus</div></div>
+  <div class="kpi"><div class="l">Élèves / enseignant</div><div class="v">{{ e.ratio|jur_nb(1) }}</div><div class="d">{{ tot.t|jur_nb }} élèves</div></div>
+</div>
+
+{% if not tot.ecoles %}<div class="carte">{{ T.vide("Aucune école pour ces critères.") }}</div>{% else %}
+<div class="carte"><h2>Enseignants par {{ lib_groupe|lower }}</h2>
+  <p class="aide">Enseignants en poste : directeurs, adjoints et enseignants actifs. Besoin = nombre de classes (groupes pédagogiques). Manque et surplus sont calculés école par école puis additionnés (un surplus d'une école ne compense pas le manque d'une autre).</p>
+  <div class="tw"><table class="t serre">
+    <tr><th rowspan="2">{{ lib_groupe }}</th><th rowspan="2" class="num">Écoles</th><th colspan="6" class="grp">Effectifs et sexe</th><th colspan="{{ CATEGORIES|length }}" class="grp">Catégorie</th><th colspan="4" class="grp">Besoin</th><th rowspan="2" class="num">Élèves / ens.</th></tr>
+    <tr><th class="num">Total</th><th class="num">H</th><th class="num">F</th><th class="num">% H</th><th class="num">% F</th><th class="num">Écart H-F</th>
+      {% for k, l in CATEGORIES %}<th class="num">{{ l }}</th>{% endfor %}<th class="num">Classes</th><th class="num">En classe</th><th class="num">Manque</th><th class="num">Surplus</th></tr>
+    {% for k, nom, ll, a in grp + [(None, 'Total', [], tot)] %}{% set x = a.ens %}
+    <tr class="{{ 'b' if loop.last }}"><td>{{ nom }}</td><td class="num">{{ a.ecoles }}</td><td class="num">{{ x.t }}</td><td class="num">{{ x.h }}</td><td class="num">{{ x.f }}</td>
+      <td class="num">{{ x.pct_h|jur_pct }}</td><td class="num">{{ x.pct_f|jur_pct }}</td><td class="num">{{ x.ecart }}</td>
+      {% for c, l in CATEGORIES %}<td class="num">{{ x.par_categorie.get(c, 0) }}</td>{% endfor %}
+      <td class="num">{{ x.besoin }}</td><td class="num">{{ x.disponibles }}</td><td class="num {{ 'rouge' if x.manque }}">{{ x.manque }}</td><td class="num">{{ x.surplus }}</td><td class="num">{{ x.ratio|jur_nb(1) }}</td></tr>
+    {% endfor %}
+  </table></div>
+  <h3>Hommes et femmes</h3>{{ graph_hf }}
+  <h3>Élèves par enseignant</h3>{{ graph_ratio }}
+</div>
+
+<div class="deux">
+  <div class="carte"><h2>Écoles en manque d'enseignants ({{ manque|length }})</h2>
+    {% if manque %}<div class="tw"><table class="t serre"><tr><th>École</th><th class="num">Classes</th><th class="num">En classe</th><th class="num">Manque</th></tr>
+      {% for l in manque %}<tr><td><a href="{{ url_for('jur_ecole_fiche', eid=l.id, annee=flt.annee) }}">{{ l.nom }}</a><br><span class="aide">{{ l.cs_nom ~ ' – ' if JUR_NIVEAU == 'ddemp' }}{{ l.zone_nom }}</span></td>
+        <td class="num">{{ l.besoin.classes }}</td><td class="num">{{ l.besoin.enseignants }}</td><td class="num rouge"><b>{{ l.besoin.manque }}</b></td></tr>{% endfor %}</table></div>
+    {% else %}<p><span class="badge ok">✓ Aucune école en manque</span></p>{% endif %}</div>
+  <div class="carte"><h2>Écoles en surplus d'enseignants ({{ surplus|length }})</h2>
+    {% if surplus %}<div class="tw"><table class="t serre"><tr><th>École</th><th class="num">Classes</th><th class="num">En classe</th><th class="num">Surplus</th></tr>
+      {% for l in surplus %}<tr><td><a href="{{ url_for('jur_ecole_fiche', eid=l.id, annee=flt.annee) }}">{{ l.nom }}</a><br><span class="aide">{{ l.cs_nom ~ ' – ' if JUR_NIVEAU == 'ddemp' }}{{ l.zone_nom }}</span></td>
+        <td class="num">{{ l.besoin.classes }}</td><td class="num">{{ l.besoin.enseignants }}</td><td class="num"><b>{{ l.besoin.surplus }}</b></td></tr>{% endfor %}</table></div>
+    {% else %}<p><span class="badge ok">✓ Aucune école en surplus</span></p>{% endif %}</div>
+</div>
+
+<div class="carte"><h2>Enseignants par école</h2>
+  <div class="tw"><table class="t serre">
+    <tr><th>École</th><th>Type</th><th>Secteur</th><th>{{ 'CS / zone' if JUR_NIVEAU == 'ddemp' else 'Zone' }}</th><th class="num">Total</th><th class="num">H</th><th class="num">F</th>
+      {% for k, l in CATEGORIES %}<th class="num">{{ l }}</th>{% endfor %}<th class="num">Classes</th><th class="num">Manque</th><th class="num">Surplus</th><th class="num">Élèves</th><th class="num">Élèves / ens.</th></tr>
+    {% for l in lignes %}
+    <tr><td><a href="{{ url_for('jur_ecole_fiche', eid=l.id, annee=flt.annee) }}">{{ l.nom }}</a>{% if not l.a_personnel %} <span class="badge att">personnel non reçu</span>{% endif %}</td><td>{{ l.type }}</td><td>{{ JUR_SECTEURS[l.secteur] }}</td>
+      <td>{% if JUR_NIVEAU == 'ddemp' %}{{ l.cs_nom }}<br><span class="aide">{{ l.zone_nom }}</span>{% else %}{{ l.zone_nom or '—' }}{% endif %}</td>
+      <td class="num">{{ l.ens.t }}</td><td class="num">{{ l.ens.h }}</td><td class="num">{{ l.ens.f }}</td>
+      {% for c, x in CATEGORIES %}<td class="num">{{ l.ens.par_categorie.get(c, 0) }}</td>{% endfor %}
+      <td class="num">{{ l.besoin.classes }}</td><td class="num {{ 'rouge' if l.besoin.manque }}">{{ l.besoin.manque }}</td><td class="num">{{ l.besoin.surplus }}</td><td class="num">{{ l.eff.t }}</td><td class="num">{{ l.ratio|jur_nb(1) }}</td></tr>
+    {% endfor %}
+  </table></div>
+</div>
+{% endif %}
+{% endblock %}

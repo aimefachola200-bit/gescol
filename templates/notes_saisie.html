@@ -1,0 +1,77 @@
+{% extends "base.html" %}{% block titre %}Notes {{ cl.nom }}{% endblock %}
+{% block contenu %}
+{% set mat = cl.cycle == 'maternelle' %}
+<div class="entete">
+  <div><h1>{{ 'Évaluations' if mat else 'Notes' }} – {{ cl.nom }} – {{ per }}</h1>
+  <p class="sous">{{ cl.niveau }} · {{ eleves|length }} élève(s) ·
+    {% if mat %}appréciation par domaine : A = acquis, ECA = en cours d'acquisition, NA = non acquis
+    {% elif cl.cycle == 'primaire' %}règle des 2/3 (les matières marquées * n'y comptent pas)
+    {% elif cl.niveau in ['6ème','5ème'] %}moyenne simple (coefficients non appliqués en 6ème/5ème)
+    {% else %}moyenne pondérée par les coefficients{% endif %}</p></div>
+  <div class="actions">
+    {% for p2 in PERIODES %}<a class="btn {{ '' if loop.index==p else 'sec' }} petit" href="{{ url_for('notes_saisie', cid=cl.id, p=loop.index) }}">{{ p2 }}</a>{% endfor %}
+    <a class="btn sec" href="{{ url_for('resultats', cid=cl.id, p=p) }}">Voir les résultats</a>
+  </div>
+</div>
+{% if mat %}
+<p class="aide">Choisissez l'appréciation de chaque domaine. « D » = dispensé. La colonne Observation apparaît sur le livret remis aux parents.</p>
+{% else %}
+<p class="aide">Tapez une note de 0 à 20 (virgule acceptée), <b>D</b> pour « dispensé », ou laissez vide si la matière n'est pas encore évaluée. La touche Entrée passe à la case suivante. L'observation apparaît sur le bulletin.</p>
+{% endif %}
+{% if not eleves %}<div class="carte">Aucun élève inscrit dans cette classe.</div>{% else %}
+<form method="post" id="grille">
+<div class="tw"><table class="t saisie">
+  <tr><th class="sticky">Élève</th>
+    {% for m in matieres %}<th class="v c" title="{{ m.nom }}">{{ m.nom }}{{ ' *' if m.mode_calcul=='exclu_2_3' and cl.cycle=='primaire' else '' }}{% if cl.cycle=='secondaire' and cl.niveau not in ['6ème','5ème'] %} (×{{ '%g'|format(m.coefficient) }}){% endif %}</th>{% endfor %}
+    {% if mat %}<th>Bilan</th>{% else %}<th class="c">Moy.</th><th class="c">Rang</th><th>Décision</th>{% endif %}
+    <th>Observation</th></tr>
+  {% for e in eleves %}{% set r = res[e.id] %}
+  <tr><td class="sticky" style="white-space:nowrap"><b>{{ e.nom }}</b> {{ e.prenoms }}</td>
+    {% for m in matieres %}{% set n = notes.get((e.id, m.id)) %}
+      {% if mat %}
+      {% set v = ('D' if n and n.dispense else (n.appreciation if n and n.appreciation else '')) %}
+      <td class="c"><select name="n_{{ e.id }}_{{ m.id }}" class="appr appr-{{ v or 'vide' }}" aria-label="{{ e.nom }} – {{ m.nom }}">
+        <option value="" {{ 'selected' if not v }}>—</option>
+        {% for k in APPRECIATIONS %}<option value="{{ k }}" {{ 'selected' if v==k }}>{{ k }}</option>{% endfor %}
+        <option value="D" {{ 'selected' if v=='D' }}>D</option>
+      </select></td>
+      {% else %}
+      {% set v = ('D' if n and n.dispense else ('%g'|format(n.valeur) if n and n.valeur is not none else '')) %}
+      <td class="c"><input name="n_{{ e.id }}_{{ m.id }}" value="{{ v }}" inputmode="decimal" autocomplete="off" aria-label="{{ e.nom }} – {{ m.nom }}"
+        class="{{ 'disp' if v=='D' else ('bas' if n and n.valeur is not none and n.valeur < 10 else '') }}"></td>
+      {% endif %}
+    {% endfor %}
+    {% if mat %}
+    <td style="white-space:nowrap">{% if r.details.evalues %}<span class="badge {{ 'ok' if r.admis else 'att' }}">{{ r.decision }}</span>{% endif %}</td>
+    {% else %}
+    <td class="c"><b>{{ '%.2f'|format(r.moyenne) if r.moyenne is not none else '—' }}</b></td>
+    <td class="c">{{ r.rang or '—' }}</td>
+    <td>{% if r.moyenne is not none %}<span class="badge {{ 'ok' if r.admis else 'ko' }}">{{ r.decision }}</span>{% endif %}</td>
+    {% endif %}
+    <td><input name="obs_{{ e.id }}" value="{{ r.details.observation or '' }}" maxlength="600" class="obs" placeholder="ex. Élève travailleur, doit soigner l'écriture" aria-label="Observation {{ e.nom }}"></td></tr>
+  {% endfor %}
+</table></div>
+<p class="actions" style="margin-top:14px"><button class="btn">Enregistrer</button>
+  {% if not mat %}<span class="aide">Moyenne de classe : {{ '%.2f'|format(stats.moyenne_classe) if stats.moyenne_classe is not none else '—' }}</span>{% endif %}</p>
+</form>
+<script>
+(function(){
+  var ins=[].slice.call(document.querySelectorAll('#grille input[name^="n_"], #grille select[name^="n_"]'));
+  ins.forEach(function(el,i){
+    el.addEventListener('keydown',function(ev){if(ev.key==='Enter'){ev.preventDefault();var n=ins[i+1];if(n){n.focus();if(n.select)n.select();}}});
+    if(el.tagName==='SELECT'){el.addEventListener('change',function(){el.className='appr appr-'+(el.value||'vide')});return;}
+    el.addEventListener('input',function(){
+      var v=el.value.trim().replace(',','.'),f=parseFloat(v);
+      el.classList.toggle('disp',v.toUpperCase()==='D');
+      el.classList.toggle('bas',v!==''&&!isNaN(f)&&f<10);
+      el.style.outline=(v===''||v.toUpperCase()==='D'||(!isNaN(f)&&f>=0&&f<=20&&/^\d+(\.\d+)?$/.test(v)))?'':'2px solid #B42318';
+    });
+  });
+  var modifie=false;document.getElementById('grille').addEventListener('input',function(){modifie=true});
+  document.getElementById('grille').addEventListener('change',function(){modifie=true});
+  document.getElementById('grille').addEventListener('submit',function(){modifie=false});
+  window.addEventListener('beforeunload',function(e){if(modifie){e.preventDefault();e.returnValue='';}});
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}{% block titre %}École{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<h1>{{ 'Modifier : ' ~ e.nom if edition else 'Ajouter une école' }}</h1>
+<form method="post" enctype="multipart/form-data" class="f">
+<div class="grille2">
+<div class="carte">
+  <h2 style="margin-top:0">Identité</h2>
+  <div class="ligne">
+    <div><label for="nom">Nom de l'école *</label><input id="nom" name="nom" required value="{{ e.nom or '' }}" placeholder="EPP Akpakpa Centre / Groupe A"></div>
+    <div><label for="sigle">Sigle</label><input id="sigle" name="sigle" value="{{ e.sigle or '' }}" maxlength="15"></div>
+    <div><label for="statut">Statut</label><select id="statut" name="statut">{% for s in ['Publique','Privée','Confessionnelle','Communautaire'] %}<option {{ 'selected' if e.statut==s }}>{{ s }}</option>{% endfor %}</select></div>
+    <div><label for="ordre">Ordre d'enseignement</label><select id="ordre" name="ordre"><option value="">—</option>{% for o in ordres %}<option {{ 'selected' if e.ordre==o }}>{{ o }}</option>{% endfor %}</select></div>
+  </div>
+  <h2>Localisation (DDEMP, CS)</h2>
+  <div class="ligne">
+    <div><label for="dep">Département (DDEMP)</label>
+      <input id="dep" name="departement" data-dep list="dl-deps" value="{{ e.departement or '' }}" placeholder="Choisir ou saisir">
+      <datalist id="dl-deps">{% for d in DEPARTEMENTS %}<option value="{{ d }}">{% endfor %}</datalist></div>
+    <div><label for="cs">Circonscription scolaire <span class="aide nb-cs"></span></label><input id="cs" name="cs" data-cs value="{{ e.cs or '' }}" placeholder="Choisir ou saisir"></div>
+    <div><label for="up">Unité pédagogique (UP)</label><input id="up" name="up" value="{{ e.up or '' }}"></div>
+    <div><label for="zone">Zone pédagogique</label><input id="zone" name="zone" value="{{ e.zone or '' }}"></div>
+    <div><label for="commune">Commune</label><input id="commune" name="commune" value="{{ e.commune or '' }}"></div>
+    <div><label for="ville">Ville (lieu de signature)</label><input id="ville" name="ville" value="{{ e.ville or '' }}"></div>
+  </div>
+  <p class="aide">Les 12 départements et les 118 circonscriptions scolaires du Bénin sont proposés ; vous pouvez aussi saisir librement.</p>
+  <h2>Contacts</h2>
+  <div class="ligne">
+    <div><label for="adresse">Adresse</label><input id="adresse" name="adresse" value="{{ e.adresse or '' }}"></div>
+    <div><label for="bp">Boîte postale</label><input id="bp" name="bp" value="{{ e.bp or '' }}"></div>
+    <div><label for="tel">Téléphone</label><input id="tel" name="telephone" value="{{ e.telephone or '' }}" inputmode="tel"></div>
+    <div><label for="email">E-mail</label><input id="email" name="email" type="email" value="{{ e.email or '' }}"></div>
+  </div>
+  <label for="logo">Logo de l'école (PNG ou JPG)</label><input id="logo" type="file" name="logo" accept="image/*">
+  {% if edition %}<img src="{{ url_for('ecole_logo', eid=e.id) }}" alt="" style="max-height:70px;margin-top:6px" onerror="this.remove()">{% endif %}
+</div>
+<div class="carte">
+  <h2 style="margin-top:0">Responsables</h2>
+  <label>Directeur / Directrice</label>
+  <div class="duo"><select name="directeur_titre">{% for t in ['Directeur','Directrice'] %}<option {{ 'selected' if e.directeur_titre==t }}>{{ t }}</option>{% endfor %}</select>
+  <input name="directeur_nom" value="{{ e.directeur_nom or '' }}" placeholder="Nom et prénoms"></div>
+  <label for="dtel">Téléphone du directeur</label><input id="dtel" name="directeur_tel" value="{{ e.directeur_tel or '' }}" inputmode="tel">
+  <label>Administrateur / Administratrice</label>
+  <div class="duo"><select name="admin_titre">{% for t in ['Administrateur','Administratrice'] %}<option {{ 'selected' if e.admin_titre==t }}>{{ t }}</option>{% endfor %}</select>
+  <input name="admin_nom" value="{{ e.admin_nom or '' }}" placeholder="Nom et prénoms"></div>
+  <label>Chef de circonscription scolaire (CCS)</label>
+  <div class="duo"><select name="ccs_titre">{% for t in ['Le CCS','La CCS'] %}<option {{ 'selected' if e.ccs_titre==t }}>{{ t }}</option>{% endfor %}</select>
+  <input name="ccs_nom" value="{{ e.ccs_nom or '' }}" placeholder="Nom et prénoms"></div>
+
+  <h2>Cachet officiel</h2>
+  <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
+    <div style="flex:1;min-width:220px">
+      <label for="c-sup">Texte de l'arc supérieur</label><input id="c-sup" name="cachet_sup" value="{{ e.cachet_sup or '' }}" maxlength="60" placeholder="EPP AKPAKPA CENTRE">
+      <label for="c-centre">Texte central (| pour aller à la ligne)</label><input id="c-centre" name="cachet_centre" value="{{ e.cachet_centre or '' }}" maxlength="60" placeholder="LA DIRECTION">
+      <label for="c-inf">Texte de l'arc inférieur</label><input id="c-inf" name="cachet_inf" value="{{ e.cachet_inf or '' }}" maxlength="60" placeholder="COTONOU">
+      <label>Couleur</label>
+      <label class="choix"><input type="radio" name="cachet_couleur" value="bleu" {{ 'checked' if e.cachet_couleur!='rouge' }}> Bleu</label>
+      <label class="choix"><input type="radio" name="cachet_couleur" value="rouge" {{ 'checked' if e.cachet_couleur=='rouge' }}> Rouge</label>
+    </div>
+    <img id="apercu-cachet" alt="Aperçu du cachet" width="170" height="170" src="{{ url_for('cachet_svg', sup=e.cachet_sup or '', inf=e.cachet_inf or '', centre=e.cachet_centre or '', couleur=e.cachet_couleur or 'bleu') }}">
+  </div>
+  <p class="aide">Les deux textes en arc sont séparés par une étoile de chaque côté, comme sur les cachets des écoles.</p>
+  {% if edition %}
+  <h2>Signatures</h2>
+  <div class="grille2">
+    {{ M.signature('ecole:' ~ e.id ~ ':directeur', 'Signature du directeur / de la directrice') }}
+    {{ M.signature('ecole:' ~ e.id ~ ':admin', "Signature de l'administrateur") }}
+  </div>
+  {% else %}<p class="aide">Les signatures digitales se font après le premier enregistrement.</p>{% endif %}
+</div>
+</div>
+<div class="actions"><button class="btn">Enregistrer</button><a class="btn sec" href="{{ url_for('ecoles') }}">Annuler</a></div>
+</form>
+<script>
+(function(){var f=document.querySelector('form.f'),img=document.getElementById('apercu-cachet'),t;
+function maj(){clearTimeout(t);t=setTimeout(function(){var p=new URLSearchParams({sup:f.cachet_sup.value,inf:f.cachet_inf.value,centre:f.cachet_centre.value,couleur:f.querySelector('[name=cachet_couleur]:checked').value});img.src='{{ url_for("cachet_svg") }}?'+p;},250);}
+['cachet_sup','cachet_inf','cachet_centre'].forEach(function(n){f[n].addEventListener('input',maj)});
+f.querySelectorAll('[name=cachet_couleur]').forEach(function(r){r.addEventListener('change',maj)});})();
+</script>
+{% endblock %}

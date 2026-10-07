@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block titre %}GESCOL{% endblock %} – {{ ECOLE.sigle }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ VERSION }}">
+<script src="{{ url_for('static', filename='gescol.js') }}?v={{ VERSION }}" defer></script>
+{% if g.user %}<script src="{{ url_for('referentiel_js') }}" defer></script>{% endif %}
+<link rel="manifest" href="{{ url_for('manifeste') }}">
+<meta name="theme-color" content="#1F4E79">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="{{ NOM_APPLI }}">
+<link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+</head>
+<body>
+{% set ep = request.endpoint or '' %}
+{% if g.user %}
+{% macro lien(endpoint, texte, actif, ico='') %}{% if ep_existe(endpoint) %}<a href="{{ url_for(endpoint) }}" class="{{ 'actif' if actif }}">{% if ico %}<span class="ico" aria-hidden="true">{{ ico }}</span>{% endif %}{{ texte }}</a>{% endif %}{% endmacro %}
+{% macro groupe(cle, titre, actif, ico) %}<details class="groupe-l {{ 'actif' if actif }}" data-g="{{ cle }}" {{ 'open' if actif }}><summary><span class="ico" aria-hidden="true">{{ ico }}</span>{{ titre }}</summary><div class="sous">{{ caller() }}</div></details>{% endmacro %}
+<div class="app">
+<aside id="lateral" class="lateral" aria-label="Menu principal">
+  <a class="marque" href="{{ url_for('accueil') }}"><span class="logo-g">G</span><span>{{ NOM_APPLI }}<small>{{ ECOLE.sigle or ECOLE.nom }}</small></span></a>
+  {% if ECOLES|length > 1 %}
+  <form method="post" action="" class="choix-ecole" onsubmit="this.action='/ecoles/'+this.e.value+'/choisir'">
+    <label for="choix-ecole" class="aide">École</label>
+    <select id="choix-ecole" name="e" onchange="this.form.requestSubmit()">{% for e in ECOLES %}<option value="{{ e.id }}" {{ 'selected' if ECOLE_COURANTE and e.id==ECOLE_COURANTE.id }}>{{ e.nom }}</option>{% endfor %}</select>
+    <input type="hidden" name="suivant" value="{{ request.path }}">
+  </form>{% endif %}
+  <nav id="menu">
+    {% if JURIDICTION %}{% include "_menu_juridiction.html" %}{% else %}
+    {{ lien('accueil', 'Tableau de bord', ep=='accueil', '⌂') }}
+    {% if PUBLIQUE %}{% if g.user.role in ('fondateur','admin','directeur') %}{{ lien('directeur_tableau', 'Tableau de bord du directeur', ep.startswith('directeur_tableau'), '📊') }}{% endif %}
+    {% elif g.user.role in ('fondateur','admin') %}{{ lien('fondateur_tableau', 'Tableau du fondateur', ep.startswith('fondateur'), '📊') }}{% endif %}
+    {% if g.user.role == 'enseignant' %}{{ lien('espace_enseignant', 'Mon espace', ep=='espace_enseignant', '★') }}{% endif %}
+    {% call groupe('sco', 'Scolarité', ep.startswith('eleve') or ep.startswith('classe') or ep.startswith('appel') or ep.startswith('absences') or ep.startswith('registre') or ep.startswith('releve') or ep.startswith('calendrier') or ep.startswith('affichage'), '👥') %}
+      {{ lien('eleves', 'Élèves et inscriptions', ep.startswith('eleve')) }}
+      {{ lien('classes', 'Classes', ep.startswith('classe')) }}
+      {% if peut('appel') %}{{ lien('appel_accueil', "Registre d'appel (journalier)", ep in ('appel_accueil','appel_classe')) }}
+      {{ lien('appel_stats', 'Absences (statistiques)', ep=='appel_stats') }}{% endif %}
+      {% if peut('registre') %}{{ lien('registre_accueil', 'Registre de présence', ep.startswith('registre')) }}
+      {{ lien('releve_mensuel', 'Relevés mensuels de présence', ep.startswith('releve')) }}
+      {{ lien('calendrier_scolaire', 'Calendrier (jours de classe)', ep.startswith('calendrier')) }}{% endif %}
+      {% if peut('affichage') %}{{ lien('affichage_accueil', "Tableau d'affichage", ep.startswith('affichage')) }}{% endif %}
+    {% endcall %}
+    {% call groupe('eval', 'Évaluations', ep.startswith('notes') or ep.startswith('eval') or ep in ('resultats','matieres') or ep.startswith('bilan') or ep.startswith('honneur') or ep.startswith('synthese'), '✎') %}
+      {% if peut('evaluations') %}{{ lien('eval_accueil', 'Saisie des notes (évaluations)', ep.startswith('eval_') and ep not in ('eval_statistiques','eval_analyse')) }}
+      {{ lien('eval_statistiques', 'Statistiques', ep=='eval_statistiques') }}
+      {{ lien('eval_analyse', 'Analyse et rapport', ep=='eval_analyse') }}
+      {{ lien('honneur_accueil', "Tableau d'honneur", ep.startswith('honneur')) }}
+      {{ lien('bilan_annuel', 'Bilan annuel et décision', ep.startswith('bilan')) }}{% endif %}
+      {% if peut('notes') %}{{ lien('notes_accueil', 'Notes par période (bulletins)', ep.startswith('notes') or ep=='resultats') }}{% endif %}
+      {% if peut('synthese') %}{{ lien('synthese_accueil', 'Synthèse École / UP / CS', ep.startswith('synthese')) }}{% endif %}
+      {{ lien('matieres', 'Matières et domaines', ep=='matieres') }}
+    {% endcall %}
+    {% if peut('cep') %}
+    {% call groupe('cep', 'Examens (CEP)', ep.startswith('cep') or ep.startswith('carte'), '🎓') %}
+      {{ lien('cep_accueil', "Fiches d'inscription au CEP", ep.startswith('cep_fiche') or ep=='cep_accueil') }}
+      {{ lien('carte_editeur', 'Carte scolaire du candidat', ep.startswith('carte')) }}
+      {{ lien('cep_blanc_accueil', 'Examen blanc CEP', ep.startswith('cep_blanc')) }}
+    {% endcall %}{% endif %}
+    {% if peut('cantine') %}
+    {% call groupe('cant', 'Cantine', ep.startswith('cantine'), '🍲') %}
+      {{ lien('cantine_accueil', 'Paiements de cantine', ep in ('cantine_accueil','cantine_classe')) }}
+      {{ lien('cantine_recap', 'Récapitulatifs', ep=='cantine_recap') }}
+      {{ lien('cantine_config', 'Configuration (montants)', ep=='cantine_config') }}
+    {% endcall %}{% endif %}
+    {% if peut('paiements') or peut('tresorerie') or peut('paie') or (PUBLIQUE and (peut('cantine') or peut('carriere') or peut('depenses'))) %}
+    {% call groupe('fin', 'Finances', ep.startswith('paiement') or ep=='impayes' or ep.startswith('tresorerie') or ep.startswith('paie') or ep.startswith('personnel') or ep=='bulletin_paie_pdf' or ep=='livre_paie' or ep.startswith('depense') or ep.startswith('recette') or ep.startswith('carriere') or ep=='cantine_impayes' or ep.startswith('cep_frais'), '💰') %}
+      {% if PUBLIQUE %}
+      {% if peut('cantine') %}{{ lien('cantine_accueil', 'Paiements de cantine', ep in ('cantine_accueil','cantine_classe')) }}
+      {{ lien('cantine_impayes', 'Impayés de cantine', ep=='cantine_impayes') }}{% endif %}
+      {% if peut('depenses') %}{{ lien('depenses_accueil', 'Dépenses (fonds de cantine…)', ep.startswith('depense')) }}
+      {{ lien('recettes_accueil', 'Subventions et recettes', ep.startswith('recette')) }}
+      {{ lien('cep_frais', 'Frais de dossier CEP', ep.startswith('cep_frais')) }}{% endif %}
+      {% if peut('paiements') %}{{ lien('paiements_en_ligne', 'Paiements en ligne (facultatif)', ep=='paiements_en_ligne') }}{% endif %}
+      {% else %}
+      {% if peut('paiements') %}{{ lien('paiements', 'Paiements de scolarité', ep in ('paiements','paiement_nouveau')) }}
+      {{ lien('impayes', 'Impayés', ep=='impayes') }}
+      {{ lien('paiements_en_ligne', 'Paiements en ligne', ep=='paiements_en_ligne') }}{% endif %}
+      {% endif %}
+      {% if peut('tresorerie') %}{{ lien('tresorerie', 'Trésorerie', ep=='tresorerie') }}
+      {{ lien('tresorerie_bilan', 'Bilan et budget', ep in ('tresorerie_bilan','tresorerie_budget')) }}{% endif %}
+      {% if PUBLIQUE %}
+      {% if peut('carriere') %}{{ lien('personnel', 'Personnel', ep.startswith('personnel')) }}
+      {{ lien('carriere_accueil', 'Gestion de carrière des enseignants', ep.startswith('carriere')) }}{% endif %}
+      {% elif peut('paie') %}{{ lien('personnel', 'Personnel', ep.startswith('personnel')) }}
+      {{ lien('paie_accueil', 'Paie', ep in ('paie_accueil','paie_mois')) }}{% endif %}
+    {% endcall %}{% endif %}
+    {% if PUBLIQUE %}
+    {% call groupe('vie', "Vie de l'école", ep.startswith('maitre_semaine') or ep.startswith('visite') or ep.startswith('patrimoine') or ep.startswith('recensement') or ep.startswith('docs_enseignant') or ep.startswith('rapports'), '🏫') %}
+      {% if peut('recensement') %}{{ lien('recensement_accueil', "Carte d'identité de l'école (recensement, rapports)", ep.startswith('recensement')) }}{% endif %}
+      {% if peut('maitre_semaine') %}{{ lien('maitre_semaine_accueil', 'Maître de semaine (journal)', ep.startswith('maitre_semaine')) }}{% endif %}
+      {% if peut('visites') %}{{ lien('visites_accueil', "Visites de classe et d'école", ep.startswith('visite')) }}{% endif %}
+      {% if peut('patrimoine') %}{{ lien('patrimoine_accueil', 'Patrimoine et ressources', ep.startswith('patrimoine')) }}{% endif %}
+      {% if peut('docs_enseignant') %}{{ lien('docs_enseignant_accueil', "Documents de l'enseignant", ep.startswith('docs_enseignant')) }}{% endif %}
+    {% endcall %}
+    {% endif %}
+    {% if peut('communication') or peut('parents') %}
+    {% set nb = messages_non_lus() + whatsapp_en_attente() %}
+    {% call groupe('par', 'Parents' ~ (' (' ~ nb ~ ')' if nb else ''), ep in ('communication','parents_liste'), '✉') %}
+      {% if peut('communication') %}{{ lien('communication', 'Messages et WhatsApp', ep=='communication') }}{% endif %}
+      {% if peut('parents') %}{{ lien('parents_liste', 'Comptes parents', ep=='parents_liste') }}{% endif %}
+      {% if peut('eleves') %}{{ lien('espace_eleves_acces', 'Comptes élèves', ep=='espace_eleves_acces') }}{% endif %}
+    {% endcall %}{% endif %}
+    {% if peut('donnees') %}
+    {% call groupe('don', 'Données', ep.startswith('donnees') or ep.startswith('educmaster') or ep.startswith('conversion') or ep.startswith('transmission'), '⇅') %}
+      {{ lien('transmission_accueil', 'Transmission à la circonscription', ep.startswith('transmission')) }}
+      {{ lien('donnees_accueil', 'Import / export', ep.startswith('donnees')) }}
+      {{ lien('educmaster_accueil', 'EducMaster (primaire, secondaire)', ep.startswith('educmaster')) }}
+      {{ lien('conversion_pdf', 'Conversion PDF → Excel / CSV', ep.startswith('conversion')) }}
+    {% endcall %}{% endif %}
+    {% if peut('ecoles') and not peut('parametres') %}{{ lien('ecoles', 'Mon école (fiche, cachet)', ep.startswith('ecole'), '🏫') }}{% endif %}
+    {% if peut('secretariat') %}
+    {% call groupe('sec', 'Secrétariat', ep in ('courrier','archives'), '🗂') %}
+      {{ lien('courrier', 'Courrier', ep=='courrier') }}
+      {{ lien('archives', 'Archives', ep=='archives') }}
+    {% endcall %}{% endif %}
+    {% if peut('parametres') %}
+    {% call groupe('adm', 'Administration', ep in ('utilisateurs','journal_page','parametres','en_ligne_page','demandes_ecoles','reglages_messages','reglages_paiement_en_ligne','paie_parametres','affectations') or ep.startswith('ecole'), '⚙') %}
+      {{ lien('ecoles', 'Écoles (ajout, modification)', ep.startswith('ecole')) }}
+      {{ lien('parametres', "Paramètres généraux", ep=='parametres') }}
+      {{ lien('en_ligne_page', 'Mise en ligne et sauvegardes', ep=='en_ligne_page') }}
+      {{ lien('utilisateurs', 'Utilisateurs et affectations', ep in ('utilisateurs','affectations')) }}
+      {{ lien('reglages_paiement_en_ligne', 'Paiement en ligne', ep=='reglages_paiement_en_ligne') }}
+      {{ lien('reglages_messages', 'WhatsApp et SMS', ep=='reglages_messages') }}
+      {{ lien('paie_parametres', 'Paramètres de paie', ep=='paie_parametres') }}
+      {{ lien('demandes_ecoles', 'Écoles candidates', ep.startswith('demandes')) }}
+      {{ lien('journal_page', "Journal d'activité", ep=='journal_page') }}
+    {% endcall %}{% endif %}
+    {{ lien('verifier', 'Vérifier un document', ep=='verifier', '✔') }}
+    {% endif %}
+  </nav>
+  <div class="lateral-pied aide">GESCOL {{ VERSION }}<br>Conception : {{ CONCEPTEUR }}</div>
+</aside>
+<div id="voile" class="voile" hidden></div>
+<div class="zone">
+<header class="barre-haut">
+  <button id="btn-menu" class="btn-menu" type="button" aria-expanded="false" aria-controls="lateral" aria-label="Ouvrir le menu">☰</button>
+  <div class="bh-titre"><strong>{{ ECOLE.nom }}</strong><span class="aide">{% if ECOLE.cs %}CS {{ ECOLE.cs }} · {% endif %}{{ ANNEE }}</span></div>
+  <div class="bh-user">{{ g.user.nom }} <span class="badge">{{ ROLES[g.user.role] }}</span> · <a href="{{ url_for('mon_compte') }}">Compte</a> · <a href="{{ url_for('logout') }}">Déconnexion</a></div>
+</header>
+{% elif g.get('parent') %}
+<header class="top parent">
+  <a class="marque" href="{{ url_for('parent_accueil') }}">GESCOL · Espace parents</a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu" onclick="var n=document.getElementById('menu');var o=n.classList.toggle('ouvert');this.setAttribute('aria-expanded',o)">☰ Menu</button>
+  <nav id="menu">
+    <a href="{{ url_for('parent_accueil') }}" class="{{ 'actif' if ep in ('parent_accueil','parent_enfant','parent_payer') }}">Mes enfants</a>
+    <a href="{{ url_for('parent_messages') }}" class="{{ 'actif' if ep=='parent_messages' }}">Messages</a>
+    <a href="{{ url_for('installer') }}" class="{{ 'actif' if ep=='installer' }}">Installer l'application</a>
+    <div class="user">{{ g.parent.nom }} · <a href="{{ url_for('parent_mdp') }}">Mot de passe</a> · <a href="{{ url_for('parent_logout') }}">Déconnexion</a></div>
+  </nav>
+</header>
+{% else %}
+<header class="top">
+  <a class="marque" href="{{ url_for('login') }}">GESCOL</a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu" onclick="var n=document.getElementById('menu');var o=n.classList.toggle('ouvert');this.setAttribute('aria-expanded',o)">☰ Menu</button>
+  <nav id="menu">
+    <a href="{{ url_for('login') }}" class="{{ 'actif' if ep=='login' }}">Connexion personnel</a>
+    <a href="{{ url_for('parent_login') }}" class="{{ 'actif' if ep=='parent_login' }}">Espace parents</a>
+    {% if ep_existe('eleve_login') %}<a href="{{ url_for('eleve_login') }}" class="{{ 'actif' if ep=='eleve_login' }}">Espace élève</a>{% endif %}
+    <a href="{{ url_for('rejoindre') }}" class="{{ 'actif' if ep=='rejoindre' }}">Inscrire mon école</a>
+    <a href="{{ url_for('verifier') }}" class="{{ 'actif' if ep=='verifier' }}">Vérifier un document</a>
+    <a href="{{ url_for('installer') }}" class="{{ 'actif' if ep=='installer' }}">Installer l'application</a>
+  </nav>
+</header>
+{% endif %}
+<div id="bandeau-install" class="bandeau" hidden>
+  <span>Installez GESCOL sur cet appareil pour l'ouvrir comme une application.</span>
+  <button class="btn petit" type="button" id="btn-install">Installer</button>
+  <button class="btn sec petit" type="button" onclick="document.getElementById('bandeau-install').hidden=true;try{localStorage.setItem('gescol-install-ignore','1')}catch(e){}">Plus tard</button>
+</div>
+<main {% if g.user %}class="travail"{% endif %}>
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+  {% endwith %}
+  {% block contenu %}{% endblock %}
+  <footer class="credit">GESCOL {{ VERSION }} · Conception : {{ CONCEPTEUR }}</footer>
+</main>
+{% if g.user %}</div></div>{% endif %}
+<script>
+(function(){
+  if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1')){
+    navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(){});
+  }
+  var invite=null, b=document.getElementById('bandeau-install');
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault(); invite=e; window.gescolInvite=e;
+    var ignore=false; try{ignore=localStorage.getItem('gescol-install-ignore')==='1'}catch(_){}
+    if(!ignore) b.hidden=false;
+    document.dispatchEvent(new Event('gescol-installable'));
+  });
+  document.getElementById('btn-install').addEventListener('click',function(){
+    if(!invite) return; invite.prompt(); invite.userChoice.finally(function(){invite=null;b.hidden=true;});
+  });
+  window.addEventListener('appinstalled',function(){b.hidden=true;});
+})();
+</script>
+</body>
+</html>

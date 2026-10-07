@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% block titre %}Cantine – configuration{% endblock %}
+{% block contenu %}
+<style>
+.cant-cfg input.m{width:110px;text-align:right}
+.cant-cfg form{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0}
+</style>
+<div class="entete">
+  <div><h1>Configuration de la cantine</h1>
+  <p class="sous">Montant à payer par jour de cantine (FCFA), classe par classe. Les paiements ne sont possibles qu'après la « Validation de configuration ».</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('cantine_accueil') }}">← Paiements de cantine</a></div>
+</div>
+
+{% if not cls %}
+<div class="carte">Aucune classe disponible pour cette école. Créez d'abord les classes (menu Classes).</div>
+{% else %}
+{% if not modifiable %}<div class="flash info">Consultation seulement : la configuration est modifiée par la direction ou le comptable.</div>{% endif %}
+<div class="tw"><table class="t cant-cfg">
+  <thead><tr><th>Classe</th><th class="c">Effectif</th><th>Montant par jour (FCFA)</th><th>État</th></tr></thead>
+  <tbody>
+  {% for c in cls %}{% set cf = cfgs.get(c.id) %}
+  <tr><td><b>{{ c.nom }}</b><br><span class="aide">{{ c.niveau }}</span></td><td class="c">{{ eff.get(c.id, 0) }}</td>
+    <td>{% if modifiable %}
+      <form method="post" action="{{ url_for('cantine_config') }}">
+        <input type="hidden" name="classe" value="{{ c.id }}">
+        <label class="aide" for="m-{{ c.id }}">Montant</label>
+        <input class="m" id="m-{{ c.id }}" name="montant" value="{{ cf.montant_jour if cf else '' }}" inputmode="numeric" placeholder="ex. 200" required>
+        <button class="btn sec petit" name="action" value="enregistrer">Enregistrer</button>
+        <button class="btn vert petit" name="action" value="valider">✔ Validation de configuration</button>
+        {% if cf and cf.valide %}<button class="btn danger petit" name="action" value="devalider" formnovalidate data-confirmer="Suspendre les paiements de cantine de {{ c.nom }} ?">Suspendre</button>{% endif %}
+      </form>
+      {% else %}{{ milliers(cf.montant_jour) if cf else '—' }}{% endif %}</td>
+    <td>{% if cf and cf.valide and cf.montant_jour > 0 %}<span class="badge ok">Validée</span><br><span class="aide">le {{ date_fr(cf.valide_le) }} à {{ cf.valide_le[11:16] }}</span>
+      {% elif cf %}<span class="badge att">Non validée</span>{% else %}<span class="badge ko">Non configurée</span>{% endif %}</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+<p class="aide">Montant : nombre entier de 1 à {{ milliers(max) }} FCFA. Modifier le montant d'une classe déjà validée suspend ses paiements jusqu'à une nouvelle validation. Les paiements déjà enregistrés conservent le montant en vigueur au moment de la saisie.</p>
+{% endif %}
+{% endblock %}

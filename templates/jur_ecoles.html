@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% block titre %}Écoles de la juridiction{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Écoles de la juridiction</h1><p class="sous">{{ ecoles|length }} école(s) · année {{ ANNEE }}</p></div>
+<div class="actions">
+  {% if peut('jur_ecoles') %}<a class="btn" href="{{ url_for('jur_ecole_form') }}">+ Ajouter une école</a>
+  <a class="btn sec" href="{{ url_for('jur_ecoles_import') }}">⇪ Importer (Excel)</a>{% endif %}
+  <a class="btn sec" href="{{ url_for('jur_ecoles', export='xlsx', **f) }}">⇩ Exporter (Excel)</a>
+</div></div>
+<div class="grille indicateurs">
+  {% for t, tl in JUR_TYPES.items() %}{% for s, sl in JUR_SECTEURS.items() %}
+  <div class="kpi"><div class="l">{{ tl }} – {{ sl|lower }}</div><div class="v">{{ compte.get((t, s), 0) }}</div></div>
+  {% endfor %}{% endfor %}
+</div>
+<form method="get" class="filtres">
+  {% if JUR_NIVEAU=='ddemp' %}<label>Circonscription<br><select name="cs" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if f.get('cs')|string == c.id|string }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+  <label>Zone pédagogique<br><select name="zone" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for z in zones %}<option value="{{ z.id }}" {{ 'selected' if f.get('zone')|string == z.id|string }}>{% if JUR_NIVEAU=='ddemp' %}{{ z.cs_nom }} – {% endif %}{{ z.nom }}</option>{% endfor %}</select></label>
+  <label>Type<br><select name="type" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for k, v in JUR_TYPES.items() %}<option value="{{ k }}" {{ 'selected' if f.get('type')==k }}>{{ v }}</option>{% endfor %}</select></label>
+  <label>Secteur<br><select name="secteur" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for k, v in JUR_SECTEURS.items() %}<option value="{{ k }}" {{ 'selected' if f.get('secteur')==k }}>{{ v }}</option>{% endfor %}</select></label>
+  <label>Recherche<br><input name="q" value="{{ f.get('q','') }}" placeholder="Nom, code, directeur…"></label>
+  <button class="btn sec petit">Filtrer</button>
+</form>
+<div class="tw"><table class="t">
+  <tr><th>École</th><th>Type</th><th>Secteur</th>{% if JUR_NIVEAU=='ddemp' %}<th>CS</th>{% endif %}<th>Zone</th><th>Directeur</th><th>Données {{ ANNEE }}</th><th></th></tr>
+  {% for e in ecoles %}
+  <tr><td><a href="{{ url_for('jur_ecole_fiche', eid=e.id) }}"><b>{{ e.nom }}</b></a><br><span class="aide">{{ e.code }}{% if e.localite %} · {{ e.localite }}{% endif %}</span></td>
+    <td>{{ e.type }}</td><td>{{ JUR_SECTEURS[e.secteur] }}</td>{% if JUR_NIVEAU=='ddemp' %}<td>{{ e.cs_nom }}</td>{% endif %}<td>{{ e.zone_nom or '—' }}</td>
+    <td>{{ e.directeur_nom or '' }}{% if e.directeur_tel %}<br><span class="aide">{{ e.directeur_tel }}</span>{% endif %}</td>
+    <td>{% if recus.get(e.id) %}<span class="badge ok">{{ recus[e.id] }} rubrique(s)</span>{% else %}<span class="badge att">non reçues</span>{% endif %}
+      {% if e.derniere_transmission %}<br><span class="aide">{{ e.derniere_transmission[:10] }}</span>{% endif %}</td>
+    <td class="num">{% if peut('jur_ecoles') %}<a class="btn sec petit" href="{{ url_for('jur_ecole_form', eid=e.id) }}">Modifier</a>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="8" class="gris">Aucune école. Ajoutez-les, importez un fichier Excel ou importez les fichiers de transmission envoyés par les écoles.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

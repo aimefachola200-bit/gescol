@@ -1,0 +1,67 @@
+{% extends "base.html" %}{% block titre %}Tableau d'honneur{% endblock %}
+{% import "_macros.html" as M with context %}
+{% import "resultats_eval_entete.html" as R with context %}
+{% block contenu %}
+{{ R.styles() }}
+<div class="entete">
+  <div><h1>Tableau d'honneur</h1>
+  <p class="sous">Meilleurs élèves d'une évaluation ou du bilan annuel · tableau à afficher et certificats / diplômes d'honneur individuels</p></div>
+</div>
+
+{{ M.choix_classe(classes, cl.id if cl else None) }}
+{{ R.vide(classes, cl, evs, 'honneur_accueil') }}
+
+{% if cl and evs %}
+<form method="get" action="{{ url_for('honneur_accueil') }}" data-doc="{{ cle_entete }}">
+  <input type="hidden" name="classe" value="{{ cl.id }}">
+  {% call M.barre_doc() %}
+    <button class="btn sec petit">🔎 Afficher la liste</button>
+    <button class="btn petit" formaction="{{ url_for('honneur_pdf') }}" formtarget="_blank">📄 Tableau d'honneur (PDF)</button>
+    <button class="btn vert petit" formaction="{{ url_for('honneur_certificats') }}" formtarget="_blank" {{ 'disabled' if not retenus }}>🎓 Certificats de tous les retenus (PDF)</button>
+  {% endcall %}
+  <div class="carte">
+    <div class="grille-id">
+      <div><label for="h-ev">Source du classement</label>
+        <select id="h-ev" name="ev">
+          {% for e in evs %}<option value="{{ e.id }}" {{ 'selected' if choix == e.id|string }}>{{ e.titre }}</option>{% endfor %}
+          <option value="bilan" {{ 'selected' if choix == 'bilan' }}>Bilan annuel{{ ' (sélection enregistrée)' if bilan_enr else ' (toutes les évaluations)' }}</option>
+        </select></div>
+      <div><label for="h-seuil">Moyenne minimale (/20)</label>
+        <input id="h-seuil" name="seuil" inputmode="decimal" value="{{ seuil|res_nb if seuil is not none else '' }}" placeholder="ex. 12 (vide = aucune)" data-garder></div>
+      <div><label for="h-n">Nombre maximal de lauréats (rang)</label>
+        <input id="h-n" name="n" type="number" min="1" max="200" value="{{ n or '' }}" placeholder="ex. 10 (vide = tous)"></div>
+      <div><label for="h-modele">Modèle individuel</label>
+        <select id="h-modele" name="modele"><option value="certificat" {{ 'selected' if modele != 'diplome' }}>Certificat d'honneur</option>
+          <option value="diplome" {{ 'selected' if modele == 'diplome' }}>Diplôme d'honneur</option></select></div>
+    </div>
+    <label for="h-msg">Message de félicitations (tableau d'honneur)</label>
+    <textarea id="h-msg" name="msg" rows="3" maxlength="600" style="width:100%">{{ msg }}</textarea>
+    <p class="aide">Sont retenus les élèves qui ont {{ V.ont }}{% if choix == 'bilan' %} (bilan annuel : admis){% endif %}, dont la moyenne atteint le minimum et dont le rang ne dépasse pas le nombre indiqué.</p>
+  </div>
+  {{ R.entete_docs(v, cl) }}
+</form>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Source</div><div class="v" style="font-size:16px">{{ source or '—' }}</div><div class="d">{{ cl.nom }}</div></div>
+  <div class="kpi"><div class="l">Élèves retenus</div><div class="v">{{ retenus|length }}</div><div class="d">sur {{ nb_ok }} ayant réussi</div></div>
+  <div class="kpi"><div class="l">Filles / garçons</div><div class="v">{{ retenus|selectattr('eleve.sexe', 'equalto', 'F')|list|length }} / {{ retenus|selectattr('eleve.sexe', 'equalto', 'M')|list|length }}</div><div class="d">parmi les retenus</div></div>
+</div>
+
+{% if cl.cycle == 'maternelle' %}
+<div class="flash info">Maternelle : les appréciations (A / ECA / NA) ne donnent pas de moyenne chiffrée ; le tableau d'honneur par moyenne ne s'applique pas.</div>
+{% endif %}
+
+<div class="tw"><table class="t">
+  <thead><tr><th>Rang</th><th>Nom et prénoms</th><th class="c">Sexe</th><th class="num">Moyenne</th><th>Mention</th><th>Détail</th><th></th></tr></thead>
+  <tbody>
+  {% for c in retenus %}
+    <tr><td><b>{{ c.rang_txt }}</b></td><td><b>{{ c.eleve.nom }}</b> {{ c.eleve.prenoms }}</td><td class="c">{{ c.eleve.sexe }}</td>
+      <td class="num"><b>{{ c.moyenne|res_nb }}</b></td><td>{{ c.mention }}</td><td class="aide">{{ c.detail }}</td>
+      <td><a class="btn sec petit" target="_blank" href="{{ url_for('honneur_certificats', classe=cl.id, ev=choix, seuil=seuil if seuil is not none else '', n=n or '', eleve=c.eleve.id, modele=modele) }}">🎓 {{ 'Diplôme' if modele == 'diplome' else 'Certificat' }}</a></td></tr>
+  {% else %}
+    <tr><td colspan="7" class="gris">Aucun élève ne remplit les critères retenus{% if nb_ok %} : baissez la moyenne minimale ou augmentez le nombre de lauréats{% else %} (notes non saisies ou aucune réussite){% endif %}.</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,16 @@
+instance/
+venv/
+venv-build/
+build/
+dist/
+__pycache__/
+*.pyc
+packaging/android/.gradle/
+packaging/android/app/build/
+packaging/android/build/
+packaging/android_autonome/.gradle/
+packaging/android_autonome/app/build/
+packaging/android_autonome/build/
+packaging/android_autonome/app/src/main/assets/
+packaging/android_autonome/app/src/main/python/*
+!packaging/android_autonome/app/src/main/python/gescol_android.py

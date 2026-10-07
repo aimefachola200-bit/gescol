@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% block titre %}Circonscriptions et zones{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ 'Zones pédagogiques' if JUR_NIVEAU=='cs' else 'Circonscriptions et zones pédagogiques' }}</h1>
+<p class="sous">{{ liste|length }} circonscription(s) · {% set nz = namespace(n=0) %}{% for x in liste %}{% set nz.n = nz.n + x.zones|length %}{% endfor %}{{ nz.n }} zone(s) pédagogique(s)</p></div>
+<a class="btn sec" href="{{ url_for('jur_ecoles') }}">Écoles</a></div>
+{% for x in liste %}{% set c = x.cs %}
+<details class="carte" {{ 'open' if loop.length == 1 }}>
+  <summary><b>CS {{ c.nom }}</b> — {{ x.zones|length }} zone(s), {{ x.nb_ecoles }} école(s){% if c.ccs_nom %} · {{ c.ccs_titre or 'CCS' }} : {{ c.ccs_nom }}{% endif %}</summary>
+  {% if peut('jur_ecoles') %}
+  <form method="post" class="grille-id" style="margin:10px 0">
+    <input type="hidden" name="action" value="cs_modifier"><input type="hidden" name="cs_id" value="{{ c.id }}">
+    <div><label>Titre du CCS</label><input name="ccs_titre" value="{{ c.ccs_titre or '' }}" placeholder="Le Chef de la Circonscription Scolaire"></div>
+    <div><label>Nom du CCS</label><input name="ccs_nom" value="{{ c.ccs_nom or '' }}"></div>
+    <div><label>Téléphone</label><input name="telephone" value="{{ c.telephone or '' }}"></div>
+    <div><label>E-mail</label><input name="email" value="{{ c.email or '' }}"></div>
+    <div><label>Adresse</label><input name="adresse" value="{{ c.adresse or '' }}"></div>
+    <div style="align-self:end"><button class="btn sec petit">Enregistrer la CS</button></div>
+  </form>{% endif %}
+  {% if c.arrondissements %}<p class="aide">Arrondissements : {{ c.arrondissements }}</p>{% endif %}
+  <div class="tw"><table class="t compact">
+    <tr><th>Zone pédagogique</th><th>Conseiller pédagogique</th><th>Téléphone</th><th class="num">Écoles</th><th></th></tr>
+    {% for z in x.zones %}
+    <tr><form method="post"><input type="hidden" name="action" value="zone_modifier"><input type="hidden" name="zone_id" value="{{ z.id }}">
+      <td><input name="nom" value="{{ z.nom }}" aria-label="Nom de la zone"></td>
+      <td><input name="cp_nom" value="{{ z.cp_nom or '' }}" aria-label="CP"></td>
+      <td><input name="cp_telephone" value="{{ z.cp_telephone or '' }}" aria-label="Téléphone du CP"></td>
+      <td class="num">{{ z.nb }}</td>
+      <td class="num">{% if peut('jur_ecoles') %}<button class="btn sec petit">Enregistrer</button>{% endif %}</form>
+      {% if peut('jur_ecoles') %}<form method="post" style="display:inline"><input type="hidden" name="action" value="zone_supprimer"><input type="hidden" name="zone_id" value="{{ z.id }}">
+      <button class="btn danger petit" data-confirmer="Supprimer cette zone ?">✕</button></form>{% endif %}</td></tr>
+    {% else %}<tr><td colspan="5" class="gris">Aucune zone.</td></tr>{% endfor %}
+  </table></div>
+  {% if peut('jur_ecoles') %}
+  <form method="post" class="ligne" style="margin-top:8px"><input type="hidden" name="action" value="zone_ajouter"><input type="hidden" name="cs_id" value="{{ c.id }}">
+    <input name="nom" placeholder="Nouvelle zone (ex. Zone pédagogique 5)" required aria-label="Nouvelle zone"><button class="btn sec petit">+ Ajouter une zone</button></form>{% endif %}
+</details>
+{% endfor %}
+{% if JUR_NIVEAU=='ddemp' and peut('jur_ecoles') %}
+<form method="post" class="carte ligne"><input type="hidden" name="action" value="cs_ajouter">
+  <input name="nom" placeholder="Nom d'une circonscription absente de la liste" required aria-label="Nouvelle CS"><button class="btn sec">+ Ajouter une CS</button></form>{% endif %}
+{% endblock %}

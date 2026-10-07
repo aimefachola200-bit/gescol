@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% block titre %}Structure{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ 'Circonscription scolaire' if JUR_NIVEAU=='cs' else 'Direction départementale (DDEMP)' }}</h1>
+<p class="sous">Identité de la structure utilisée dans les en-têtes, cachets et documents.</p></div></div>
+{% if not JUR %}<div class="flash info">Première utilisation : choisissez votre {{ 'circonscription' if JUR_NIVEAU=='cs' else 'département' }}. Les circonscriptions et zones pédagogiques sont créées automatiquement d'après la liste officielle (118 CS du Bénin).</div>{% endif %}
+<form method="post" class="carte" data-cascade>
+  <div class="grille-id">
+    <div><label for="dep">Département</label>
+      <select id="dep" name="departement" required onchange="majCS()">
+        <option value="">— choisir —</option>
+        {% for d in departements %}<option {{ 'selected' if s.departement==d }}>{{ d }}</option>{% endfor %}
+      </select></div>
+    {% if JUR_NIVEAU=='cs' %}
+    <div><label for="cs">Circonscription scolaire</label>
+      <select id="cs" name="cs" required data-val="{{ s.cs or '' }}"></select></div>
+    {% endif %}
+    <div><label for="nom">Nom complet (laisser vide = automatique)</label><input id="nom" name="nom" value="{{ s.nom or '' }}"></div>
+    <div><label for="sigle">Sigle</label><input id="sigle" name="sigle" value="{{ s.sigle or '' }}"></div>
+    <div><label for="rt">Titre du responsable</label>
+      <input id="rt" name="responsable_titre" list="titres" value="{{ s.responsable_titre or ('Le Chef de la Circonscription Scolaire' if JUR_NIVEAU=='cs' else 'Le Directeur Départemental') }}">
+      <datalist id="titres"><option>Le Chef de la Circonscription Scolaire</option><option>La Cheffe de la Circonscription Scolaire</option>
+      <option>L'Inspecteur, Chef de la Circonscription Scolaire</option><option>Le Directeur Départemental</option><option>La Directrice Départementale</option></datalist></div>
+    <div><label for="rn">Nom et prénoms du responsable</label><input id="rn" name="responsable_nom" value="{{ s.responsable_nom or '' }}"></div>
+    <div><label for="ad">Adresse</label><input id="ad" name="adresse" value="{{ s.adresse or '' }}"></div>
+    <div><label for="bp">BP</label><input id="bp" name="bp" value="{{ s.bp or '' }}"></div>
+    <div><label for="vi">Ville</label><input id="vi" name="ville" value="{{ s.ville or '' }}"></div>
+    <div><label for="te">Téléphone</label><input id="te" name="telephone" value="{{ s.telephone or '' }}"></div>
+    <div><label for="em">E-mail</label><input id="em" name="email" type="email" value="{{ s.email or '' }}"></div>
+  </div>
+  {% if JUR %}<p><label><input type="checkbox" name="confirmer" value="1"> Je confirme le changement de juridiction (si département ou CS modifié)</label></p>{% endif %}
+  <p class="actions"><button class="btn">Enregistrer</button>
+  {% if JUR %}<a class="btn sec" href="{{ url_for('jur_zones') }}">Circonscriptions et zones pédagogiques</a>
+  <a class="btn sec" href="{{ url_for('jur_ecoles') }}">Écoles</a>{% endif %}</p>
+</form>
+<script>
+var CS={{ cs_par_dep|tojson }};
+function majCS(){var s=document.getElementById('cs');if(!s)return;var d=document.getElementById('dep').value,v=s.dataset.val;
+ s.innerHTML='<option value="">— choisir —</option>'+(CS[d]||[]).map(function(c){return '<option'+(c==v?' selected':'')+'>'+c+'</option>'}).join('');}
+majCS();
+</script>
+{% endblock %}

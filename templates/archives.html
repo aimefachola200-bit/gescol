@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% block titre %}Archives{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Archives</h1><p class="sous">Documents numérisés de l'établissement et des élèves. Ils sont inclus dans la sauvegarde.</p></div>
+  <a class="btn sec" href="{{ url_for('courrier') }}">Courrier</a>
+</div>
+<details class="carte" {{ 'open' if not lst }}>
+  <summary style="cursor:pointer;font-weight:600">+ Archiver un document</summary>
+  <form method="post" enctype="multipart/form-data" class="f" style="margin-top:10px">
+    <div class="ligne">
+      <div><label>Type *</label><select name="type">{% for t in types %}<option>{{ t }}</option>{% endfor %}</select></div>
+      <div><label>Titre *</label><input name="titre" required maxlength="200" placeholder="ex. Acte de naissance"></div>
+      <div><label>Matricule de l'élève (facultatif)</label><input name="matricule" placeholder="ex. CPFA-2026-P-0012"></div>
+      <div><label>Fichier * (PDF, photo, Word, Excel ; 16 Mo max.)</label><input type="file" name="fichier" required></div>
+    </div>
+    <p><button class="btn">Archiver</button></p>
+  </form>
+</details>
+<form class="filtres">
+  <select name="type"><option value="">Tous les types</option>{% for t in types %}<option {{ 'selected' if typ==t }}>{{ t }}</option>{% endfor %}</select>
+  <input name="q" value="{{ rech }}" placeholder="Titre, nom ou matricule de l'élève"><button class="btn sec">Rechercher</button>
+</form>
+<div class="tw"><table class="t">
+  <tr><th>Date</th><th>Type</th><th>Titre</th><th>Élève</th><th></th></tr>
+  {% for a in lst %}
+  <tr><td>{{ date_fr(a.cree_le) }}</td><td>{{ a.type }}</td><td>{{ a.titre }}</td>
+    <td>{% if a.eleve_id %}<a href="{{ url_for('eleve_detail', eid=a.eleve_id) }}">{{ a.nom }} {{ a.prenoms }}</a>{% endif %}</td>
+    <td class="num"><a class="btn sec petit" href="{{ url_for('fichier_secretariat', quoi='archive', i=a.id) }}" target="_blank">Ouvrir</a></td></tr>
+  {% else %}<tr><td colspan="5" class="gris">Aucun document archivé.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

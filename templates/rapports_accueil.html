@@ -1,0 +1,74 @@
+{% extends "base.html" %}{% block titre %}Rapports de rentrée et de fin d'année{% endblock %}
+{% block contenu %}
+<style>
+.rp-docs{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px}
+.rp-docs .carte h3{margin:0 0 4px}
+.rp-docs .carte .actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.rp-docs .carte.absent{opacity:.8}
+.rp-fic{font-size:13px;margin:6px 0 0;padding-left:18px}
+</style>
+<div class="entete">
+  <div><h1>Rapports de rentrée et de fin d'année</h1>
+    <p class="sous">Carte d'identité de l'école – fiches officielles EP (primaire) et EM (maternelle), remplies automatiquement par GESCOL</p></div>
+  <div class="actions">{% if ep_existe('recensement_accueil') %}<a class="btn sec petit" href="{{ url_for('recensement_accueil') }}">🗂 Fiches de recensement</a>{% endif %}</div>
+</div>
+
+<form method="get" class="filtres">
+  <label for="rp-annee">Année scolaire<br><select id="rp-annee" name="annee" onchange="this.form.submit()">
+    {% for a in annees %}<option value="{{ a }}" {{ 'selected' if a == annee }}>{{ a }}{{ ' (année active)' if a == ANNEE }}</option>{% endfor %}
+  </select></label>
+</form>
+
+<p class="aide">Chaque fiche reprend <b>exactement</b> les rubriques du modèle officiel. Les cases sont pré-remplies à partir de
+GESCOL (école, classes, élèves, personnel, cantine, patrimoine, évaluations) et restent toutes corrigibles avant l'impression.
+Une fois signé et visé, le rapport officiel scanné peut être téléversé pour l'archive de l'année.</p>
+
+<div class="rp-docs">
+{% for c in cartes %}
+  <div class="carte {{ '' if c.cycle_present else 'absent' }}">
+    <h3>{{ c.info.court }}</h3>
+    <div class="aide">{{ c.info.titre }}</div>
+    <p style="margin:8px 0 0">
+      {% if c.maj %}<span class="badge ok">Enregistré le {{ c.maj[:16] }}</span>{% if c.par %} <span class="aide">par {{ c.par }}</span>{% endif %}
+      <br><span class="aide">{{ c.corrections }} case(s) corrigée(s) à la main</span>
+      {% else %}<span class="badge att">Non enregistré</span> <span class="aide">valeurs calculées</span>{% endif %}
+      {% if not c.cycle_present %}<br><span class="aide">Aucune classe de ce cycle dans l'école : fiche vierge ou saisie manuelle.</span>{% endif %}
+    </p>
+    {% if c.fichiers %}<ul class="rp-fic">{% for f in c.fichiers %}<li><a href="{{ url_for('rapports_fichier', fid=f.id) }}" target="_blank">📎 {{ f.nom_origine }}</a> <span class="aide">({{ f.televerse_le[:10] }})</span></li>{% endfor %}</ul>{% endif %}
+    <div class="actions">
+      <a class="btn petit" href="{{ url_for('rapports_formulaire', doc=c.doc, annee=annee) }}">✎ Ouvrir / remplir</a>
+      <a class="btn sec petit" href="{{ url_for('rapports_pdf', doc=c.doc, annee=annee) }}" target="_blank">📄 PDF</a>
+      <a class="btn sec petit" href="{{ url_for('rapports_pdf', doc=c.doc, vierge=1) }}" target="_blank">📄 Vierge</a>
+      <a class="btn sec petit" href="{{ url_for('rapports_excel', doc=c.doc, annee=annee) }}">📊 Excel</a>
+    </div>
+  </div>
+{% endfor %}
+</div>
+
+<div class="carte" style="margin-top:14px">
+  <h3 style="margin-top:0">Archive des rapports officiels téléversés</h3>
+  {% if tous_fichiers %}
+  <div class="tw"><table class="t">
+    <thead><tr><th>Année</th><th>Document</th><th>Fichier</th><th>Commentaire</th><th>Téléversé le</th><th></th></tr></thead>
+    <tbody>{% for f in tous_fichiers %}<tr>
+      <td>{{ f.annee }}</td><td>{{ RAPPORTS_DOCS[f.doc].court if f.doc in RAPPORTS_DOCS else f.doc }}</td>
+      <td><a href="{{ url_for('rapports_fichier', fid=f.id) }}" target="_blank">{{ f.nom_origine }}</a> <span class="aide">({{ (f.taille / 1024)|round(0)|int }} Ko)</span></td>
+      <td>{{ f.commentaire or '' }}</td><td>{{ f.televerse_le[:16] }}</td>
+      <td><form method="post" action="{{ url_for('rapports_fichier_supprimer', fid=f.id) }}"><input type="hidden" name="suivant" value="{{ request.full_path }}">
+        <button class="btn danger petit" data-confirmer="Supprimer définitivement ce fichier de l'archive ?">Supprimer</button></form></td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="aide">Aucun rapport téléversé pour le moment (bouton « Téléverser » dans chaque fiche).</p>{% endif %}
+</div>
+
+<div class="carte">
+  <h3 style="margin-top:0">Armoiries de l'en-tête</h3>
+  <p class="aide">Les fiches officielles portent les armoiries de la République. Vous pouvez téléverser leur image (PNG ou JPG) ;
+  sans image, GESCOL dessine un emblème générique. {% if armoiries %}<span class="badge ok">Image enregistrée</span>{% endif %}</p>
+  <form method="post" action="{{ url_for('rapports_armoiries') }}" enctype="multipart/form-data" class="ligne">
+    <label for="rp-arm">Image</label> <input id="rp-arm" type="file" name="image" accept="image/png,image/jpeg">
+    <button class="btn petit">Enregistrer</button>
+    {% if armoiries %}<button class="btn sec petit" name="supprimer" value="1">Retirer</button>{% endif %}
+  </form>
+</div>
+{% endblock %}

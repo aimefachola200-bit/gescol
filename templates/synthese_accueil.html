@@ -1,0 +1,219 @@
+{% extends "base.html" %}{% block titre %}Synthèse de l'évaluation{% endblock %}
+{% import "_macros.html" as M with context %}
+{% macro n(v) %}{{ '' if v is none else v }}{% endmacro %}
+{% macro pc(v) %}{{ fr(v) }}{% if v is not none %} %{% endif %}{% endmacro %}
+{% block contenu %}
+<style>
+.sy-in{width:3.4em;padding:3px 4px;text-align:center}
+.sy-mat{min-width:11em;width:100%;padding:3px 5px}
+table.sy th,table.sy td{padding:3px 4px;font-size:12.5px;text-align:center;border:1px solid #EAECF0}
+table.sy th{font-size:11.5px}
+table.sy td.g{text-align:left}
+table.sy .calc{background:#F9FAFB;font-variant-numeric:tabular-nums}
+table.sy tr.ens td{font-weight:700;background:#EEF4FB}
+table.sy .rf{color:var(--rouge);font-weight:700}
+.sy-fiche-tete{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px 12px;margin-bottom:8px}
+.sy-fiche-tete label{font-size:12.5px;font-weight:600;display:block}
+.sy-analyse h3{font-size:15px;margin:14px 0 6px}
+.sy-analyse li{margin:3px 0}
+.sy-sel{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.sy-sel label{font-size:12.5px;font-weight:600}
+</style>
+<div class="entete">
+  <div><h1>Synthèse de l'évaluation – École / UP / CS</h1>
+  <p class="sous">Analyse des résultats par matière, participation et réussite au seuil, synthèse par niveau et écarts de genre · année {{ ANNEE }}</p></div>
+</div>
+
+<form method="get" class="carte sy-sel" aria-label="Choix de l'évaluation">
+  <div><label for="sel-type">Type d'évaluation</label><br>
+    <select id="sel-type" name="type">{% for k, lib in TYPES.items() %}<option value="{{ k }}" {{ 'selected' if k == type_ }}>{{ lib }}</option>{% endfor %}</select></div>
+  <div><label for="sel-num">Numéro</label><br><input id="sel-num" name="numero" type="number" min="1" max="50" value="{{ numero }}" style="width:5em"></div>
+  <div><label for="sel-cl">Classe</label><br>
+    <select id="sel-cl" name="classe"><option value="">Toutes les classes</option>
+    {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if c.id == cid }}>{{ c.nom }}</option>{% endfor %}</select></div>
+  <div><button class="btn">Afficher</button></div>
+</form>
+
+{% set T = r.total %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Évaluation</div><div class="v" style="font-size:18px">{{ titre_ev }}</div><div class="d">{{ 'Toutes les classes' if not cid else (fiches[0].classe if fiches else '') }} · {{ r.calculs|length }} fiche(s)</div></div>
+  <div class="kpi"><div class="l">Inscrits / ont composé</div><div class="v">{{ T.inscrits.t if T else 0 }} / {{ T.composes.t if T else 0 }}</div><div class="d">participation {{ pc(T.participation.t) if T else '—' }}</div></div>
+  <div class="kpi"><div class="l">Ont atteint le seuil</div><div class="v">{{ T.reussis.t if T else 0 }}</div><div class="d">G {{ T.reussis.g if T else 0 }} · F {{ T.reussis.f if T else 0 }}</div></div>
+  <div class="kpi"><div class="l">Taux de réussite</div><div class="v">{{ pc(T.taux.t) if T else '—' }}</div><div class="d">G {{ pc(T.taux.g) if T else '—' }} · F {{ pc(T.taux.f) if T else '—' }}</div></div>
+</div>
+
+{% if neuf %}<div class="flash info">Première ouverture : les fiches ont été pré-remplies à partir des notes de GESCOL. Vérifiez-les, complétez-les puis cliquez sur « Sauvegarder ».</div>
+{% elif doc.maj %}<p class="aide">Dernière sauvegarde : {{ doc.maj }}{% if doc.maj_par %} par {{ doc.maj_par }}{% endif %}.</p>{% endif %}
+
+<form method="post" id="f-synth" novalidate>
+  <input type="hidden" name="type" value="{{ type_ }}"><input type="hidden" name="numero" value="{{ numero }}">
+  <input type="hidden" name="classe" value="{{ cid or '' }}">
+  <div class="barre-doc">
+    <button class="btn petit" name="action" value="sauver">💾 Sauvegarder</button>
+    <a class="btn sec petit" href="{{ url_for('synthese_accueil', type=type_, numero=numero, classe=cid) }}" title="Recharger la synthèse enregistrée (les modifications non sauvegardées sont perdues)">📂 Charger</a>
+    <button class="btn sec petit" name="action" value="prefill" data-confirmer="Recalculer les fiches des classes de GESCOL à partir des notes ? Les chiffres modifiés à la main pour ces classes seront remplacés (les fiches des autres écoles sont conservées).">⟳ Pré-remplir depuis GESCOL</button>
+    {% if not cid %}<button class="btn sec petit" name="action" value="ajouter">＋ Fiche d'une autre école</button>{% endif %}
+    <span class="sep"></span>
+    <button class="btn sec petit" name="action" value="excel" title="Sauvegarde puis télécharge le classeur Excel">⬇ Excel</button>
+    <button class="btn sec petit" name="action" value="pdf" formtarget="_blank" title="Sauvegarde puis ouvre le PDF">🖨 PDF</button>
+    <span class="sep"></span>
+    <button class="btn danger petit" formaction="{{ url_for('synthese_supprimer') }}" formnovalidate
+      data-confirmer="Supprimer la synthèse enregistrée pour cette évaluation (toutes les fiches, y compris celles des autres écoles) ?">↺ Réinitialiser</button>
+  </div>
+
+  <div class="carte"><h2 style="margin-top:0">En-tête</h2>
+    {{ M.identification(doc.entete, ('zone','up','ecole','ddemp','cs','annee','directeur','ccs','titulaire')) }}
+  </div>
+
+  {% if not fiches %}
+  <div class="carte">Aucune fiche : {% if classes %}cliquez sur « Pré-remplir depuis GESCOL » ou ajoutez la fiche d'une autre école.{% else %}aucune classe du primaire ou du secondaire n'est accessible ; ajoutez la fiche d'une autre école.{% endif %}</div>
+  {% endif %}
+
+  {% for c in r.calculs %}{% set f = c.fiche %}{% set i = loop.index0 %}{% set p = 'f' ~ i ~ '_' %}
+  <div class="carte" id="fiche-{{ f.id }}" data-fiche>
+    <input type="hidden" name="{{ p }}id" value="{{ f.id }}">
+    <div class="entete" style="margin-bottom:6px"><h2 style="margin:0">Fiche de saisie : {{ f.classe or 'nouvelle classe' }}</h2>
+      <div>{% if f.source == 'gescol' %}{% if f.evaluation %}<span class="badge ok">Pré-remplie depuis les notes GESCOL</span>{% else %}<span class="badge att">Aucune « {{ titre_ev }} » pour cette classe dans GESCOL : saisie manuelle</span>{% endif %}
+      {% else %}<span class="badge">Autre école (saisie libre)</span>
+        <label style="margin-left:8px"><input type="checkbox" name="{{ p }}suppr" value="1"> supprimer cette fiche</label>{% endif %}</div></div>
+    <div class="sy-fiche-tete">
+      <div><label for="{{ p }}ecole">École</label><input id="{{ p }}ecole" name="{{ p }}ecole" value="{{ f.ecole or '' }}"></div>
+      <div><label for="{{ p }}classe">Classe</label><input id="{{ p }}classe" name="{{ p }}classe" value="{{ f.classe or '' }}" placeholder="ex. CM1 A"></div>
+      <div><label for="{{ p }}niveau">Niveau</label><input id="{{ p }}niveau" name="{{ p }}niveau" list="dl-niveaux" value="{{ f.niveau or '' }}" placeholder="ex. CM1"></div>
+    </div>
+    <h3 style="font-size:14.5px;margin:10px 0 4px">Analyse des résultats par matière</h3>
+    <div class="tw"><table class="sy" data-mat>
+      <thead><tr><th rowspan="2">Matière</th><th colspan="3">Inscrits</th><th colspan="3">Ont composé</th>
+        <th colspan="3" title="N'ont pas atteint 10/20 dans la matière">Maîtrise partielle (&lt; 10)</th>
+        <th colspan="3" title="Ont atteint 10/20 dans la matière">Maîtrise maximale (≥ 10)</th><th colspan="3">% de réussite</th><th rowspan="2">À renforcer</th></tr>
+        <tr>{% for _ in range(5) %}<th>G</th><th>F</th><th>T</th>{% endfor %}</tr></thead>
+      <tbody>
+      {% set mats = f.matieres or [] %}
+      {% for m in mats + [{}, {}] %}{% set pm = p ~ 'm' ~ loop.index0 ~ '_' %}{% set l = c.par_nom.get((m.nom or '').strip()) if m else none %}
+        <tr data-l>
+          <td class="g"><input class="sy-mat" name="{{ pm }}nom" value="{{ m.nom or '' }}" aria-label="Matière" {% if not m %}placeholder="autre matière…"{% endif %}></td>
+          <td><input class="sy-in" name="{{ pm }}ig" data-k="ig" value="{{ n(m.ig) }}" inputmode="numeric" aria-label="Inscrits garçons" placeholder="{{ f.seuil.ig }}"></td>
+          <td><input class="sy-in" name="{{ pm }}if" data-k="if" value="{{ n(m['if']) }}" inputmode="numeric" aria-label="Inscrits filles" placeholder="{{ f.seuil['if'] }}"></td>
+          <td class="calc" data-o="it">{{ l.inscrits.t if l }}</td>
+          <td><input class="sy-in" name="{{ pm }}cg" data-k="cg" value="{{ n(m.cg) }}" inputmode="numeric" aria-label="Ont composé garçons" placeholder="{{ f.seuil.cg }}"></td>
+          <td><input class="sy-in" name="{{ pm }}cf" data-k="cf" value="{{ n(m.cf) }}" inputmode="numeric" aria-label="Ont composé filles" placeholder="{{ f.seuil.cf }}"></td>
+          <td class="calc" data-o="ct">{{ l.composes.t if l }}</td>
+          <td class="calc" data-o="pg">{{ l.partielle.g if l }}</td><td class="calc" data-o="pf">{{ l.partielle.f if l }}</td><td class="calc" data-o="pt">{{ l.partielle.t if l }}</td>
+          <td><input class="sy-in" name="{{ pm }}mg" data-k="mg" value="{{ n(m.mg) }}" inputmode="numeric" aria-label="Maîtrise maximale garçons"></td>
+          <td><input class="sy-in" name="{{ pm }}mf" data-k="mf" value="{{ n(m.mf) }}" inputmode="numeric" aria-label="Maîtrise maximale filles"></td>
+          <td class="calc" data-o="mt">{{ l.maximale.t if l }}</td>
+          <td class="calc" data-o="tg">{{ fr(l.taux.g) if l }}</td><td class="calc" data-o="tf">{{ fr(l.taux.f) if l }}</td><td class="calc" data-o="tt">{{ fr(l.taux.t) if l }}</td>
+          <td class="calc rf" data-o="rf">{{ "OUI" if l and l.renforcer }}</td>
+        </tr>
+      {% endfor %}
+      {% set e = c.ensemble %}
+      <tr class="ens"><td class="g">ENSEMBLE</td>
+        {% for k in ('inscrits','composes','partielle','maximale') %}<td>{{ e[k].g }}</td><td>{{ e[k].f }}</td><td>{{ e[k].t }}</td>{% endfor %}
+        <td>{{ fr(e.taux.g) }}</td><td>{{ fr(e.taux.f) }}</td><td>{{ fr(e.taux.t) }}</td>
+        <td class="rf" style="font-size:11.5px">{{ c.renforcer|join(', ') or '—' }}</td></tr>
+      </tbody>
+    </table></div>
+    <p class="aide">Case « inscrits » ou « ont composé » vide = effectif de la classe (bloc ci-dessous). Maîtrise partielle = ont composé − maîtrise maximale. La ligne ENSEMBLE (cumul des copies de toutes les matières) est recalculée à la sauvegarde.</p>
+
+    <h3 style="font-size:14.5px;margin:10px 0 4px">Participation &amp; réussite au seuil (résultat officiel de la classe)</h3>
+    <div class="tw"><table class="sy" data-seuil>
+      <thead><tr><th></th><th>Garçons</th><th>Filles</th><th>Total</th></tr></thead>
+      <tbody>
+        {% for k, lib in (('i','Inscrits'),('c','Ont composé'),('r','Ont atteint le seuil de maîtrise')) %}
+        <tr><td class="g">{{ lib }}</td>
+          <td><input class="sy-in" name="{{ p }}s_{{ k }}g" data-s="{{ k }}g" value="{{ f.seuil[k ~ 'g'] or 0 }}" inputmode="numeric" aria-label="{{ lib }} garçons"></td>
+          <td><input class="sy-in" name="{{ p }}s_{{ k }}f" data-s="{{ k }}f" value="{{ f.seuil[k ~ 'f'] or 0 }}" inputmode="numeric" aria-label="{{ lib }} filles"></td>
+          <td class="calc" data-so="{{ k }}t"></td></tr>
+        {% endfor %}
+        <tr><td class="g"><b>Taux de réussite au seuil</b></td><td class="calc" data-so="tg"></td><td class="calc" data-so="tf"></td><td class="calc" data-so="tt"></td></tr>
+        <tr><td class="g">Taux de participation</td><td class="calc" data-so="pg"></td><td class="calc" data-so="pf"></td><td class="calc" data-so="pt"></td></tr>
+      </tbody>
+    </table></div>
+    {% if c.alertes %}<div class="flash warning" style="margin-top:8px"><b>À vérifier :</b><ul style="margin:4px 0 0 18px">{% for a in c.alertes %}<li>{{ a }}</li>{% endfor %}</ul></div>{% endif %}
+  </div>
+  {% endfor %}
+  <datalist id="dl-niveaux">{% for nv in NIVEAUX %}<option value="{{ nv }}">{% endfor %}</datalist>
+
+  <div class="carte">
+    <h2 style="margin-top:0">Synthèse générale {{ 'de la classe' if cid else "de l'école par niveau de classe" }}</h2>
+    {% if r.niveaux %}
+    <div class="tw"><table class="sy">
+      <thead><tr><th rowspan="2">Niveau</th><th rowspan="2">Classe(s)</th><th colspan="3">Inscrits</th><th colspan="3">Ont composé</th><th colspan="3">Ont réussi (seuil)</th><th colspan="3">Taux de réussite</th><th rowspan="2">À renforcer</th><th rowspan="2">Observation</th></tr>
+        <tr>{% for _ in range(4) %}<th>G</th><th>F</th><th>T</th>{% endfor %}</tr></thead>
+      <tbody>
+      {% for nv in r.niveaux %}
+        <tr><td class="g"><b>{{ nv.niveau }}</b></td><td class="g">{{ nv.classes|join(', ') }}</td>
+          {% for k in ('inscrits','composes','reussis') %}<td>{{ nv[k].g }}</td><td>{{ nv[k].f }}</td><td>{{ nv[k].t }}</td>{% endfor %}
+          <td>{{ fr(nv.taux.g) }}</td><td>{{ fr(nv.taux.f) }}</td><td><b>{{ pc(nv.taux.t) }}</b></td>
+          <td class="rf" style="font-size:11.5px">{{ nv.renforcer|join(', ') or '—' }}</td>
+          <td><input name="obs_{{ nv.niveau }}" value="{{ '' if nv.observation_auto else nv.observation }}" placeholder="{{ nv.observation }}" aria-label="Observation {{ nv.niveau }}" style="min-width:14em"></td></tr>
+      {% endfor %}
+      {% if T %}<tr class="ens"><td class="g">TOTAL</td><td class="g">{{ r.calculs|length }} classe(s)</td>
+          {% for k in ('inscrits','composes','reussis') %}<td>{{ T[k].g }}</td><td>{{ T[k].f }}</td><td>{{ T[k].t }}</td>{% endfor %}
+          <td>{{ fr(T.taux.g) }}</td><td>{{ fr(T.taux.f) }}</td><td>{{ pc(T.taux.t) }}</td>
+          <td class="rf" style="font-size:11.5px">{{ T.renforcer|join(', ') or '—' }}</td><td class="g">{{ T.observation }}</td></tr>{% endif %}
+      </tbody>
+    </table></div>
+    <p class="aide">Observation vide = observation automatique (affichée en grisé). « À renforcer » : matières dont le taux de réussite est inférieur à {{ TAUX_REFERENCE }} %.</p>
+    {% else %}<p class="gris">Pas encore de fiche renseignée.</p>{% endif %}
+  </div>
+
+  <div class="carte sy-analyse">
+    <h2 style="margin-top:0">Analyse des résultats</h2>
+    <h3>1. Analyse quantitative</h3><ul>{% for t in r.analyse.quantitative %}<li>{{ t }}</li>{% endfor %}</ul>
+    <h3>2. Analyse qualitative (appréciation globale par rapport au seuil)</h3><ul>{% for t in r.analyse.qualitative %}<li>{{ t }}</li>{% endfor %}</ul>
+    <h3>3. Écarts de genre</h3>
+    {% if r.analyse.genre_lignes %}
+    <div class="tw"><table class="t compact" style="max-width:640px">
+      <thead><tr><th>Classe / niveau</th><th class="c">Garçons (%)</th><th class="c">Filles (%)</th><th class="c">Écart F − G (points)</th></tr></thead>
+      <tbody>{% for x in r.analyse.genre_lignes %}<tr><td>{{ x.niveau }}</td><td class="c">{{ fr(x.g) }}</td><td class="c">{{ fr(x.f) }}</td>
+        <td class="c">{% if x.ecart is none %}—{% else %}<span class="{{ 'vert' if x.ecart > 0 else ('rouge' if x.ecart < 0 else '') }}">{{ '+' if x.ecart > 0 }}{{ fr(x.ecart) }}</span>{% endif %}</td></tr>{% endfor %}</tbody>
+    </table></div>{% endif %}
+    <ul>{% for t in r.analyse.genre %}<li>{{ t }}</li>{% endfor %}</ul>
+    <p class="aide">L'analyse est recalculée à chaque sauvegarde.</p>
+  </div>
+</form>
+
+<details class="carte"><summary><b>Signatures digitales (PDF)</b></summary>
+  <p class="aide">Les signatures enregistrées ici apparaissent sur le PDF (le cachet de l'école est apposé à côté de la signature du directeur).</p>
+  <div class="grille2">
+    <div>{{ M.signature('ecole:%d:directeur' % g.ecole.id, 'Signature du directeur / de la directrice') }}</div>
+    <div>{{ M.signature('ecole:%d:ccs' % g.ecole.id, 'Signature du CCS') }}</div>
+    {% if cid %}<div>{{ M.signature('classe:%d:titulaire' % cid, 'Signature du titulaire') }}</div>{% endif %}
+  </div>
+</details>
+
+<script>
+(function () {
+  function ent(el) { if (!el) return null; var s = (el.value || '').trim(); if (s === '') return null; var v = parseInt(s, 10); return isNaN(v) ? null : v; }
+  function pc(a, b) { return b ? (Math.round(10000 * a / b) / 100).toString().replace('.', ',') : '—'; }
+  function set(root, attr, k, v) { var c = root.querySelector('[' + attr + '="' + k + '"]'); if (c) c.textContent = v; }
+  function calc(fiche) {
+    var S = {};
+    fiche.querySelectorAll('[data-s]').forEach(function (i) { S[i.dataset.s] = ent(i) || 0; });
+    var ts = fiche.querySelector('[data-seuil]');
+    ['i', 'c', 'r'].forEach(function (k) { set(ts, 'data-so', k + 't', S[k + 'g'] + S[k + 'f']); });
+    set(ts, 'data-so', 'tg', pc(S.rg, S.cg)); set(ts, 'data-so', 'tf', pc(S.rf, S.cf)); set(ts, 'data-so', 'tt', pc(S.rg + S.rf, S.cg + S.cf));
+    set(ts, 'data-so', 'pg', pc(S.cg, S.ig)); set(ts, 'data-so', 'pf', pc(S.cf, S.if)); set(ts, 'data-so', 'pt', pc(S.cg + S.cf, S.ig + S['if']));
+    fiche.querySelectorAll('[data-mat] tr[data-l]').forEach(function (tr) {
+      var v = {};
+      tr.querySelectorAll('[data-k]').forEach(function (i) { v[i.dataset.k] = ent(i); });
+      var nom = (tr.querySelector('.sy-mat').value || '').trim();
+      if (!nom) { tr.querySelectorAll('[data-o]').forEach(function (c) { c.textContent = ''; }); return; }
+      ['ig', 'if', 'cg', 'cf'].forEach(function (k) { if (v[k] === null) v[k] = S[k] || 0; });
+      v.mg = v.mg || 0; v.mf = v.mf || 0;
+      set(tr, 'data-o', 'it', v.ig + v['if']); set(tr, 'data-o', 'ct', v.cg + v.cf);
+      var pg = Math.max(0, v.cg - v.mg), pf = Math.max(0, v.cf - v.mf);
+      set(tr, 'data-o', 'pg', pg); set(tr, 'data-o', 'pf', pf); set(tr, 'data-o', 'pt', pg + pf);
+      set(tr, 'data-o', 'mt', v.mg + v.mf);
+      set(tr, 'data-o', 'tg', pc(v.mg, v.cg)); set(tr, 'data-o', 'tf', pc(v.mf, v.cf));
+      var ct = v.cg + v.cf, tt = ct ? 100 * (v.mg + v.mf) / ct : null;
+      set(tr, 'data-o', 'tt', pc(v.mg + v.mf, ct));
+      set(tr, 'data-o', 'rf', tt !== null && tt < {{ TAUX_REFERENCE }} ? 'OUI' : '');
+      tr.querySelectorAll('[data-k]').forEach(function (i) { var x = ent(i); i.style.borderColor = (i.value.trim() && x === null) ? '#B42318' : ''; });
+    });
+  }
+  document.querySelectorAll('[data-fiche]').forEach(function (f) { calc(f); f.addEventListener('input', function () { calc(f); }); });
+})();
+</script>
+{% endblock %}

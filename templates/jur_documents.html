@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% block titre %}Attestations et certificats{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Attestations et certificats</h1>
+<p class="sous">Documents administratifs délivrés par {{ 'le Chef de la Circonscription Scolaire' if JUR_NIVEAU=='cs' else 'le Directeur départemental' }} : pré-remplis depuis le personnel, numérotés au registre, signés, cachetés et vérifiables par QR code.</p></div>
+<a class="btn sec" href="{{ url_for('jur_document_historique') }}">Registre / historique</a></div>
+{% if not s %}<div class="flash info">La structure n'est pas configurée : les en-têtes et le signataire seront incomplets.</div>{% endif %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Documents de l'année</div><div class="v">{{ total }}</div><div class="d">enregistrés au registre de l'année</div></div>
+  <div class="kpi"><div class="l">Prochain numéro</div><div class="v">{{ '%03d' % prochain }}</div><div class="d">{{ exemple }}</div></div>
+</div>
+{% for fam, titre in (('jur', 'Documents délivrés par ' ~ ('le CCS' if JUR_NIVEAU=='cs' else 'le Directeur départemental')), ('ame', 'Aspirants au métier d’enseignant (AME) — format école avec visas')) %}
+<section class="carte"><h2>{{ titre }}</h2>
+<div class="tw"><table class="t compact">
+  <tr><th>Document</th><th>Description</th><th class="num">Cette année</th><th></th></tr>
+  {% for k, d in DOCS.items() if d.famille == fam %}
+  <tr><td><b>{{ d.nom }}</b></td><td>{{ d.desc }}</td><td class="num">{{ par_type.get(k, 0) }}</td>
+    <td class="num" style="white-space:nowrap"><a class="btn petit" href="{{ url_for('jur_document_form', doc=k) }}">Établir</a>
+      <a class="btn sec petit" target="_blank" href="{{ url_for('jur_document_vierge', doc=k) }}">Vierge</a></td></tr>
+  {% endfor %}
+</table></div></section>
+{% endfor %}
+<section class="carte"><h2>Derniers documents</h2>
+<div class="tw"><table class="t compact"><tr><th>Référence</th><th>Document</th><th>Date</th><th>Par</th><th></th></tr>
+{% for h in recents %}<tr><td>{{ h.ref }}</td><td>{{ h.libelle }}</td><td>{{ h.cree_le }}</td><td>{{ h.auteur or '' }}</td>
+<td><a class="btn sec petit" target="_blank" href="{{ url_for('jur_document_reimprimer', hid=h.id) }}">Réimprimer</a></td></tr>
+{% else %}<tr><td colspan="5" class="gris">Aucun document enregistré pour l'instant.</td></tr>{% endfor %}
+</table></div></section>
+{% if peut('jur_structure') %}
+<form method="post" class="carte"><h2>Registre des références</h2>
+  <p class="aide">Format : « SO N° 001{{ '/CS-' ~ (s.cs or '…') if JUR_NIVEAU=='cs' else '' }}/DDEMP-{{ sigle_dep or '…' }}/SP ». Le numéro repart à 1 chaque année scolaire ; vous pouvez fixer le premier numéro (registre déjà commencé sur papier).</p>
+  <div class="grille-id">
+    <div><label for="sd">Abréviation du département (DDEMP-…)</label><input id="sd" name="sigle_dep" maxlength="10" value="{{ sigle_perso or sigle_dep }}"></div>
+    <div><label for="dp">Premier numéro de l'année</label><input id="dp" name="depart" type="number" min="1" max="99999" placeholder="1"></div>
+    <div style="align-self:end"><button class="btn sec">Enregistrer</button></div>
+  </div>
+</form>{% endif %}
+{% endblock %}

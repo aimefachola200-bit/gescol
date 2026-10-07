@@ -1,0 +1,130 @@
+{% extends "base.html" %}{% block titre %}Bilan annuel et décision{% endblock %}
+{% import "_macros.html" as M with context %}
+{% import "resultats_eval_entete.html" as R with context %}
+{% block contenu %}
+{{ R.styles() }}
+<div class="entete">
+  <div><h1>Bilan annuel et décision de fin d'année</h1>
+  <p class="sous">M = (M<sub>O</sub> + E<sub>D</sub>) / 2 · passage si l'élève a validé les 2/3 des évaluations qu'il a composées · année {{ ANNEE }}</p></div>
+</div>
+
+{{ M.choix_classe(classes, cl.id if cl else None) }}
+{{ R.vide(classes, cl, evs, 'bilan_annuel') }}
+
+{% if cl and evs %}
+<form method="get" action="{{ url_for('bilan_annuel') }}" id="f-bilan">
+  <input type="hidden" name="classe" value="{{ cl.id }}">
+  <div class="barre-doc">
+    <button class="btn petit" name="calculer" value="1">🧮 Calculer le bilan annuel</button>
+    <button class="btn sec petit" formaction="{{ url_for('bilan_pdf') }}" formtarget="_blank">📄 Export PDF</button>
+    <button class="btn sec petit" formaction="{{ url_for('bilan_xlsx') }}">📊 Excel</button>
+    <button class="btn sec petit" formaction="{{ url_for('bilan_bulletins') }}" formtarget="_blank">🧾 Bulletins individuels (PDF)</button>
+    <span class="sep"></span>
+    <button class="btn vert petit" formaction="{{ url_for('bilan_sauver') }}" formmethod="post">💾 Sauvegarder</button>
+    <button class="btn sec petit" name="charger" value="1" {{ 'disabled' if not enr }} title="Recharger la sélection enregistrée">📂 Charger</button>
+    <button class="btn sec petit" name="vider" value="1" data-confirmer="Décocher toutes les évaluations ? (le bilan enregistré n'est pas supprimé)">↺ Réinitialiser</button>
+  </div>
+
+  {% if enr %}<p class="aide">Bilan enregistré le {{ enr.calcule_le }} par {{ enr.par }} : {{ enr.libelles|join(', ') }}.</p>{% endif %}
+
+  <div class="carte" data-coches>
+    <div class="ligne" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <h2 class="res-h" style="margin:0">Évaluations à prendre en compte</h2>
+      <div><button type="button" class="btn sec petit" data-cocher="1">Tout cocher</button>
+        <button type="button" class="btn sec petit" data-cocher="0">Tout décocher</button>
+        <span class="aide"><span class="nb-coches">{{ sel_ids|length }}</span> cochée(s)</span></div>
+    </div>
+    <div class="grille-id" style="margin:8px 0">
+      <div><label for="b-nb">Nombre d'évaluations</label>
+        <input id="b-nb" name="nb" type="number" min="1" max="{{ evs|length }}" value="{{ nb or '' }}">
+        <span class="aide">Coche automatiquement les N dernières évaluations.</span></div>
+    </div>
+    <div class="tw"><table class="t compact">
+      <thead><tr><th></th><th>Évaluation</th><th>Clé des notes</th><th>Date</th><th>Rôle dans la formule</th></tr></thead>
+      <tbody>
+      {% for e in evs %}
+        <tr><td><input type="checkbox" name="ev" value="{{ e.id }}" id="ev-{{ e.id }}" {{ 'checked' if e.id in sel_ids }}></td>
+          <td><label for="ev-{{ e.id }}">{{ e.titre }}</label></td><td>{{ e.libelle }}</td><td>{{ date_fr(e.date) if e.date else '—' }}</td>
+          <td class="aide role-ev" data-id="{{ e.id }}"></td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    <p class="aide">Les évaluations sont prises dans l'ordre chronologique : la <b>dernière cochée</b> est E<sub>D</sub> (évaluation de fin),
+      les autres forment M<sub>O</sub> (moyenne des évaluations antérieures). La moyenne annuelle M sert au rang ;
+      la décision (ADMIS(E) / NON ADMIS(E) – redouble) dépend uniquement du nombre d'évaluations validées ({{ V.reussite }}) : au moins les 2/3 de celles que l'élève a composées.</p>
+  </div>
+  {{ R.entete_docs(v, cl) }}
+</form>
+
+{% if res %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Effectif</div><div class="v">{{ st.T.effectif }}</div><div class="d">{{ st.G.effectif }} G · {{ st.F.effectif }} F</div></div>
+  <div class="kpi"><div class="l">Admis</div><div class="v">{{ st.T.admis }} / {{ st.T.evalues }}</div><div class="d">G {{ st.G.admis }} · F {{ st.F.admis }}</div></div>
+  <div class="kpi"><div class="l">Taux d'admission</div><div class="v">{{ st.T.taux|res_pc }}</div><div class="d">G {{ st.G.taux|res_pc }} · F {{ st.F.taux|res_pc }}</div></div>
+  <div class="kpi"><div class="l">Moyenne annuelle</div><div class="v">{{ st.T.moyenne|res_nb }}</div><div class="d">G {{ st.G.moyenne|res_nb }} · F {{ st.F.moyenne|res_nb }}</div></div>
+</div>
+
+<div class="tw"><table class="t compact">
+  <thead><tr><th>Rang</th><th>Nom et prénoms</th><th class="c">Sexe</th>
+    {% for e in sel %}<th class="num" title="{{ e.titre }}">{{ e.libelle }}{% if loop.last %} (E<sub>D</sub>){% endif %}</th>{% endfor %}
+    <th class="num">M<sub>O</sub></th><th class="num">E<sub>D</sub></th><th class="num">M annuelle</th><th class="c">Validées / composées</th><th>Décision</th><th></th></tr></thead>
+  <tbody>
+  {% for o in tries %}
+    <tr><td>{{ lignes[loop.index0][0] }}</td><td>{{ o.eleve.nom }} {{ o.eleve.prenoms }}</td><td class="c">{{ o.eleve.sexe }}</td>
+      {% for m in o.moyennes %}{% set l = o.lignes[loop.index0] %}
+        <td class="num">{{ m|res_nb }}{% if l and l.compose %} <span class="{{ 'vert' if l.maitrise else 'rouge' }}" title="{{ V.ok if l.maitrise else V.ko }}">{{ '✓' if l.maitrise else '✗' }}</span>{% endif %}</td>
+      {% endfor %}
+      <td class="num">{{ o.M_O|res_nb }}</td><td class="num">{{ o.E_D|res_nb }}</td><td class="num"><b>{{ o.M|res_nb }}</b></td>
+      <td class="c">{{ o.validees }} / {{ o.composees }} <span class="aide">(requis {{ o.requis }})</span></td>
+      <td><span class="badge {{ 'ok' if o.admis else ('att' if not o.composees else 'ko') }}">{{ o.decision }}</span>{% if o.composees and not o.admis %} <span class="aide">redouble</span>{% endif %}</td>
+      <td><a class="btn sec petit" target="_blank" href="{{ url_for('bilan_bulletins', classe=cl.id, ev=sel|map(attribute='id')|list, eleve=o.eleve.id) }}">🧾 Bulletin</a></td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+
+<h2 class="res-h">Synthèse par sexe</h2>
+<div class="tw"><table class="t">
+  <thead><tr><th></th><th class="num">Garçons</th><th class="num">Filles</th><th class="num">Total</th></tr></thead>
+  <tbody>
+    <tr><td>Effectif</td>{% for k in 'GFT' %}<td class="num">{{ st[k].effectif }}</td>{% endfor %}</tr>
+    <tr><td>Évalués (au moins une évaluation composée)</td>{% for k in 'GFT' %}<td class="num">{{ st[k].evalues }}</td>{% endfor %}</tr>
+    <tr><td>Admis</td>{% for k in 'GFT' %}<td class="num">{{ st[k].admis }}</td>{% endfor %}</tr>
+    <tr><td>Non admis (redoublent)</td>{% for k in 'GFT' %}<td class="num">{{ st[k].non_admis }}</td>{% endfor %}</tr>
+    <tr><td>Taux d'admission</td>{% for k in 'GFT' %}<td class="num">{{ st[k].taux|res_pc }}</td>{% endfor %}</tr>
+    <tr><td>Moyenne annuelle</td>{% for k in 'GFT' %}<td class="num">{{ st[k].moyenne|res_nb }}</td>{% endfor %}</tr>
+  </tbody>
+</table></div>
+{% elif calcule %}
+<div class="carte gris">Cochez au moins une évaluation puis cliquez sur « Calculer le bilan annuel ».</div>
+{% elif cl and evs %}
+<div class="carte gris">Cochez les évaluations à prendre en compte puis cliquez sur « 🧮 Calculer le bilan annuel ».</div>
+{% endif %}
+{% endif %}
+
+<script>
+(function () {
+  var f = document.getElementById('f-bilan'); if (!f) return;
+  var cases = Array.prototype.slice.call(f.querySelectorAll('input[type=checkbox][name=ev]'));
+  var nb = document.getElementById('b-nb');
+  function roles() {  /* affiche le rôle de chaque évaluation cochée : M_O ou E_D */
+    var cochees = cases.filter(function (c) { return c.checked; });
+    cases.forEach(function (c) {
+      var td = f.querySelector('.role-ev[data-id="' + c.value + '"]');
+      td.textContent = !c.checked ? '' : (c === cochees[cochees.length - 1] ? 'E_D (dernière évaluation)' : 'M_O (antérieure)');
+    });
+  }
+  f.addEventListener('change', function (e) {
+    if (e.target === nb) {  /* nombre d'évaluations : coche les N dernières */
+      var n = parseInt(nb.value, 10) || 0;
+      cases.forEach(function (c, i) { c.checked = i >= cases.length - n; });
+      cases[0] && cases[0].dispatchEvent(new Event('change', { bubbles: true }));
+    } else if (e.target.name === 'ev') {
+      nb.value = cases.filter(function (c) { return c.checked; }).length || '';
+    }
+    roles();
+  });
+  f.addEventListener('click', function (e) { if (e.target.dataset && e.target.dataset.cocher !== undefined) setTimeout(function () { nb.value = cases.filter(function (c) { return c.checked; }).length || ''; roles(); }, 0); });
+  roles();
+})();
+</script>
+{% endblock %}

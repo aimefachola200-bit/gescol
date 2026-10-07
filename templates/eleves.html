@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% block titre %}Élèves{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Élèves</h1><p class="sous">{{ eleves|length }} résultat(s)</p></div>
+  <div class="actions">
+    {% if peut('eleves') %}<a class="btn" href="{{ url_for('eleve_form') }}">+ Inscrire un élève</a>
+    <a class="btn sec" href="{{ url_for('eleves_export') }}">Exporter (CSV)</a>
+    {% if ep_existe('eleves_import') %}<a class="btn sec" href="{{ url_for('eleves_import') }}">Importer (Excel)</a>
+    <a class="btn sec" href="{{ url_for('eleves_modele_xlsx') }}">Modèle Excel</a>
+    <a class="btn sec" href="{{ url_for('eleves_export_xlsx', q=rech, classe=cid, statut=statut) }}">Exporter (Excel)</a>
+    <a class="btn sec" href="{{ url_for('insc_photo', classe=cid) }}">📷 Photos à la caméra</a>{% endif %}{% endif %}
+  </div>
+</div>
+<form class="filtres">
+  <input name="q" value="{{ rech }}" placeholder="Nom, prénom, matricule ou téléphone" style="min-width:280px">
+  <select name="classe"><option value="">Toutes les classes</option>
+    {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if c.id==cid }}>{{ c.nom }}</option>{% endfor %}</select>
+  <select name="statut">
+    {% for v,l in [('inscrit','Inscrits'),('transfere','Transférés'),('sorti','Sortis'),('tous','Tous')] %}
+    <option value="{{ v }}" {{ 'selected' if v==statut }}>{{ l }}</option>{% endfor %}</select>
+  <button class="btn sec">Filtrer</button>
+</form>
+<div class="tw"><table class="t">
+  <tr><th>Matricule</th><th>Nom et prénoms</th><th>Sexe</th><th>Classe</th><th>Né(e) le</th><th>Parent</th><th>Statut</th></tr>
+  {% for e in eleves %}
+  <tr><td>{{ e.matricule }}</td><td><a href="{{ url_for('eleve_detail', eid=e.id) }}"><b>{{ e.nom }}</b> {{ e.prenoms }}</a></td>
+    <td>{{ e.sexe }}</td><td>{{ e.classe_nom or '—' }}</td><td>{{ date_fr(e.date_naissance) }}</td>
+    <td>{{ e.parent_nom or '' }} <span class="gris">{{ e.parent_telephone or '' }}</span></td>
+    <td><span class="badge {{ 'ok' if e.statut=='inscrit' else 'att' }}">{{ e.statut }}</span></td></tr>
+  {% else %}<tr><td colspan="7" class="gris">Aucun élève trouvé.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% block titre %}Importer les résultats du CEP{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Importer les résultats officiels du CEP</h1><p class="sous">Session {{ session }} (année {{ a }})</p></div>
+<a class="btn sec" href="{{ url_for('jur_cep', annee=a) }}">← Tableau du CEP</a></div>
+<div class="carte">
+<p>Fichier Excel (.xlsx) ou CSV, une ligne par école. Colonnes reconnues : <b>Code</b> et/ou <b>École</b>{% if JUR_NIVEAU=='ddemp' %} (+ Circonscription en cas d'homonymie){% endif %},
+<b>Candidats G</b>, <b>Candidats F</b>, <b>Admis G</b>, <b>Admis F</b> (les intitulés « Présentés garçons », « Inscrits filles », « Admis masculin »… sont aussi reconnus).
+Les lignes de total sont ignorées. Contrôles : nombres entiers positifs, admis ≤ candidats.</p>
+<p>Chaque école reconnue reçoit ces chiffres comme correction (marquée « importé ») ; la liste nominative éventuellement transmise par l'école est conservée.</p>
+<p><a class="btn sec petit" href="{{ url_for('jur_cep_import', modele=1, annee=a) }}">⇩ Télécharger le modèle (écoles et chiffres actuels)</a></p>
+<form method="post" enctype="multipart/form-data" class="ligne">
+  <label>Année <select name="annee">{% for x in annees %}<option {{ 'selected' if x == a }}>{{ x }}</option>{% endfor %}</select></label>
+  <input type="file" name="fichier" accept=".xlsx,.csv" required aria-label="Fichier des résultats">
+  <button class="btn">Importer</button></form>
+</div>
+{% if rapport %}
+<div class="carte" style="margin-top:14px">
+  <h2>Compte rendu</h2>
+  <p><b>{{ rapport.ok|length }}</b> école(s) mise(s) à jour{% if rapport.ignorees %} · {{ rapport.ignorees }} ligne(s) ignorée(s) (vides ou totaux){% endif %}.</p>
+  {% if rapport.erreurs %}<h3>Lignes refusées ({{ rapport.erreurs|length }})</h3><ul>{% for m in rapport.erreurs %}<li class="rouge">{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% if rapport.ok %}<details><summary>Écoles mises à jour</summary><ul>{% for n in rapport.ok %}<li>{{ n }}</li>{% endfor %}</ul></details>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}{% block titre %}Tableau de bord{% endblock %}
+{% block contenu %}
+<h1>Tableau de bord</h1>
+<p class="sous">{{ ECOLE.nom }} – année scolaire {{ ANNEE }}</p>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Élèves inscrits</div><div class="v">{{ s.eleves }}</div><div class="d">dont {{ s.filles }} filles</div></div>
+  <div class="kpi"><div class="l">Absents aujourd'hui</div><div class="v">{{ s.absents_jour }}</div>
+    <div class="d">appel fait dans {{ s.appels_faits }} classe(s) sur {{ s.classes }}{% if peut('appel') %} · <a href="{{ url_for('appel_accueil') }}">registre</a>{% endif %}</div></div>
+  {% if PUBLIQUE %}
+  {% if peut('tresorerie') or peut('cantine') %}
+  <div class="kpi"><div class="l">Fonds reçus – subventions et cantine ({{ ANNEE }})</div><div class="v">{{ fcfa(s.recu_annee or 0) }}</div>
+    <div class="d">dont aujourd'hui {{ fcfa(s.recu_jour or 0) }}{% if ep_existe('cantine_impayes') %} · <a href="{{ url_for('cantine_impayes') }}">impayés cantine</a>{% endif %}</div></div>
+  <div class="kpi"><div class="l">Solde en caisse</div><div class="v {{ 'rouge' if (s.solde or 0) < 0 }}">{{ fcfa(s.solde or 0) }}</div>
+    <div class="d">dépenses de l'année {{ fcfa(s.depenses_annee or 0) }} · aujourd'hui {{ fcfa(s.depenses_jour or 0) }}</div></div>
+  {% endif %}
+  {% else %}
+  {% if peut('paiements') %}
+  <div class="kpi"><div class="l">Encaissé ({{ ANNEE }})</div><div class="v">{{ fcfa(s.encaisse) }}</div>
+    <div class="d">sur {{ fcfa(s.attendu) }} attendus · {{ s.taux }} %</div>
+    <div class="progress"><div style="width:{{ [s.taux,100]|min }}%"></div></div></div>
+  <div class="kpi"><div class="l">Encaissé aujourd'hui</div><div class="v">{{ fcfa(s.aujourdhui) }}</div><div class="d">dont en ligne {{ fcfa(s.en_ligne_jour) }} · <a href="{{ url_for('impayes') }}">impayés</a></div></div>
+  {% endif %}
+  {% endif %}
+</div>
+
+{% if peut('communication') and (messages_non_lus() or whatsapp_en_attente() or s.courrier) %}
+<div class="flash info">
+  {% if messages_non_lus() %}<a href="{{ url_for('communication', onglet='recus') }}"><b>{{ messages_non_lus() }} message(s) de parents</b></a> à lire. {% endif %}
+  {% if whatsapp_en_attente() %}<a href="{{ url_for('communication', onglet='whatsapp') }}"><b>{{ whatsapp_en_attente() }} WhatsApp</b></a> à envoyer. {% endif %}
+  {% if s.courrier and peut('secretariat') %}<a href="{{ url_for('courrier', statut='a_traiter') }}"><b>{{ s.courrier }} courrier(s)</b></a> à traiter. {% endif %}
+  {{ s.parents }} parent(s) ont un accès à l'espace parents.
+</div>{% endif %}
+<div class="actions" style="margin-bottom:18px">
+  {% if peut('eleves') %}<a class="btn" href="{{ url_for('eleve_form') }}">+ Inscrire un élève</a>{% endif %}
+  {% if PUBLIQUE %}
+  {% if peut('cantine') %}<a class="btn" href="{{ url_for('cantine_accueil') }}">+ Enregistrer un paiement (cantine)</a>{% endif %}
+  {% if peut('depenses') and ep_existe('depense_nouvelle') %}<a class="btn orange" href="{{ url_for('depense_nouvelle') }}">– Enregistrer une dépense</a>{% endif %}
+  {% elif peut('paiements') %}<a class="btn" href="{{ url_for('paiement_nouveau') }}">+ Enregistrer un paiement</a>{% endif %}
+  {% if peut('appel') %}<a class="btn sec" href="{{ url_for('appel_accueil') }}">Faire l'appel</a>{% endif %}
+  {% if peut('notes') %}<a class="btn sec" href="{{ url_for('notes_accueil') }}">Saisir des notes</a>{% endif %}
+</div>
+
+<h2>Effectifs par classe</h2>
+{% if par_classe %}
+<div class="tw"><table class="t">
+  <tr><th>Classe</th><th>Niveau</th><th class="num">Effectif</th><th class="num">Filles</th><th class="num">Garçons</th></tr>
+  {% for c in par_classe %}
+  <tr><td><a href="{{ url_for('classe_detail', cid=c.id) }}">{{ c.nom }}</a></td><td>{{ c.niveau }}</td>
+      <td class="num">{{ c.effectif }}</td><td class="num">{{ c.filles or 0 }}</td><td class="num">{{ c.effectif - (c.filles or 0) }}</td></tr>
+  {% endfor %}
+</table></div>
+{% else %}
+<div class="carte">Aucune classe pour l'instant. {% if peut('classes') %}<a href="{{ url_for('classe_form') }}">Créer la première classe</a>.{% endif %}</div>
+{% endif %}
+
+{% if not PUBLIQUE and peut('paiements') and derniers %}
+<h2>Derniers paiements</h2>
+<div class="tw"><table class="t">
+  <tr><th>Reçu</th><th>Date</th><th>Élève</th><th>Mode</th><th class="num">Montant</th></tr>
+  {% for p in derniers %}
+  <tr><td><a href="{{ url_for('recu', pid=p.id) }}" target="_blank">{{ p.numero_recu }}</a> {% if p.annule %}<span class="badge ko">annulé</span>{% endif %}</td>
+      <td>{{ date_fr(p.date_paiement) }}</td><td><a href="{{ url_for('eleve_detail', eid=p.eleve_id) }}">{{ p.nom }} {{ p.prenoms }}</a></td>
+      <td>{{ MODES_PAIEMENT.get(p.mode, p.mode) }}</td><td class="num">{{ fcfa(p.montant) }}</td></tr>
+  {% endfor %}
+</table></div>
+{% endif %}
+{% endblock %}

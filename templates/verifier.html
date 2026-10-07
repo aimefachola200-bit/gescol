@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% block titre %}Vérification{% endblock %}
+{% block contenu %}
+<div style="max-width:560px;margin:0 auto">
+<h1>Vérifier un document</h1>
+<p class="sous">{{ ECOLE.nom }} – saisissez le code imprimé sous le QR code, ou scannez le QR.</p>
+<form class="filtres" action="{{ url_for('verifier') }}"><input name="code" value="{{ code }}" placeholder="Code (ex. 3FA92B10C4)" style="min-width:260px"><button class="btn">Vérifier</button></form>
+{% if code %}
+  {% if doc and not doc.annule %}
+  <div class="carte" style="border-color:#ABEFC6">
+    <h2 style="margin-top:0" class="vert">✔ Document authentique</h2>
+    <dl class="info">
+      <dt>Type</dt><dd>{{ TYPES_DOCS.get(doc.type, doc.type) }}</dd>
+      <dt>Objet</dt><dd>{{ doc.libelle }}</dd>
+      {% if eleve %}<dt>Élève</dt><dd>{{ eleve.nom }} {{ eleve.prenoms }} ({{ eleve.matricule }})</dd>{% endif %}
+      <dt>Émis le</dt><dd>{{ date_fr(doc.cree_le) }} à {{ doc.cree_le[11:16] }}</dd>
+      <dt>Empreinte</dt><dd style="font-family:monospace;font-size:12px">{{ doc.empreinte[:24] }}…</dd>
+    </dl>
+    <p class="aide">Comparez ces informations avec le document présenté.</p>
+  </div>
+  {% elif doc %}
+  <div class="carte" style="border-color:#FECDCA"><h2 style="margin-top:0" class="rouge">✘ Reçu annulé</h2><p>Ce reçu a été émis puis annulé par l'établissement. Il n'a plus de valeur.</p></div>
+  {% else %}
+  <div class="carte" style="border-color:#FECDCA"><h2 style="margin-top:0" class="rouge">✘ Code inconnu</h2><p>Aucun document de l'établissement ne correspond à ce code. Le document est peut-être falsifié.</p></div>
+  {% endif %}
+{% endif %}
+</div>
+{% endblock %}

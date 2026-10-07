@@ -1,0 +1,67 @@
+{% extends "base.html" %}{% block titre %}Planning des maîtres de semaine{% endblock %}
+{% block contenu %}
+<style>
+.ms-plan tr.courante td{background:#EEF4FF}
+.ms-plan tr.ferme td{color:var(--gris)}
+.ms-plan select{max-width:280px}
+.ms-rot{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:4px 14px;margin:8px 0}
+.ms-rot label{font-weight:normal;display:flex;gap:6px;align-items:center}
+</style>
+<div class="entete">
+  <div><h1>Planning des maîtres de semaine</h1>
+  <p class="sous">Année scolaire {{ annee }} — {{ nb_attribuees }} semaine(s) attribuée(s) sur {{ lignes|length }}</p></div>
+  <div class="actions">
+    <form method="get" class="filtres" style="margin:0"><label for="an">Année</label>
+      <select id="an" name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a==annee }}>{{ a }}</option>{% endfor %}</select></form>
+    <a class="btn sec petit" href="{{ url_for('maitre_semaine_planning_pdf', annee=annee) }}" target="_blank">📄 Planning PDF</a>
+    <a class="btn sec petit" href="{{ url_for('maitre_semaine_accueil') }}">← Semaine en cours</a>
+  </div>
+</div>
+
+{% if not pers %}
+<div class="carte">Aucun membre du personnel n'est enregistré pour cette école. Ajoutez d'abord le personnel (menu Personnel) pour désigner les maîtres de semaine.</div>
+{% else %}
+{% if modifiable %}
+<details class="carte" {{ 'open' if not nb_attribuees }}>
+  <summary><b>Rotation automatique</b> — proposer un planning à partir du personnel</summary>
+  <form method="post">
+    <input type="hidden" name="annee" value="{{ annee }}"><input type="hidden" name="action" value="rotation">
+    <p class="aide">Les personnes cochées sont désignées à tour de rôle, dans l'ordre de la liste, pour chaque semaine de la période. Les semaines déjà attribuées sont conservées (sauf si vous cochez « remplacer ») et les semaines entièrement fermées dans le calendrier scolaire sont sautées. Vous pouvez ensuite modifier chaque semaine.</p>
+    <div class="ms-rot">
+      {% for p in pers %}<label><input type="checkbox" name="rot" value="{{ p.id }}" {{ 'checked' if p.id in defaut_rot }}> {{ nom_complet(p) }} <span class="aide">({{ p.fonction }})</span></label>{% endfor %}
+    </div>
+    <div class="filtres">
+      <label>Du<br><input type="date" name="du" value="{{ lignes[0].l.isoformat() }}"></label>
+      <label>Au<br><input type="date" name="au" value="{{ lignes[-1].l.isoformat() }}"></label>
+      <label style="align-self:center"><input type="checkbox" name="remplacer" value="1"> remplacer les semaines déjà attribuées</label>
+      <button class="btn vert">⟳ Proposer la rotation</button>
+    </div>
+  </form>
+</details>
+{% else %}
+<div class="flash info">Consultation seulement : le planning est établi par la direction ou le secrétariat.</div>
+{% endif %}
+
+<form method="post">
+  <input type="hidden" name="annee" value="{{ annee }}"><input type="hidden" name="action" value="enregistrer">
+  <div class="tw"><table class="t compact ms-plan">
+    <thead><tr><th>N°</th><th>Semaine</th><th>Maître de semaine</th><th></th></tr></thead>
+    <tbody>
+    {% for x in lignes %}
+    <tr class="{{ 'courante' if x.courante }} {{ 'ferme' if x.ferme }}">
+      <td>{{ loop.index }}</td>
+      <td>du {{ x.l.strftime('%d/%m/%Y') }} au {{ x.v.strftime('%d/%m/%Y') }}{% if x.courante %} <span class="badge ok">en cours</span>{% endif %}{% if x.ferme %} <span class="badge">{{ x.motif }}</span>{% endif %}</td>
+      <td>{% if modifiable %}
+        <select name="p_{{ x.l.isoformat() }}" aria-label="Maître de la semaine du {{ x.l.strftime('%d/%m/%Y') }}">
+          <option value="">— non désigné —</option>
+          {% for p in pers %}<option value="{{ p.id }}" {{ 'selected' if x.r and x.r.personnel_id == p.id }}>{{ nom_complet(p) }}</option>{% endfor %}
+        </select>
+        {% else %}{{ (x.r.maitre_nom if x.r else '') or '—' }}{% endif %}</td>
+      <td><a class="btn sec petit" href="{{ url_for('maitre_semaine_semaine', semaine=x.l.isoformat()) }}">Semaine</a></td>
+    </tr>
+    {% endfor %}
+    </tbody></table></div>
+  {% if modifiable %}<p class="actions"><button class="btn vert">💾 Enregistrer le planning</button></p>{% endif %}
+</form>
+{% endif %}
+{% endblock %}

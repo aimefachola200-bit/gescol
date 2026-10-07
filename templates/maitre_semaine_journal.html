@@ -1,0 +1,106 @@
+{% extends "base.html" %}{% block titre %}Journal du maître de semaine{% endblock %}
+{% block contenu %}
+<style>
+.ms-form fieldset{border:1px solid var(--bord);border-radius:10px;padding:10px 14px;margin:0 0 14px}
+.ms-form legend{font-weight:700;padding:0 6px;color:var(--bleu)}
+.ms-form label{font-weight:600;font-size:13px;display:block;margin:6px 0 3px}
+.ms-radios{display:flex;gap:12px;flex-wrap:wrap}
+.ms-radios label,.ms-acts label{font-weight:normal;display:flex;gap:5px;align-items:center;margin:2px 0}
+.ms-acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2px 12px}
+.ms-nb{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:4px 12px}
+.ms-form textarea{min-height:58px}
+</style>
+<div class="entete">
+  <div><h1>Journal du {{ date_longue(d) }}</h1>
+  <p class="sous">Maître de semaine : <b>{{ (pl.maitre_nom if pl else '') or 'non désigné' }}</b> — semaine du {{ lun.strftime('%d/%m/%Y') }}</p></div>
+  <div class="actions">
+    <a class="btn sec petit" href="{{ url_for('maitre_semaine_journal', date=prec) }}">← Jour précédent</a>
+    <form method="get" style="margin:0;display:inline-flex;gap:4px"><label class="aide" for="jd" style="align-self:center">Date</label><input id="jd" type="date" name="date" value="{{ d.isoformat() }}" onchange="this.form.submit()"></form>
+    <a class="btn sec petit" href="{{ url_for('maitre_semaine_journal', date=suiv) }}">Jour suivant →</a>
+    <a class="btn sec petit" href="{{ url_for('maitre_semaine_accueil', semaine=lun.isoformat()) }}">Semaine</a>
+  </div>
+</div>
+
+{% if ferme %}<div class="flash warning">Ce jour est marqué « {{ ferme }} » dans le calendrier scolaire.</div>{% endif %}
+{% if futur %}<div class="flash info">Ce jour n'est pas encore arrivé : le journal pourra être renseigné le jour même.</div>{% endif %}
+{% if j and j.visa_le %}
+<div class="flash success">Visé par {{ j.visa_nom or (visa_user.nom if visa_user else 'la direction') }} le {{ date_fr(j.visa_le) }} à {{ j.visa_le[11:16] }}.{% if verrou %} Journée verrouillée : seule la direction peut la modifier.{% endif %}</div>
+{% endif %}
+
+<form method="post" class="ms-form">
+  <input type="hidden" name="date" value="{{ d.isoformat() }}">
+  <fieldset {{ 'disabled' if verrou }}>
+    <legend>Ouverture de la journée</legend>
+    <div class="ligne">
+      <div><label for="pid">Maître de semaine</label>
+        <select id="pid" name="personnel_id"><option value="">— {{ (pl.maitre_nom if pl else '') or 'non désigné' }} —</option>
+        {% for p in pers %}<option value="{{ p.id }}" {{ 'selected' if v.personnel_id|string == p.id|string }}>{{ nom_complet(p) }}</option>{% endfor %}</select></div>
+      <div><label for="ha">Heure d'arrivée du maître</label><input id="ha" name="heure_arrivee" type="time" value="{{ v.heure_arrivee or '' }}"></div>
+      <div><label for="hc">Heure de montée des couleurs</label><input id="hc" name="heure_couleurs" type="time" value="{{ v.heure_couleurs or '' }}"></div>
+      <div><label>Salut aux couleurs</label><div class="ms-radios">
+        {% for k, lib in SALUT.items() %}<label><input type="radio" name="salut_couleurs" value="{{ k }}" {{ 'checked' if v.salut_couleurs == k }}> {{ lib }}</label>{% endfor %}</div></div>
+    </div>
+  </fieldset>
+
+  <fieldset {{ 'disabled' if verrou }}>
+    <legend>Propreté et discipline</legend>
+    <div class="ligne">
+      {% for champ, lib in (('proprete_cour', 'Propreté de la cour'), ('proprete_classes', 'Propreté des classes'), ('discipline_etat', 'Discipline générale')) %}
+      <div><label>{{ lib }}</label><div class="ms-radios">
+        {% for k, e in ETATS.items() %}<label><input type="radio" name="{{ champ }}" value="{{ k }}" {{ 'checked' if v[champ] == k }}> {{ e }}</label>{% endfor %}</div></div>
+      {% endfor %}
+    </div>
+    <label for="disc">Discipline : faits marquants</label><textarea id="disc" name="discipline" maxlength="2000">{{ v.discipline or '' }}</textarea>
+  </fieldset>
+
+  <fieldset {{ 'disabled' if verrou }}>
+    <legend>Retards et absences</legend>
+    <div class="ligne">
+      <div><label for="re">Retards d'enseignants (noms, heures)</label><textarea id="re" name="retards_ens" maxlength="2000">{{ v.retards_ens or '' }}</textarea></div>
+      <div><label for="ae">Absences d'enseignants (noms, motifs)</label><textarea id="ae" name="absences_ens" maxlength="2000">{{ v.absences_ens or '' }}</textarea></div>
+    </div>
+    <div class="ms-nb">
+      <div><label for="ag">Élèves absents : garçons</label><input id="ag" name="eleves_abs_g" inputmode="numeric" value="{{ v.eleves_abs_g if v.eleves_abs_g is not none else '' }}"></div>
+      <div><label for="af">Élèves absents : filles</label><input id="af" name="eleves_abs_f" inputmode="numeric" value="{{ v.eleves_abs_f if v.eleves_abs_f is not none else '' }}"></div>
+      <div><label for="rg">Élèves en retard : garçons</label><input id="rg" name="eleves_ret_g" inputmode="numeric" value="{{ v.eleves_ret_g if v.eleves_ret_g is not none else '' }}"></div>
+      <div><label for="rf">Élèves en retard : filles</label><input id="rf" name="eleves_ret_f" inputmode="numeric" value="{{ v.eleves_ret_f if v.eleves_ret_f is not none else '' }}"></div>
+    </div>
+    <p class="aide">Registre d'appel de GESCOL pour ce jour : {{ sug.abs_g + sug.abs_f }} élève(s) absent(s) ({{ sug.abs_g }} G / {{ sug.abs_f }} F), {{ sug.ret_g + sug.ret_f }} retard(s) ({{ sug.ret_g }} G / {{ sug.ret_f }} F).{% if not j %} Ces nombres sont pré-remplis.{% endif %}</p>
+    <label for="ed">Précisions sur les élèves</label><textarea id="ed" name="eleves_details" maxlength="2000">{{ v.eleves_details or '' }}</textarea>
+  </fieldset>
+
+  <fieldset {{ 'disabled' if verrou }}>
+    <legend>Visites, incidents et activités</legend>
+    <div class="ligne">
+      <div><label for="vi">Visites reçues</label><textarea id="vi" name="visites" maxlength="2000">{{ v.visites or '' }}</textarea>
+        {% if sug.visites and j %}<p class="aide">Visites enregistrées ce jour : {{ sug.visites }}</p>{% endif %}</div>
+      <div><label for="in">Incidents</label><textarea id="in" name="incidents" maxlength="2000">{{ v.incidents or '' }}</textarea></div>
+    </div>
+    <label>Activités de la journée</label>
+    <div class="ms-acts">{% for k, lib in ACTIVITES.items() %}<label><input type="checkbox" name="activites" value="{{ k }}" {{ 'checked' if k in v.activites }}> {{ lib }}</label>{% endfor %}</div>
+    <label for="ad">Détails des activités</label><textarea id="ad" name="activites_details" maxlength="2000">{{ v.activites_details or '' }}</textarea>
+    <label for="ob">Observations du maître de semaine</label><textarea id="ob" name="observations" maxlength="2000">{{ v.observations or '' }}</textarea>
+  </fieldset>
+
+  {% if not verrou and not futur %}<p class="actions"><button class="btn vert">💾 Enregistrer le journal</button></p>{% endif %}
+</form>
+
+{% if j %}
+<div class="carte">
+  <h2>Visa du directeur</h2>
+  {% if direction %}
+    <form method="post" action="{{ url_for('maitre_semaine_viser', jid=j.id) }}" class="actions" style="display:inline-flex">
+      {% if j.visa_le %}<button class="btn sec" name="action" value="annuler" data-confirmer="Retirer le visa de cette journée ?">Retirer le visa</button>
+      {% else %}<button class="btn vert" name="action" value="viser">✔ Viser la journée</button>{% endif %}
+    </form>
+    <form method="post" action="{{ url_for('maitre_semaine_supprimer', jid=j.id) }}" style="display:inline">
+      <button class="btn danger" data-confirmer="Supprimer définitivement le journal de ce jour ?">Supprimer</button></form>
+    <p class="aide">La signature digitale du directeur (enregistrée ci-dessous) est apposée sur le rapport hebdomadaire lorsque toutes les journées sont visées.</p>
+    {% import "_macros.html" as M with context %}
+    {{ M.signature('ecole:' ~ g.ecole.id ~ ':directeur', 'Signature du directeur / de la directrice') }}
+  {% else %}
+    <p>{% if j.visa_le %}<span class="badge ok">Visé</span>{% else %}<span class="badge att">En attente du visa de la direction</span>{% endif %}</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

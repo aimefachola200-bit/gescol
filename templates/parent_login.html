@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block titre %}Espace parents{% endblock %}
+{% block contenu %}
+<div class="login carte">
+  <h1>Espace parents</h1>
+  <p class="sous">{{ ECOLE.nom }} — notes, bulletins, absences, paiements et messages de l'école.</p>
+  <form method="post" class="f">
+    <label>Numéro de téléphone</label><input name="telephone" type="tel" inputmode="tel" autocomplete="username" required placeholder="ex. 01 97 00 00 00" autofocus>
+    <label>Mot de passe</label><input name="mdp" type="password" required autocomplete="current-password">
+    <p><button class="btn" style="width:100%">Se connecter</button></p>
+  </form>
+  <p class="aide">Pas encore d'accès ou mot de passe oublié ? Demandez-le au secrétariat de l'école : il vous sera envoyé par WhatsApp.</p>
+  <p class="aide"><a href="{{ url_for('login') }}">Connexion du personnel</a></p>
+</div>
+<p class="aide" id="android-serveur" hidden style="text-align:center">Application connectée à <b id="android-adr"></b> · <a href="#" onclick="window.GescolAndroid.changerServeur();return false">Changer de serveur</a></p>
+<script>if(window.GescolAndroid){document.getElementById('android-serveur').hidden=false;document.getElementById('android-adr').textContent=window.GescolAndroid.serveur();}</script>
+{% endblock %}

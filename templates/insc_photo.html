@@ -1,0 +1,141 @@
+{% extends "base.html" %}{% block titre %}Photos des élèves{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<style>
+.ph-zone{display:grid;grid-template-columns:minmax(260px,1fr) minmax(280px,420px);gap:16px;align-items:start}
+@media(max-width:800px){.ph-zone{grid-template-columns:1fr}.ph-cam{order:-1}}
+.ph-liste{list-style:none;margin:0;padding:0;max-height:70vh;overflow:auto;border:1px solid var(--bord);border-radius:10px;background:#fff}
+.ph-liste li{display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:1px solid var(--bord);cursor:pointer}
+.ph-liste li:last-child{border-bottom:none}
+.ph-liste li.courant{background:#EEF4FA;outline:2px solid #2E6DA4;outline-offset:-2px}
+.ph-liste li.fait .etat{color:var(--vert);font-weight:700}
+.ph-liste img,.ph-liste .vig{width:36px;height:45px;object-fit:cover;border-radius:4px;background:#F2F4F7;flex:none}
+.ph-liste .nom{flex:1}
+.ph-cam{position:sticky;top:70px;background:#fff;border:1px solid var(--bord);border-radius:12px;padding:14px}
+.ph-cadre{position:relative;width:100%;aspect-ratio:4/5;background:#101828;border-radius:10px;overflow:hidden}
+.ph-cadre video,.ph-cadre img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph-cadre .guide{position:absolute;inset:12% 18% 22%;border:2px dashed rgba(255,255,255,.6);border-radius:50% 50% 45% 45%;pointer-events:none}
+.ph-cadre .msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;text-align:center;padding:20px}
+.ph-cam h3{margin:10px 0 2px}
+</style>
+<div class="entete">
+  <div><h1>Photos des élèves à la caméra</h1>
+    <p class="sous">Photographiez toute une classe à la suite : chaque photo est enregistrée sur la fiche de l'élève puis GESCOL passe au suivant.</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('eleves', classe=cl.id if cl else None) }}">← Élèves</a></div>
+</div>
+{% call M.choix_classe(classes, cl.id if cl else None) %}
+  {% if cl %}<label style="align-self:end"><input type="checkbox" name="tous" value="1" {{ 'checked' if tous }} onchange="this.form.submit()"> Afficher aussi les élèves qui ont déjà une photo</label>{% endif %}
+{% endcall %}
+
+{% if not cl %}
+<div class="carte gris">{% if classes %}Choisissez la classe à photographier.{% else %}Aucune classe n'est encore créée.{% endif %}</div>
+{% elif not total %}
+<div class="carte gris">Aucun élève inscrit dans {{ cl.nom }}.</div>
+{% else %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Élèves de {{ cl.nom }}</div><div class="v">{{ total }}</div></div>
+  <div class="kpi"><div class="l">Avec photo</div><div class="v vert" id="nb-avec">{{ avec|length }}</div><div class="d">sur {{ total }}</div></div>
+  <div class="kpi"><div class="l">Sans photo</div><div class="v" id="nb-sans">{{ total - avec|length }}</div></div>
+</div>
+{% if not eleves %}
+<div class="carte">Tous les élèves de {{ cl.nom }} ont déjà une photo. Cochez « Afficher aussi les élèves qui ont déjà une photo » pour en reprendre une.</div>
+{% else %}
+<div class="ph-zone">
+  <ul class="ph-liste" id="liste" aria-label="Élèves à photographier">
+    {% for x in eleves %}
+    <li data-eid="{{ x.id }}" data-url="{{ url_for('insc_photo', eid=x.id) }}" data-nom="{{ x.nom }} {{ x.prenoms }}" data-mat="{{ x.matricule or '' }}" class="{{ 'fait' if x.id in avec }}" tabindex="0">
+      {% if x.id in avec %}<img src="{{ url_for('eleve_photo', eid=x.id) }}" alt="">{% else %}<span class="vig"></span>{% endif %}
+      <span class="nom"><b>{{ x.nom }}</b> {{ x.prenoms }}<br><span class="aide">{{ x.matricule or '' }}</span></span>
+      <span class="etat">{{ '✓' if x.id in avec else '' }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  <div class="ph-cam" aria-live="polite">
+    <div class="ph-cadre">
+      <video id="video" playsinline muted hidden></video>
+      <img id="apercu" alt="" hidden>
+      <div class="guide" id="guide" hidden></div>
+      <div class="msg" id="msg">Cliquez sur « Allumer la caméra ».</div>
+    </div>
+    <h3 id="cour-nom">—</h3><div class="aide" id="cour-mat"></div>
+    <div class="actions" style="margin-top:10px">
+      <button type="button" class="btn" id="b-cam">Allumer la caméra</button>
+      <button type="button" class="btn vert" style="color:#fff" id="b-prendre" hidden>Prendre la photo</button>
+      <button type="button" class="btn sec" id="b-passer">Passer</button>
+      <label class="btn sec">Fichier / appareil photo<input type="file" id="f-photo" accept="image/*" capture="environment" hidden></label>
+    </div>
+    <p class="aide">Astuce : touche <b>Espace</b> pour prendre la photo. Placez l'élève devant un fond clair, visage dans l'ovale.
+      Sur un téléphone relié en http (réseau local), la caméra intégrée n'est pas autorisée par le navigateur : utilisez « Fichier / appareil photo ».</p>
+  </div>
+</div>
+<script>
+(function(){
+  var items=[].slice.call(document.querySelectorAll('#liste li')), i=-1, flux=null, occupe=false;
+  var vid=document.getElementById('video'), ap=document.getElementById('apercu'), msg=document.getElementById('msg'), guide=document.getElementById('guide');
+  var bCam=document.getElementById('b-cam'), bPr=document.getElementById('b-prendre'), bPass=document.getElementById('b-passer'), fic=document.getElementById('f-photo');
+  function toast(m,ok){ if(window.GESCOL&&GESCOL.toast){GESCOL.toast(m,ok);} else if(!ok){alert(m);} }
+  function choisir(k){
+    if(k<0||k>=items.length){ msg.textContent='Fin de la liste : toutes les photos de la série sont faites.'; msg.hidden=false; i=items.length; majCourant(); return; }
+    i=k; majCourant(); items[i].scrollIntoView({block:'nearest'});
+  }
+  function majCourant(){
+    items.forEach(function(li,k){ li.classList.toggle('courant',k===i); });
+    var li=items[i];
+    document.getElementById('cour-nom').textContent = li ? li.dataset.nom : '—';
+    document.getElementById('cour-mat').textContent = li ? ('Matricule : '+(li.dataset.mat||'—')) : '';
+    bPr.disabled = !li; bPass.disabled = !li;
+  }
+  function suivantSansPhoto(depuis){
+    for(var k=depuis;k<items.length;k++){ if(!items[k].classList.contains('fait')) return k; }
+    return depuis<items.length ? depuis : -1;
+  }
+  function recadrer(source, w, h, fin){   // découpe 4:5 centrée -> JPEG 360x450
+    var c=document.createElement('canvas'), W=360, H=450, r=Math.max(W/w,H/h);
+    c.width=W; c.height=H; c.getContext('2d').drawImage(source,(W-w*r)/2,(H-h*r)/2,w*r,h*r);
+    fin(c.toDataURL('image/jpeg',0.85));
+  }
+  function envoyer(data){
+    var li=items[i]; if(!li||occupe) return; occupe=true;
+    ap.src=data; ap.hidden=false;
+    fetch(li.dataset.url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:data})})
+      .then(function(r){return r.json().catch(function(){return {ok:false};});})
+      .then(function(r){
+        occupe=false;
+        if(!r.ok){ toast(r.erreur||'Photo non enregistrée.',false); return; }
+        var deja=li.classList.contains('fait');
+        li.classList.add('fait'); li.querySelector('.etat').textContent='✓';
+        var v=li.querySelector('.vig,img'); var im=document.createElement('img'); im.src=r.url; im.alt=''; v.replaceWith(im);
+        if(!deja){ var a=document.getElementById('nb-avec'), s=document.getElementById('nb-sans'); a.textContent=+a.textContent+1; s.textContent=Math.max(0,+s.textContent-1); }
+        toast('Photo enregistrée : '+li.dataset.nom,true);
+        setTimeout(function(){ if(flux) ap.hidden=true; choisir(i+1); }, 700);
+      }).catch(function(){ occupe=false; toast('Connexion au serveur impossible : photo non enregistrée.',false); });
+  }
+  bCam.addEventListener('click',function(){
+    if(flux){ flux.getTracks().forEach(function(t){t.stop();}); flux=null; vid.hidden=true; guide.hidden=true; bPr.hidden=true; bCam.textContent='Allumer la caméra'; msg.hidden=false; msg.textContent='Caméra éteinte.'; return; }
+    if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)||!window.isSecureContext){
+      toast('Caméra non disponible ici (connexion non sécurisée) : utilisez « Fichier / appareil photo ».',false); return; }
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280}},audio:false}).then(function(s){
+      flux=s; vid.srcObject=s; vid.hidden=false; guide.hidden=false; ap.hidden=true; msg.hidden=true; bPr.hidden=false; bCam.textContent='Éteindre la caméra'; vid.play();
+    }).catch(function(){ toast('Caméra inaccessible : autorisez-la dans le navigateur ou utilisez « Fichier / appareil photo ».',false); });
+  });
+  bPr.addEventListener('click',function(){ if(!flux||!vid.videoWidth) return; recadrer(vid,vid.videoWidth,vid.videoHeight,envoyer); });
+  bPass.addEventListener('click',function(){ choisir(i+1); });
+  fic.addEventListener('change',function(){
+    if(!fic.files[0]) return; var im=new Image();
+    im.onload=function(){ recadrer(im,im.width,im.height,envoyer); URL.revokeObjectURL(im.src); fic.value=''; };
+    im.src=URL.createObjectURL(fic.files[0]);
+  });
+  items.forEach(function(li,k){
+    li.addEventListener('click',function(){ choisir(k); });
+    li.addEventListener('keydown',function(e){ if(e.key==='Enter'){ choisir(k); } });
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.code==='Space' && flux && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(document.activeElement.tagName)){ e.preventDefault(); bPr.click(); }
+  });
+  var ouvrir={{ ouvrir|tojson }}, k0=-1;
+  if(ouvrir){ items.forEach(function(li,k){ if(+li.dataset.eid===ouvrir) k0=k; }); }
+  choisir(k0>=0 ? k0 : Math.max(0,suivantSansPhoto(0)));
+})();
+</script>
+{% endif %}{% endif %}
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends "base.html" %}{% block titre %}Cantine – {{ cl.nom }}{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<style>
+table.cant-grille td.j,table.cant-grille th.j{text-align:center;min-width:74px}
+table.cant-grille td.j input{width:20px;height:20px;cursor:pointer}
+table.cant-grille td.ferme{background:#F2F4F7}
+table.cant-grille td.calc{background:#F9FAFB;font-weight:600;text-align:right;white-space:nowrap}
+table.cant-grille tfoot td{font-weight:700;background:#E4ECF5}
+table.cant-grille th.j small{display:block;font-weight:400}
+table.cant-grille th.j button{margin-top:3px;padding:1px 6px;font-size:11px}
+.cant-nav{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end}
+.cant-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+</style>
+
+<div class="entete">
+  <div><h1>Cantine – {{ cl.nom }}</h1>
+  <p class="sous">Semaine du {{ d.jours[0].strftime('%d/%m/%Y') }} au {{ d.jours[-1].strftime('%d/%m/%Y') }} ·
+    {% if cfg %}{{ milliers(cfg.montant_jour) }} FCFA par jour{% else %}montant non configuré{% endif %}</p></div>
+  <div class="actions cant-nav">
+    <form method="get" action="{{ url_for('cantine_accueil') }}"><label>Classe<br><select name="classe" onchange="this.form.submit()">
+      {% for c in cls %}<option value="{{ c.id }}" {{ 'selected' if c.id == cl.id }}>{{ c.nom }}</option>{% endfor %}</select></label></form>
+    <a class="btn sec petit" href="{{ url_for('cantine_classe', cid=cl.id, semaine=prec) }}">← Semaine précédente</a>
+    <a class="btn sec petit" href="{{ url_for('cantine_classe', cid=cl.id, semaine=cette_semaine) }}">Cette semaine</a>
+    <a class="btn sec petit" href="{{ url_for('cantine_classe', cid=cl.id, semaine=suiv) }}">Semaine suivante →</a>
+    <form method="get" action="{{ url_for('cantine_classe', cid=cl.id) }}"><label>Aller à la semaine du<br><input type="date" name="semaine" value="{{ lun.isoformat() }}" onchange="this.form.submit()"></label></form>
+  </div>
+</div>
+
+{% if not ouverte %}
+<div class="flash danger">Paiements fermés pour {{ cl.nom }} : la configuration de la cantine {{ 'n’est pas validée' if cfg else 'n’existe pas' }}.
+  {% if peut_configurer %}<a href="{{ url_for('cantine_config') }}">Configurer et valider le montant par jour</a>.{% else %}Demandez à la direction ou au comptable de la valider.{% endif %}</div>
+{% endif %}
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Inscrits</div><div class="v">{{ d.inscrits.t }}</div><div class="d">F : {{ d.inscrits.f }} · G : {{ d.inscrits.g }}</div></div>
+  <div class="kpi"><div class="l">Ont payé (semaine)</div><div class="v">{{ d.payeurs.t }}</div><div class="d">F : {{ d.payeurs.f }} · G : {{ d.payeurs.g }}</div></div>
+  <div class="kpi"><div class="l">Repas payés</div><div class="v" id="k-repas">{{ d.repas }}</div><div class="d">jours cochés</div></div>
+  <div class="kpi"><div class="l">Total semaine</div><div class="v" id="k-total">{{ milliers(d.total) }}</div><div class="d">FCFA</div></div>
+</div>
+
+<form method="post" action="{{ url_for('cantine_enregistrer', cid=cl.id) }}" id="f-cant" autocomplete="off">
+<input type="hidden" name="semaine" value="{{ lun.isoformat() }}">
+{% call M.barre_doc(sauver=False, charger=False, reinit=False) %}
+  <button type="submit" class="btn vert petit" title="Enregistrer l'en-tête et les paiements de la semaine">💾 Sauvegarder</button>
+  <a class="btn sec petit" href="{{ url_for('cantine_classe', cid=cl.id, semaine=lun.isoformat()) }}" title="Recharger les paiements enregistrés (annule les modifications non sauvegardées)">📂 Charger</a>
+  <button type="button" class="btn sec petit" id="b-reinit" title="Décocher toutes les cases à l'écran (rien n'est supprimé tant que vous ne sauvegardez pas)">↺ Réinitialiser</button>
+  <span class="sep"></span>
+  <button type="submit" class="btn sec petit" formaction="{{ url_for('cantine_classe_pdf', cid=cl.id, semaine=lun.isoformat()) }}" formtarget="_blank" title="PDF de la semaine (paiements enregistrés)">📄 PDF</button>
+  <a class="btn sec petit" href="{{ url_for('cantine_recap', type='semaine', date=lun.isoformat(), classe=cl.id) }}">📊 Récapitulatifs</a>
+{% endcall %}
+
+<details class="carte">
+  <summary><b>En-tête</b> <span class="aide">(repris sur le PDF — enregistré avec « Sauvegarder »)</span></summary>
+  {{ M.identification(v, champs=('ddemp','cs','ecole','cours','annee','titulaire','directeur')) }}
+</details>
+
+{% if not d.lignes %}
+<div class="carte">Aucun élève inscrit en {{ cl.nom }}. Inscrivez d'abord les élèves (menu Élèves et inscriptions ou Tableau d'affichage).</div>
+{% else %}
+<p class="aide">Cochez les jours payés (du lundi au vendredi, mercredi compris). Chaque case cochée vaut {{ milliers(cfg.montant_jour) if cfg else '—' }} FCFA ; un paiement déjà enregistré garde son montant d'origine. Cliquez sur « Sauvegarder » pour enregistrer.</p>
+<div class="tw"><table class="t compact cant-grille" id="grille" data-montant="{{ cfg.montant_jour if cfg else 0 }}">
+  <thead><tr><th class="c">N°</th><th class="sticky">Élève</th><th class="c">Sexe</th>
+    {% for j in d.jours %}{% set iso = d.isos[loop.index0] %}
+    <th class="j">{{ jours_noms[loop.index0] }}<small>{{ j.strftime('%d/%m') }}{% if d.fermes.get(iso) %} · {{ d.fermes[iso] }}{% endif %}</small>
+      {% if ouverte %}<button type="button" class="btn sec petit" data-col="{{ loop.index0 }}" title="Cocher / décocher toute la colonne">tous</button>{% endif %}</th>{% endfor %}
+    <th class="c">Jours</th><th class="c">Total (FCFA)</th></tr></thead>
+  <tbody>
+  {% for l in d.lignes %}{% set e = l.e %}
+  <tr><td class="c">{{ loop.index }}</td><td class="sticky"><b>{{ e.nom }}</b> {{ e.prenoms }}</td><td class="c">{{ e.sexe }}</td>
+    {% for c in l.cases %}{% set iso = d.isos[loop.index0] %}
+    <td class="j {{ 'ferme' if d.fermes.get(iso) }}"><input type="checkbox" name="p" value="{{ e.id }}_{{ iso }}" data-col="{{ loop.index0 }}"
+      data-m="{{ c if c is not none else (cfg.montant_jour if cfg else 0) }}" {{ 'checked' if c is not none }} {{ 'disabled' if not ouverte }}
+      aria-label="{{ e.nom }} {{ e.prenoms }} – {{ jours_noms[loop.index0] }} {{ d.jours[loop.index0].strftime('%d/%m') }}"></td>
+    {% endfor %}
+    <td class="calc c-n" style="text-align:center">{{ l.n }}</td><td class="calc c-t">{{ milliers(l.total) }}</td></tr>
+  {% endfor %}
+  </tbody>
+  <tfoot><tr><td></td><td>Total par jour (FCFA)</td><td></td>
+    {% for p in d.par_jour %}<td class="c t-j">{{ milliers(p.montant) }}</td>{% endfor %}
+    <td class="c" id="t-n">{{ d.repas }}</td><td class="c" id="t-t" style="text-align:right">{{ milliers(d.total) }}</td></tr></tfoot>
+</table></div>
+{% endif %}
+</form>
+
+<h2>Statistiques de la semaine</h2>
+<div class="cant-stats">
+  <div class="carte"><h3 style="margin-top:0">Par genre</h3>
+    <div class="tw"><table class="t compact"><thead><tr><th></th><th class="c">Filles</th><th class="c">Garçons</th><th class="c">Total</th></tr></thead><tbody>
+      <tr><td>Inscrits</td><td class="c">{{ d.inscrits.f }}</td><td class="c">{{ d.inscrits.g }}</td><td class="c"><b>{{ d.inscrits.t }}</b></td></tr>
+      <tr><td>Ont payé dans la semaine</td><td class="c">{{ d.payeurs.f }}</td><td class="c">{{ d.payeurs.g }}</td><td class="c"><b>{{ d.payeurs.t }}</b></td></tr>
+    </tbody></table></div></div>
+  <div class="carte"><h3 style="margin-top:0">Paiements enregistrés par jour et par genre</h3>
+    <div class="tw"><table class="t compact"><thead><tr><th>Jour</th><th class="c">Filles</th><th class="c">Garçons</th><th class="c">Total</th><th class="c">Montant (FCFA)</th></tr></thead><tbody>
+      {% for p in d.par_jour %}<tr><td>{{ p.lib }}</td><td class="c">{{ p.f }}</td><td class="c">{{ p.g }}</td><td class="c">{{ p.t }}</td><td class="c">{{ milliers(p.montant) }}</td></tr>{% endfor %}
+      <tr><th>Semaine</th><th class="c">{{ d.par_jour|sum(attribute='f') }}</th><th class="c">{{ d.par_jour|sum(attribute='g') }}</th><th class="c">{{ d.repas }}</th><th class="c">{{ milliers(d.total) }}</th></tr>
+    </tbody></table></div>
+    <p class="aide">Chiffres enregistrés en base (après « Sauvegarder »).</p></div>
+</div>
+
+<script>
+(function () {
+  var t = document.getElementById('grille'); if (!t) return;
+  function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+  function calculer() {
+    var cols = [0, 0, 0, 0, 0], tn = 0, tt = 0;
+    t.querySelectorAll('tbody tr').forEach(function (tr) {
+      var n = 0, s = 0;
+      tr.querySelectorAll('input[type=checkbox]').forEach(function (c) {
+        if (c.checked) { var m = parseInt(c.dataset.m, 10) || 0; n++; s += m; cols[+c.dataset.col] += m; }
+      });
+      tr.querySelector('.c-n').textContent = n; tr.querySelector('.c-t').textContent = fmt(s); tn += n; tt += s;
+    });
+    t.querySelectorAll('tfoot .t-j').forEach(function (td, i) { td.textContent = fmt(cols[i]); });
+    document.getElementById('t-n').textContent = tn; document.getElementById('t-t').textContent = fmt(tt);
+    document.getElementById('k-repas').textContent = tn; document.getElementById('k-total').textContent = fmt(tt);
+  }
+  t.addEventListener('change', calculer);
+  t.querySelectorAll('thead button[data-col]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var cs = t.querySelectorAll('tbody input[data-col="' + b.dataset.col + '"]:not([disabled])');
+      var tous = Array.prototype.every.call(cs, function (c) { return c.checked; });
+      cs.forEach(function (c) { c.checked = !tous; }); calculer();
+    });
+  });
+  var r = document.getElementById('b-reinit');
+  if (r) r.addEventListener('click', function () {
+    if (!confirm('Décocher toutes les cases de la semaine ? Rien n’est supprimé tant que vous ne cliquez pas sur « Sauvegarder ».')) return;
+    t.querySelectorAll('tbody input[type=checkbox]:not([disabled])').forEach(function (c) { c.checked = false; }); calculer();
+  });
+})();
+</script>
+{% endblock %}

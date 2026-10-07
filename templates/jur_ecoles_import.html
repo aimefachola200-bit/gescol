@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% block titre %}Importer des écoles{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Importer la liste des écoles (Excel)</h1></div><a class="btn sec" href="{{ url_for('jur_ecoles') }}">← Écoles</a></div>
+<div class="carte">
+<p>Colonnes reconnues : <b>Nom</b> (obligatoire), Code, Type (EP, EM ou EE), Secteur (public / privé), Circonscription{% if JUR_NIVEAU=='cs' %} (facultatif){% endif %}, Zone pédagogique, Commune, Arrondissement, Localité, Directeur, Téléphone, Année de création.
+Une école déjà présente (même code, ou même nom dans la même CS) est mise à jour.</p>
+<p><a class="btn sec petit" href="{{ url_for('jur_ecoles_import', modele=1) }}">⇩ Télécharger le modèle Excel</a></p>
+<form method="post" enctype="multipart/form-data" class="ligne"><input type="file" name="fichier" accept=".xlsx" required aria-label="Fichier Excel"><button class="btn">Importer</button></form>
+</div>
+<p class="aide">Les données détaillées (effectifs, personnel, CEP, fiches de recensement…) arrivent par les fichiers de transmission des écoles (menu « Transmissions »).</p>
+{% endblock %}

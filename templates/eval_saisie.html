@@ -1,0 +1,342 @@
+{% extends "base.html" %}{% block titre %}Saisie – {{ ev.libelle }} – {{ cl.nom }}{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+{% set mat = cl.cycle == 'maternelle' %}
+{% set prim = cl.cycle == 'primaire' %}
+{% set mot_ok = 'MAÎTRISE' if prim else ('ADMIS' if cl.cycle == 'secondaire' else 'Progrès satisfaisants') %}
+<style>
+#f-saisie .btn.vert{color:#fff}  /* style.css : .vert{color:vert} rendait le texte invisible sur fond vert */
+.ev-sel{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.ev-sel label{font-size:12.5px;font-weight:600}
+.ev-sigs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:12px}
+.ev-sigs .sig-pad canvas{max-width:100%;height:auto}
+table.ev-grille th.ev-mat{font-size:12px;line-height:1.2;min-width:62px}
+table.ev-grille th.ev-mat abbr{text-decoration:none;cursor:help}
+table.ev-grille .ev-coef{font-weight:normal;font-size:11px;opacity:.85}
+.ev-legende{font-size:12.5px;margin:6px 0 10px}
+table.ev-grille td.calc{background:#F9FAFB;font-weight:600;text-align:center;white-space:nowrap}
+table.ev-grille input.err{outline:2px solid #B42318;background:#FEF3F2}
+table.ev-grille input[disabled]{background:#F2F4F7;color:#667085}
+table.ev-grille th.nom,table.ev-grille td.nom{min-width:190px;white-space:nowrap}
+table.ev-grille tr.ko td.nom{box-shadow:inset 3px 0 0 #B42318}
+table.ev-grille tr.ok td.nom{box-shadow:inset 3px 0 0 #1B7F3B}
+.ev-import{display:inline-flex;align-items:center;gap:0;cursor:pointer}
+.ev-import input{position:absolute;width:1px;height:1px;opacity:0}
+.ev-bul{display:inline-flex;gap:4px;align-items:center}
+.ev-bul select{max-width:180px;padding:5px}
+#ev-tableau table{margin-bottom:10px}
+@media print{.ev-noprint{display:none!important}}
+</style>
+
+<div class="entete">
+  <div><h1>Saisie des notes – {{ ev.titre }}</h1>
+  <p class="sous">{{ cl.nom }} ({{ cl.niveau }}) · {{ matieres|length }} matière(s) évaluée(s)
+    {% if ev.date %}· évaluation du {{ date_fr(ev.date) }}{% endif %} · année {{ ev.annee }}</p></div>
+  <div class="actions ev-sel">
+    <div><label for="ev-choix">Étape / Formative N°</label><br>
+      <select id="ev-choix" onchange="if(this.value) location.href=this.value">
+        {% for x in evs %}<option value="{{ url_for('eval_saisie', ev_id=x.id) }}" {{ 'selected' if x.id == ev.id }}>{{ x.titre }}</option>{% endfor %}
+        <option value="{{ url_for('eval_form', classe=cl.id) }}">＋ Nouvelle évaluation…</option>
+      </select></div>
+    <a class="btn sec petit" href="{{ url_for('eval_form', ev_id=ev.id) }}">⚙ Matières et seuil</a>
+    <a class="btn sec petit" href="{{ url_for('eval_accueil', classe=cl.id) }}">← Évaluations</a>
+  </div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Inscrits</div><div class="v" id="k-inscrits">{{ lignes|length }}</div><div class="d" id="k-sexe"></div></div>
+  <div class="kpi"><div class="l">Ont composé</div><div class="v" id="k-composes">—</div><div class="d">au moins une note</div></div>
+  <div class="kpi"><div class="l">{{ 'Maîtrise' if prim else ('Admis' if cl.cycle == 'secondaire' else 'Progrès satisfaisants') }}</div><div class="v" id="k-ok">—</div><div class="d" id="k-taux"></div></div>
+  {% if not mat %}<div class="kpi"><div class="l">Moyenne de la classe</div><div class="v" id="k-moy">—</div><div class="d" id="k-ext"></div></div>{% endif %}
+</div>
+
+<form method="post" id="f-saisie" data-doc="evaluations:ev{{ ev.id }}" autocomplete="off">
+<input type="hidden" name="notes_json" id="notes-json" data-nosave>
+{% call M.barre_doc(sauver=False, charger=False, reinit=False) %}
+  <button type="submit" class="btn vert petit" title="Enregistrer les notes et l'en-tête en base">💾 Sauvegarder</button>
+  <button type="button" class="btn sec petit" id="b-charger" title="Recharger les notes et l'en-tête enregistrés">📂 Charger</button>
+  <button type="button" class="btn sec petit" id="b-reinit" title="Vider la grille à l'écran (rien n'est supprimé en base)">↺ Réinitialiser</button>
+  <span class="sep"></span>
+  <button type="button" class="btn petit" id="b-tableau" title="Tableau des inscrits, ayant composé, ayant réussi + ordre de mérite">🧮 Générer le tableau</button>
+  <span class="sep"></span>
+  <a class="btn sec petit ev-pdf" href="{{ url_for('eval_rapport_pdf', ev_id=ev.id) }}" target="_blank" rel="noopener">📄 Rapport PDF</a>
+  <a class="btn sec petit ev-pdf" href="{{ url_for('eval_bulletins_classe', ev_id=ev.id) }}" target="_blank" rel="noopener">📄 Bulletin classe</a>
+  <button form="f-publier" class="btn {{ 'sec' if publie else 'vert' }} petit" title="Rendre visibles dans les espaces élèves et parents">{{ '🔒 Masquer aux élèves/parents' if publie else '📢 Publier aux élèves et parents' }}</button>
+  <span class="ev-bul"><select name="eleve" form="f-bulletin" aria-label="Élève pour le bulletin" data-nosave required>
+      <option value="">Bulletin élève…</option>
+      {% for l in lignes %}<option value="{{ l.eleve.id }}">{{ l.eleve.nom }} {{ l.eleve.prenoms }}</option>{% endfor %}
+    </select><button class="btn sec petit ev-pdf" form="f-bulletin" title="Bulletin de l'élève choisi">📄 Bulletin élève</button></span>
+  <span class="sep"></span>
+  <a class="btn sec petit" href="{{ url_for('eval_modele_excel', ev_id=ev.id) }}">📊 Modèle Excel</a>
+  <a class="btn sec petit ev-pdf" href="{{ url_for('eval_export_excel', ev_id=ev.id) }}">📊 Exporter Excel</a>
+  <label class="btn sec petit ev-import" title="Importer un fichier Excel rempli à partir du modèle">📥 Importer Excel
+    <input type="file" name="fichier" form="f-import" accept=".xlsx,.xlsm,.csv" id="f-fichier" data-nosave></label>
+  <span class="sep"></span>
+  <button class="btn danger petit" form="f-effacer" data-confirmer="Effacer DÉFINITIVEMENT en base toutes les notes de « {{ ev.titre }} » pour {{ cl.nom }}{{ ' (vos matières uniquement)' if restreint else '' }} ?">🗑 Effacer les notes</button>
+{% endcall %}
+
+<details class="carte" open>
+  <summary><b>Informations institutionnelles</b> <span class="aide">(en-tête des PDF et des fichiers Excel — enregistrées avec « Sauvegarder »)</span></summary>
+  {{ M.identification(v, champs=('ddemp','cs','ecole','cours','annee','admin','directeur')) }}
+  <div class="grille-id"><div><label for="id-evaluation">Évaluation</label>
+    <input id="id-evaluation" value="{{ ev.titre }}" readonly data-nosave title="Modifiez le type ou le numéro avec « Matières et seuil »"></div>
+    {% if not mat %}<div><label for="id-seuil">Seuil de passage</label><input id="id-seuil" value="{{ seuil_txt }}" readonly data-nosave></div>{% endif %}</div>
+  {% if g.user.role in ('admin', 'fondateur', 'directeur') %}
+  <div class="ev-sigs">
+    {{ M.signature('ecole:%d:admin' % ECOLE_COURANTE.id, 'Signature de l’administrateur / l’administratrice') }}
+    {{ M.signature('ecole:%d:directeur' % ECOLE_COURANTE.id, 'Signature du directeur / de la directrice') }}
+  </div>
+  <p class="aide">Signez avec la souris ou le doigt, vérifiez avec « Aperçu », puis cliquez sur « Enregistrer » : la signature est reprise sur le rapport PDF et les bulletins (avec le cachet de l'école).</p>
+  {% else %}
+  <p class="aide">Les signatures digitales de l'administrateur et du directeur sont enregistrées par la direction ; elles apparaissent automatiquement sur les PDF.</p>
+  {% endif %}
+</details>
+
+{% if mat %}
+<p class="aide">Choisissez l'appréciation de chaque domaine : <b>A</b> = acquis, <b>ECA</b> = en cours d'acquisition, <b>NA</b> = non acquis, <b>D</b> = dispensé.</p>
+{% else %}
+<p class="aide">Tapez une note de 0 à 20 (virgule acceptée), <b>D</b> = dispensé, case vide = pas de note. <b>Entrée</b> passe à l'élève suivant (même matière).
+  {% if prim %}<b>MAÎTRISE</b> : {{ seuil_txt }} — seule condition de réussite ; la moyenne sert au rang.
+  {% elif cl.niveau in ['6ème','5ème'] %}Moyenne simple (pas de coefficient en 6ème/5ème) ; admis si moyenne ≥ 10.
+  {% else %}Moyenne pondérée par les coefficients ; admis si moyenne ≥ 10.{% endif %}
+  {% if restreint %}<br>Vous ne pouvez saisir que <b>vos</b> matières ; les autres colonnes sont en lecture seule.{% endif %}</p>
+{% endif %}
+
+{% if not lignes %}
+<div class="carte">Aucun élève inscrit dans {{ cl.nom }}. Inscrivez d'abord les élèves pour saisir les notes.</div>
+{% else %}
+<div class="tw"><table class="t saisie ev-grille" id="grille">
+  <thead><tr><th class="c">N°</th><th class="sticky nom">Élève</th><th class="c">Sexe</th>
+    {% for m in matieres %}<th class="c ev-mat" title="{{ m.nom }}"><abbr title="{{ m.nom }}">{{ m.code or m.nom }}</abbr>{% if cl.cycle == 'secondaire' and cl.niveau not in ['6ème','5ème'] %}<br><span class="ev-coef">coef. {{ '%g'|format(m.coefficient) }}</span>{% endif %}</th>{% endfor %}
+    {% if mat %}<th>Bilan</th>{% else %}<th class="c">Total</th><th class="c">Moy.</th><th class="c">≥ 10</th><th>Décision</th><th class="c">Rang</th>{% endif %}</tr></thead>
+  <tbody>
+  {% for l in lignes %}{% set e = l.eleve %}
+  <tr data-e="{{ e.id }}"><td class="c">{{ loop.index }}</td><td class="sticky nom"><b>{{ e.nom }}</b> {{ e.prenoms }}</td><td class="c">{{ e.sexe }}</td>
+    {% for m in matieres %}{% set val = valeurs[e.id|string][m.id|string] %}{% set ok = m.id in permis %}
+    <td class="c">{% if mat %}
+      <select {% if ok %}name="n_{{ e.id }}_{{ m.id }}"{% else %}disabled{% endif %} data-m="{{ m.id }}" class="cell appr appr-{{ val or 'vide' }}" aria-label="{{ e.nom }} {{ e.prenoms }} – {{ m.nom }}">
+        <option value="" {{ 'selected' if not val }}>—</option>
+        {% for k in APPRECIATIONS %}<option value="{{ k }}" {{ 'selected' if val == k }}>{{ k }}</option>{% endfor %}
+        <option value="D" {{ 'selected' if val == 'D' }}>D</option></select>
+      {% else %}
+      <input {% if ok %}name="n_{{ e.id }}_{{ m.id }}"{% else %}disabled{% endif %} data-m="{{ m.id }}" class="cell" value="{{ val }}" inputmode="decimal" maxlength="6" aria-label="{{ e.nom }} {{ e.prenoms }} – {{ m.nom }}">
+      {% endif %}</td>
+    {% endfor %}
+    {% if mat %}<td class="calc c-dec">—</td>{% else %}
+    <td class="calc c-tot">—</td><td class="calc c-moy">—</td><td class="calc c-reu">—</td><td class="calc c-dec">—</td><td class="calc c-rang">—</td>{% endif %}
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+<p class="aide ev-legende"><b>Matières :</b> {% for m in matieres %}{{ m.code }} = {{ m.nom }}{{ ' ; ' if not loop.last }}{% endfor %}</p>
+{% endif %}
+</form>
+
+<section id="ev-tableau" class="carte" hidden aria-live="polite"></section>
+
+<form id="f-import" method="post" enctype="multipart/form-data" action="{{ url_for('eval_import_excel', ev_id=ev.id) }}" hidden></form>
+<form id="f-publier" method="post" action="{{ url_for('eval_publier', ev_id=ev.id) }}" hidden></form>
+<form id="f-effacer" method="post" action="{{ url_for('eval_effacer', ev_id=ev.id) }}" hidden></form>
+<form id="f-bulletin" method="get" action="{{ url_for('eval_bulletin_eleve', ev_id=ev.id) }}" target="_blank" hidden></form>
+
+<script>
+(function(){
+  "use strict";
+  var CFG = {{ config_js|tojson }};
+  var MAT = CFG.cycle === 'maternelle', PRIM = CFG.cycle === 'primaire';
+  var form = document.getElementById('f-saisie'), grille = document.getElementById('grille');
+  var modifie = CFG.rejets > 0;   // valeurs refusées réaffichées : elles restent à corriger
+  function $$(s, r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
+  function fr(x){ return x === null || x === undefined ? '—' : x.toFixed(2).replace('.', ','); }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  var COEF = {}; CFG.matieres.forEach(function(m){ COEF[m.id] = m.coef || 1; });
+
+  /* Lecture d'une case : {vide} | {disp} | {note} | {appr} | {err} */
+  function lire(el){
+    var v = (el.value || '').trim();
+    if (v === '') return {vide: true};
+    if (v.toUpperCase() === 'D') return {disp: true};
+    if (MAT) return ['A','ECA','NA'].indexOf(v) >= 0 ? {appr: v} : {err: true};
+    v = v.replace(',', '.');
+    if (!/^\d{1,2}(\.\d{1,2})?$/.test(v)) return {err: true};
+    var f = parseFloat(v);
+    return (f >= 0 && f <= 20) ? {note: Math.round(f * 100) / 100} : {err: true};
+  }
+
+  function seuilDe(nbEval){
+    if (CFG.seuil) return Math.max(1, Math.min(CFG.seuil, nbEval || CFG.seuil));
+    return nbEval ? Math.ceil(2 * nbEval / 3 - 1e-9) : 0;
+  }
+
+  /* Calcul d'une ligne (mêmes règles que evaluations_core.resultats) */
+  function calculer(tr){
+    var r = {id: +tr.dataset.e, vals: [], disp: 0, pts: 0, coefs: 0, appr: [], err: 0};
+    $$('.cell', tr).forEach(function(el){
+      var x = lire(el);
+      el.classList.toggle('err', !!x.err);
+      if (!MAT) { el.classList.toggle('bas', x.note !== undefined && x.note < 10); el.classList.toggle('disp', !!x.disp); }
+      else el.className = el.className.replace(/appr-\S+/, 'appr-' + (el.value || 'vide'));
+      if (x.err) { r.err++; return; }
+      if (x.disp) { r.disp++; return; }
+      if (x.appr) r.appr.push(x.appr);
+      if (x.note !== undefined) { var c = CFG.coef ? COEF[el.dataset.m] : 1; r.vals.push(x.note); r.pts += x.note * c; r.coefs += c; }
+    });
+    var nbEval = CFG.matieres.length - r.disp;
+    r.seuil = seuilDe(nbEval); r.nbEval = nbEval;
+    r.reussies = r.vals.filter(function(v){ return v >= 10; }).length;
+    r.moy = null; r.ok = null;
+    if (MAT) {
+      if (r.appr.length) {
+        var s = (2 * r.appr.filter(function(a){ return a === 'A'; }).length + r.appr.filter(function(a){ return a === 'ECA'; }).length) / (2 * r.appr.length);
+        r.dec = s >= .75 ? 'Progrès très satisfaisants' : (s >= .5 ? 'Progrès satisfaisants' : 'Progrès à renforcer'); r.ok = s >= .5;
+      } else r.dec = 'ABSENT';
+      r.compose = r.appr.length > 0;
+    } else if (!r.vals.length) { r.dec = 'ABSENT'; r.compose = false; }
+    else {
+      r.compose = true;
+      r.moy = Math.round((CFG.coef ? r.pts / r.coefs : r.vals.reduce(function(a, b){ return a + b; }, 0) / r.vals.length) * 100) / 100;
+      r.total = Math.round((CFG.coef ? r.pts : r.vals.reduce(function(a, b){ return a + b; }, 0)) * 100) / 100;
+      if (PRIM) { r.ok = r.reussies >= r.seuil; r.dec = r.ok ? 'MAÎTRISE' : 'NON MAÎTRISE'; }
+      else { r.ok = r.moy >= 10; r.dec = r.ok ? 'ADMIS' : 'NON ADMIS'; }
+    }
+    return r;
+  }
+
+  var RES = [];
+  function recalculer(){
+    if (!grille) return;
+    var lignes = $$('tbody tr', grille), res = lignes.map(calculer);
+    // rang « olympique » sur la moyenne
+    var tri = res.filter(function(r){ return r.moy !== null; }).sort(function(a, b){ return b.moy - a.moy; });
+    tri.forEach(function(r, i){ r.rang = (i && tri[i-1].moy === r.moy) ? tri[i-1].rang : i + 1; });
+    tri.forEach(function(r){ r.exaequo = tri.filter(function(x){ return x.moy === r.moy; }).length > 1; });
+    lignes.forEach(function(tr, i){
+      var r = res[i], badge = r.ok === null ? 'att' : (r.ok ? 'ok' : 'ko');
+      tr.querySelector('.c-dec').innerHTML = r.compose || r.dec !== 'ABSENT' ? '<span class="badge ' + badge + '">' + esc(r.dec) + '</span>' : '<span class="aide">ABSENT</span>';
+      tr.classList.toggle('ok', r.ok === true); tr.classList.toggle('ko', r.ok === false);
+      if (!MAT) {
+        tr.querySelector('.c-tot').textContent = r.compose ? fr(r.total) : '—';
+        tr.querySelector('.c-moy').textContent = fr(r.moy);
+        tr.querySelector('.c-reu').textContent = r.compose ? r.reussies + '/' + r.nbEval : '—';
+        tr.querySelector('.c-reu').title = 'Seuil : ' + r.seuil;
+        tr.querySelector('.c-rang').textContent = r.rang ? r.rang + (r.rang === 1 ? 'er' : 'e') + (r.exaequo ? ' ex æquo' : '') : '—';
+      }
+    });
+    RES = res;
+    // indicateurs
+    var el = CFG.eleves, sexe = {}; el.forEach(function(e){ sexe[e.id] = e.sexe; });
+    var g = el.filter(function(e){ return e.sexe === 'M'; }).length;
+    var comp = res.filter(function(r){ return r.compose; }), ok = comp.filter(function(r){ return r.ok; });
+    document.getElementById('k-sexe').textContent = g + ' G · ' + (el.length - g) + ' F';
+    document.getElementById('k-composes').textContent = comp.length;
+    document.getElementById('k-ok').textContent = ok.length;
+    document.getElementById('k-taux').textContent = comp.length ? ('taux : ' + (100 * ok.length / comp.length).toFixed(2).replace('.', ',') + ' %') : '';
+    var km = document.getElementById('k-moy');
+    if (km) {
+      var m = tri.map(function(r){ return r.moy; });
+      km.textContent = m.length ? fr(m.reduce(function(a, b){ return a + b; }, 0) / m.length) : '—';
+      document.getElementById('k-ext').textContent = m.length ? ('+ forte ' + fr(m[0]) + ' · + faible ' + fr(m[m.length - 1])) : '';
+    }
+    if (!document.getElementById('ev-tableau').hidden) generer(false);
+  }
+
+  /* « Générer le tableau » : inscrits / ont composé / ont réussi + ordre de mérite */
+  function generer(defiler){
+    var box = document.getElementById('ev-tableau'), el = CFG.eleves, par = {};
+    el.forEach(function(e, i){ par[e.id] = e; });
+    function compte(f){ var o = {G: 0, F: 0}; RES.forEach(function(r){ if (f(r)) o[par[r.id].sexe === 'M' ? 'G' : 'F']++; }); o.T = o.G + o.F; return o; }
+    var ins = compte(function(){ return true; }), comp = compte(function(r){ return r.compose; }), ok = compte(function(r){ return r.compose && r.ok; });
+    function taux(k){ return comp[k] ? (100 * ok[k] / comp[k]).toFixed(2).replace('.', ',') + ' %' : '—'; }
+    var lib = PRIM ? 'Ont la maîtrise' : (MAT ? 'Progrès satisfaisants' : 'Admis');
+    var h = '<h2 style="margin-top:0">Tableau des élèves inscrits et ayant réussi – ' + esc({{ ev.titre|tojson }}) + '</h2>' +
+      '<div class="tw"><table class="t compact"><thead><tr><th></th><th class="c">Garçons</th><th class="c">Filles</th><th class="c">Total</th></tr></thead><tbody>' +
+      '<tr><td>Inscrits</td><td class="c">' + ins.G + '</td><td class="c">' + ins.F + '</td><td class="c"><b>' + ins.T + '</b></td></tr>' +
+      '<tr><td>Ont composé</td><td class="c">' + comp.G + '</td><td class="c">' + comp.F + '</td><td class="c"><b>' + comp.T + '</b></td></tr>' +
+      '<tr><td>' + lib + '</td><td class="c">' + ok.G + '</td><td class="c">' + ok.F + '</td><td class="c"><b>' + ok.T + '</b></td></tr>' +
+      '<tr><td>Taux</td><td class="c">' + taux('G') + '</td><td class="c">' + taux('F') + '</td><td class="c"><b>' + taux('T') + '</b></td></tr>' +
+      '</tbody></table></div>';
+    if (!MAT) {
+      var ordre = RES.filter(function(r){ return r.moy !== null; }).sort(function(a, b){ return a.rang - b.rang || par[a.id].nom.localeCompare(par[b.id].nom); });
+      h += '<h3>Ordre de mérite</h3><div class="tw"><table class="t compact"><thead><tr><th class="c">Rang</th><th>Nom et prénoms</th><th class="c">Sexe</th><th class="c">Moyenne</th><th class="c">Matières ≥ 10</th><th>Décision</th></tr></thead><tbody>' +
+        (ordre.length ? ordre.map(function(r){
+          return '<tr><td class="c">' + r.rang + (r.rang === 1 ? 'er' : 'e') + (r.exaequo ? ' ex æquo' : '') + '</td><td>' + esc(par[r.id].nom) + '</td><td class="c">' + par[r.id].sexe +
+            '</td><td class="c"><b>' + fr(r.moy) + '</b></td><td class="c">' + r.reussies + '/' + r.nbEval + '</td><td><span class="badge ' + (r.ok ? 'ok' : 'ko') + '">' + r.dec + '</span></td></tr>';
+        }).join('') : '<tr><td colspan="6" class="gris">Aucune note saisie.</td></tr>') + '</tbody></table></div>';
+    }
+    h += '<p class="aide ev-noprint">Tableau calculé à partir de la grille affichée' + (modifie ? ' (<b>non sauvegardée</b>)' : '') + '. <button type="button" class="btn sec petit" onclick="window.print()">🖨 Imprimer</button></p>';
+    box.innerHTML = h; box.hidden = false;
+    if (defiler) box.scrollIntoView({behavior: 'smooth', block: 'start'});
+  }
+
+  if (grille) {
+    var cells = $$('.cell:not([disabled])', grille), nbm = CFG.matieres.length;
+    grille.addEventListener('input', function(){ modifie = true; recalculer(); });
+    grille.addEventListener('change', function(){ modifie = true; recalculer(); });
+    grille.addEventListener('keydown', function(ev){
+      if (ev.key !== 'Enter' || !ev.target.classList.contains('cell')) return;
+      ev.preventDefault();
+      var tous = $$('.cell', grille), i = tous.indexOf(ev.target), pas = ev.shiftKey ? -nbm : nbm, j = i + pas;
+      while (tous[j] && tous[j].disabled) j += pas;
+      if (!tous[j]) { j = (i % nbm) + 1; if (j >= nbm || ev.shiftKey) return; } // bas de colonne : matière suivante
+      if (tous[j]) { tous[j].focus(); if (tous[j].select) tous[j].select(); }
+    });
+    recalculer();
+  }
+
+  form.addEventListener('input', function(e){ if (!grille || !grille.contains(e.target)) modifie = true; });
+  // Sauvegarder : la grille part en un seul champ JSON (évite la limite du nombre de champs)
+  form.addEventListener('submit', function(ev){
+    var errs = grille ? $$('.cell.err', grille).length : 0;
+    if (errs && !window.confirm(errs + ' case(s) contiennent une valeur invalide (en rouge) : elles ne seront pas enregistrées. Continuer ?')) { ev.preventDefault(); return; }
+    var o = {};
+    if (grille) $$('.cell[name]', grille).forEach(function(el){
+      var p = el.name.split('_'); (o[p[1]] = o[p[1]] || {})[p[2]] = el.value; el.dataset.nom = el.name; el.removeAttribute('name');
+    });
+    document.getElementById('notes-json').value = JSON.stringify(o);
+    modifie = false;
+  });
+  window.addEventListener('pageshow', function(){ $$('.cell[data-nom]').forEach(function(el){ el.name = el.dataset.nom; }); });
+
+  // Charger : notes et en-tête enregistrés en base
+  document.getElementById('b-charger').addEventListener('click', function(){
+    if (modifie && !window.confirm('Remplacer la grille affichée par les données enregistrées ? Les modifications non sauvegardées seront perdues.')) return;
+    fetch(CFG.url_donnees, {credentials: 'same-origin'}).then(function(r){ return r.json(); }).then(function(d){
+      if (grille) $$('.cell', grille).forEach(function(el){
+        var tr = el.closest('tr'), v = (d.notes[tr.dataset.e] || {})[el.dataset.m];
+        el.value = v === undefined || v === null ? '' : v;
+      });
+      var ent = d.entete || {};
+      $$('input[name],select[name]', form).forEach(function(el){ if (el.name in ent && !el.classList.contains('cell')) el.value = ent[el.name]; });
+      modifie = false; recalculer();
+      GESCOL.toast(d.maj ? 'Données chargées (dernière saisie le ' + d.maj + ').' : 'Aucune note enregistrée pour cette évaluation.', !!d.maj);
+    }).catch(function(){ GESCOL.toast('Chargement impossible (connexion ?).', false); });
+  });
+
+  // Réinitialiser : vide la grille à l'écran seulement
+  document.getElementById('b-reinit').addEventListener('click', function(){
+    if (!grille) return;
+    if (!window.confirm('Vider la grille à l\'écran ?\nLes notes enregistrées ne sont pas supprimées tant que vous ne cliquez pas sur « Sauvegarder ». « Charger » les fait revenir.')) return;
+    $$('.cell:not([disabled])', grille).forEach(function(el){ el.value = ''; });
+    modifie = true; recalculer();
+    GESCOL.toast('Grille vidée à l\'écran (rien n\'est encore supprimé en base).');
+  });
+
+  document.getElementById('b-tableau').addEventListener('click', function(){ recalculer(); generer(true); });
+
+  // Import Excel : envoi dès que le fichier est choisi
+  document.getElementById('f-fichier').addEventListener('change', function(){
+    if (!this.files.length) return;
+    if (modifie && !window.confirm('Des notes affichées ne sont pas sauvegardées : elles seront perdues. Importer quand même ?')) { this.value = ''; return; }
+    modifie = false; document.getElementById('f-import').submit();
+  });
+
+  // PDF / Excel : ils reprennent les données enregistrées
+  $$('.ev-pdf').forEach(function(a){
+    a.addEventListener('click', function(ev){
+      if (modifie && !window.confirm('Des modifications ne sont pas sauvegardées : le document reprendra les dernières données enregistrées. Continuer ?')) ev.preventDefault();
+    });
+  });
+  window.addEventListener('beforeunload', function(e){ if (modifie) { e.preventDefault(); e.returnValue = ''; } });
+})();
+</script>
+{% endblock %}

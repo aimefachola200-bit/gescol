@@ -1,0 +1,96 @@
+{# Édition publique : renseignements de carrière (inclus par personnel_form.html après la fonction) #}
+<div class="carte" id="car-bloc">
+  <h2 style="margin-top:0">Carrière</h2>
+  <div class="ligne">
+    <div><label for="car-grade">Grade</label><input id="car-grade" name="grade" list="car-grades" maxlength="20" value="{{ car.grade or '' }}" placeholder="ex. A1-5, B1-12, C1-3" autocomplete="off">
+      <datalist id="car-grades">{% for gr in car_grades %}<option value="{{ gr }}">{% endfor %}</datalist></div>
+    <div><label for="car-ip">Indice payé</label><input id="car-ip" name="indice_paye" inputmode="numeric" value="{{ car.indice_paye if car.indice_paye is not none else '' }}"></div>
+    <div><label for="car-ir">Indice réel</label><input id="car-ir" name="indice_reel" inputmode="numeric" value="{{ car.indice_reel if car.indice_reel is not none else '' }}"></div>
+    <div><label for="car-nais">Date de naissance</label><input id="car-nais" name="date_naissance" maxlength="10" placeholder="jj/mm/aaaa, ou l'année seule" value="{{ car_fmt_date(car.date_naissance)|replace('(année) ', '') if car.date_naissance and '-' in (car.date_naissance|string) else (car.date_naissance or '') }}"></div>
+  </div>
+  <div class="ligne">
+    <div><label for="car-ps">Date de première prise de service</label><input id="car-ps" type="date" name="date_prise_service" value="{{ car.date_prise_service or '' }}"></div>
+    <div><label for="car-psd">Prise de service dans le département</label><input id="car-psd" type="date" name="date_service_dep" value="{{ car.date_service_dep or '' }}"></div>
+    <div><label for="car-psc">Prise de service dans la commune</label><input id="car-psc" type="date" name="date_service_commune" value="{{ car.date_service_commune or '' }}"></div>
+    <div><label for="car-pse">Prise de service dans l'école</label><input id="car-pse" type="date" name="date_service_ecole" value="{{ car.date_service_ecole or '' }}"></div>
+  </div>
+  <div class="car-calc" aria-live="polite">
+    <div><span>Ancienneté générale</span><b data-anc="car-ps">—</b></div>
+    <div><span>Dans le département</span><b data-anc="car-psd">—</b></div>
+    <div><span>Dans la commune</span><b data-anc="car-psc">—</b></div>
+    <div><span>Dans l'école</span><b data-anc="car-pse">—</b></div>
+    <div><span>Départ probable à la retraite</span><b id="car-ret">—</b></div>
+  </div>
+  <p class="aide">Calcul automatique : anciennetés au {{ car_reference.strftime('%d/%m/%Y') }} (31 décembre de l'année en cours, jour inclus), en années et mois.
+    Retraite = date de naissance + {{ car_ages.A }} ans (grade A), {{ car_ages.B }} ans (grade B), {{ car_ages.C }} ans (grade C) ; si seule l'année de naissance est connue : 31/12 de l'année correspondante.</p>
+  <h3>Diplômes</h3>
+  <div class="ligne">
+    <div><label for="car-dip">Diplôme académique le plus élevé</label><input id="car-dip" name="diplome_academique" list="car-diplomes" maxlength="80" value="{{ car.diplome_academique or '' }}">
+      <datalist id="car-diplomes">{% for d in car_diplomes %}<option value="{{ d }}">{% endfor %}</datalist></div>
+    <div><label for="car-dipa">Année d'obtention</label><input id="car-dipa" name="diplome_academique_annee" inputmode="numeric" maxlength="4" value="{{ car.diplome_academique_annee or '' }}"></div>
+    <div><label for="car-ceap">CEAP</label><select id="car-ceap" name="ceap"><option value="">—</option><option value="oui" {{ 'selected' if car.ceap=='oui' }}>Oui</option><option value="non" {{ 'selected' if car.ceap=='non' }}>Non</option></select></div>
+    <div><label for="car-ceapa">Année du CEAP</label><input id="car-ceapa" name="ceap_annee" inputmode="numeric" maxlength="4" value="{{ car.ceap_annee or '' }}"></div>
+    <div><label for="car-cap">CAP</label><select id="car-cap" name="cap"><option value="">—</option><option value="oui" {{ 'selected' if car.cap=='oui' }}>Oui</option><option value="non" {{ 'selected' if car.cap=='non' }}>Non</option></select></div>
+    <div><label for="car-capa">Année du CAP</label><input id="car-capa" name="cap_annee" inputmode="numeric" maxlength="4" value="{{ car.cap_annee or '' }}"></div>
+  </div>
+  <h3>Suivi pédagogique et évaluation</h3>
+  <div class="ligne">
+    <div><label for="car-apt">Visite d'aptitude</label><select id="car-apt" name="visite_aptitude"><option value="">—</option><option value="oui" {{ 'selected' if car.visite_aptitude=='oui' }}>Oui</option><option value="non" {{ 'selected' if car.visite_aptitude=='non' }}>Non</option></select></div>
+    <div><label for="car-aptn">Note de la visite d'aptitude (/20)</label><input id="car-aptn" name="visite_aptitude_note" inputmode="decimal" value="{{ car_fmt_nombre(car.visite_aptitude_note) }}"></div>
+    <div><label for="car-dep">Département à servir</label><select id="car-dep" name="departement_servir"><option value="">—</option>
+      {% for d in car_departements %}<option {{ 'selected' if car.departement_servir == d }}>{{ d }}</option>{% endfor %}</select></div>
+    <div><label for="car-vcp">Visites de classe reçues : CP</label><input id="car-vcp" name="visites_cp" inputmode="numeric" value="{{ car.visites_cp if car.visites_cp is not none else '' }}"></div>
+    <div><label for="car-vccs">Visites de classe reçues : CCS</label><input id="car-vccs" name="visites_ccs" inputmode="numeric" value="{{ car.visites_ccs if car.visites_ccs is not none else '' }}"></div>
+    <div><label for="car-up">Participation à l'UP (%)</label><input id="car-up" name="participation_up" inputmode="decimal" value="{{ car_fmt_nombre(car.participation_up) }}"></div>
+    <div><label for="car-note">Note d'évaluation du personnel (/20)</label><input id="car-note" name="note_evaluation" inputmode="decimal" value="{{ car_fmt_nombre(car.note_evaluation) }}"></div>
+  </div>
+  <div><label for="car-gc">Gestion collégiale (responsabilités)</label><textarea id="car-gc" name="gestion_collegiale" rows="2" maxlength="500" placeholder="ex. Responsable de la cantine, membre du conseil des maîtres…">{{ car.gestion_collegiale or '' }}</textarea></div>
+  <h3>Compte de l'agent</h3>
+  <div class="ligne">
+    <div><label for="car-user">Compte utilisateur de l'agent</label><select id="car-user" name="user_id"><option value="">— aucun —</option>
+      {% for u in car_comptes %}<option value="{{ u.id }}" {{ 'selected' if (car.user_id|string) == (u.id|string) }}>{{ u.nom }} ({{ u.identifiant }}, {{ ROLES.get(u.role, u.role) }})</option>{% endfor %}</select></div>
+  </div>
+  <p class="aide">Le compte lié permet à l'enseignant de voir sa fiche de carrière dans « Mon espace » et d'y proposer ses diplômes (vous validez ensuite).</p>
+</div>
+<style>
+.car-calc{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:12px 0 4px}
+.car-calc div{background:#F5F9FD;border:1px solid #D6E4F2;border-radius:8px;padding:8px 10px}
+.car-calc span{display:block;font-size:12px;color:var(--gris)}
+.car-calc b{font-size:15px}
+#car-bloc h3{font-size:15px;margin:16px 0 4px;color:var(--bleu)}
+</style>
+<script>
+/* Calculs en direct : mêmes règles que le serveur (m_carriere.py). */
+(function () {
+  var REF = new Date({{ car_reference.year }}, 11, 31), AGES = {A: {{ car_ages.A }}, B: {{ car_ages.B }}, C: {{ car_ages.C }}};
+  function iso(s) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+  function mois(d, f) { var n = (f.getFullYear() - d.getFullYear()) * 12 + f.getMonth() - d.getMonth(); if (f.getDate() < d.getDate()) n--; return n; }
+  function duree(n) { var a = Math.floor(n / 12), m = n % 12, t = [];
+    if (a) t.push(a + (a > 1 ? " ans" : " an")); if (m || !a) t.push(m + " mois"); return (a || m) ? t.join(" ") : "moins d'un mois"; }
+  function fr(d) { return ("0" + d.getDate()).slice(-2) + "/" + ("0" + (d.getMonth() + 1)).slice(-2) + "/" + d.getFullYear(); }
+  function calc() {
+    var lendemain = new Date(REF.getFullYear() + 1, 0, 1);
+    document.querySelectorAll("[data-anc]").forEach(function (b) {
+      var d = iso(document.getElementById(b.dataset.anc).value);
+      b.textContent = d && d <= REF ? duree(mois(d, lendemain)) : "—";
+    });
+    var g = (document.getElementById("car-grade").value || "").trim().toUpperCase().charAt(0), age = AGES[g];
+    var n = (document.getElementById("car-nais").value || "").trim(), r = null, m;
+    if (age) {
+      if (/^\d{4}$/.test(n)) r = new Date(+n + age, 11, 31);
+      else if ((m = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/.exec(n)) || (m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(n))) {
+        var j = m[1].length === 4 ? +m[3] : +m[1], mo = +m[2], an = m[1].length === 4 ? +m[1] : +m[3];
+        r = new Date(an + age, mo - 1, j);
+        if (r.getMonth() !== mo - 1) r = new Date(an + age, 1, 28);   /* 29 février */
+      }
+    }
+    var out = document.getElementById("car-ret");
+    if (!r) { out.textContent = age ? "date de naissance ?" : "grade A, B ou C ?"; return; }
+    var auj = new Date(); auj.setHours(0, 0, 0, 0);
+    out.textContent = fr(r) + (r <= auj ? " (atteint)" : " (reste " + duree(mois(auj, r)) + ")");
+  }
+  document.getElementById("car-bloc").addEventListener("input", calc);
+  document.getElementById("car-bloc").addEventListener("change", calc);
+  document.addEventListener("DOMContentLoaded", calc); calc();
+})();
+</script>

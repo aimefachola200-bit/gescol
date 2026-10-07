@@ -1,0 +1,51 @@
+{% extends "base.html" %}{% block titre %}Envoyer à la DDEMP{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Envoyer à la DDEMP</h1>
+  <p class="sous">Paquet de la circonscription : toutes ses écoles et ses données propres — année {{ annee }}</p></div>
+  <div class="actions">{% if apercu and peut('jur_transmission') %}<a class="btn" href="{{ url_for('jur_transmission_envoi', annee=annee, telecharger=1) }}">⬇ Télécharger le fichier</a>{% endif %}</div></div>
+<form method="get" class="filtres"><label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a==annee }}>{{ a }}</option>{% endfor %}</select></label></form>
+{% if erreur %}<div class="flash danger">{{ erreur }}</div>{% endif %}
+{% if apercu %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Écoles</div><div class="v">{{ apercu.ecoles }}</div><div class="d">{{ apercu.avec }} avec données {{ annee }}</div></div>
+  <div class="kpi"><div class="l">Élèves</div><div class="v">{{ apercu.eleves }}</div><div class="d">{{ apercu.f }} filles · {{ apercu.g }} garçons</div></div>
+  <div class="kpi"><div class="l">Enseignants</div><div class="v">{{ apercu.enseignants }}</div></div>
+  <div class="kpi"><div class="l">Agents de la CS</div><div class="v">{{ apercu.agents }}</div><div class="d">fichier ≈ {{ (apercu.taille / 1024)|round(1) }} Ko</div></div>
+</div>
+<div class="grille2">
+<div class="carte"><h2>Aperçu du contenu</h2>
+  <table class="t compact"><tr><th>Rubrique</th><th class="num">Écoles</th></tr>
+  {% for k in sections %}<tr><td>{{ noms[k] }}</td><td class="num">{{ apercu.rub[k] }} / {{ apercu.ecoles }}</td></tr>{% endfor %}
+  <tr><td>Données propres de la CS</td><td class="num">{{ apercu.cs_sections|join(', ') or '—' }}</td></tr></table>
+  {% if apercu.sans %}<p class="aide"><b>{{ apercu.sans|length }} école(s) sans données pour {{ annee }}</b> (identité seule) : {{ apercu.sans[:15]|join(', ') }}{% if apercu.sans|length > 15 %}…{% endif %}.
+    <a href="{{ url_for('jur_transmission_suivi', annee=annee) }}">Relancer</a></p>{% endif %}
+  <p class="aide">Fichier : <b>{{ apercu.nom }}</b> — à remettre à la DDEMP (clé USB, WhatsApp, e-mail) si l'envoi en ligne n'est pas possible.</p>
+</div>
+<div class="carte"><h2>Envoi en ligne</h2>
+  <p class="aide">La DDEMP vous communique l'adresse Internet de son application et le code d'accès de votre circonscription.</p>
+  {% if peut('jur_transmission') %}
+  <form method="post"><input type="hidden" name="action" value="reglages"><input type="hidden" name="annee" value="{{ annee }}">
+    <label>Adresse Internet de la DDEMP<br><input name="adresse" value="{{ r.get('adresse','') }}" placeholder="https://ddemp-plateau.exemple.bj" style="width:100%"></label>
+    <label>Code d'accès fourni par la DDEMP<br><input name="code_acces" type="password" autocomplete="off" placeholder="{{ 'enregistré — laisser vide pour le conserver' if r.get('code_acces') else 'ex. K7QF-2MXP-9RTA' }}" style="width:100%"></label>
+    {% if r.get('code_acces') %}<label><input type="checkbox" name="effacer_code" value="1"> Effacer le code enregistré</label>{% endif %}
+    <div class="actions"><button class="btn sec">Enregistrer les réglages</button></div>
+  </form>
+  <form method="post" style="margin-top:10px"><input type="hidden" name="action" value="envoyer"><input type="hidden" name="annee" value="{{ annee }}">
+    <button class="btn vert" {{ 'disabled' if not r.get('adresse') or not r.get('code_acces') }} data-confirmer="Envoyer maintenant les données {{ annee }} de la circonscription à la DDEMP ?">⇪ Envoyer à la DDEMP</button>
+    {% if not r.get('adresse') or not r.get('code_acces') %}<span class="aide">Renseignez d'abord l'adresse et le code d'accès.</span>{% endif %}
+  </form>
+  {% else %}<p class="gris">Votre rôle ne permet pas d'envoyer les données.</p>{% endif %}
+</div>
+</div>
+{% endif %}
+<div class="carte"><h2>Historique des envois</h2>
+{% if hist %}<div class="tw"><table class="t compact">
+  <tr><th>Date</th><th>Année</th><th>Mode</th><th class="num">Écoles</th><th class="num">Avec données</th><th class="num">Agents</th><th>Résultat</th><th>Par</th></tr>
+  {% for h in hist %}<tr><td>{{ (h.envoye_le or '')[:16] }}</td><td>{{ h.annee }}</td>
+    <td>{{ 'En ligne' if h.mode=='en_ligne' else 'Fichier' }}{% if h.destination %}<br><span class="aide">{{ h.destination }}</span>{% endif %}</td>
+    <td class="num">{{ h.nb_ecoles }}</td><td class="num">{{ h.nb_ecoles_donnees }}</td><td class="num">{{ h.nb_agents }}</td>
+    <td>{% if h.statut=='ok' %}<span class="badge ok">réussi</span>{% else %}<span class="badge ko">échec</span>{% endif %}<br><span class="aide">{{ h.message }}</span></td>
+    <td>{{ h.envoye_par }}</td></tr>{% endfor %}
+</table></div>{% else %}<p class="gris">Aucun envoi pour l'instant.</p>{% endif %}
+</div>
+{% endblock %}

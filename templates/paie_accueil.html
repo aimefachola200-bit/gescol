@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block titre %}Paie{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Paie du personnel</h1><p class="sous">Préparer → vérifier → valider (direction) → payer. Le paiement s'inscrit automatiquement en trésorerie.</p></div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('paie_mois', mois=courant) }}">Paie de {{ mois_long(courant) }}</a>
+    <a class="btn sec" href="{{ url_for('personnel') }}">Personnel</a>
+    {% if peut('parametres') %}<a class="btn sec" href="{{ url_for('paie_parametres') }}">Taux CNSS / ITS</a>{% endif %}
+  </div>
+</div>
+<form class="filtres" onsubmit="location.href='{{ url_for('paie_mois', mois='XXXX') }}'.replace('XXXX', this.m.value);return false">
+  <input type="month" name="m" value="{{ courant }}" style="width:auto"><button class="btn sec">Ouvrir ce mois</button></form>
+<div class="tw"><table class="t">
+  <tr><th>Mois</th><th class="num">Bulletins</th><th class="num">Brut</th><th class="num">Net versé</th><th class="num">CNSS (total)</th><th class="num">ITS</th><th class="num">VPS</th><th>État</th></tr>
+  {% for m in mois %}
+  <tr><td><a href="{{ url_for('paie_mois', mois=m.mois) }}"><b>{{ mois_long(m.mois)|capitalize }}</b></a></td><td class="num">{{ m.n }}</td>
+    <td class="num">{{ fcfa(m.brut) }}</td><td class="num">{{ fcfa(m.net) }}</td><td class="num">{{ fcfa(m.cnss) }}</td><td class="num">{{ fcfa(m.its) }}</td><td class="num">{{ fcfa(m.vps) }}</td>
+    <td>{% if m.statut_min=='paye' %}<span class="badge ok">payée</span>{% elif m.statut_max=='brouillon' %}<span class="badge att">en préparation</span>{% else %}<span class="badge">validée / partielle</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="8" class="gris">Aucune paie préparée.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

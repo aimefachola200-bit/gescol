@@ -1,0 +1,110 @@
+{% extends "base.html" %}{% block titre %}{{ e.nom }} {{ e.prenoms }}{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>{{ e.nom }} {{ e.prenoms }}</h1>
+    <p class="sous">{{ e.matricule }} · {{ cl.nom if cl else 'sans classe' }} · <span class="badge {{ 'ok' if e.statut=='inscrit' else 'att' }}">{{ e.statut }}</span></p></div>
+  <div class="actions">
+    {% if peut('eleves') %}<a class="btn sec" href="{{ url_for('eleve_form', eid=e.id) }}">Modifier</a>{% endif %}
+    {% if peut('paiements') and reste > 0 %}<a class="btn" href="{{ url_for('paiement_nouveau', eleve_id=e.id) }}">+ Paiement</a>{% endif %}
+  </div>
+</div>
+
+{% if request.args.recu %}
+<div class="flash info">Reçu prêt : <a href="{{ url_for('recu', pid=request.args.recu) }}" target="_blank"><b>ouvrir / imprimer le reçu</b></a></div>
+{% endif %}
+
+<div class="carte fiche">
+  {% if e.photo %}<img class="photo" src="{{ url_for('eleve_photo', eid=e.id) }}" alt="Photo">{% else %}<div class="photo"></div>{% endif %}
+  <dl class="info">
+    <dt>Sexe</dt><dd>{{ 'Masculin' if e.sexe=='M' else 'Féminin' }}</dd>
+    <dt>Naissance</dt><dd>{{ date_fr(e.date_naissance) }} à {{ e.lieu_naissance or '—' }}</dd>
+    <dt>Parent / tuteur</dt><dd>{{ e.parent_nom or '—' }} · {{ e.parent_telephone or '' }}{% if e.parent_whatsapp %} · WhatsApp {{ e.parent_whatsapp }}{% endif %}</dd>
+    <dt>Adresse</dt><dd>{{ e.adresse or '—' }}</dd>
+    <dt>Inscrit le</dt><dd>{{ date_fr(e.date_inscription) }} ({{ e.annee }})</dd>
+  </dl>
+</div>
+
+{% if peut('paiements') or peut('eleves') %}
+<h2>Scolarité {{ ANNEE }}</h2>
+<div class="grille">
+  <div class="kpi"><div class="l">Montant dû</div><div class="v">{{ fcfa(du) }}</div></div>
+  <div class="kpi"><div class="l">Payé</div><div class="v vert">{{ fcfa(paye) }}</div></div>
+  <div class="kpi"><div class="l">Reste à payer</div><div class="v {{ 'rouge' if reste else 'vert' }}">{{ fcfa(reste) if reste else 'Soldé' }}</div></div>
+</div>
+{% if paiements %}
+<div class="tw"><table class="t">
+  <tr><th>Reçu</th><th>Date</th><th>Mode</th><th>Référence</th><th class="num">Montant</th><th></th></tr>
+  {% for p in paiements %}
+  <tr><td><a href="{{ url_for('recu', pid=p.id) }}" target="_blank">{{ p.numero_recu }}</a>
+      {% if p.annule %}<span class="badge ko" title="{{ p.motif_annulation }}">annulé</span>{% endif %}</td>
+    <td>{{ date_fr(p.date_paiement) }}</td><td>{{ MODES_PAIEMENT.get(p.mode, p.mode) }}</td><td>{{ p.reference or '' }}</td>
+    <td class="num">{{ fcfa(p.montant) }}</td>
+    <td class="num">{% if not p.annule and g.user.role in ('admin','directeur') %}
+      <form method="post" action="{{ url_for('paiement_annuler', pid=p.id) }}" class="actions" style="justify-content:flex-end"
+            onsubmit="return this.motif.value.trim().length>0">
+        <input name="motif" placeholder="Motif d'annulation" style="width:170px"><button class="btn danger petit">Annuler</button></form>{% endif %}</td></tr>
+  {% endfor %}
+</table></div>
+{% endif %}
+{% endif %}
+
+{% if g.user.role != 'comptable' and cl %}
+<h2>Résultats scolaires</h2>
+<div class="tw"><table class="t">
+  <tr><th>Période</th><th class="num">Moyenne</th><th>Rang</th><th>Mention</th><th>Décision</th><th></th></tr>
+  {% for i, per, r in moyennes %}
+  <tr><td>{{ per }}</td><td class="num"><b>{{ '%.2f'|format(r.moyenne) if r.moyenne is not none else '—' }}</b></td><td>{{ r.rang_texte }}</td><td>{{ r.mention }}</td>
+    <td><span class="badge {{ 'ok' if r.admis else 'ko' }}">{{ r.decision }}</span></td>
+    <td class="num"><a class="btn sec petit" href="{{ url_for('bulletin_eleve', eid=e.id, p=i) }}" target="_blank">{{ 'Livret' if cl.cycle=='maternelle' else 'Bulletin' }} PDF</a></td></tr>
+  {% else %}<tr><td colspan="6" class="gris">Aucune note saisie pour cette année.</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+
+<h2>Parent et présence</h2>
+<div class="grille2">
+  <div class="carte">
+    {% set cp = compte_parent(e) %}
+    {% if cp %}
+      <b>Espace parents :</b> <span class="badge ok">accès créé</span><br>
+      <span class="gris">Identifiant {{ affiche_tel(cp.telephone) }} · {{ 'jamais connecté' if not cp.dernier_acces else 'dernière connexion le ' ~ date_fr(cp.dernier_acces) }}</span>
+    {% else %}
+      <b>Espace parents :</b> <span class="badge att">pas encore d'accès</span>
+    {% endif %}
+    <div class="actions" style="margin-top:10px">
+      {% if peut('parents') %}
+      <form method="post" action="{{ url_for('acces_parent', eid=e.id) }}">
+        {% if cp %}<button class="btn sec petit" name="reinitialiser" value="1">Nouveau mot de passe parent</button>
+        {% else %}<button class="btn petit" {{ 'disabled title="Ajoutez d\'abord le téléphone du parent"' if not e.parent_telephone }}>Créer l'accès parent</button>{% endif %}
+      </form>{% endif %}
+      {% set tel = e.parent_whatsapp or e.parent_telephone %}
+      {% if tel and lien_wa(tel, 'x') %}<a class="btn wa petit" target="_blank" rel="noopener" href="{{ lien_wa(tel, 'Bonjour ' ~ (e.parent_nom or '') ~ ', ') }}">WhatsApp au parent</a>{% endif %}
+    </div>
+  </div>
+  <div class="carte">
+    <b>Absences depuis la rentrée :</b> {{ absences.absent }} (dont {{ absences.justifie }} justifiée(s)) · <b>retards :</b> {{ absences.retard }}
+    {% if peut('appel') %}<div class="actions" style="margin-top:10px"><a class="btn sec petit" href="{{ url_for('absences_eleve_page', eid=e.id) }}">Détail et justifications</a></div>{% endif %}
+  </div>
+</div>
+
+{% if peut('documents') %}
+<h2>Documents officiels</h2>
+<div class="carte">
+  <div class="actions">
+    <a class="btn sec" target="_blank" href="{{ url_for('document', eid=e.id, type_doc='carte') }}">Carte d'élève</a>
+    <a class="btn sec" target="_blank" href="{{ url_for('document', eid=e.id, type_doc='certificat_frequentation') }}">Certificat de fréquentation</a>
+    <a class="btn sec" target="_blank" href="{{ url_for('document', eid=e.id, type_doc='attestation_inscription') }}">Attestation d'inscription</a>
+    {% if cl and cl.niveau == 'CM2' %}<a class="btn sec" target="_blank" href="{{ url_for('document', eid=e.id, type_doc='fiche_cep') }}">Fiche CEP</a>{% endif %}
+  </div>
+  <form class="filtres" style="margin:14px 0 0" target="_blank" action="{{ url_for('document', eid=e.id, type_doc='certificat_transfert') }}">
+    <input name="destination" placeholder="Établissement d'accueil (facultatif)" style="min-width:280px">
+    <button class="btn sec">Certificat de transfert</button>
+  </form>
+  {% if docs %}
+  <p class="aide" style="margin-top:14px">Documents délivrés (vérifiables par QR code) :</p>
+  <table class="t">{% for d in docs %}
+    <tr><td>{{ TYPES_DOCS.get(d.type, d.type) }}</td><td>{{ d.libelle }}</td><td>{{ d.cree_le[:16] }}</td>
+      <td><a href="{{ url_for('verifier', code=d.code) }}">{{ d.code }}</a></td></tr>{% endfor %}</table>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

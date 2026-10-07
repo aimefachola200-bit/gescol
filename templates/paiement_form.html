@@ -1,0 +1,44 @@
+{% extends "base.html" %}{% block titre %}Nouveau paiement{% endblock %}
+{% block contenu %}
+<h1>Enregistrer un paiement</h1>
+{% if not e %}
+<p class="sous">Recherchez l'élève.</p>
+<form class="filtres"><input name="q" value="{{ rech }}" placeholder="Nom, prénom ou matricule" autofocus style="min-width:300px"><button class="btn">Rechercher</button></form>
+{% if rech %}
+<div class="tw"><table class="t">
+  {% for t in trouves %}
+  <tr><td>{{ t.matricule }}</td><td><b>{{ t.nom }}</b> {{ t.prenoms }}</td><td>{{ t.classe_nom or '' }}</td>
+    <td class="num"><a class="btn petit" href="{{ url_for('paiement_nouveau', eleve_id=t.id) }}">Choisir</a></td></tr>
+  {% else %}<tr><td class="gris">Aucun élève trouvé.</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+{% else %}
+<p class="sous">{{ e.nom }} {{ e.prenoms }} · {{ e.matricule }} · {{ cl.nom if cl else '' }}</p>
+<div class="grille">
+  <div class="kpi"><div class="l">Scolarité</div><div class="v">{{ fcfa(situ[0]) }}</div></div>
+  <div class="kpi"><div class="l">Déjà payé</div><div class="v vert">{{ fcfa(situ[1]) }}</div></div>
+  <div class="kpi"><div class="l">Reste à payer</div><div class="v rouge">{{ fcfa(situ[2]) }}</div></div>
+</div>
+{% if situ[2] <= 0 %}
+<div class="carte">La scolarité de cet élève est soldée. {% if situ[0] == 0 %}(Aucun montant de scolarité n'est défini pour sa classe : renseignez-le dans Classes.){% endif %}</div>
+{% else %}
+<div class="carte" style="max-width:620px">
+<form method="post" class="f">
+  <input type="hidden" name="eleve_id" value="{{ e.id }}">
+  <div class="ligne">
+    <div><label>Montant ({{ 'FCFA' }}) *</label><input name="montant" inputmode="numeric" required value="{{ request.form.montant or '' }}" placeholder="max {{ situ[2] }}"></div>
+    <div><label>Mode de paiement *</label><select name="mode" id="mode" required>
+      {% for k,v in MODES_PAIEMENT.items() if k not in ('fedapay','kkiapay') %}<option value="{{ k }}" {{ 'selected' if request.form.mode==k }}>{{ v }}</option>{% endfor %}</select></div>
+  </div>
+  <div class="ligne" id="momo">
+    <div><label>Référence de la transaction</label><input name="reference" value="{{ request.form.reference or '' }}" placeholder="ID du SMS de confirmation"></div>
+    <div><label>Téléphone du payeur</label><input name="telephone" value="{{ request.form.telephone or e.parent_telephone or '' }}"></div>
+  </div>
+  <label>Motif</label><input name="motif" value="{{ request.form.motif or 'Frais de scolarité' }}">
+  <p class="aide">Pour Mobile Money, vérifiez la réception sur le téléphone de l'école avant de valider, puis recopiez la référence de la transaction.</p>
+  <div class="actions"><button class="btn">Valider et générer le reçu</button><a class="btn sec" href="{{ url_for('eleve_detail', eid=e.id) }}">Annuler</a></div>
+</form>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

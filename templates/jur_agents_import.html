@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block titre %}Importer des agents{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Importer des agents (Excel)</h1></div><a class="btn sec" href="{{ url_for('jur_agents') }}">← Agents</a></div>
+<div class="carte">
+  <p>1. Téléchargez le <a href="{{ url_for('jur_agents_import', modele=1) }}">modèle Excel</a> (ou l'export de la liste des agents) et remplissez une ligne par agent.</p>
+  <p>2. Un agent déjà enregistré (même NIP, sinon mêmes nom et prénoms) est mis à jour ; les autres sont ajoutés. Les lignes invalides sont refusées avec un message.</p>
+  <form method="post" enctype="multipart/form-data">
+    <label for="fic">Fichier (.xlsx)</label><input id="fic" type="file" name="fichier" accept=".xlsx,.csv" required>
+    <p class="actions"><button class="btn">Importer</button></p>
+  </form>
+</div>
+<div class="carte"><h2>Colonnes reconnues</h2>
+  <p class="aide">{% for k, lib, t in champs %}{{ lib }}{{ ' · ' if not loop.last }}{% endfor %}</p>
+  <p class="aide">Codes des services : {% for c, n in services %}<b>{{ c }}</b> = {{ n }}{{ ' ; ' if not loop.last }}{% endfor %}. Dates : jj/mm/aaaa ; date de naissance : l'année seule est acceptée ; notes sur 20 ; NIP : 12 chiffres au maximum.</p>
+</div>
+{% endblock %}

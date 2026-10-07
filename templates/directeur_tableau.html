@@ -1,0 +1,84 @@
+{% extends "base.html" %}{% block titre %}Tableau de bord du directeur{% endblock %}
+{% block contenu %}
+<style>
+.dt-t td,.dt-t th{white-space:nowrap;font-size:13px}
+.dt-t td.long{white-space:normal;min-width:180px}
+.dt-t tr.alerte td{background:#FEF6EE}
+.dt-t th.sticky,.dt-t td.sticky{box-shadow:1px 0 0 var(--bord)}
+.dt-t th.sticky{background:inherit}
+.dt-grp th{background:#E4ECF5;color:var(--bleu);text-align:center}
+.dt-deux{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start}
+</style>
+<div class="entete">
+  <div><h1>Tableau de bord du directeur</h1>
+    <p class="sous">Tableau synoptique · {{ ECOLE.nom }} · année {{ ANNEE }} · situation au {{ aujourdhui.strftime('%d/%m/%Y') }}</p></div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('directeur_tableau_pdf') }}" target="_blank">PDF (paysage)</a>
+    <a class="btn sec" href="{{ url_for('directeur_tableau_xlsx') }}">Excel</a>
+    {% if peut('carriere') %}<a class="btn sec" href="{{ url_for('carriere_accueil') }}">Gestion de carrière</a>{% endif %}
+  </div>
+</div>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Élèves inscrits</div><div class="v">{{ d.tot.t }}</div><div class="d">{{ d.tot.f }} filles · {{ d.tot.m }} garçons · {{ d.classes|length }} classe(s)</div></div>
+  <div class="kpi"><div class="l">Personnel</div><div class="v">{{ d.personnel|length }}</div><div class="d">{{ d.personnel|selectattr('incomplet')|list|length }} dossier(s) incomplet(s)</div></div>
+  <div class="kpi"><div class="l">Retraite ≤ 2 ans</div><div class="v {{ 'rouge' if retraites }}">{{ retraites }}</div><div class="d">{{ d.personnel|selectattr('aptitude_manquante')|list|length }} sans visite d'aptitude</div></div>
+  {% if d.cantine %}<div class="kpi"><div class="l">Fonds de cantine (année)</div><div class="v">{{ fcfa(d.cantine.annee) }}</div><div class="d">ce mois {{ fcfa(d.cantine.mois) }} · aujourd'hui {{ fcfa(d.cantine.jour) }}</div></div>{% endif %}
+</div>
+
+<div class="dt-deux">
+<section aria-labelledby="dt-eff">
+  <h2 id="dt-eff">1. Effectifs des élèves par classe et par sexe</h2>
+  {% if d.classes %}
+  <div class="tw"><table class="t dt-t">
+    <tr><th>Classe</th><th>Cours</th><th>Titulaire</th><th class="num">Garçons</th><th class="num">Filles</th><th class="num">Total</th><th class="num">dont redoublants</th>{% if d.cantine %}<th class="num">Cantine (année)</th>{% endif %}</tr>
+    {% for l in d.classes %}
+    <tr><td><b>{{ l.c.nom }}</b></td><td>{{ l.c.niveau }}</td><td>{{ l.c.titulaire_nom or '—' }}</td><td class="num">{{ l.m }}</td><td class="num">{{ l.f }}</td><td class="num"><b>{{ l.t }}</b></td><td class="num">{{ l.red }}</td>{% if d.cantine %}<td class="num">{{ fcfa(l.cantine) }}</td>{% endif %}</tr>
+    {% endfor %}
+    <tr style="font-weight:700;background:#F5F9FD"><td>TOTAL</td><td></td><td></td><td class="num">{{ d.tot.m }}</td><td class="num">{{ d.tot.f }}</td><td class="num">{{ d.tot.t }}</td><td class="num">{{ d.tot.red }}</td>{% if d.cantine %}<td class="num">{{ fcfa(d.tot.cantine) }}</td>{% endif %}</tr>
+  </table></div>
+  {% else %}<div class="carte gris">Aucune classe n'est créée dans cette école.</div>{% endif %}
+</section>
+<section aria-labelledby="dt-fonds">
+  <h2 id="dt-fonds">2. Synthèse des fonds</h2>
+  {% if d.cantine or pub %}
+  <div class="tw"><table class="t dt-t">
+    <tr><th>Rubrique</th><th class="num">Montant</th><th>Détail</th></tr>
+    {% if d.cantine %}
+    <tr><td>Cantine – année scolaire</td><td class="num"><b>{{ fcfa(d.cantine.annee) }}</b></td><td>{{ d.cantine.annee_n }} paiement(s) · {{ d.cantine.annee_el }} élève(s)</td></tr>
+    <tr><td>Cantine – mois en cours</td><td class="num">{{ fcfa(d.cantine.mois) }}</td><td>{{ d.cantine.mois_n }} paiement(s)</td></tr>
+    <tr><td>Cantine – aujourd'hui</td><td class="num">{{ fcfa(d.cantine.jour) }}</td><td>{{ d.cantine.jour_n }} paiement(s)</td></tr>
+    {% endif %}
+    {% for lib, v in pub %}<tr><td>{{ lib }}</td><td class="num {{ 'rouge' if v < 0 }}">{{ fcfa(v) }}</td><td>finances de l'école</td></tr>{% endfor %}
+  </table></div>
+  <p class="aide">Cantine : paiements enregistrés du {{ date_fr(d.bornes[0]) }} au {{ date_fr(d.bornes[1]) }}.{% if not pub %} Les subventions, dépenses et le solde apparaîtront ici dès que le module des finances de l'école publique sera en service.{% endif %}</p>
+  {% else %}<div class="carte gris">Aucune donnée de cantine ou de finances disponible.</div>{% endif %}
+</section>
+</div>
+
+<h2>3. Personnel et carrière <span class="aide">(anciennetés au {{ reference.strftime('%d/%m/%Y') }} — faites défiler le tableau horizontalement)</span></h2>
+{% if d.personnel %}
+<div class="tw"><table class="t dt-t">
+  <tr class="dt-grp"><th class="sticky" rowspan="2">Nom et prénoms</th><th colspan="5">Identification</th><th colspan="3">Grade et indices</th><th colspan="4">Prises de service</th><th colspan="4">Anciennetés au {{ reference.strftime('%d/%m/%Y') }}</th><th colspan="2">Retraite</th><th colspan="3">Diplômes</th><th colspan="7">Suivi et évaluation</th></tr>
+  <tr><th>Sexe</th><th>NIP</th><th>Catégorie</th><th>Fonction</th><th>Naissance</th><th>Grade</th><th class="num">Indice payé</th><th class="num">Indice réel</th>
+    <th>1re prise</th><th>Département</th><th>Commune</th><th>École</th><th>Générale</th><th>Département</th><th>Commune</th><th>École</th>
+    <th>Date probable</th><th>Reste</th><th>Académique</th><th>CEAP</th><th>CAP</th><th>Aptitude</th><th>Dép. à servir</th><th class="num">Visites CP</th><th class="num">Visites CCS</th><th class="num">UP %</th><th>Gestion collégiale</th><th class="num">Note</th></tr>
+  {% for f in d.personnel %}
+  <tr class="{{ 'alerte' if f.alerte_retraite }}">
+    <td class="sticky"><a href="{{ url_for('carriere_fiche', pid=f.id) }}"><b>{{ f.nom }}</b> {{ f.prenoms }}</a></td>
+    <td>{{ f.sexe or '' }}</td><td>{{ f.nip or '—' }}</td><td>{{ f.categorie_lib or '—' }}</td><td>{{ f.fonction }}</td><td>{{ f.naissance_txt or '—' }}</td>
+    <td>{{ f.grade or '—' }}</td><td class="num">{{ f.indice_paye if f.indice_paye is not none else '' }}</td><td class="num">{{ f.indice_reel if f.indice_reel is not none else '' }}</td>
+    <td>{{ car_fmt_date(f.date_prise_service) }}</td><td>{{ car_fmt_date(f.date_service_dep) }}</td><td>{{ car_fmt_date(f.date_service_commune) }}</td><td>{{ car_fmt_date(f.date_service_ecole) }}</td>
+    <td>{{ f.anc_txt.generale }}</td><td>{{ f.anc_txt.departement }}</td><td>{{ f.anc_txt.commune }}</td><td>{{ f.anc_txt.ecole }}</td>
+    <td>{{ f.retraite_txt or '—' }}</td><td>{% if f.alerte_retraite %}<span class="badge ko">{{ f.restant_txt }}</span>{% else %}{{ f.restant_txt }}{% endif %}</td>
+    <td>{{ f.diplome_academique or '' }}{% if f.diplome_academique_annee %} ({{ f.diplome_academique_annee }}){% endif %}</td>
+    <td>{{ car_diplome_pro(f, 'ceap') }}</td><td>{{ car_diplome_pro(f, 'cap') }}</td>
+    <td>{{ f.visite_aptitude or '—' }}{% if f.visite_aptitude_note is not none %} ({{ car_fmt_nombre(f.visite_aptitude_note) }}){% endif %}</td>
+    <td>{{ f.departement_servir or '' }}</td><td class="num">{{ f.visites_cp if f.visites_cp is not none else '' }}</td><td class="num">{{ f.visites_ccs if f.visites_ccs is not none else '' }}</td>
+    <td class="num">{{ car_fmt_nombre(f.participation_up) }}</td><td class="long">{{ f.gestion_collegiale or '' }}</td><td class="num">{{ car_fmt_nombre(f.note_evaluation) }}</td></tr>
+  {% endfor %}
+</table></div>
+<p class="aide">Lignes orangées : départ à la retraite dans 2 ans ou moins. Retraite = date de naissance + 60 ans (grade A), 58 ans (B), 55 ans (C).</p>
+{% else %}
+<div class="carte gris">Aucun agent enregistré pour cette école.{% if peut('carriere') %} <a href="{{ url_for('personnel_form') }}">Ajouter un agent</a>.{% endif %}</div>
+{% endif %}
+{% endblock %}

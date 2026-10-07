@@ -1,0 +1,43 @@
+{% extends "base.html" %}{% block titre %}Enregistrer une dépense{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Enregistrer une dépense</h1>
+  <p class="sous">Saisissez chaque dépense à sa date (achats de vivres, condiments, bois, motivation des cuisinières…). Les dépenses du jour s'affichent en dessous.</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('depenses_accueil') }}">Journal des dépenses</a></div>
+</div>
+
+<form method="post" class="f carte" enctype="multipart/form-data">
+  <div class="ligne">
+    <div><label for="d-date">Date *</label><input id="d-date" type="date" name="date" value="{{ v.get('date', '') }}" max="{{ aujourdhui }}" required></div>
+    <div><label for="d-cat">Catégorie *</label><select id="d-cat" name="categorie" required>
+      <option value="">— choisir —</option>
+      {% for c in categories %}<option {{ 'selected' if c == v.get('categorie') }}>{{ c }}</option>{% endfor %}</select></div>
+    <div><label for="d-mt">Montant (FCFA) *</label><input id="d-mt" name="montant" inputmode="numeric" value="{{ v.get('montant', '') }}" placeholder="ex. 15 000" required></div>
+    <div><label for="d-mode">Mode de paiement</label><select id="d-mode" name="mode">{% for k, lib in modes.items() %}<option value="{{ k }}" {{ 'selected' if k == v.get('mode') }}>{{ lib }}</option>{% endfor %}</select></div>
+  </div>
+  <label for="d-lib">Libellé *</label>
+  <input id="d-lib" name="libelle" maxlength="200" required value="{{ v.get('libelle', '') }}" placeholder="ex. Achat de 2 sacs de maïs pour la cantine">
+  <div class="ligne">
+    <div><label for="d-ben">Fournisseur / bénéficiaire</label><input id="d-ben" name="beneficiaire" maxlength="120" value="{{ v.get('beneficiaire', '') }}" placeholder="ex. Marché de Dantokpa, Mme HOUNSOU (cuisinière)"></div>
+    <div><label for="d-ref">Référence (facture, reçu…)</label><input id="d-ref" name="reference" maxlength="100" value="{{ v.get('reference', '') }}"></div>
+    <div><label for="d-piece">Pièce justificative (photo ou PDF, facultatif)</label><input id="d-piece" type="file" name="piece" accept="image/jpeg,image/png,image/webp,application/pdf"></div>
+  </div>
+  <p class="actions" style="margin-top:14px">
+    <button class="btn orange" name="suite" value="nouvelle">Enregistrer et saisir une autre dépense</button>
+    <button class="btn sec" name="suite" value="journal">Enregistrer et voir le journal du jour</button>
+  </p>
+  <p class="aide">* champs obligatoires. La date ne peut pas être dans le futur. Pièce : JPG, PNG, WEBP ou PDF, 8 Mo au maximum.</p>
+</form>
+
+<h2>Dépenses du {{ du_jour.date.strftime('%d/%m/%Y') }}</h2>
+{% if du_jour.lignes %}
+<div class="tw"><table class="t">
+  <thead><tr><th>Catégorie</th><th>Libellé</th><th>Fournisseur / bénéficiaire</th><th>Pièce</th><th class="num">Montant (FCFA)</th></tr></thead>
+  <tbody>{% for l in du_jour.lignes %}
+  <tr {% if l.annule %}style="color:#98A2B3;text-decoration:line-through"{% endif %}><td>{{ l.categorie }}</td><td>{{ l.libelle }}</td><td>{{ l.beneficiaire or '' }}</td>
+    <td>{% if l.piece %}<a href="{{ url_for('depense_piece', did=l.id) }}" target="_blank">📎 Voir</a>{% endif %}</td><td class="num">{{ milliers(l.montant) }}</td></tr>
+  {% endfor %}</tbody>
+  <tfoot><tr><th colspan="4" style="text-align:left">Total du jour (hors annulées)</th><th class="num">{{ milliers(du_jour.total) }}</th></tr></tfoot>
+</table></div>
+{% else %}<div class="carte gris">Aucune dépense enregistrée à cette date.</div>{% endif %}
+{% endblock %}

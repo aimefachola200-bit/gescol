@@ -1,0 +1,40 @@
+{% extends "espace_eleve_base.html" %}{% block titre %}Ma carte{% endblock %}
+{% block style %}
+.ee-carte{max-width:520px;border:1px solid var(--bord);border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.ee-carte .h{background:#1F4E79;color:#fff;padding:10px 14px}
+.ee-carte .h b{display:block}.ee-carte .h span{font-size:12px;opacity:.85}
+.ee-carte .c{display:flex;gap:14px;padding:14px}
+.ee-carte dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0;font-size:14px}
+.ee-carte dt{color:var(--gris)}.ee-carte dd{margin:0;font-weight:600}
+{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Ma carte scolaire</h1><p class="sous">Informations enregistrées par l'école pour {{ ANNEE }}.</p></div>
+  {% if cl %}<div class="actions"><a class="btn" href="{{ url_for('eleve_carte_pdf') }}" target="_blank">Carte d'élève (PDF)</a></div>{% endif %}
+</div>
+<div class="ee-carte">
+  <div class="h"><b>{{ ECOLE.nom }}</b><span>CARTE D'ÉLÈVE – {{ ANNEE }}</span></div>
+  <div class="c">
+    {% if a_photo %}<img class="ee-photo" src="{{ url_for('eleve_ma_photo') }}" alt="Ma photo">
+    {% else %}<div class="ee-photo vide">Pas de<br>photo</div>{% endif %}
+    <dl>
+      <dt>Nom</dt><dd>{{ e.nom }}</dd>
+      <dt>Prénoms</dt><dd>{{ e.prenoms }}</dd>
+      <dt>Sexe</dt><dd>{{ 'Féminin' if e.sexe=='F' else 'Masculin' if e.sexe=='M' else '—' }}</dd>
+      <dt>Né(e) le</dt><dd>{{ date_fr(e.date_naissance) if e.date_naissance else '—' }}{% if e.lieu_naissance %} à {{ e.lieu_naissance }}{% endif %}</dd>
+      <dt>Classe</dt><dd>{{ cl.nom if cl else '—' }}</dd>
+      <dt>Matricule</dt><dd>{{ e.matricule or '—' }}</dd>
+    </dl>
+  </div>
+</div>
+<h2>Informations d'examen</h2>
+<div class="tw"><table class="t" style="max-width:640px">
+  <tr><th>Matricule EducMaster</th><td>{{ e.matricule_educmaster or '—' }}</td></tr>
+  <tr><th>NIP</th><td>{{ e.nip or '—' }}</td></tr>
+  <tr><th>N° de table</th><td>{{ e.numero_table or '—' }}</td></tr>
+  <tr><th>Centre d'examen</th><td>{{ e.centre_examen or '—' }}</td></tr>
+  <tr><th>Années de scolarité</th><td>{{ e.annees_scolarite if e.annees_scolarite is not none else '—' }}</td></tr>
+  <tr><th>Parent / tuteur</th><td>{{ e.parent_nom or '—' }}{% if e.parent_telephone %} · {{ e.parent_telephone }}{% endif %}</td></tr>
+</table></div>
+<p class="aide">Une information est inexacte ? Signale-le au secrétariat de l'école qui corrigera ta fiche.</p>
+{% endblock %}

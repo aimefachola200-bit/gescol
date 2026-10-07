@@ -1,0 +1,67 @@
+{% extends "base.html" %}{% block titre %}Recevoir les transmissions{% endblock %}
+{% block contenu %}
+<style>
+.jt-res td{vertical-align:top}
+.jt-res ul{margin:2px 0 0 16px;padding:0}
+.zone-depot input[type=file]{max-width:100%}
+</style>
+<div class="entete"><div><h1>Recevoir les transmissions</h1>
+  <p class="sous">{{ 'Fichiers .gescol envoyés par les écoles de la circonscription' if JUR_NIVEAU=='cs' else 'Fichiers .gescol envoyés par les circonscriptions du département' }}</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_transmission_suivi') }}">Suivi des envois</a></div></div>
+
+{% if peut('jur_transmission') %}
+<div class="carte"><h2>Importer des fichiers de transmission</h2>
+  <form method="post" enctype="multipart/form-data">
+    <label class="zone-depot">Choisissez un ou plusieurs fichiers « .gescol » (15 Mo au maximum chacun, 16 Mo en tout par envoi)<br>
+      <input type="file" name="fichiers" accept=".gescol,.json,application/gzip" multiple required></label>
+    <div class="actions"><button class="btn">⇪ Importer</button></div>
+  </form>
+  <p class="aide">Les écoles peuvent aussi envoyer leurs données en ligne : donnez-leur l'adresse de cette application et leur
+    code d'accès (page <a href="{{ url_for('jur_transmission_suivi') }}">Suivi des envois</a>). Un fichier déjà importé peut être réimporté : les données sont simplement mises à jour.</p>
+</div>
+{% endif %}
+
+{% if resultats %}
+<div class="carte"><h2>Résultat de l'import</h2><div class="tw"><table class="t compact jt-res">
+  <tr><th>Fichier</th><th>Émetteur</th><th>Résultat</th></tr>
+  {% for r in resultats %}<tr><td>{{ r.nom }}</td><td>{{ r.emetteur or '' }}{% if r.annee %}<br><span class="aide">{{ r.annee }} · {{ r.nb_ecoles }} école(s)</span>{% endif %}</td>
+  <td>{% if r.ok %}<span class="badge ok">importé</span>
+      {{ r.resume.ecoles_creees }} école(s) créée(s), {{ r.resume.ecoles_maj }} mise(s) à jour, {{ r.resume.sections }} rubrique(s){% if r.resume.cs %} · CS {{ r.resume.cs }}{% endif %}
+      {% if r.rubriques %}<br><span class="aide">Rubriques : {% for k in r.rubriques %}{{ noms[k] }}{{ ', ' if not loop.last }}{% endfor %}</span>{% endif %}
+      {% if r.resume.ignorees %}<br><b>Écoles ignorées (hors périmètre) :</b><ul>{% for m in r.resume.ignorees %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+    {% else %}<span class="badge ko">refusé</span> {{ r.erreur }}{% endif %}</td></tr>{% endfor %}
+</table></div></div>
+{% endif %}
+
+<div class="carte"><h2>Paquets reçus</h2>
+<form method="get" class="filtres">
+  <label>Année<br><select name="annee" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for a in annees %}<option {{ 'selected' if f.get('annee')==a }}>{{ a }}</option>{% endfor %}</select></label>
+  <label>Mode<br><select name="mode" onchange="this.form.submit()"><option value="">Tous</option>
+    <option value="fichier" {{ 'selected' if f.get('mode')=='fichier' }}>Fichier</option>
+    <option value="en_ligne" {{ 'selected' if f.get('mode')=='en_ligne' }}>En ligne</option></select></label>
+  {% if JUR_NIVEAU=='ddemp' %}
+  <label>Émetteur<br><select name="type" onchange="this.form.submit()"><option value="">Tous</option>
+    <option value="cs" {{ 'selected' if f.get('type')=='cs' }}>Circonscriptions</option>
+    <option value="ecole" {{ 'selected' if f.get('type')=='ecole' }}>Écoles</option></select></label>
+  <label>Circonscription<br><select name="cs" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if f.get('cs')==c.id|string }}>{{ c.nom }}</option>{% endfor %}</select></label>
+  {% endif %}
+  <label>Recherche<br><input name="q" value="{{ f.get('q','') }}" placeholder="Nom ou code de l'émetteur"></label>
+  <button class="btn sec petit">Filtrer</button>
+</form>
+<div class="tw"><table class="t compact">
+  <tr><th>Reçu le</th><th>Émetteur</th>{% if JUR_NIVEAU=='ddemp' %}<th>CS</th>{% endif %}<th>Année</th><th>Mode</th><th>Contenu</th><th>Reçu par</th><th></th></tr>
+  {% for p in paquets %}<tr>
+    <td>{{ (p.recu_le or '')[:16] }}</td>
+    <td>{{ p.emetteur_nom or '' }}<br><span class="aide">{{ 'École' if p.emetteur_type=='ecole' else 'Circonscription' }} · {{ p.emetteur_code or '' }}</span></td>
+    {% if JUR_NIVEAU=='ddemp' %}<td>{{ p.cs_nom or '' }}</td>{% endif %}
+    <td>{{ p.annee }}</td><td>{{ 'En ligne' if p.mode=='en_ligne' else ('Fichier' if p.mode=='fichier' else p.mode) }}</td>
+    <td>{{ (p.res.ecoles_creees or 0) + (p.res.ecoles_maj or 0) }} école(s) · {{ p.res.sections or 0 }} rubrique(s){% if p.res.ignorees %}<br><span class="aide">{{ p.res.ignorees|length }} ignorée(s)</span>{% endif %}</td>
+    <td class="aide">{{ p.recu_par or '' }}</td>
+    <td><a class="btn sec petit" href="{{ url_for('jur_transmission_detail', pid=p.id) }}">Détail</a></td></tr>
+  {% else %}<tr><td colspan="8" class="gris">Aucun paquet reçu{{ ' avec ces critères' if f }}. Importez les fichiers des {{ 'écoles' if JUR_NIVEAU=='cs' else 'circonscriptions' }} ou activez l'envoi en ligne.</td></tr>{% endfor %}
+</table></div>
+{% if paquets|length >= 300 %}<p class="aide">Seuls les 300 derniers paquets sont affichés : affinez avec les filtres.</p>{% endif %}
+</div>
+{% endblock %}

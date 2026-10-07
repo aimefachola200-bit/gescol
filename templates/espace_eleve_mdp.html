@@ -1,0 +1,18 @@
+{% extends "espace_eleve_base.html" %}{% block titre %}Mot de passe{% endblock %}
+{% block contenu %}
+{% set moi = g.eleve_session %}
+<div class="login carte">
+  <h1>Ton mot de passe</h1>
+  <p class="sous">{% if moi.doit_changer %}Bienvenue {{ moi.prenoms }} ! Choisis un mot de passe personnel pour remplacer le code provisoire reçu de l'école.{% else %}Modifier ton mot de passe.{% endif %}</p>
+  <form method="post" class="f">
+    <label for="m1">Mot de passe actuel{{ ' (code provisoire reçu)' if moi.doit_changer }}</label>
+    <input id="m1" type="password" name="ancien" required autocomplete="current-password">
+    <label for="m2">Nouveau mot de passe (6 caractères minimum)</label>
+    <input id="m2" type="password" name="nouveau" required minlength="6" autocomplete="new-password">
+    <label for="m3">Confirmation du nouveau mot de passe</label>
+    <input id="m3" type="password" name="confirmation" required minlength="6" autocomplete="new-password">
+    <p><button class="btn" style="width:100%">Enregistrer</button></p>
+  </form>
+  <p class="aide">Garde ton mot de passe secret. En cas d'oubli, l'école peut te remettre un nouveau code provisoire.</p>
+</div>
+{% endblock %}

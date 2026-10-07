@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block titre %}Mon compte{% endblock %}
+{% block contenu %}
+<h1>Mon compte</h1>
+<p class="sous">{{ g.user.nom }} – identifiant « {{ g.user.identifiant }} » – {{ ROLES[g.user.role] }}</p>
+<div class="carte" style="max-width:460px">
+  <h2 style="margin-top:0">Changer le mot de passe</h2>
+  <form method="post" class="f">
+    <label>Mot de passe actuel</label><input type="password" name="ancien" required>
+    <label>Nouveau mot de passe (8 caractères minimum)</label><input type="password" name="nouveau" required minlength="8">
+    <label>Confirmation</label><input type="password" name="confirmation" required minlength="8">
+    <p><button class="btn">Enregistrer</button></p>
+  </form>
+</div>
+<p class="aide" id="android-serveur" hidden>Application Android connectée à <b id="android-adr"></b> · <a href="#" onclick="window.GescolAndroid.changerServeur();return false">Changer de serveur</a></p>
+<script>if(window.GescolAndroid){document.getElementById('android-serveur').hidden=false;document.getElementById('android-adr').textContent=window.GescolAndroid.serveur();}</script>
+{% endblock %}

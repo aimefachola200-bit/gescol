@@ -1,0 +1,25 @@
+# Déploiement GESCOL sur Render (https://render.com) : « New + → Blueprint » puis choisir ce dépôt GitHub.
+# Le disque persistant /data garde la base, les photos et les sauvegardes (obligatoire : sans disque,
+# les données seraient effacées à chaque redémarrage). Offre « Starter » ou supérieure nécessaire pour le disque.
+services:
+  - type: web
+    name: gescol
+    runtime: python
+    plan: starter
+    region: frankfurt
+    buildCommand: pip install -r requirements.txt
+    startCommand: waitress-serve --listen=0.0.0.0:$PORT --threads=8 wsgi:application
+    healthCheckPath: /sante
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: GESCOL_EN_LIGNE
+        value: "1"
+      - key: GESCOL_DATA
+        value: /data
+      - key: GESCOL_ADMIN_MDP
+        generateValue: true
+    disk:
+      name: donnees-gescol
+      mountPath: /data
+      sizeGB: 1

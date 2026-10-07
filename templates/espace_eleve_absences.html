@@ -1,0 +1,30 @@
+{% extends "espace_eleve_base.html" %}{% block titre %}Absences{% endblock %}
+{% block contenu %}
+<h1>Absences et retards</h1>
+<p class="sous">{{ e.prenoms }} {{ e.nom }} · depuis la rentrée {{ ANNEE }}</p>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Absences</div><div class="v {{ 'rouge' if stats.absent }}">{{ stats.absent }}</div><div class="d">dont {{ stats.justifie }} justifiée(s)</div></div>
+  <div class="kpi"><div class="l">Retards</div><div class="v">{{ stats.retard }}</div><div class="d">appel journalier</div></div>
+  <div class="kpi"><div class="l">Demi-journées d'absence</div><div class="v {{ 'rouge' if reg }}">{{ reg|sum(attribute='n') }}</div><div class="d">registre de présence</div></div>
+</div>
+
+<h2>Appel journalier</h2>
+{% if pres %}
+<div class="tw"><table class="t">
+  <tr><th>Date</th><th>Type</th><th>Motif</th><th>Justifiée</th></tr>
+  {% for a in pres %}<tr><td>{{ date_fr(a.date) }}</td><td>{{ 'Absence' if a.statut=='absent' else 'Retard' }}</td><td>{{ a.motif or '' }}</td>
+    <td>{% if a.justifie %}<span class="badge ok">oui</span>{% else %}<span class="badge att">non</span>{% endif %}</td></tr>{% endfor %}
+</table></div>
+{% else %}<div class="carte gris">Aucune absence ni aucun retard enregistré à l'appel journalier.</div>{% endif %}
+
+<h2>Registre de présence (demi-journées)</h2>
+{% if reg %}
+<div class="tw"><table class="t">
+  <tr><th>Date</th><th>Absent(e)</th></tr>
+  {% for r in reg %}{% set d = (r.demis or '').split(',') %}
+  <tr><td>{{ date_fr(r.date) }}</td>
+    <td>{% if '1' in d and '2' in d %}toute la journée{% elif '1' in d %}le matin{% else %}l'après-midi{% endif %}</td></tr>{% endfor %}
+</table></div>
+{% else %}<div class="carte gris">Aucune demi-journée d'absence inscrite au registre de présence.</div>{% endif %}
+<p class="aide">Une erreur ? Signale-la à ton maître / professeur principal. Tes parents peuvent justifier une absence depuis l'espace parents.</p>
+{% endblock %}

@@ -1,0 +1,252 @@
+{% extends "base.html" %}{% block titre %}Registre de présence{% if cl %} – {{ cl.nom }}{% endif %}{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<style>
+.btn.vert{color:#fff}
+.rg-nav{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.rg-nav .titre-periode{font-weight:700;font-size:17px;min-width:170px;text-align:center}
+.rg-nav input[type=month],.rg-nav input[type=date]{width:auto}
+.rg-vue a{padding:6px 12px;border:1px solid var(--bord);background:#fff;color:var(--bleu);font-size:13px}
+.rg-vue a:first-child{border-radius:7px 0 0 7px}.rg-vue a:last-child{border-radius:0 7px 7px 0;border-left:none}
+.rg-vue a.actif{background:var(--bleu);color:#fff;border-color:var(--bleu)}
+table.rg td.nom,table.rg th.nom{text-align:left;white-space:nowrap;position:sticky;left:0;background:#fff;z-index:2;min-width:170px}
+table.rg thead th{background:#F2F4F7;font-size:12px;font-weight:600;color:#344054}
+table.rg thead th.we{background:#E4E7EC;color:#98A2B3}
+table.rg thead th.auj{background:#1F4E79;color:#fff}
+table.rg th.jr{min-width:52px}table.rg th.jr small{display:block;font-weight:400;font-size:10.5px}
+table.rg td.case{min-width:24px;height:30px;font-size:12px;padding:0}
+table.rg td.case.X{background:repeating-linear-gradient(45deg,#F2F4F7,#F2F4F7 4px,#E4E7EC 4px,#E4E7EC 8px)}
+table.rg td.case.F{background:#FCFCFD;color:#D0D5DD;cursor:not-allowed}
+table.rg td.case.P:hover{background:#D1FADF}table.rg td.case.A:hover{background:#FEE4E2}
+table.rg td.case:focus{outline:2px solid var(--bleu2);outline-offset:-2px}
+table.rg td.case.encours{opacity:.45}
+table.rg td.tot,table.rg th.tot{font-weight:700;min-width:44px}
+table.rg tfoot td{background:#F9FAFB;font-weight:600;font-size:12px}
+table.rg td.sep-j{border-left:2px solid #98A2B3!important}
+@media(max-width:600px){.grille.indicateurs{grid-template-columns:1fr 1fr;gap:8px}.kpi{padding:8px 10px}.kpi .v{font-size:19px}.rg-nav .titre-periode{min-width:0;flex:1;font-size:15px}.rg-nav{width:100%}.rg-nav label.aide{display:none}.rg-nav input{flex:1 1 100%}}
+.rg-legende{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--gris);margin:8px 0}
+.rg-legende span.c{display:inline-block;width:18px;height:14px;border:1px solid #D0D5DD;vertical-align:middle;margin-right:4px}
+.rg-outils{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.rg-outils form .grille-id{margin-bottom:10px}
+.rg-import-label{position:relative;display:inline-block}
+</style>
+
+<div class="entete">
+  <div><h1>Registre de présence{% if cl %} – {{ cl.nom }}{% endif %}</h1>
+    <p class="sous">{{ p.titre }} · présences par demi-journée (matin / après-midi){% if cl and cl.titulaire_nom %} · {{ cl.titulaire_titre or 'Titulaire' }} : {{ cl.titulaire_nom }}{% endif %}</p></div>
+  <div class="actions">
+    <a class="btn sec petit" href="{{ url_for('calendrier_scolaire', mois=p.mois) }}">📅 Calendrier</a>
+    <a class="btn sec petit" href="{{ url_for('releve_mensuel', classe=cl.id if cl else None) }}">📊 Relevés mensuels</a>
+  </div>
+</div>
+
+{# ------------------------------------------------ choix de la classe et de la période #}
+<form method="get" class="filtres" id="f-periode">
+  <label>Classe<br><select name="classe" onchange="this.form.submit()">
+    <option value="">— toutes les classes —</option>
+    {% for c in cls %}<option value="{{ c.id }}" {{ 'selected' if cl and c.id == cl.id }}>{{ c.nom }}</option>{% endfor %}
+  </select></label>
+  <input type="hidden" name="vue" value="{{ p.vue }}">
+  <div class="rg-nav">
+    <a class="btn sec petit" href="{{ url_for('registre_accueil', classe=cl.id if cl else None, **p.prec) }}" title="{{ 'Semaine' if p.vue == 'semaine' else 'Mois' }} précédent(e)" aria-label="Période précédente">◀</a>
+    <span class="titre-periode">{{ p.titre }}</span>
+    <a class="btn sec petit" href="{{ url_for('registre_accueil', classe=cl.id if cl else None, **p.suiv) }}" title="{{ 'Semaine suivante' if p.vue == 'semaine' else 'Mois suivant' }}" aria-label="Période suivante">▶</a>
+    {% if p.vue == 'semaine' %}
+    <label class="aide" for="rg-sem">Semaine du</label><input id="rg-sem" type="date" name="semaine" value="{{ p.semaine }}" onchange="this.form.submit()">
+    {% else %}
+    <label class="aide" for="rg-mois">Aller au mois</label><input id="rg-mois" type="month" name="mois" value="{{ p.mois }}" onchange="this.form.submit()">
+    {% endif %}
+  </div>
+  <div class="rg-vue" role="group" aria-label="Affichage">
+    <a href="{{ url_for('registre_accueil', classe=cl.id if cl else None, vue='mois', mois=p.mois) }}" class="{{ 'actif' if p.vue == 'mois' }}">Mois</a><a href="{{ url_for('registre_accueil', classe=cl.id if cl else None, vue='semaine', semaine=p.semaine) }}" class="{{ 'actif' if p.vue == 'semaine' }}">Semaine</a>
+  </div>
+</form>
+
+{% if not cl %}
+{# ------------------------------------------------ vue d'ensemble des classes #}
+{% if not cls %}
+<div class="carte">Aucune classe ne vous est accessible. Créez d'abord les classes (menu Scolarité → Classes) ou demandez à la direction de vous affecter une classe.</div>
+{% else %}
+<p class="aide">Choisissez une classe pour ouvrir son registre. Les absences comptées sont celles de la période affichée ({{ p.titre }}).</p>
+<div class="tw"><table class="t">
+  <thead><tr><th>Classe</th><th>Niveau</th><th class="num">Effectif</th><th class="num">Absences (demi-journées)</th><th></th></tr></thead>
+  <tbody>
+  {% for r in resume %}
+  <tr><td><b>{{ r.c.nom }}</b></td><td>{{ r.c.niveau }}</td><td class="num">{{ r.eff }}</td>
+    <td class="num {{ 'rouge' if r.abs }}">{{ r.abs }}</td>
+    <td class="num"><a class="btn petit" href="{{ url_for('registre_accueil', classe=r.c.id, vue=p.vue, mois=p.mois, semaine=p.semaine if p.vue == 'semaine' else None) }}">Ouvrir le registre</a></td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+
+{% else %}
+{# ------------------------------------------------ registre de la classe #}
+{% set nb_abs = absn|length %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Effectif</div><div class="v">{{ eleves|length }}</div><div class="d">{{ eleves|selectattr('sexe','equalto','F')|list|length }} fille(s) · {{ eleves|selectattr('sexe','equalto','M')|list|length }} garçon(s)</div></div>
+  <div class="kpi"><div class="l">Demi-journées de classe</div><div class="v">{{ dj }}</div><div class="d">écoulées sur la période</div></div>
+  <div class="kpi"><div class="l">Absences</div><div class="v" id="k-abs">{{ nb_abs }}</div><div class="d">demi-journées d'absence</div></div>
+  <div class="kpi"><div class="l">Taux de présence</div><div class="v" id="k-taux">{{ nb_fr(taux) ~ ' %' if taux is not none else '—' }}</div><div class="d">sur {{ poss }} présence(s) possible(s)</div></div>
+</div>
+
+{% call M.barre_doc(sauver=False, charger=False, reinit=False) %}
+  <button type="button" class="btn vert petit" id="b-sauver" title="Enregistrer d'un coup toute la grille affichée">💾 Sauvegarder</button>
+  <button type="button" class="btn sec petit" id="b-charger" title="Recharger la grille depuis le serveur">📂 Charger</button>
+  <a class="btn sec petit" href="{{ url_for('registre_pdf', classe=cl.id, mois=p.mois) }}" target="_blank" rel="noopener" title="Registre du mois au format PDF">📄 PDF du mois</a>
+  <form method="post" action="{{ url_for('registre_reinitialiser') }}" style="display:inline">
+    <input type="hidden" name="classe" value="{{ cl.id }}"><input type="hidden" name="du" value="{{ p.du.isoformat() }}">
+    <input type="hidden" name="au" value="{{ p.au.isoformat() }}"><input type="hidden" name="retour" value="{{ retour }}">
+    <button class="btn sec petit" data-confirmer="Effacer toutes les absences de {{ cl.nom }} pour la période « {{ p.titre }} » ? Tous les élèves redeviendront présents.">↺ Réinitialiser</button>
+  </form>
+  <span class="sep"></span>
+  <a class="btn sec petit" href="#rg-ajout" onclick="document.getElementById('rg-ajout').open=true">＋ Ajouter un élève</a>
+  <a class="btn sec petit" href="#rg-import" onclick="document.getElementById('rg-import').open=true">⬆ Importer (Excel)</a>
+{% endcall %}
+
+{% if not eleves %}
+<div class="carte"><b>Aucun élève inscrit en {{ cl.nom }}.</b>
+  <p class="aide">Ajoutez les élèves un par un ou importez la liste depuis un fichier Excel (colonnes Nom, Prénoms, Sexe) avec les formulaires ci-dessous.</p></div>
+{% else %}
+<p class="aide">Touchez une case pour basculer <b>Présent</b> ↔ <b>Absent</b> : chaque clic est enregistré aussitôt. Le mercredi, seul le matin compte ; les cases hachurées sont des demi-journées sans classe (week-end, congé, jour férié — voir le calendrier).</p>
+<div class="rg-legende" aria-hidden="true">
+  <span><span class="c" style="background:#ECFDF3"></span>P = présent(e)</span>
+  <span><span class="c" style="background:#FEF3F2"></span>A = absent(e)</span>
+  <span><span class="c" style="background:repeating-linear-gradient(45deg,#F2F4F7,#F2F4F7 3px,#E4E7EC 3px,#E4E7EC 6px)"></span>pas de classe</span>
+  <span><span class="c" style="background:#FCFCFD"></span>jour à venir</span>
+  <span>M = matin · S = soir (après-midi)</span>
+</div>
+<div class="tw"><table class="t grille-cases rg" id="rg-grille" data-classe="{{ cl.id }}" data-du="{{ p.du.isoformat() }}" data-au="{{ p.au.isoformat() }}">
+  <thead>
+  <tr><th rowspan="2">N°</th><th rowspan="2" class="nom">Nom et prénoms</th>
+    {% for j in p.jours %}
+      {% if j.n > 0 %}<th colspan="2" class="jr sep-j{{ ' auj' if j.auj }}" title="{{ j.long|capitalize }}{{ ' — ' ~ j.motif if j.motif }}">{{ j.court }} {{ j.num }}{% if j.n == 1 %}<small>matin</small>{% endif %}</th>
+      {% else %}<th rowspan="2" class="we sep-j{{ ' auj' if j.auj }}" title="{{ j.long|capitalize }} — {{ j.motif or 'pas de classe' }}">{{ j.court }}<br>{{ j.num }}</th>{% endif %}
+    {% endfor %}
+    <th rowspan="2" class="tot" title="Total des demi-journées d'absence">Abs.</th></tr>
+  <tr>{% for j in p.jours if j.n > 0 %}<th class="sep-j">M</th><th{{ ' class=we' if j.n == 1 }}>S</th>{% endfor %}</tr>
+  </thead>
+  <tbody>
+  {% for e in eleves %}{% set ns = namespace(t=0) %}
+  <tr data-eleve="{{ e.id }}"><td>{{ loop.index }}</td><td class="nom"><b>{{ e.nom }}</b> {{ e.prenoms }} <span class="aide">({{ e.sexe or '?' }})</span></td>
+    {% for j in p.jours %}
+      {% if j.n == 0 %}<td class="case X sep-j" title="{{ j.motif or 'Pas de classe' }}"></td>
+      {% else %}
+        {% for demi in (1, 2) %}
+          {% if demi > j.n %}<td class="case X" title="Pas de classe l'après-midi"></td>
+          {% elif j.futur %}<td class="case F{{ ' sep-j' if demi == 1 }}" title="Jour à venir"></td>
+          {% else %}{% set a = (e.id, j.iso, demi) in absn %}{% if a %}{% set ns.t = ns.t + 1 %}{% endif %}
+            <td class="case {{ 'A' if a else 'P' }}{{ ' sep-j' if demi == 1 }}" tabindex="0" role="button" aria-pressed="{{ 'true' if a else 'false' }}"
+                data-d="{{ j.iso }}" data-m="{{ demi }}" title="{{ e.nom }} {{ e.prenoms }} — {{ j.long }} {{ 'matin' if demi == 1 else 'après-midi' }}">{{ 'A' if a else 'P' }}</td>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+    {% endfor %}
+    <td class="tot {{ 'rouge' if ns.t }}">{{ ns.t }}</td></tr>
+  {% endfor %}
+  </tbody>
+  <tfoot><tr><td></td><td class="nom">Absents par demi-journée</td>
+    {% for j in p.jours %}
+      {% if j.n == 0 %}<td class="sep-j"></td>
+      {% else %}{% for demi in (1, 2) %}<td class="{{ 'sep-j' if demi == 1 }}" data-col="{{ j.iso }}_{{ demi }}">{% if demi <= j.n and not j.futur %}{% set ns2 = namespace(n=0) %}{% for e in eleves %}{% if (e.id, j.iso, demi) in absn %}{% set ns2.n = ns2.n + 1 %}{% endif %}{% endfor %}{{ ns2.n or '' }}{% endif %}</td>{% endfor %}{% endif %}
+    {% endfor %}
+    <td class="tot" id="rg-total">{{ nb_abs }}</td></tr></tfoot>
+</table></div>
+{% endif %}
+
+{# ------------------------------------------------ ajout / import d'élèves #}
+<div class="rg-outils" style="margin-top:16px">
+  <details class="carte" id="rg-ajout" {{ 'open' if not eleves }}>
+    <summary><b>＋ Ajouter un élève en {{ cl.nom }}</b></summary>
+    <form method="post" action="{{ url_for('registre_ajouter_eleve') }}" style="margin-top:10px">
+      <input type="hidden" name="classe" value="{{ cl.id }}"><input type="hidden" name="retour" value="{{ retour }}">
+      <div class="grille-id">
+        <div><label for="ae-nom">Nom *</label><input id="ae-nom" name="nom" required maxlength="80" autocomplete="off"></div>
+        <div><label for="ae-pre">Prénoms *</label><input id="ae-pre" name="prenoms" required maxlength="120" autocomplete="off"></div>
+        <div><label for="ae-sexe">Sexe *</label><select id="ae-sexe" name="sexe" required><option value="">—</option><option value="F">F (fille)</option><option value="M">M (garçon)</option></select></div>
+        <div><label for="ae-dn">Date de naissance</label><input id="ae-dn" type="date" name="date_naissance"></div>
+        <div><label for="ae-tel">Contact des parents</label><input id="ae-tel" name="parent_telephone" maxlength="60" inputmode="tel"></div>
+      </div>
+      <button class="btn">Ajouter l'élève</button>
+    </form>
+  </details>
+  <details class="carte" id="rg-import" {{ 'open' if not eleves }}>
+    <summary><b>⬆ Importer la liste des élèves (Excel)</b></summary>
+    <form method="post" action="{{ url_for('registre_importer') }}" enctype="multipart/form-data" style="margin-top:10px">
+      <input type="hidden" name="classe" value="{{ cl.id }}"><input type="hidden" name="retour" value="{{ retour }}">
+      <p class="aide">Fichier <b>.xlsx</b> ou <b>.csv</b> avec une ligne d'en-tête contenant au moins les colonnes <b>Nom</b>, <b>Prénoms</b> et <b>Sexe</b> (F/M) — ou une seule colonne « Nom et prénoms ». Colonnes facultatives : Date de naissance, Contact des parents. Les élèves déjà présents dans la classe ne sont pas créés en double.</p>
+      <label for="ai-f" class="aide">Fichier</label>
+      <input id="ai-f" type="file" name="fichier" accept=".xlsx,.xlsm,.csv" required>
+      <p style="margin-top:10px"><button class="btn">Importer dans {{ cl.nom }}</button></p>
+    </form>
+  </details>
+</div>
+
+<script>
+(function () {
+  var T = document.getElementById('rg-grille');
+  if (!T) return;
+  var cid = T.dataset.classe;
+  function majTotaux() {
+    // totaux par élève, par demi-journée et indicateurs
+    var total = 0, possibles = {{ poss }};
+    T.querySelectorAll('tbody tr').forEach(function (tr) {
+      var n = tr.querySelectorAll('td.case.A').length; total += n;
+      var c = tr.querySelector('td.tot'); c.textContent = n; c.classList.toggle('rouge', n > 0);
+    });
+    var cols = {};
+    T.querySelectorAll('tbody td.case.A').forEach(function (td) { var k = td.dataset.d + '_' + td.dataset.m; cols[k] = (cols[k] || 0) + 1; });
+    T.querySelectorAll('tfoot td[data-col]').forEach(function (td) {
+      if (td.textContent.trim() !== '' || cols[td.dataset.col] || T.querySelector('td.case[data-d="' + td.dataset.col.slice(0, 10) + '"][data-m="' + td.dataset.col.slice(11) + '"]'))
+        td.textContent = cols[td.dataset.col] || '';
+    });
+    document.getElementById('rg-total').textContent = total;
+    document.getElementById('k-abs').textContent = total;
+    document.getElementById('k-taux').textContent = possibles ? (Math.round(1000 * (possibles - total) / possibles) / 10).toString().replace('.', ',') + ' %' : '—';
+  }
+  function poser(td, absent) {
+    td.className = td.className.replace(/\b[PA]\b/, absent ? 'A' : 'P');
+    td.textContent = absent ? 'A' : 'P';
+    td.setAttribute('aria-pressed', absent ? 'true' : 'false');
+  }
+  function basculer(td) {
+    if (td.classList.contains('encours')) return;
+    var absent = !td.classList.contains('A');
+    var eid = td.parentNode.dataset.eleve;
+    poser(td, absent); td.classList.add('encours'); majTotaux();
+    GESCOL.json('{{ url_for("registre_presence") }}', { eleve_id: eid, date: td.dataset.d, demi: td.dataset.m, absent: absent })
+      .then(function (r) {
+        td.classList.remove('encours');
+        if (!r.ok) { poser(td, !absent); majTotaux(); GESCOL.toast(r.erreur || 'Enregistrement refusé.', false); }
+      })
+      .catch(function () { td.classList.remove('encours'); GESCOL.toast('Connexion perdue : cliquez sur « Sauvegarder » quand le réseau revient.', false); });
+  }
+  T.addEventListener('click', function (e) {
+    var td = e.target.closest('td.case[data-d]'); if (td) basculer(td);
+  });
+  T.addEventListener('keydown', function (e) {
+    var td = e.target.closest('td.case[data-d]');
+    if (td && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); basculer(td); }
+  });
+  document.getElementById('b-sauver').addEventListener('click', function () {
+    var abs = [];
+    T.querySelectorAll('tbody td.case.A[data-d]').forEach(function (td) { abs.push([+td.parentNode.dataset.eleve, td.dataset.d, +td.dataset.m]); });
+    GESCOL.json('{{ url_for("registre_sauvegarder") }}', { classe: cid, du: T.dataset.du, au: T.dataset.au, absences: abs })
+      .then(function (r) { GESCOL.toast(r.ok ? 'Registre enregistré (' + r.n + ' absence(s)).' : (r.erreur || 'Erreur'), !!r.ok); })
+      .catch(function () { GESCOL.toast('Serveur injoignable : réessayez.', false); });
+  });
+  document.getElementById('b-charger').addEventListener('click', function () {
+    fetch('{{ url_for("registre_absences") }}?classe=' + cid + '&du=' + T.dataset.du + '&au=' + T.dataset.au, { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        var set = {};
+        (r.absences || []).forEach(function (a) { set[a[0] + '|' + a[1] + '|' + a[2]] = 1; });
+        T.querySelectorAll('tbody td.case[data-d]').forEach(function (td) { poser(td, !!set[td.parentNode.dataset.eleve + '|' + td.dataset.d + '|' + td.dataset.m]); });
+        majTotaux(); GESCOL.toast('Registre rechargé depuis le serveur.');
+      })
+      .catch(function () { GESCOL.toast('Serveur injoignable : réessayez.', false); });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

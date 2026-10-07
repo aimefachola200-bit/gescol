@@ -1,0 +1,80 @@
+{% extends "base.html" %}{% block titre %}CEP – {{ e.nom }}{% endblock %}
+{% block contenu %}
+<style>
+.t td.n, .t th.n{text-align:right}
+.saisie-cep input[type=number]{width:100px}
+.saisie-cep fieldset{border:1px solid var(--bord);border-radius:8px;padding:10px 14px;margin:0 0 12px}
+.saisie-cep legend{font-weight:600;padding:0 6px}
+</style>
+<div class="entete"><div><h1>CEP – {{ e.nom }}</h1>
+  <p class="sous">{{ e.code }} · {% if JUR_NIVEAU=='ddemp' %}CS {{ e.cs_nom }} · {% endif %}{{ e.zone_nom or 'Sans zone pédagogique' }} · {{ JUR_SECTEURS.get(e.secteur, '') }} · session {{ session }}</p></div>
+<div class="actions">
+  <form method="get" class="ligne"><label>Année <select name="annee" onchange="this.form.submit()">{% for x in annees %}<option {{ 'selected' if x == a }}>{{ x }}</option>{% endfor %}</select></label></form>
+  <a class="btn sec" href="{{ url_for('jur_cep', annee=a) }}">← Tableau du CEP</a>
+  <a class="btn sec" href="{{ url_for('jur_ecole_fiche', eid=e.id, annee=a) }}">Fiche de l'école</a>
+</div></div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Candidats</div><div class="v">{{ c.candidats }}</div><div class="d">{{ c.candidats_g }} G · {{ c.candidats_f }} F</div></div>
+  <div class="kpi"><div class="l">Admis</div><div class="v">{{ nb(c.admis) }}</div><div class="d">{{ nb(c.admis_g) }} G · {{ nb(c.admis_f) }} F</div></div>
+  <div class="kpi"><div class="l">Taux de réussite</div><div class="v">{{ pct(c.taux) }}</div><div class="d">G {{ pct(c.taux_g) }} · F {{ pct(c.taux_f) }}</div></div>
+  <div class="kpi"><div class="l">Élèves de CM1</div><div class="v">{{ c.cm1 }}</div><div class="d">candidats prévus l'an prochain</div></div>
+</div>
+
+<div class="grille2">
+<div class="carte">
+  <h2>Origine des chiffres</h2>
+  {% if not transmis and not corr %}
+    <p class="gris">Aucune donnée du CEP n'a été transmise par cette école pour {{ a }}.</p>
+  {% else %}
+  <div class="tw"><table class="t compact">
+    <tr><th></th><th class="n">Candidats G</th><th class="n">F</th><th class="n">Admis G</th><th class="n">F</th><th class="n">CM1 G</th><th class="n">F</th></tr>
+    <tr><td>Transmis par l'école</td>{% if transmis %}<td class="n">{{ transmis.candidats_g }}</td><td class="n">{{ transmis.candidats_f }}</td><td class="n">{{ nb(transmis.admis_g) }}</td><td class="n">{{ nb(transmis.admis_f) }}</td><td class="n">{{ transmis.cm1_g }}</td><td class="n">{{ transmis.cm1_f }}</td>{% else %}<td colspan="6" class="gris">rien de transmis</td>{% endif %}</tr>
+    {% if corr %}<tr><td><b>{{ 'Résultats officiels importés' if corr.source == 'import' else 'Correction' }}</b><br><span class="aide">{{ corr.maj }}{% if corr.maj_par %} · {{ corr.maj_par }}{% endif %}</span></td>
+      <td class="n"><b>{{ corr.candidats_g }}</b></td><td class="n"><b>{{ corr.candidats_f }}</b></td><td class="n"><b>{{ nb(corr.admis_g) }}</b></td><td class="n"><b>{{ nb(corr.admis_f) }}</b></td>
+      <td class="n">{{ corr.cm1_g if corr.cm1_g is not none else '=' }}</td><td class="n">{{ corr.cm1_f if corr.cm1_f is not none else '=' }}</td></tr>{% endif %}
+  </table></div>
+  {% if corr and corr.observation %}<p class="aide">Observation : {{ corr.observation }}</p>{% endif %}
+  {% if src == 'transmission' and corr %}<p class="flash warning">L'école a transmis de nouvelles données après la correction ; la correction reste appliquée. Supprimez-la pour reprendre les chiffres de l'école.</p>{% endif %}
+  {% if corr and peut_ecrire %}
+  <form method="post"><input type="hidden" name="annee" value="{{ a }}"><input type="hidden" name="action" value="annuler">
+    <button class="btn danger petit" data-confirmer="Supprimer la correction et reprendre les chiffres transmis par l'école ?">Supprimer la correction</button></form>
+  {% endif %}
+  {% endif %}
+  {% if maj_sec %}<p class="aide">Section CEP mise à jour le {{ maj_sec }} ({{ 'saisie / import' if src == 'saisie' else 'transmission' }}).</p>{% endif %}
+</div>
+
+{% if peut_ecrire %}
+<div class="carte saisie-cep">
+  <h2>Saisir / corriger les chiffres</h2>
+  <form method="post">
+    <input type="hidden" name="annee" value="{{ a }}"><input type="hidden" name="action" value="enregistrer">
+    <fieldset><legend>Candidats présentés</legend>
+      <label>Garçons <input type="number" name="candidats_g" min="0" step="1" required value="{{ saisie.candidats_g }}"></label>
+      <label>Filles <input type="number" name="candidats_f" min="0" step="1" required value="{{ saisie.candidats_f }}"></label></fieldset>
+    <fieldset><legend>Admis <span class="aide">(laisser vide si les résultats ne sont pas encore connus)</span></legend>
+      <label>Garçons <input type="number" name="admis_g" min="0" step="1" value="{{ saisie.admis_g }}"></label>
+      <label>Filles <input type="number" name="admis_f" min="0" step="1" value="{{ saisie.admis_f }}"></label></fieldset>
+    <fieldset><legend>Élèves de CM1 cette année <span class="aide">(prévision de l'année suivante)</span></legend>
+      <label>Garçons <input type="number" name="cm1_g" min="0" step="1" value="{{ saisie.cm1_g }}"></label>
+      <label>Filles <input type="number" name="cm1_f" min="0" step="1" value="{{ saisie.cm1_f }}"></label></fieldset>
+    <label>Observation<br><input name="observation" maxlength="300" value="{{ saisie.observation }}" placeholder="Ex. : résultats officiels du jury, rectification après vérification…" style="width:100%"></label>
+    <p class="aide">Les admis ne peuvent pas dépasser les candidats. La correction est conservée même si l'école renvoie ses données, et elle est transmise à la DDEMP avec le paquet de la circonscription.</p>
+    <button class="btn">Enregistrer</button>
+  </form>
+</div>
+{% endif %}
+</div>
+
+<div class="carte" style="margin-top:16px">
+  <div class="entete"><h2>Liste nominative des candidats</h2>
+  {% if liste %}<a class="btn sec petit" href="{{ url_for('jur_cep_ecole', eid=e.id, annee=a, export='xlsx') }}">⇩ Excel</a>{% endif %}</div>
+  {% if liste %}
+  <div class="tw"><table class="t compact">
+    <tr><th>N°</th><th>Nom et prénoms</th><th>Sexe</th><th>Né(e) le</th><th>à</th><th>N° de table</th><th>Résultat</th></tr>
+    {% for p in liste %}<tr><td>{{ loop.index }}</td><td>{{ p.nom }} {{ p.prenoms }}</td><td>{{ p.sexe }}</td><td>{{ p.date_naissance }}</td><td>{{ p.lieu_naissance }}</td><td>{{ p.numero_table }}</td>
+      <td>{% if p.admis is sameas true %}<span class="badge ok">Admis</span>{% elif p.admis is sameas false %}<span class="badge ko">Ajourné</span>{% else %}<span class="gris">—</span>{% endif %}</td></tr>{% endfor %}
+  </table></div>
+  {% else %}<p class="gris">L'école n'a pas transmis de liste nominative pour cette session.</p>{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block titre %}Résultat du paiement{% endblock %}
+{% block contenu %}
+<div class="login carte" style="max-width:520px">
+  {% if statut == 'approuve' %}
+  <h1 class="vert">Paiement confirmé</h1>
+  <p>{{ fcfa(pel.montant) }} ont été reçus pour la scolarité de {{ e.prenoms }} {{ e.nom }}. Merci !</p>
+  <p class="aide">Le reçu est disponible dans l'espace parents (onglet de votre enfant).</p>
+  {% elif statut == 'echoue' %}
+  <h1 class="rouge">Paiement non abouti</h1>
+  <p>Le paiement de {{ fcfa(pel.montant) }} a été refusé ou annulé. Aucun montant n'a été enregistré.</p>
+  {% else %}
+  <h1>Paiement en cours de confirmation</h1>
+  <p>Nous n'avons pas encore la confirmation du service de paiement. Si votre compte Mobile Money a été débité, le paiement sera enregistré automatiquement dans quelques minutes.</p>
+  <p class="aide">Référence à communiquer à l'école en cas de besoin : <b>{{ pel.reference }}</b></p>
+  {% endif %}
+  <p>{% if g.parent %}<a class="btn" href="{{ url_for('parent_enfant', eid=e.id) }}">Retour à l'espace parents</a>{% else %}<a class="btn" href="{{ url_for('parent_login') }}">Espace parents</a>{% endif %}</p>
+</div>
+{% endblock %}

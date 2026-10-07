@@ -1,0 +1,141 @@
+{% extends "base.html" %}{% block titre %}Tableau d'affichage{% if cl %} – {{ cl.nom }}{% endif %}{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<style>
+.aff-sigs{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:10px}
+.aff-sigs .sig-pad canvas{max-width:100%;height:auto}
+.aff-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.aff-svg{max-width:100%;height:auto;display:block;margin-top:8px}
+table.aff-liste input.sc{width:64px;text-align:center}
+table.aff-liste input.tel{width:150px}
+.aff-import{display:inline-flex;align-items:center;cursor:pointer}
+.aff-import input{position:absolute;width:1px;height:1px;opacity:0}
+.aff-rep{display:flex;height:22px;border-radius:6px;overflow:hidden;margin:8px 0;background:#F2F4F7}
+.aff-rep span{display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600;min-width:0}
+.aff-f{background:#C2185B}.aff-g{background:#1F4E79}
+.aff-age{display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap}
+</style>
+
+<div class="entete">
+  <div><h1>Tableau d'affichage</h1>
+  <p class="sous">Liste de classe à afficher : identité, âge, scolarité, contact des parents, répartition par sexe et récapitulatifs statistiques.</p></div>
+</div>
+
+{% call M.choix_classe(cls, cl.id if cl else None) %}
+  {% if cl %}<label>Âge calculé<br><select name="age" onchange="this.form.submit()">
+    <option value="31dec" {{ 'selected' if mode != 'jour' }}>au 31 décembre de l'année scolaire</option>
+    <option value="jour" {{ 'selected' if mode == 'jour' }}>à la date du jour</option></select></label>{% endif %}
+{% endcall %}
+
+{% if not cl %}
+  {% if not cls %}<div class="carte">Aucune classe disponible. Créez d'abord une classe (menu Classes){% if g.user.role == 'enseignant' %} ou demandez votre affectation à la direction{% endif %}.</div>
+  {% else %}
+  <div class="carte"><p class="aide">Choisissez une classe pour afficher sa liste.</p>
+  <div class="tw"><table class="t compact"><thead><tr><th>Classe</th><th>Niveau</th><th class="c">Effectif</th><th class="c">Filles</th><th class="c">Garçons</th><th></th></tr></thead><tbody>
+  {% for c in cls %}{% set r = eff.get(c.id) %}
+  <tr><td><b>{{ c.nom }}</b></td><td>{{ c.niveau }}</td><td class="c">{{ r.n if r else 0 }}</td><td class="c">{{ (r.f or 0) if r else 0 }}</td><td class="c">{{ (r.n - (r.f or 0)) if r else 0 }}</td>
+    <td><a class="btn petit" href="{{ url_for('affichage_accueil', classe=c.id) }}">Ouvrir</a></td></tr>
+  {% endfor %}</tbody></table></div></div>
+  {% endif %}
+{% else %}
+{% set rep = d.rep %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Effectif</div><div class="v">{{ rep.total }}</div><div class="d">{{ cl.nom }}</div></div>
+  <div class="kpi"><div class="l">Filles</div><div class="v">{{ rep.f }}</div><div class="d">{{ pct_fr(rep.pf) }}</div></div>
+  <div class="kpi"><div class="l">Garçons</div><div class="v">{{ rep.g }}</div><div class="d">{{ pct_fr(rep.pg) }}</div></div>
+  <div class="kpi"><div class="l">Âge calculé</div><div class="v" style="font-size:17px">{{ d.ref.strftime('%d/%m/%Y') }}</div><div class="d">{{ 'date du jour' if mode == 'jour' else '31 décembre de l’année scolaire' }}</div></div>
+</div>
+
+<form method="post" action="{{ url_for('affichage_enregistrer') }}" id="f-aff" autocomplete="off">
+<input type="hidden" name="classe" value="{{ cl.id }}">
+<input type="hidden" name="age" value="{{ mode }}">
+{% call M.barre_doc(sauver=False, charger=False, reinit=False) %}
+  <a class="btn petit" href="#ajout" onclick="document.getElementById('ajout').open=true">＋ Ajouter élève</a>
+  <label class="btn sec petit aff-import" title="Fichier Excel ou CSV : Nom, Prénoms, Sexe, Date de naissance, Scolarité, Contact">📥 Importer Excel
+    <input type="file" name="fichier" form="f-import" accept=".xlsx,.xlsm,.csv" onchange="if(this.files.length) this.form.submit()"></label>
+  <a class="btn sec petit" href="{{ url_for('affichage_modele') }}" title="Modèle Excel vierge pour l'import">📊 Modèle</a>
+  <span class="sep"></span>
+  <a class="btn sec petit" href="{{ url_for('affichage_accueil', classe=cl.id, age=mode) }}" title="Recharger les données enregistrées (annule les modifications non sauvegardées)">📂 Charger</a>
+  <button type="submit" class="btn vert petit" title="Enregistrer l'en-tête, la scolarité et les contacts">💾 Sauvegarder</button>
+  <button type="submit" class="btn sec petit" form="f-reinit" data-confirmer="Revenir à l'en-tête par défaut (fiche de l'école) ? Les élèves ne sont pas modifiés." title="Remettre l'en-tête aux valeurs de la fiche de l'école">↺ Réinitialiser</button>
+  <span class="sep"></span>
+  <button type="submit" class="btn sec petit" formaction="{{ url_for('affichage_pdf', classe=cl.id, age=mode) }}" formtarget="_blank" title="PDF A4 avec l'en-tête affiché à l'écran">📄 PDF</button>
+{% endcall %}
+
+<details class="carte" open>
+  <summary><b>En-tête</b> <span class="aide">(repris sur le PDF — enregistré avec « Sauvegarder »)</span></summary>
+  {{ M.identification(v, champs=('ddemp','cs','ecole','cours','annee','titulaire','directeur')) }}
+</details>
+
+<h2>Liste des élèves</h2>
+{% if not d.lignes %}
+<div class="carte">Aucun élève inscrit en {{ cl.nom }}. Utilisez « Ajouter élève » ou « Importer Excel » pour constituer la liste.</div>
+{% else %}
+<p class="aide">Scolarité = nombre d'années de scolarité (modifiable, entier de 0 à 20). Âge révolu {{ 'à la date du jour' if mode == 'jour' else 'au 31 décembre ' ~ d.annee[:4] }}. Pensez à « Sauvegarder » après modification.</p>
+<div class="tw"><table class="t compact aff-liste">
+  <thead><tr><th class="c">N°</th><th>Nom</th><th>Prénoms</th><th class="c">Sexe</th><th class="c">Âge</th><th class="c">Scolarité</th><th>Contact parents</th></tr></thead>
+  <tbody>
+  {% for l in d.lignes %}{% set e = l.e %}
+  <tr><td class="c">{{ loop.index }}</td><td><a href="{{ url_for('eleve_detail', eid=e.id) }}"><b>{{ e.nom }}</b></a></td><td>{{ e.prenoms }}</td>
+    <td class="c">{{ e.sexe }}</td>
+    <td class="c" title="Né(e) le {{ date_fr(e.date_naissance) }}">{{ l.age if l.age is not none else '—' }}</td>
+    <td class="c"><input class="sc" name="sc_{{ e.id }}" value="{{ l.sc if l.sc is not none else '' }}" inputmode="numeric" pattern="\d{1,2}" maxlength="2" aria-label="Scolarité de {{ e.nom }} {{ e.prenoms }}"></td>
+    <td><input class="tel" name="tel_{{ e.id }}" value="{{ e.parent_telephone or '' }}" maxlength="60" aria-label="Contact des parents de {{ e.nom }} {{ e.prenoms }}"></td></tr>
+  {% endfor %}
+  </tbody></table></div>
+{% endif %}
+
+<details class="carte" open>
+  <summary><b>Signatures digitales</b></summary>
+  <div class="aff-sigs">
+    {{ M.signature('classe:%d:titulaire' % cl.id, 'Signature du titulaire (' ~ (v.titulaire_nom or cl.nom) ~ ')') }}
+    {% if sig_dir %}{{ M.signature('ecole:%d:directeur' % ECOLE_COURANTE.id, 'Signature du directeur / de la directrice') }}
+    {% else %}<p class="aide">La signature du directeur / de la directrice est enregistrée par la direction ; elle apparaît automatiquement sur le PDF avec le cachet.</p>{% endif %}
+  </div>
+  <p class="aide">Signez avec la souris ou le doigt, vérifiez avec « Aperçu », puis « Enregistrer ». « Effacer » supprime la signature enregistrée.</p>
+</details>
+</form>
+<form method="post" action="{{ url_for('affichage_importer') }}" enctype="multipart/form-data" id="f-import"><input type="hidden" name="classe" value="{{ cl.id }}"><input type="hidden" name="age" value="{{ mode }}"></form>
+<form method="post" action="{{ url_for('affichage_reinitialiser') }}" id="f-reinit"><input type="hidden" name="classe" value="{{ cl.id }}"><input type="hidden" name="age" value="{{ mode }}"></form>
+
+<details class="carte" id="ajout">
+  <summary><b>＋ Ajouter un élève à {{ cl.nom }}</b></summary>
+  <form method="post" action="{{ url_for('affichage_ajouter_eleve') }}" class="grille-id">
+    <input type="hidden" name="classe" value="{{ cl.id }}"><input type="hidden" name="age" value="{{ mode }}">
+    <div><label for="a-nom">Nom *</label><input id="a-nom" name="nom" required maxlength="80"></div>
+    <div><label for="a-pre">Prénoms *</label><input id="a-pre" name="prenoms" required maxlength="120"></div>
+    <div><label for="a-sexe">Sexe *</label><select id="a-sexe" name="sexe" required><option value="">—</option><option value="F">F (fille)</option><option value="M">M (garçon)</option></select></div>
+    <div><label for="a-dn">Date de naissance</label><input id="a-dn" type="date" name="date_naissance"></div>
+    <div><label for="a-sc">Scolarité (années)</label><input id="a-sc" name="annees_scolarite" inputmode="numeric" maxlength="2"></div>
+    <div><label for="a-tel">Contact des parents</label><input id="a-tel" name="parent_telephone" maxlength="60"></div>
+    <div style="align-self:end"><button class="btn vert">Ajouter l'élève</button></div>
+  </form>
+  <p class="aide">L'élève est réellement inscrit dans la classe (un matricule lui est attribué) ; complétez sa fiche plus tard dans « Élèves et inscriptions ».</p>
+</details>
+
+<h2>Répartition par sexe</h2>
+<div class="carte">
+  {% if rep.total %}
+  <div class="aff-rep" role="img" aria-label="Filles {{ pct_fr(rep.pf) }}, garçons {{ pct_fr(rep.pg) }}">
+    {% if rep.f %}<span class="aff-f" style="width:{{ rep.pf }}%">{{ pct_fr(rep.pf) }}</span>{% endif %}
+    {% if rep.g %}<span class="aff-g" style="width:{{ rep.pg }}%">{{ pct_fr(rep.pg) }}</span>{% endif %}
+  </div>{% endif %}
+  <div class="tw"><table class="t compact"><thead><tr><th></th><th class="c">Filles</th><th class="c">Garçons</th><th class="c">Total</th></tr></thead>
+  <tbody><tr><td>Effectif</td><td class="c">{{ rep.f }}</td><td class="c">{{ rep.g }}</td><td class="c"><b>{{ rep.total }}</b></td></tr>
+  <tr><td>Pourcentage</td><td class="c">{{ pct_fr(rep.pf) }}</td><td class="c">{{ pct_fr(rep.pg) }}</td><td class="c"><b>{{ '100 %' if rep.total else '0 %' }}</b></td></tr></tbody></table></div>
+</div>
+
+<h2>Récapitulatif statistique</h2>
+<div class="aff-stats">
+  {% for bloc in [('Courbe des scolarités par sexe', 'Scolarité (années)', d.sco, d.sco_tot, svg_sco), ('Courbe par âge par sexe', 'Âge (ans)', d.ages, d.ages_tot, svg_age)] %}
+  <div class="carte"><h3 style="margin-top:0">{{ bloc[0] }}</h3>
+    <div class="tw"><table class="t compact"><thead><tr><th>{{ bloc[1] }}</th><th class="c">F</th><th class="c">G</th><th class="c">Total</th><th class="c">%</th></tr></thead><tbody>
+    {% for r in bloc[2] %}<tr><td>{{ r.lib }}</td><td class="c">{{ r.f }}</td><td class="c">{{ r.g }}</td><td class="c">{{ r.t }}</td><td class="c">{{ pct_fr(r.pct) }}</td></tr>{% endfor %}
+    <tr><th>TOTAL</th><th class="c">{{ bloc[3].f }}</th><th class="c">{{ bloc[3].g }}</th><th class="c">{{ bloc[3].t }}</th><th class="c">{{ pct_fr(bloc[3].pct) }}</th></tr>
+    </tbody></table></div>
+    {{ bloc[4] }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

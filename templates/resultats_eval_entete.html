@@ -1,0 +1,65 @@
+{# Composants partagés des pages « Résultats des évaluations » (statistiques, analyse, tableau d'honneur, bilan).
+   Import : {% import "resultats_eval_entete.html" as R with context %} #}
+{% import "_macros.html" as M with context %}
+
+{# Sélecteur classe + évaluation (GET) #}
+{% macro choix_classe_ev(classes, cl, evs, ev, action) %}
+<form method="get" action="{{ url_for(action) }}" class="filtres">
+  <label>Classe<br><select name="classe" onchange="this.form.ev && (this.form.ev.value=''); this.form.submit()">
+    <option value="">— choisir —</option>
+    {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if cl and c.id==cl.id }}>{{ c.nom }}</option>{% endfor %}
+  </select></label>
+  {% if cl and evs %}
+  <label>Évaluation<br><select name="ev" onchange="this.form.submit()">
+    {% for e in evs %}<option value="{{ e.id }}" {{ 'selected' if ev and e.id==ev.id }}>{{ e.titre }}{% if e.date %} — {{ date_fr(e.date) }}{% endif %}</option>{% endfor %}
+  </select></label>
+  {% endif %}
+  <noscript><button class="btn sec petit">Afficher</button></noscript>
+</form>
+{% endmacro %}
+
+{# Messages quand il manque la classe ou les évaluations #}
+{% macro vide(classes, cl, evs, action) %}
+{% if not classes %}
+<div class="carte">Aucune classe ne vous est accessible. Demandez à l'administrateur de créer les classes ou de vous affecter à une classe.</div>
+{% elif not cl %}
+<div class="carte"><p>Choisissez une classe :</p>
+  <div class="grille res-choix">{% for c in classes %}<a class="btn sec" href="{{ url_for(action, classe=c.id) }}">{{ c.nom }}</a>{% endfor %}</div></div>
+{% elif not evs %}
+<div class="carte"><p>Aucune évaluation n'a encore été créée pour <b>{{ cl.nom }}</b> en {{ ANNEE }}.</p>
+  {% if ep_existe('eval_accueil') %}<p><a class="btn" href="{{ url_for('eval_accueil', classe=cl.id) }}">Créer une évaluation et saisir les notes</a></p>{% endif %}</div>
+{% endif %}
+{% endmacro %}
+
+{# En-tête des documents (M.identification) + signatures digitales, repliable #}
+{% macro entete_docs(v, cl, ouvert=False) %}
+<details class="carte res-entete" {{ 'open' if ouvert }}>
+  <summary><b>En-tête et signatures des documents PDF</b> <span class="aide">— DDEMP, CS, école, cours, année, titulaire, directeur</span></summary>
+  {{ M.identification(v) }}
+  <p class="aide">Ces informations figurent en haut des PDF. « 💾 Sauvegarder » les garde pour les prochains documents de la classe.</p>
+  <div class="grille2">
+    <div><b>Signature du titulaire</b>{{ M.signature('classe:' ~ cl.id ~ ':titulaire', 'Signature du titulaire') }}</div>
+    <div><b>Signature du directeur / de la directrice</b> <span class="aide">(le cachet de l'école est apposé automatiquement)</span>
+      {{ M.signature('ecole:' ~ cl.ecole_id ~ ':directeur', 'Signature du directeur') }}</div>
+  </div>
+</details>
+{% endmacro %}
+
+{% macro styles() %}
+<style>
+  .res-chart{width:100%;height:auto;display:block;max-width:760px}
+  .res-graph{background:#fff;border:1px solid var(--bord,#EAECF0);border-radius:10px;padding:10px 12px}
+  .res-graph h3{margin:0 0 6px;font-size:14px}
+  .res-entete summary{cursor:pointer;padding:2px 0}
+  .res-entete[open] summary{margin-bottom:8px}
+  .res-extremes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+  .res-extremes .x{border:1px solid var(--bord,#EAECF0);border-radius:10px;padding:10px 12px;background:#fff}
+  .res-extremes .x h4{margin:0 0 6px;font-size:13px;color:var(--gris,#667085);text-transform:uppercase;letter-spacing:.03em}
+  .res-extremes .fort{color:#1B7F3B;font-weight:700}.res-extremes .faible{color:#B42318;font-weight:700}
+  .res-choix{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  .t td.num,.t th.num{text-align:right;white-space:nowrap}
+  .t tr.res-renf td{background:#FEF3F2}
+  h2.res-h{font-size:17px;margin:22px 0 8px}
+  .res-texte{width:100%;min-height:150px;font:inherit;line-height:1.5}
+</style>
+{% endmacro %}

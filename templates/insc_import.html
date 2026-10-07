@@ -1,0 +1,121 @@
+{% extends "base.html" %}{% block titre %}Import des élèves{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Importer des élèves (Excel)</h1>
+    <p class="sous">Inscription ou mise à jour en série à partir d'un fichier Excel (.xlsx) ou CSV : toutes les données de la carte scolaire.</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('eleves_modele_xlsx') }}">Modèle Excel vierge</a>
+    <a class="btn sec" href="{{ url_for('eleves_export_xlsx') }}">Exporter les élèves (Excel)</a>
+    <a class="btn sec" href="{{ url_for('eleves') }}">← Élèves</a>
+  </div>
+</div>
+
+<nav class="onglets" aria-label="Étapes">
+  <a class="{{ 'actif' if etape=='choix' }}">1. Fichier</a>
+  <a class="{{ 'actif' if etape=='apercu' }}">2. Vérification</a>
+  <a class="{{ 'actif' if etape=='rapport' }}">3. Rapport</a>
+</nav>
+
+{% if etape == 'choix' %}
+<form method="post" enctype="multipart/form-data" class="carte" id="f-import">
+  <input type="hidden" name="action" value="analyser">
+  <label class="zone-depot" id="zone" for="fichier">
+    <b>Déposez ici le fichier Excel</b><br><span class="aide">ou cliquez pour le choisir (.xlsx, .csv — 2 000 lignes au plus)</span><br>
+    <span id="nom-fichier" style="font-weight:600"></span>
+  </label>
+  <input id="fichier" name="fichier" type="file" accept=".xlsx,.xlsm,.csv,.txt" required hidden>
+  <div class="grille2" style="margin-top:14px">
+    <div><label for="classe_defaut">Classe par défaut (lignes sans classe ou classe inconnue)</label>
+      <select id="classe_defaut" name="classe_defaut"><option value="">— aucune : la colonne « Classe » est obligatoire —</option>
+        {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if c.id==cid }}>{{ c.nom }}</option>{% endfor %}</select></div>
+  </div>
+  <p class="actions" style="margin-top:14px"><button class="btn">Analyser le fichier</button></p>
+  <p class="aide">Rien n'est enregistré à cette étape : GESCOL affiche d'abord un aperçu ligne par ligne (création, mise à jour ou erreur) que vous validez ensuite.</p>
+</form>
+<div class="carte" style="margin-top:14px">
+  <h3 style="margin-top:0">Comment préparer le fichier</h3>
+  <ul class="aide">
+    <li>Partez du <a href="{{ url_for('eleves_modele_xlsx') }}">modèle Excel</a> (feuille « Consignes ») ou de l'<a href="{{ url_for('eleves_export_xlsx') }}">export Excel</a> des élèves existants pour les corriger en masse.</li>
+    <li>Obligatoires : <b>Nom</b>, <b>Prénoms</b>, <b>Sexe</b> (M/F) et la <b>Classe</b> (ou une classe par défaut ci-dessus).</li>
+    <li>Un élève est <b>mis à jour</b> (et non créé en double) si son matricule, son matricule EducMaster, ou ses nom + prénoms + date de naissance sont reconnus. Une cellule vide n'efface pas la donnée existante.</li>
+    <li>Les intitulés de colonnes peuvent varier (« Prénom(s) », « Né(e) le », « Tél. »…) ; une seule colonne « Nom et prénoms » est aussi acceptée.</li>
+  </ul>
+  {% if rapport_dispo %}<p><a class="btn sec petit" href="{{ url_for('eleves_import_rapport') }}">Rapport du dernier import (Excel)</a></p>{% endif %}
+</div>
+<script>
+(function(){
+  var z=document.getElementById('zone'), f=document.getElementById('fichier'), n=document.getElementById('nom-fichier');
+  function montrer(){ n.textContent = f.files[0] ? ('Fichier choisi : ' + f.files[0].name) : ''; }
+  f.addEventListener('change', montrer);
+  ['dragenter','dragover'].forEach(function(t){ z.addEventListener(t,function(e){e.preventDefault(); z.classList.add('survol');}); });
+  ['dragleave','drop'].forEach(function(t){ z.addEventListener(t,function(e){e.preventDefault(); z.classList.remove('survol');}); });
+  z.addEventListener('drop',function(e){ if(e.dataTransfer.files.length){ f.files=e.dataTransfer.files; montrer(); } });
+})();
+</script>
+
+{% elif etape == 'apercu' %}
+{% set nb_c = res|selectattr('action','equalto','creer')|list|length %}
+{% set nb_m = res|selectattr('action','equalto','maj')|list|length %}
+{% set nb_e = res|selectattr('action','equalto','erreur')|list|length %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Lignes lues</div><div class="v">{{ res|length }}</div><div class="d">{{ d.fichier }}</div></div>
+  <div class="kpi"><div class="l">Nouveaux élèves</div><div class="v vert">{{ nb_c }}</div><div class="d">seront inscrits</div></div>
+  <div class="kpi"><div class="l">Fiches à mettre à jour</div><div class="v">{{ nb_m }}</div><div class="d">élèves déjà connus</div></div>
+  <div class="kpi"><div class="l">Lignes en erreur</div><div class="v {{ 'rouge' if nb_e }}">{{ nb_e }}</div><div class="d">seront ignorées</div></div>
+</div>
+<details class="carte" style="margin-bottom:12px"><summary><b>Colonnes reconnues ({{ d.colonnes|length }})</b>{% if defaut %} · classe par défaut : {{ defaut.nom }}{% endif %}</summary>
+  <div class="tw"><table class="t compact" style="margin-top:8px"><tr><th>Donnée GESCOL</th><th>Colonne du fichier</th></tr>
+    {% for k, h in d.colonnes.items() %}<tr><td>{{ LIBELLES.get(k, 'Nom et prénoms') }}</td><td>{{ h }}</td></tr>{% endfor %}
+  </table></div>
+  {% set absentes = LIBELLES.keys()|reject('in', d.colonnes.keys())|list %}
+  {% if absentes %}<p class="aide">Non trouvées dans le fichier : {% for k in absentes %}{{ LIBELLES[k] }}{{ ', ' if not loop.last }}{% endfor %}.</p>{% endif %}
+</details>
+<form method="post" data-coches>
+  <div class="actions" style="margin-bottom:10px">
+    <button class="btn vert" style="color:#fff" name="action" value="valider" data-confirmer="Enregistrer les lignes cochées ?">Valider l'import des lignes cochées (<span class="nb-coches">0</span>)</button>
+    <button class="btn sec" name="action" value="annuler" formnovalidate>Annuler</button>
+    <span class="aide"><a href="#" data-cocher="1">tout cocher</a> · <a href="#" data-cocher="0">tout décocher</a></span>
+  </div>
+  <div class="tw"><table class="t compact">
+    <tr><th></th><th>Ligne</th><th>Résultat</th><th>Nom</th><th>Prénoms</th><th>Sexe</th><th>Né(e) le</th><th>Classe</th><th>Matricule</th><th>Observations</th></tr>
+    {% for r in res %}{% set v = r.valeurs %}
+    <tr {% if r.action=='erreur' %}style="background:#FEF3F2"{% endif %}>
+      <td>{% if r.action != 'erreur' %}<input type="checkbox" name="lignes" value="{{ r.n }}" checked aria-label="Importer la ligne {{ r.n }}">{% endif %}</td>
+      <td>{{ r.n }}</td>
+      <td>{% if r.action=='creer' %}<span class="badge ok">nouveau</span>{% elif r.action=='maj' %}<span class="badge att">mise à jour</span>{% else %}<span class="badge ko">erreur</span>{% endif %}</td>
+      <td><b>{{ v.nom or r.brut.nom }}</b></td><td>{{ v.prenoms or r.brut.prenoms }}</td><td>{{ v.sexe or r.brut.sexe }}</td>
+      <td>{{ date_fr(v.date_naissance) if v.date_naissance else (r.brut.date_naissance or '') }}</td>
+      <td>{{ r.classe.nom if r.classe else (r.brut.classe or '') }}</td>
+      <td>{{ r.eleve.matricule if r.eleve else (v.matricule or 'automatique') }}</td>
+      <td>{% for m in r.erreurs %}<div class="rouge">✗ {{ m }}</div>{% endfor %}{% for m in r.avert %}<div class="aide">⚠ {{ m }}</div>{% endfor %}</td></tr>
+    {% endfor %}
+  </table></div>
+</form>
+<p class="aide">Corrigez les lignes en erreur dans votre fichier puis importez-le à nouveau : les élèves déjà importés seront reconnus et simplement mis à jour.</p>
+
+{% elif etape == 'rapport' %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Élèves inscrits</div><div class="v vert">{{ crees|length }}</div><div class="d">{{ d.fichier }}</div></div>
+  <div class="kpi"><div class="l">Fiches mises à jour</div><div class="v">{{ maj|length }}</div></div>
+  <div class="kpi"><div class="l">Lignes ignorées</div><div class="v {{ 'rouge' if ignores }}">{{ ignores|length }}</div></div>
+</div>
+<div class="actions" style="margin-bottom:12px">
+  <a class="btn" href="{{ url_for('eleves_import_rapport') }}">Rapport d'import (Excel)</a>
+  <a class="btn sec" href="{{ url_for('eleves') }}">Voir la liste des élèves</a>
+  <a class="btn sec" href="{{ url_for('eleves_import') }}">Nouvel import</a>
+</div>
+{% if ignores %}
+<h2>Lignes ignorées</h2>
+<div class="tw"><table class="t compact">
+  <tr><th>Ligne</th><th>Nom et prénoms</th><th>Motif</th></tr>
+  {% for r, raison in ignores %}<tr><td>{{ r.n }}</td><td>{{ r.valeurs.nom or r.brut.nom }} {{ r.valeurs.prenoms or r.brut.prenoms }}</td><td class="rouge">{{ raison }}</td></tr>{% endfor %}
+</table></div>{% endif %}
+{% if crees or maj %}
+<h2>Élèves enregistrés</h2>
+<div class="tw"><table class="t compact">
+  <tr><th>Ligne</th><th>Matricule</th><th>Nom et prénoms</th><th>Classe</th><th>Opération</th></tr>
+  {% for r, eid, mat in crees %}<tr><td>{{ r.n }}</td><td>{{ mat }}</td><td><a href="{{ url_for('eleve_detail', eid=eid) }}"><b>{{ r.valeurs.nom }}</b> {{ r.valeurs.prenoms }}</a></td><td>{{ r.classe.nom }}</td><td><span class="badge ok">inscrit(e)</span></td></tr>{% endfor %}
+  {% for r, eid, mat in maj %}<tr><td>{{ r.n }}</td><td>{{ mat }}</td><td><a href="{{ url_for('eleve_detail', eid=eid) }}"><b>{{ r.valeurs.nom }}</b> {{ r.valeurs.prenoms }}</a></td><td>{{ r.classe.nom }}</td><td><span class="badge att">mise à jour</span></td></tr>{% endfor %}
+</table></div>{% endif %}
+{% endif %}
+{% endblock %}

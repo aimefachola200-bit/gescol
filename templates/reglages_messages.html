@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% block titre %}Réglages des messages{% endblock %}
+{% block contenu %}
+<h1>Messages aux parents : WhatsApp et SMS</h1>
+<p class="sous">Les messages apparaissent toujours dans l'espace parents. WhatsApp et SMS s'y ajoutent selon ces réglages.</p>
+<form method="post" class="f" style="max-width:820px">
+<div class="carte">
+  <h2 style="margin-top:0">Quand prévenir les parents ?</h2>
+  {% for k, lib in [('notif_absence', "Absence ou retard (à l'enregistrement de l'appel)"), ('notif_paiement', 'Paiement reçu (au guichet ou en ligne)'), ('notif_bulletin', 'Bulletin publié')] %}
+  <label style="font-weight:400;display:flex;gap:8px;align-items:center"><input type="checkbox" name="{{ k }}" {{ 'checked' if p[k]=='1' }}> {{ lib }}</label>
+  {% endfor %}
+</div>
+<div class="carte">
+  <h2 style="margin-top:0">WhatsApp (gratuit)</h2>
+  <label style="font-weight:400;display:flex;gap:8px;align-items:center"><input type="checkbox" name="notif_whatsapp" {{ 'checked' if p.notif_whatsapp=='1' }}> Préparer un message WhatsApp pour chaque événement</label>
+  <p class="aide">Les messages s'accumulent dans « Messages et WhatsApp → WhatsApp à envoyer ». Un clic ouvre WhatsApp avec le texte prêt ; la personne appuie sur Envoyer. L'envoi entièrement automatique par WhatsApp exige l'API WhatsApp Business de Meta (payante, avec validation de l'école) et n'est pas inclus.</p>
+</div>
+<div class="carte">
+  <h2 style="margin-top:0">SMS automatiques (fournisseur payant)</h2>
+  <label style="font-weight:400;display:flex;gap:8px;align-items:center"><input type="checkbox" name="notif_sms" {{ 'checked' if p.notif_sms=='1' }}> Envoyer automatiquement un SMS pour chaque événement</label>
+  <p class="aide">Souscrivez auprès d'un fournisseur de SMS en masse qui dessert le Bénin et qui propose une « API HTTP ». Recopiez ici l'adresse fournie dans sa documentation, en remplaçant le numéro par <code>{telephone}</code> (ou <code>{telephone_plus}</code> avec « + »), le texte par <code>{message}</code> et le nom d'expéditeur par <code>{expediteur}</code>.</p>
+  <div class="ligne">
+    <div><label>Méthode</label><select name="sms_methode">
+      {% for k, l in [('GET','GET (tout dans l\'adresse)'), ('POST_JSON','POST avec corps JSON'), ('POST_FORM','POST formulaire')] %}<option value="{{ k }}" {{ 'selected' if p.sms_methode==k }}>{{ l }}</option>{% endfor %}</select></div>
+    <div><label>Nom d'expéditeur</label><input name="sms_expediteur" value="{{ p.sms_expediteur }}" maxlength="11" placeholder="ex. CPFA"></div>
+  </div>
+  <label>Adresse (URL) de la passerelle</label>
+  <input name="sms_url" value="{{ p.sms_url }}" placeholder="https://api.fournisseur.com/sms/send?user=XXX&amp;key=YYY&amp;to={telephone}&amp;from={expediteur}&amp;text={message}">
+  <label>Corps de la requête (POST uniquement)</label>
+  <textarea name="sms_corps" rows="3" placeholder='{"to": "{telephone_plus}", "from": "{expediteur}", "text": "{message}"}'>{{ p.sms_corps }}</textarea>
+  <label>En-tête d'authentification (facultatif)</label>
+  <input name="sms_entete" value="{{ p.sms_entete }}" placeholder="Authorization: Bearer VOTRE_CLE">
+  <div class="filtres" style="margin-top:12px">
+    <input name="tel_test" placeholder="Votre numéro pour un SMS de test" style="min-width:240px">
+    <button class="btn sec" name="tester" value="1">Enregistrer et envoyer un SMS de test</button>
+  </div>
+</div>
+<button class="btn">Enregistrer</button>
+</form>
+{% endblock %}

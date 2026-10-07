@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% block titre %}Courrier{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Registre du courrier</h1><p class="sous">{{ a_traiter }} courrier(s) à traiter</p></div>
+  <a class="btn sec" href="{{ url_for('archives') }}">Archives</a>
+</div>
+<details class="carte" {{ 'open' if not lst }}>
+  <summary style="cursor:pointer;font-weight:600">+ Enregistrer un courrier</summary>
+  <form method="post" enctype="multipart/form-data" class="f" style="margin-top:10px">
+    <div class="ligne">
+      <div><label>Sens</label><select name="sens"><option value="arrivee">Arrivée (reçu)</option><option value="depart">Départ (envoyé)</option></select></div>
+      <div><label>Date</label><input type="date" name="date" value="{{ aujourdhui }}"></div>
+      <div><label>Expéditeur / destinataire *</label><input name="correspondant" required placeholder="ex. Circonscription scolaire de Cotonou"></div>
+      <div><label>Référence du document</label><input name="reference" placeholder="n° de lettre"></div>
+    </div>
+    <label>Objet *</label><input name="objet" required maxlength="300">
+    <label>Document scanné (PDF ou photo, facultatif)</label><input type="file" name="fichier" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+    <p><button class="btn">Enregistrer</button></p>
+  </form>
+</details>
+<form class="filtres">
+  <select name="sens"><option value="">Arrivée et départ</option><option value="arrivee" {{ 'selected' if sens=='arrivee' }}>Arrivée</option><option value="depart" {{ 'selected' if sens=='depart' }}>Départ</option></select>
+  <select name="statut"><option value="">Tous les états</option>{% for k, v in STATUTS_COURRIER.items() %}<option value="{{ k }}" {{ 'selected' if statut==k }}>{{ v }}</option>{% endfor %}</select>
+  <input name="q" value="{{ rech }}" placeholder="Objet, correspondant, numéro"><button class="btn sec">Filtrer</button>
+</form>
+<div class="tw"><table class="t">
+  <tr><th>N°</th><th>Date</th><th>Correspondant</th><th>Objet</th><th>Suite / état</th></tr>
+  {% for c in lst %}
+  <tr><td style="white-space:nowrap"><b>{{ c.numero }}</b><br><span class="gris">{{ 'Arrivée' if c.sens=='arrivee' else 'Départ' }}</span></td>
+    <td>{{ date_fr(c.date) }}</td><td>{{ c.correspondant }}{% if c.reference %}<br><span class="gris">Réf. {{ c.reference }}</span>{% endif %}</td>
+    <td>{{ c.objet }}{% if c.fichier %}<br><a href="{{ url_for('fichier_secretariat', quoi='courrier', i=c.id) }}" target="_blank">Voir le document</a>{% endif %}</td>
+    <td><form method="post" class="filtres" style="margin:0"><input type="hidden" name="action" value="maj"><input type="hidden" name="id" value="{{ c.id }}">
+      <select name="statut" style="width:auto">{% for k, v in STATUTS_COURRIER.items() %}<option value="{{ k }}" {{ 'selected' if c.statut==k }}>{{ v }}</option>{% endfor %}</select>
+      <input name="suite" value="{{ c.suite or '' }}" placeholder="Suite donnée" style="min-width:160px"><button class="btn sec petit">OK</button></form></td></tr>
+  {% else %}<tr><td colspan="5" class="gris">Aucun courrier.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

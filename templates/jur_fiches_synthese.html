@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% block titre %}Fiches consolidées{% endblock %}
+{% import "jur_fiche_macros.html" as F with context %}
+{% block contenu %}
+{{ F.style() }}
+{% set args = f.to_dict() %}
+<div class="entete"><div><h1>{{ r.titre }}</h1>
+  <p class="sous">{{ FICHES[fiche][3] }} · année {{ annee }} · {{ r.n }} école(s) prise(s) en compte sur {{ r.ecoles|length }} attendue(s)</p></div>
+  <div class="actions">
+    <a class="btn sec petit" href="{{ url_for('jur_fiches', annee=annee) }}">← Fiches des écoles</a>
+    {% if r.n %}<a class="btn" href="{{ url_for('jur_fiches_synthese', **dict(args, format='pdf', fiche=fiche, annee=annee)) }}">⇩ PDF officiel</a>
+    <a class="btn sec" href="{{ url_for('jur_fiches_synthese', **dict(args, format='pdf', par='1', fiche=fiche, annee=annee)) }}">⇩ PDF + une synthèse par {{ 'CS' if JUR_NIVEAU=='ddemp' and not cs_id else 'zone' }}</a>
+    <a class="btn sec" href="{{ url_for('jur_fiches_synthese', **dict(args, format='xlsx', fiche=fiche, annee=annee)) }}">⇩ Excel</a>{% endif %}
+  </div></div>
+<nav class="onglets" aria-label="Fiches">{% for c, i in FICHES.items() %}<a href="{{ url_for('jur_fiches_synthese', **dict(args, fiche=c, format='')) }}" class="{{ 'actif' if c == fiche }}">{{ i[4] }}</a>{% endfor %}</nav>
+<form method="get" class="filtres"><input type="hidden" name="fiche" value="{{ fiche }}">
+  <label for="js-annee">Année<br><select id="js-annee" name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  {% if JUR_NIVEAU=='ddemp' %}<label for="js-cs">Circonscription<br><select id="js-cs" name="cs" onchange="this.form.submit()"><option value="">Toute la DDEMP</option>
+    {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if cs_id == c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+  <label for="js-zone">Zone pédagogique<br><select id="js-zone" name="zone" onchange="this.form.submit()"><option value="">{{ 'Toute la CS' if JUR_NIVEAU=='cs' or cs_id else 'Toutes' }}</option>
+    {% for z in zones %}<option value="{{ z.id }}" {{ 'selected' if zone_id == z.id }}>{% if JUR_NIVEAU=='ddemp' and not cs_id %}{{ z.cs_nom }} – {% endif %}{{ z.nom }}</option>{% endfor %}</select></label>
+  <label for="js-type">Type d'école<br><select id="js-type" name="type" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for k, v in JUR_TYPES.items() %}<option value="{{ k }}" {{ 'selected' if f.get('type')==k }}>{{ v }}</option>{% endfor %}</select></label>
+  <label for="js-sect">Secteur<br><select id="js-sect" name="secteur" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for k, v in JUR_SECTEURS.items() %}<option value="{{ k }}" {{ 'selected' if f.get('secteur')==k }}>{{ v }}</option>{% endfor %}</select></label>
+</form>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Écoles prises en compte</div><div class="v">{{ r.n }}</div><div class="d">sur {{ r.ecoles|length }} concernée(s)</div></div>
+  <div class="kpi"><div class="l">Fiches absentes</div><div class="v">{{ r.ecoles|selectattr('etat','equalto','absente')|list|length }}</div></div>
+  <div class="kpi"><div class="l">Fiches incomplètes</div><div class="v">{{ r.ecoles|selectattr('etat','equalto','incomplete')|list|length }}</div><div class="d">prises en compte</div></div>
+  <div class="kpi"><div class="l">Personnel enseignant</div><div class="v">{{ r.personnel|length }}</div><div class="d">lignes des états nominatifs</div></div>
+</div>
+<div class="carte"><h3>Ventilation par {{ 'circonscription' if JUR_NIVEAU=='ddemp' and not cs_id else 'zone pédagogique' }}</h3>
+<div class="tw"><table class="t"><tr><th>{{ 'CS' if JUR_NIVEAU=='ddemp' and not cs_id else 'Zone' }}</th><th>Écoles concernées</th><th>Fiches reçues complètes</th><th>Incomplètes</th><th>Absentes</th></tr>
+{% for g, d in ventil.items() %}<tr><td>{{ g }}</td><td class="num">{{ d.attendues }}</td><td class="num">{{ d.recues }}</td><td class="num">{{ d.incompletes }}</td><td class="num">{{ d.attendues - d.recues - d.incompletes }}</td></tr>
+{% else %}<tr><td colspan="5" class="gris">Aucune école concernée.</td></tr>{% endfor %}</table></div></div>
+{{ F.controles(r.controles) }}
+{% if r.n %}<p class="aide">Nombres : somme des écoles (distances : moyenne) ; questions Oui/Non et cases : nombre d'écoles par réponse ; état nominatif : récapitulatif par statut.</p>
+{{ F.fiche(vue) }}{% else %}<div class="flash info">Aucune fiche reçue pour cette sélection : la synthèse sera disponible dès réception des fichiers de transmission des écoles.</div>{% endif %}
+{% endblock %}

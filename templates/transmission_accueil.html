@@ -1,0 +1,131 @@
+{% extends "base.html" %}{% block titre %}Transmission à la circonscription{% endblock %}
+{% block contenu %}
+<style>
+.tr-rub{list-style:none;margin:0;padding:0}
+.tr-rub li{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #EAECF0}
+.tr-rub li:last-child{border-bottom:none}
+.tr-rub .badge{flex:0 0 auto;min-width:72px;text-align:center}
+.tr-rub .aide{display:block}
+.tr-code{font-family:monospace;font-size:1.15em;letter-spacing:.04em}
+.tr-etapes{margin:0;padding-left:20px}
+.tr-etapes li{margin:3px 0}
+</style>
+<div class="entete">
+  <div><h1>Transmission à la circonscription</h1>
+  <p class="sous">Données de l'école pour la circonscription scolaire (CS) — année {{ ap.annee }}</p></div>
+  <div class="actions">
+    {% if not ap.erreurs %}<a class="btn" href="{{ url_for('transmission_fichier') }}">⬇ Télécharger le fichier de transmission</a>{% endif %}
+  </div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Élèves transmis</div><div class="v">{{ ap.eleves }}</div><div class="d">{{ ap.f }} filles · {{ ap.g }} garçons</div></div>
+  <div class="kpi"><div class="l">Classes</div><div class="v">{{ ap.classes }}</div><div class="d">maternelle et primaire</div></div>
+  <div class="kpi"><div class="l">Enseignants</div><div class="v">{{ ap.enseignants }}</div><div class="d">{{ ap.personnel }} membre(s) du personnel</div></div>
+  <div class="kpi"><div class="l">Rubriques</div><div class="v">{{ ap.presentes|length }} / {{ ap.rubriques|length }}</div><div class="d">fichier ≈ {{ (taille / 1024)|round(1) }} Ko</div></div>
+</div>
+
+{% if ap.erreurs %}
+<div class="flash danger"><b>Transmission impossible pour l'instant :</b>
+  <ul>{% for m in ap.erreurs %}<li>{{ m }}</li>{% endfor %}</ul>
+  {% if peut('ecoles') %}<a class="btn petit" href="{{ url_for('ecole_form', eid=e.id) }}">Compléter la fiche de l'école</a>{% else %}Demandez au directeur de compléter la fiche de l'école.{% endif %}
+</div>
+{% endif %}
+
+<div class="grille2">
+<div class="carte"><h2>1. Identité transmise</h2>
+  <table class="t compact">
+    <tr><th>École</th><td>{{ ap.ident.nom }}</td></tr>
+    <tr><th>Code de l'école</th><td>{% if ap.ident.code %}<span class="tr-code">{{ ap.ident.code }}</span>{% else %}<span class="badge att">à attribuer</span>{% endif %}</td></tr>
+    <tr><th>Type</th><td>{{ types[ap.ident.type] }} ({{ ap.ident.type }})</td></tr>
+    <tr><th>Secteur</th><td>{{ secteurs[ap.ident.secteur] }}</td></tr>
+    <tr><th>Département (DDEMP)</th><td>{{ ap.ident.departement or '—' }}</td></tr>
+    <tr><th>Circonscription (CS)</th><td>{{ ap.ident.cs or '—' }}</td></tr>
+    <tr><th>Zone pédagogique</th><td>{{ ap.ident.zone or '—' }}</td></tr>
+    <tr><th>Direction</th><td>{{ ap.ident.directeur_titre }} {{ ap.ident.directeur_nom or '—' }} {{ ap.ident.directeur_tel }}</td></tr>
+  </table>
+  {% if peut('ecoles') %}<p class="aide">Département, CS, zone et direction se modifient dans la <a href="{{ url_for('ecole_form', eid=e.id) }}">fiche de l'école</a>.</p>{% endif %}
+  <form method="post" action="{{ url_for('transmission_identite') }}" class="grille-id">
+    <label>Code de l'école<br><input name="code" value="{{ ap.ident.code }}" {{ '' if admin else 'readonly' }} maxlength="31"
+      pattern="[A-Za-z0-9][A-Za-z0-9\-]{3,30}" aria-describedby="aide-code"></label>
+    <label>Type d'école<br><select name="type">
+      <option value="">Automatique ({{ ap.type_deduit }})</option>
+      {% for k, v in types.items() %}<option value="{{ k }}" {{ 'selected' if r.get('type')==k }}>{{ v }} ({{ k }})</option>{% endfor %}</select></label>
+    <label>Secteur<br><select name="secteur">
+      <option value="">Automatique ({{ 'public' if PUBLIQUE else 'privé' }})</option>
+      {% for k, v in secteurs.items() %}<option value="{{ k }}" {{ 'selected' if r.get('secteur')==k }}>{{ v }}</option>{% endfor %}</select></label>
+    <div><br><button class="btn sec">Enregistrer</button></div>
+  </form>
+  <p class="aide" id="aide-code">Le code identifie l'école auprès de la CS ; il est créé automatiquement une seule fois.
+    {% if not admin %}Seul l'administrateur peut le modifier.{% else %}Ne le changez qu'à la demande de la CS.{% endif %}</p>
+</div>
+
+<div class="carte"><h2>2. Aperçu des données</h2>
+  <ul class="tr-rub">
+  {% for k, lib, ok, note in ap.rubriques %}
+    <li>{% if ok %}<span class="badge ok">incluse</span>{% else %}<span class="badge att">absente</span>{% endif %}
+      <div><b>{{ lib }}</b>{% if note %}<span class="aide">{{ note }}</span>{% endif %}</div></li>
+  {% endfor %}
+  </ul>
+  {% if ap.secondaire %}<p class="aide">Classes du secondaire non transmises à la CS : {{ ap.secondaire|join(', ') }}.</p>{% endif %}
+  {% if ap.ages_inconnus %}<p class="aide">{{ ap.ages_inconnus }} élève(s) sans date de naissance : non comptés dans la répartition par âge (au 31/12/{{ ap.annee[5:] }}).</p>{% endif %}
+</div>
+</div>
+
+{% if cep %}
+<div class="carte" id="cep"><h2>3. Résultats officiels du CEP (session {{ cep.session }})</h2>
+  <p>Candidats : <b>{{ cep.candidats_g + cep.candidats_f }}</b> ({{ cep.candidats_g }} garçons, {{ cep.candidats_f }} filles).
+   Saisissez les admis dès la proclamation officielle des résultats ; laissez vide tant qu'ils ne sont pas connus.</p>
+  <form method="post" action="{{ url_for('transmission_cep') }}" class="filtres">
+    <label>Admis garçons<br><input type="number" name="admis_g" min="0" max="{{ cep.candidats_g }}" value="{{ res_cep.get('admis_g') if res_cep.get('admis_g') is not none else '' }}"></label>
+    <label>Admis filles<br><input type="number" name="admis_f" min="0" max="{{ cep.candidats_f }}" value="{{ res_cep.get('admis_f') if res_cep.get('admis_f') is not none else '' }}"></label>
+    <button class="btn sec">Enregistrer les résultats</button>
+  </form>
+  {% if res_cep.get('admis_g') is not none %}<p class="aide">Taux de réussite : {{ ((100 * (res_cep.admis_g + res_cep.admis_f) / (cep.candidats_g + cep.candidats_f)) if (cep.candidats_g + cep.candidats_f) else 0)|round(1) }} % — saisi le {{ (res_cep.maj or '')[:16] }} par {{ res_cep.par or '' }}.</p>{% endif %}
+  {% if cep.liste %}<details><summary>Liste nominative des candidats ({{ cep.liste|length }})</summary><div class="tw"><table class="t compact">
+    <tr><th>N°</th><th>Nom et prénoms</th><th>Sexe</th><th>Date de naissance</th><th>Lieu</th><th>N° de table</th></tr>
+    {% for c in cep.liste %}<tr><td class="num">{{ loop.index }}</td><td>{{ c.nom }} {{ c.prenoms }}</td><td>{{ c.sexe }}</td><td>{{ date_fr(c.date_naissance) if c.date_naissance else '' }}</td><td>{{ c.lieu_naissance }}</td><td>{{ c.numero_table }}</td></tr>{% endfor %}
+  </table></div></details>{% endif %}
+</div>
+{% endif %}
+
+<div class="grille2">
+<div class="carte"><h2>{{ 4 if cep else 3 }}. Envoyer par fichier</h2>
+  <ol class="tr-etapes">
+    <li>Cliquez sur « Télécharger le fichier de transmission » : <b>{{ ap.nom_fichier }}</b>.</li>
+    <li>Remettez ce fichier à la circonscription (clé USB, WhatsApp, e-mail).</li>
+    <li>La CS l'importe dans GESCOL Circonscription (menu Transmissions → Recevoir).</li>
+  </ol>
+  <p class="aide">Le fichier est scellé : s'il est modifié ou abîmé en route, la CS le refusera ; il suffit alors de le renvoyer.</p>
+  {% if not ap.erreurs %}<a class="btn" href="{{ url_for('transmission_fichier') }}">⬇ Télécharger le fichier de transmission</a>{% endif %}
+</div>
+
+<div class="carte" id="en-ligne"><h2>{{ 5 if cep else 4 }}. Envoyer en ligne</h2>
+  <p class="aide">Si votre circonscription utilise GESCOL Circonscription en ligne, elle vous communique son adresse Internet et un code d'accès propre à votre école.</p>
+  <form method="post" action="{{ url_for('transmission_reglages') }}">
+    <label>Adresse Internet de la CS<br><input name="adresse" value="{{ r.get('adresse','') }}" placeholder="https://cs-pobe.exemple.bj" style="width:100%"></label>
+    <label>Code d'accès fourni par la CS<br><input name="code_acces" type="password" autocomplete="off" placeholder="{{ 'enregistré — laisser vide pour le conserver' if r.get('code_acces') else 'ex. K7QF-2MXP-9RTA' }}" style="width:100%"></label>
+    {% if r.get('code_acces') %}<label><input type="checkbox" name="effacer_code" value="1"> Effacer le code enregistré</label>{% endif %}
+    <div class="actions"><button class="btn sec">Enregistrer les réglages</button></div>
+  </form>
+  <form method="post" action="{{ url_for('transmission_envoyer') }}" style="margin-top:10px">
+    <button class="btn vert" {{ 'disabled' if ap.erreurs or not r.get('adresse') or not r.get('code_acces') }}
+      data-confirmer="Envoyer maintenant les données de {{ ap.annee }} à la circonscription ?">⇪ Envoyer à la CS</button>
+    {% if not r.get('adresse') or not r.get('code_acces') %}<span class="aide">Renseignez d'abord l'adresse et le code d'accès.</span>{% endif %}
+  </form>
+</div>
+</div>
+
+<div class="carte"><h2>Historique des envois</h2>
+{% if hist %}<div class="tw"><table class="t compact">
+  <tr><th>Date</th><th>Année</th><th>Mode</th><th class="num">Élèves</th><th class="num">Personnel</th><th>Rubriques</th><th>Résultat</th><th>Par</th></tr>
+  {% for h in hist %}<tr><td>{{ h.envoye_le[:16] }}</td><td>{{ h.annee }}</td>
+    <td>{{ 'En ligne' if h.mode=='en_ligne' else 'Fichier' }}{% if h.destination %}<br><span class="aide">{{ h.destination }}</span>{% endif %}</td>
+    <td class="num">{{ h.nb_eleves }}</td><td class="num">{{ h.nb_personnel }}</td>
+    <td class="aide">{{ h.rub|map('replace','_',' ')|join(', ') }}</td>
+    <td>{% if h.statut=='ok' %}<span class="badge ok">réussi</span>{% else %}<span class="badge ko">échec</span>{% endif %}<br><span class="aide">{{ h.message }}</span></td>
+    <td>{{ h.envoye_par }}</td></tr>{% endfor %}
+</table></div>
+{% else %}<p class="gris">Aucun envoi pour l'instant.</p>{% endif %}
+</div>
+{% endblock %}

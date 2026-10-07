@@ -1,0 +1,146 @@
+{% extends "base.html" %}{% block titre %}{{ TYPES[visite.type] ~ ' du ' ~ date_fr(visite.date) if visite else 'Nouvelle visite' }}{% endblock %}
+{% block contenu %}
+<style>
+.vis-form fieldset{border:1px solid var(--bord);border-radius:10px;padding:10px 14px;margin:0 0 14px}
+.vis-form legend{font-weight:700;padding:0 6px;color:var(--bleu)}
+.vis-form label{font-weight:600;font-size:13px;display:block;margin:6px 0 3px}
+.vis-radios{display:flex;gap:14px;flex-wrap:wrap}.vis-radios label{font-weight:normal;display:flex;gap:5px;align-items:center}
+.vis-radios input{width:auto}
+.vis-eff{display:grid;grid-template-columns:repeat(3,minmax(80px,140px));gap:8px}
+.vis-form textarea{min-height:80px}
+#vis-avert{display:none}
+</style>
+<div class="entete">
+  <div><h1>{% if visite %}{{ TYPES[visite.type] }} du {{ date_fr(visite.date) }}{% else %}Nouvelle visite{% endif %}</h1>
+  <p class="sous">{% if visite %}{{ visite.visiteur_qualite }} {{ visite.visiteur_nom }} — {{ visite.ecole_nom }}{% if visite.enseignant_nom %} — {{ visite.enseignant_nom }}{% endif %}{% if visite.classe_nom %} ({{ visite.classe_nom }}){% endif %}{% else %}Visite d'un conseiller pédagogique (CP) ou du chef de circonscription (CCS){% endif %}</p></div>
+  <div class="actions">
+    {% if visite %}<a class="btn petit" href="{{ url_for('jur_visite_pdf', vid=visite.id) }}" target="_blank">📄 Fiche PDF</a>{% endif %}
+    <a class="btn sec petit" href="{{ url_for('jur_visites') }}">← Liste des visites</a>
+  </div>
+</div>
+{% if not saisie %}<div class="flash info">Consultation seulement{% if visite and peut('jur_visites') %} : un conseiller pédagogique ne modifie que ses propres visites{% endif %}.</div>{% endif %}
+{% if not ecoles %}<div class="flash warning">Aucune école dans la juridiction : ajoutez les écoles (Juridiction › Écoles) ou importez leurs fichiers de transmission.</div>{% endif %}
+
+<form method="post" class="vis-form">
+  <fieldset {{ 'disabled' if not saisie }}>
+    <legend>Visite</legend>
+    <div class="ligne">
+      <div><label>Type de visite</label><div class="vis-radios">
+        {% for k, lib in TYPES.items() %}<label><input type="radio" name="type" value="{{ k }}" {{ 'checked' if v.type == k }} required> {{ lib }}</label>{% endfor %}</div></div>
+      <div><label for="vd">Date</label><input id="vd" type="date" name="date" value="{{ v.date or '' }}" max="{{ aujourdhui }}" required></div>
+      <div><label>Heure de début – de fin</label><div class="duo"><input type="time" name="heure_debut" value="{{ v.heure_debut or '' }}" aria-label="Heure de début"><input type="time" name="heure_fin" value="{{ v.heure_fin or '' }}" aria-label="Heure de fin"></div></div>
+    </div>
+    <div class="ligne">
+      <div><label for="vv">Visiteur</label>
+        <select id="vv" name="visiteur" required><option value="">— choisir —</option>
+          {% for o in visiteurs %}<option value="{{ o.cle }}" {{ 'selected' if v.visiteur_cle == o.cle }}>{{ o.nom }} — {{ o.qualite }} ({{ o.fonction }})</option>{% endfor %}
+          {% if responsable %}<option value="autre" {{ 'selected' if v.visiteur_cle == 'autre' }}>Autre visiteur (saisie libre)…</option>{% endif %}
+        </select></div>
+      {% if responsable %}
+      <div id="vis-autre"><label for="vn">Nom du visiteur (hors liste)</label><input id="vn" name="visiteur_nom" value="{{ v.visiteur_nom if v.visiteur_cle == 'autre' else '' }}" maxlength="120">
+        <div class="vis-radios">{% for k, lib in QUALITES.items() %}<label><input type="radio" name="visiteur_qualite" value="{{ k }}" {{ 'checked' if v.visiteur_qualite == k and v.visiteur_cle == 'autre' }}> {{ k }}</label>{% endfor %}</div></div>
+      {% endif %}
+    </div>
+  </fieldset>
+
+  <fieldset {{ 'disabled' if not saisie }}>
+    <legend>École, enseignant(e) et classe visités</legend>
+    <div class="ligne">
+      <div><label for="ve">École</label>
+        <select id="ve" name="ecole_id" required><option value="">— choisir l'école —</option>
+          {% for lib, lst in groupes.items() %}<optgroup label="{{ lib }}">
+            {% for e in lst %}<option value="{{ e.id }}" {{ 'selected' if v.ecole_id|string == e.id|string }}>{{ e.nom }}</option>{% endfor %}</optgroup>{% endfor %}
+        </select></div>
+      <div><label for="ven">Enseignant(e) visité(e)</label><input id="ven" name="enseignant_nom" list="dl-ens" value="{{ v.enseignant_nom or '' }}" maxlength="120" placeholder="choisir dans le personnel transmis ou saisir">
+        <datalist id="dl-ens"></datalist></div>
+      <div><label for="vnip">NIP de l'enseignant(e)</label><input id="vnip" name="enseignant_nip" inputmode="numeric" value="{{ v.enseignant_nip or '' }}" maxlength="20"></div>
+      <div><label for="vc">Classe</label><input id="vc" name="classe_nom" list="dl-cl" value="{{ v.classe_nom or '' }}" maxlength="60"><datalist id="dl-cl"></datalist></div>
+    </div>
+    <label>Effectif présent <span class="aide" id="ins-info"></span></label>
+    <div class="vis-eff">
+      <div><label for="eg">Garçons</label><input id="eg" name="eff_g" inputmode="numeric" value="{{ v.eff_g if v.eff_g is not none else '' }}"></div>
+      <div><label for="ef">Filles</label><input id="ef" name="eff_f" inputmode="numeric" value="{{ v.eff_f if v.eff_f is not none else '' }}"></div>
+      <div><label for="et">Total</label><input id="et" value="{{ v.eff_t if v.eff_t is not none else '' }}" readonly tabindex="-1"></div>
+    </div>
+    <div class="flash warning" id="vis-avert" role="status"></div>
+    <p class="aide">Pré-rempli avec l'effectif inscrit de la classe transmis par l'école (modifiable : n'indiquez que les élèves présents).</p>
+    <div class="ligne">
+      <div><label for="vm">Discipline / matière</label><input id="vm" name="discipline" list="dl-disc" value="{{ v.discipline or '' }}" maxlength="120">
+        <datalist id="dl-disc">{% for d in DISCIPLINES %}<option value="{{ d }}">{% endfor %}</datalist></div>
+      <div><label for="vu">Unité</label><input id="vu" name="unite" value="{{ v.unite or '' }}" maxlength="200"></div>
+      <div><label for="vdo">Dossier</label><input id="vdo" name="dossier" value="{{ v.dossier or '' }}" maxlength="200"></div>
+    </div>
+    <div class="ligne">
+      <div><label for="vsa">Situation d'apprentissage (SA)</label><input id="vsa" name="sa" value="{{ v.sa or '' }}" maxlength="300"></div>
+      <div><label for="vs">Séquence</label><input id="vs" name="sequence" value="{{ v.sequence or '' }}" maxlength="300"></div>
+    </div>
+  </fieldset>
+
+  <fieldset {{ 'disabled' if not saisie }}>
+    <legend>Observations, appréciation et conseils</legend>
+    <label for="vob">Observations</label><textarea id="vob" name="observations" maxlength="4000">{{ v.observations or '' }}</textarea>
+    <div class="grille2">
+      <div><label for="vpf">Points forts</label><textarea id="vpf" name="points_forts" maxlength="4000">{{ v.points_forts or '' }}</textarea></div>
+      <div><label for="vin">Insuffisances</label><textarea id="vin" name="insuffisances" maxlength="4000">{{ v.insuffisances or '' }}</textarea></div>
+      <div><label for="vre">Recommandations</label><textarea id="vre" name="recommandations" maxlength="4000">{{ v.recommandations or '' }}</textarea></div>
+      <div><label for="vcs">Conseils</label><textarea id="vcs" name="conseils" maxlength="4000">{{ v.conseils or '' }}</textarea></div>
+    </div>
+    <div class="ligne">
+      <div><label for="vno">Note sur 20 (visite de classe ou d'inspection)</label><input id="vno" name="note" inputmode="decimal" value="{{ ('%g' % v.note) if v.note is number else (v.note or '') }}" placeholder="ex. 14,5"></div>
+      <div><label for="vap">Appréciation</label><input id="vap" name="appreciation" value="{{ v.appreciation or '' }}" maxlength="120" placeholder="ex. Assez bien"></div>
+    </div>
+    <label for="vsu">Suites à donner</label><textarea id="vsu" name="suites" maxlength="4000">{{ v.suites or '' }}</textarea>
+  </fieldset>
+  {% if saisie %}<p class="actions"><button class="btn vert">💾 Enregistrer la visite</button></p>{% endif %}
+</form>
+{% if supprimable %}
+<form method="post" action="{{ url_for('jur_visite_supprimer', vid=visite.id) }}"><button class="btn danger petit" data-confirmer="Supprimer définitivement cette visite ?">Supprimer la visite</button></form>
+{% endif %}
+
+<script>
+(function () {
+  var D = {{ ecoles_json|safe }};
+  var $ = function (id) { return document.getElementById(id); };
+  var ec = $('ve'), ens = $('ven'), nip = $('vnip'), cl = $('vc'), g = $('eg'), f = $('ef'), t = $('et'),
+      info = $('ins-info'), av = $('vis-avert'), prec = null, nouveau = {{ 'false' if visite else 'true' }};
+  function donnees() { return D[ec.value] || {ens: [], cl: []}; }
+  function remplir(dl, items) { dl.innerHTML = ''; items.forEach(function (x) { var o = document.createElement('option'); o.value = x; dl.appendChild(o); }); }
+  function listes() {
+    var d = donnees();
+    remplir($('dl-ens'), d.ens.map(function (p) { return p.n; }));
+    remplir($('dl-cl'), d.cl.map(function (c) { return c.n; }));
+  }
+  function classe() { var n = (cl.value || '').trim().toUpperCase(); return donnees().cl.filter(function (c) { return c.n.toUpperCase() === n; })[0]; }
+  function total() {
+    var a = parseInt(g.value, 10), b = parseInt(f.value, 10), c = classe();
+    t.value = (isNaN(a) && isNaN(b)) ? '' : (isNaN(a) ? 0 : a) + (isNaN(b) ? 0 : b);
+    if (c && ((a || 0) > c.g || (b || 0) > c.f)) { av.style.display = 'block'; av.textContent = 'Attention : l\'effectif présent dépasse l\'effectif inscrit (' + c.g + ' G / ' + c.f + ' F).'; }
+    else { av.style.display = 'none'; }
+  }
+  function majClasse(init) {
+    var c = classe();
+    info.textContent = c ? '— inscrits : ' + c.g + ' G / ' + c.f + ' F (' + (c.g + c.f) + ')' : '';
+    if (c && !init) {
+      if (g.value === '' || (prec && +g.value === prec.g)) g.value = c.g;
+      if (f.value === '' || (prec && +f.value === prec.f)) f.value = c.f;
+    }
+    if (c && init && nouveau && g.value === '' && f.value === '') { g.value = c.g; f.value = c.f; }
+    prec = c; total();
+  }
+  ec.addEventListener('change', function () { listes(); majClasse(false); });
+  ens.addEventListener('change', function () {
+    var p = donnees().ens.filter(function (x) { return x.n === ens.value; })[0];
+    if (!p) return;
+    if (p.nip) nip.value = p.nip;
+    if (p.c && !cl.value) { cl.value = p.c; majClasse(false); }
+  });
+  cl.addEventListener('change', function () { majClasse(false); });
+  g.addEventListener('input', total); f.addEventListener('input', total);
+  listes(); majClasse(true);
+  // visiteur hors liste
+  var vv = $('vv'), autre = $('vis-autre');
+  function vis() { if (autre) autre.style.display = vv.value === 'autre' ? '' : 'none'; }
+  vv.addEventListener('change', vis); vis();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}{% block titre %}Documents de l'enseignant{% endblock %}
+{% block contenu %}
+<style>
+.de-docs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.de-doc{border:1px solid var(--bord);border-radius:10px;padding:12px 14px;background:#fff;display:flex;flex-direction:column;gap:8px}
+.de-doc h3{margin:0;font-size:15px}
+.de-doc p{margin:0;color:var(--gris);font-size:13px;flex:1}
+.de-fam{margin:4px 0 10px}
+</style>
+<div class="entete">
+  <div><h1>Documents de l'enseignant</h1>
+  <p class="sous">Fiches d'évaluation, certificats et attestations remplis automatiquement avec les données de GESCOL
+  (école, personnel{% if carriere %}, carrière{% endif %}, élèves, classes, registre d'appel, notes) — année {{ ANNEE }}.</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('docs_enseignant_historique') }}">🗂 Historique des documents</a></div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Documents produits</div><div class="v">{{ stats.docs }}</div><div class="d">en {{ ANNEE }} ({{ stats.n }} impression{{ 's' if stats.n > 1 }})</div></div>
+  <div class="kpi"><div class="l">{{ 'Ma fiche du personnel' if est_enseignant else 'Personnel actif' }}</div><div class="v">{{ nb_agents }}</div><div class="d">{{ 'agent lié à votre compte' if est_enseignant else "agents de l'école" }}</div></div>
+  <div class="kpi"><div class="l">Élèves inscrits</div><div class="v">{{ nb_eleves }}</div><div class="d">{{ 'dans vos classes' if est_enseignant else "dans l'école" }}</div></div>
+</div>
+
+{% if est_enseignant %}
+<div class="flash info">Vous pouvez préparer <b>vos propres fiches et certificats</b> et les <b>certificats de scolarité des élèves de vos classes</b>.
+Ils sont imprimés sans cachet ni signature : faites-les signer par le directeur / la directrice.
+{% if not nb_agents %}<br>Aucune fiche du personnel n'est liée à votre compte : demandez à la direction de vous rattacher (menu Personnel{% if carriere %} / carrière{% endif %}).{% endif %}</div>
+{% endif %}
+
+{% for code, titre, desc in FAMILLES %}
+<div class="carte">
+  <h2 style="margin-top:0">{{ titre }}</h2>
+  <p class="aide de-fam">{{ desc }}</p>
+  <div class="de-docs">
+  {% for k, d in DOCS.items() if d.famille == code %}
+    <div class="de-doc">
+      <h3>{{ d.titre }}</h3>
+      <p>{{ d.desc }}{% if par_type.get(k) %} <span class="badge ok">{{ par_type[k] }} produit{{ 's' if par_type[k] > 1 }}</span>{% endif %}</p>
+      <div class="actions">
+        <a class="btn petit" href="{{ url_for('docs_enseignant_form', doc=k) }}">✎ Remplir</a>
+        <a class="btn sec petit" href="{{ url_for('docs_enseignant_vierge', doc=k) }}" target="_blank" rel="noopener">📄 PDF vierge</a>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+<div class="carte">
+  <h2 style="margin-top:0">Derniers documents produits</h2>
+  {% if recents %}
+  <div class="tw"><table class="t compact">
+    <thead><tr><th>Date</th><th>Document</th><th class="c">Nb</th><th>Par</th><th></th></tr></thead>
+    <tbody>{% for h in recents %}
+    <tr><td>{{ date_fr(h.cree_le) }} {{ h.cree_le[11:16] }}</td><td>{{ h.libelle }}</td><td class="c">{{ h.nombre }}</td><td>{{ h.auteur or '—' }}</td>
+      <td><a class="btn sec petit" href="{{ url_for('docs_enseignant_reimprimer', hid=h.id) }}" target="_blank" rel="noopener">Réimprimer</a></td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}<p class="aide">Aucun document produit pour l'instant. Choisissez un document ci-dessus, sélectionnez la personne concernée : tout ce que GESCOL connaît est déjà rempli.</p>{% endif %}
+</div>
+{% endblock %}

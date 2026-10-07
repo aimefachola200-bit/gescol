@@ -1,0 +1,34 @@
+{% extends "base.html" %}{% block titre %}Import / export{% endblock %}
+{% block contenu %}
+<style>
+.dn-liens{list-style:none;margin:0;padding:0}
+.dn-liens li{padding:8px 0;border-bottom:1px solid #EAECF0}
+.dn-liens li:last-child{border-bottom:none}
+.dn-liens a{font-weight:600}
+.dn-liens .aide{display:block;margin-top:2px}
+</style>
+<div class="entete">
+  <div><h1>Import / export des données</h1>
+  <p class="sous">Tous les imports et exports de GESCOL, échanges avec EducMaster, conversion de PDF et sauvegarde de la base</p></div>
+</div>
+
+<div class="grille2">
+{% for titre, ico, liens in blocs %}
+  <div class="carte"><h2 style="margin-top:0"><span aria-hidden="true">{{ ico }}</span> {{ titre }}</h2>
+    <ul class="dn-liens">
+    {% for ep, lib, desc in liens %}<li><a href="{{ url_for(ep) }}">{{ lib }}</a><span class="aide">{{ desc }}</span></li>{% endfor %}
+    </ul></div>
+{% endfor %}
+{% if sauvegarde %}
+  <div class="carte"><h2 style="margin-top:0"><span aria-hidden="true">💾</span> Sauvegarde de la base</h2>
+    <p>Télécharge une archive ZIP contenant la base de données, les photos, le logo, le cachet et les signatures.
+       Conservez-la sur une clé USB ou un autre ordinateur.</p>
+    <a class="btn" href="{{ url_for('sauvegarde') }}">⬇ Télécharger la sauvegarde</a>
+    <p class="aide">Restauration : arrêtez GESCOL et recopiez le contenu de l'archive dans le dossier de données (voir le fichier LISEZ-MOI.txt de l'archive).</p></div>
+{% else %}
+  <div class="carte"><h2 style="margin-top:0"><span aria-hidden="true">💾</span> Sauvegarde de la base</h2>
+    <p class="gris">La sauvegarde complète de la base est réservée à l'administrateur (fondateur) de GESCOL.</p></div>
+{% endif %}
+</div>
+{% if not blocs and not sauvegarde %}<div class="carte">Aucun import ou export n'est accessible avec votre rôle.</div>{% endif %}
+{% endblock %}

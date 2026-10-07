@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% block titre %}Paquet reçu{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Paquet reçu n° {{ p.id }}</h1>
+  <p class="sous">{{ p.emetteur_nom }} · {{ 'école' if p.emetteur_type=='ecole' else 'circonscription' }} · année {{ p.annee }}</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_transmissions') }}">← Paquets reçus</a></div></div>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Écoles créées</div><div class="v">{{ res.ecoles_creees or 0 }}</div></div>
+  <div class="kpi"><div class="l">Écoles mises à jour</div><div class="v">{{ res.ecoles_maj or 0 }}</div></div>
+  <div class="kpi"><div class="l">Rubriques enregistrées</div><div class="v">{{ res.sections or 0 }}</div></div>
+  <div class="kpi"><div class="l">Écoles ignorées</div><div class="v">{{ (res.ignorees or [])|length }}</div><div class="d">hors périmètre</div></div>
+</div>
+<div class="grille2">
+<div class="carte"><h2>Réception</h2><table class="t compact">
+  <tr><th>Reçu le</th><td>{{ p.recu_le }}</td></tr>
+  <tr><th>Mode</th><td>{{ 'En ligne' if p.mode=='en_ligne' else 'Fichier' }}</td></tr>
+  <tr><th>Reçu par</th><td>{{ p.recu_par or '—' }}</td></tr>
+  <tr><th>Code de l'émetteur</th><td>{{ p.emetteur_code or '—' }}</td></tr>
+  <tr><th>Taille</th><td>{{ ((p.taille or 0) / 1024)|round(1) }} Ko</td></tr>
+  <tr><th>Empreinte</th><td class="aide" style="word-break:break-all">{{ p.empreinte or '' }}</td></tr>
+  {% if ecole %}<tr><th>École</th><td><a href="{{ url_for('jur_ecole_fiche', eid=ecole.id, annee=p.annee) }}">{{ ecole.nom }}</a> ({{ ecole.code }})</td></tr>{% endif %}
+  {% if cs %}<tr><th>Circonscription</th><td>{{ cs.nom }}{% if cs.ccs_nom %} — {{ cs.ccs_titre or '' }} {{ cs.ccs_nom }}{% endif %}</td></tr>{% endif %}
+</table></div>
+<div class="carte"><h2>Contenu actuel ({{ p.annee }})</h2>
+  {% if ecole %}<table class="t compact">
+    {% for k, lib in noms_longs.items() %}<tr><td>{{ lib }}</td><td>{% if secs.get(k) %}<span class="badge ok">présente</span> <span class="aide">{{ (secs[k].maj or '')[:16] }}</span>{% else %}<span class="badge att">absente</span>{% endif %}</td></tr>{% endfor %}
+  </table>
+  {% elif cs %}<p>Données propres de la circonscription :</p>
+    <ul>{% for s in cs_secs %}<li>{{ s.section }} <span class="aide">({{ (s.maj or '')[:16] }})</span></li>{% else %}<li class="gris">aucune</li>{% endfor %}</ul>
+  {% endif %}
+  {% if res.ignorees %}<h3>Écoles ignorées</h3><ul>{% for m in res.ignorees %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+</div>
+</div>
+{% if ecoles_cs %}<div class="carte"><h2>Écoles de la CS {{ cs.nom }}</h2><div class="tw"><table class="t compact">
+  <tr><th>École</th><th>Type</th><th>Zone</th><th>Rubriques</th><th class="num">Complétude</th></tr>
+  {% for l in ecoles_cs %}<tr><td><a href="{{ url_for('jur_ecole_fiche', eid=l.e.id, annee=p.annee) }}">{{ l.e.nom }}</a></td><td>{{ l.e.type }}</td><td>{{ l.e.zone_nom or '' }}</td>
+  <td class="aide">{% for k in l.presentes %}{{ noms[k] }}{{ ', ' if not loop.last }}{% else %}—{% endfor %}</td><td class="num">{{ l.taux|int }} %</td></tr>{% endfor %}
+</table></div></div>{% endif %}
+{% endblock %}

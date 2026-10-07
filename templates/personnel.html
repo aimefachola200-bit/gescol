@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block titre %}Personnel{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Personnel</h1><p class="sous">{{ lst|length }} personne(s){% if not tous %} en activité{% endif %}{% if not carriere %} · salaires de base mensuels : {{ fcfa(masse) }} (hors vacataires){% endif %}</p></div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('personnel_form') }}">+ Ajouter</a>
+    {% if carriere %}<a class="btn sec" href="{{ url_for('carriere_accueil') }}">Gestion de carrière</a>{% else %}<a class="btn sec" href="{{ url_for('paie_accueil') }}">Paie</a>{% endif %}
+    <a class="btn sec" href="{{ url_for('personnel', tous='0' if tous else '1') }}">{{ 'Masquer les anciens' if tous else 'Voir aussi les anciens' }}</a>
+  </div>
+</div>
+{% if carriere %}{% include "carriere_personnel_liste.html" %}{% else %}
+<div class="tw"><table class="t">
+  <tr><th>Matricule</th><th>Nom et prénoms</th><th>Fonction</th><th>Contrat</th><th class="num">Salaire / taux</th><th>CNSS</th><th>Téléphone</th><th></th></tr>
+  {% for p in lst %}
+  <tr style="{{ 'opacity:.55' if not p.actif }}"><td>{{ p.matricule }}</td><td><b>{{ p.nom }}</b> {{ p.prenoms }}</td><td>{{ p.fonction }}</td><td>{{ p.type_contrat }}</td>
+    <td class="num">{{ (fcfa(p.taux_horaire) ~ ' / h') if p.type_contrat=='Vacataire' else fcfa(p.salaire_base) }}</td>
+    <td>{{ 'oui' if p.assujetti_cnss else 'non' }}</td><td>{{ affiche_tel(p.telephone) if p.telephone else '' }}</td>
+    <td class="num"><a class="btn sec petit" href="{{ url_for('personnel_form', pid=p.id) }}">Modifier</a></td></tr>
+  {% else %}<tr><td colspan="8" class="gris">Aucune fiche. Ajoutez les enseignants et le personnel.</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+{% endblock %}

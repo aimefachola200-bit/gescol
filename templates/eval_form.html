@@ -1,0 +1,85 @@
+{% extends "base.html" %}{% block titre %}{{ 'Modifier' if ev else 'Nouvelle' }} évaluation – {{ cl.nom }}{% endblock %}
+{% block contenu %}
+<style>
+.ev-mats{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:4px 16px;margin:10px 0}
+.ev-mats label{display:flex;gap:8px;align-items:center;font-weight:normal;padding:5px 6px;border-radius:6px;cursor:pointer}
+.ev-mats label:hover{background:#F2F4F7}
+.ev-mats input{width:18px;height:18px;flex:none}
+.ev-compteur{font-weight:700;color:#1F4E79}
+</style>
+<div class="entete">
+  <div><h1>{{ 'Modifier l’évaluation' if ev else 'Nouvelle évaluation' }}</h1>
+  <p class="sous">{{ cl.nom }} ({{ cl.niveau }}) · année {{ ev.annee if ev else ANNEE }}</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('eval_saisie', ev_id=ev.id) if ev else url_for('eval_accueil', classe=cl.id) }}">← Retour</a></div>
+</div>
+
+<form method="post" class="carte" id="f-ev">
+  <input type="hidden" name="classe" value="{{ cl.id }}">
+  <div class="grille-id">
+    <div><label for="ev-type">Type d'évaluation</label>
+      <select id="ev-type" name="type" required>
+        {% for k, lib in TYPES.items() %}<option value="{{ k }}" {{ 'selected' if val.type == k }}>{{ lib }}</option>{% endfor %}
+      </select></div>
+    <div><label for="ev-num">Numéro (étape / formative N°)</label>
+      <input id="ev-num" name="numero" type="number" min="1" max="50" value="{{ val.numero }}" required></div>
+    <div><label for="ev-date">Date de l'évaluation</label>
+      <input id="ev-date" name="date" type="date" value="{{ val.date or '' }}"></div>
+  </div>
+  <p class="aide">Libellé : <b id="ev-lib"></b> — deux évaluations d'une même classe ne peuvent pas avoir le même type et le même numéro.</p>
+
+  <h2>Configuration des matières</h2>
+  <div data-coches>
+    <div class="actions">
+      <button type="button" class="btn sec petit" data-cocher="1">☑ Tout cocher</button>
+      <button type="button" class="btn sec petit" data-cocher="0">☐ Tout décocher</button>
+      <span><span class="nb-coches ev-compteur">0</span> matière(s) cochée(s) sur {{ toutes|length }}</span>
+    </div>
+    <div class="ev-mats">
+      {% for m in toutes %}
+      <label><input type="checkbox" name="matieres" value="{{ m.id }}" {{ 'checked' if m.id in val.matieres_ids }}>
+        <span>{{ m.nom }} <span class="aide">({{ m.code }}{% if cl.cycle == 'secondaire' %}, coef. {{ '%g'|format(m.coefficient) }}{% endif %})</span></span></label>
+      {% else %}<p class="aide">Aucune matière active pour ce cycle : ajoutez-les dans « Matières ».</p>{% endfor %}
+    </div>
+  </div>
+
+  {% if cl.cycle != 'maternelle' %}
+  <h2>Seuil de passage</h2>
+  <div class="grille-id">
+    <div><label for="ev-seuil">Nombre de matières à ≥ 10/20 exigé</label>
+      <input id="ev-seuil" name="seuil" type="number" min="1" value="{{ val.seuil or '' }}" placeholder="vide = 2/3 automatique"></div>
+  </div>
+  <p class="aide" id="ev-seuil-aide"></p>
+  {% if cl.cycle == 'secondaire' %}<p class="aide">Au secondaire, la décision suit la moyenne pondérée (≥ 10/20) ; le seuil sert d'indicateur.</p>{% endif %}
+  {% endif %}
+
+  <p class="actions" style="margin-top:16px"><button class="btn">{{ 'Enregistrer les modifications' if ev else 'Créer l’évaluation' }}</button>
+    <a class="btn sec" href="{{ url_for('eval_accueil', classe=cl.id) }}">Annuler</a></p>
+</form>
+
+{% if ev %}
+<form method="post" action="{{ url_for('eval_supprimer', ev_id=ev.id) }}" class="carte" style="border-color:#FECDCA">
+  <h2 style="margin-top:0">Supprimer l'évaluation</h2>
+  <p class="aide">La suppression efface aussi toutes les notes de « {{ ev.libelle }} » pour {{ cl.nom }}. Cette action est définitive.</p>
+  <button class="btn danger" data-confirmer="Supprimer « {{ ev.titre }} » et toutes ses notes pour {{ cl.nom }} ? Cette action est définitive.">Supprimer l'évaluation et ses notes</button>
+</form>
+{% endif %}
+
+<script>
+(function(){
+  var ABREV={diagnostique:'Diagnostique',formative:'Formative',sommative:'Sommative',certificative:'Certificative'};
+  var t=document.getElementById('ev-type'), n=document.getElementById('ev-num'), lib=document.getElementById('ev-lib');
+  var s=document.getElementById('ev-seuil'), aide=document.getElementById('ev-seuil-aide');
+  function maj(){
+    lib.textContent=(ABREV[t.value]||t.value)+' '+(parseInt(n.value,10)||1);
+    if(!s) return;
+    var k=document.querySelectorAll('#f-ev input[name=matieres]:checked').length, auto=Math.ceil(2*k/3);
+    s.max=Math.max(1,k);
+    aide.textContent= s.value ? ('Maîtrise : au moins 10/20 dans '+s.value+' matière(s) sur '+k+'.')
+      : ('Vide : 2/3 automatique, soit au moins 10/20 dans '+auto+' matière(s) sur '+k+'.');
+  }
+  ['change','input'].forEach(function(e){document.getElementById('f-ev').addEventListener(e,maj);});
+  document.querySelector('[data-coches]').addEventListener('coches',maj);
+  maj();
+})();
+</script>
+{% endblock %}

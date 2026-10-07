@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block titre %}Budget{% endblock %}
+{% block contenu %}
+<h1>Budget prévisionnel {{ ANNEE }}</h1>
+<p class="sous">Montants prévus pour toute l'année scolaire. Le bilan compare ensuite le réalisé au prévu.</p>
+<form method="post" class="f">
+<div class="grille2">
+{% for typ, titre in [('entree', 'Recettes prévues'), ('sortie', 'Dépenses prévues')] %}
+  <div class="carte"><h2 style="margin-top:0">{{ titre }}</h2>
+  {% for cat in categories[typ] %}
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:6px"><span style="flex:1">{{ cat }}</span>
+      <input name="b_{{ typ }}_{{ loop.index0 }}" value="{{ budget.get((typ, cat), '') or '' }}" inputmode="numeric" style="width:150px;text-align:right" placeholder="0"></div>
+  {% endfor %}</div>
+{% endfor %}
+</div>
+<div class="actions"><button class="btn">Enregistrer le budget</button><a class="btn sec" href="{{ url_for('tresorerie_bilan') }}">Annuler</a></div>
+</form>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}{% block titre %}Cantine – paiements{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Cantine scolaire</h1>
+  <p class="sous">Semaine du {{ lun.strftime('%d/%m/%Y') }} au {{ ven.strftime('%d/%m/%Y') }} — choisissez une classe pour saisir les paiements (du lundi au vendredi).</p></div>
+  <div class="actions">
+    <a class="btn sec petit" href="{{ url_for('cantine_accueil', semaine=prec) }}">← Semaine précédente</a>
+    <a class="btn sec petit" href="{{ url_for('cantine_accueil') }}">Cette semaine</a>
+    <a class="btn sec petit" href="{{ url_for('cantine_accueil', semaine=suiv) }}">Semaine suivante →</a>
+  </div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Classes ouvertes</div><div class="v">{{ resume|selectattr('ouverte')|list|length }} / {{ resume|length }}</div><div class="d">configuration validée</div></div>
+  <div class="kpi"><div class="l">Repas payés</div><div class="v">{{ repas }}</div><div class="d">cette semaine</div></div>
+  <div class="kpi"><div class="l">Montant encaissé</div><div class="v">{{ milliers(total) }}</div><div class="d">FCFA cette semaine</div></div>
+</div>
+
+{% if not resume %}
+<div class="carte">Aucune classe disponible pour cette école. Créez d'abord les classes (menu Classes).</div>
+{% else %}
+<div class="tw"><table class="t">
+  <thead><tr><th>Classe</th><th class="c">Effectif</th><th class="c">Montant / jour</th><th>Configuration</th><th class="c">Repas payés</th><th class="c">Montant (FCFA)</th><th></th></tr></thead>
+  <tbody>
+  {% for r in resume %}
+  <tr><td><b>{{ r.c.nom }}</b></td><td class="c">{{ r.eff }}</td>
+    <td class="c">{{ milliers(r.cfg.montant_jour) ~ ' F' if r.cfg else '—' }}</td>
+    <td>{% if r.ouverte %}<span class="badge ok">Validée</span>{% elif r.cfg %}<span class="badge att">Non validée</span>{% else %}<span class="badge ko">Non configurée</span>{% endif %}</td>
+    <td class="c">{{ r.repas }}</td><td class="c">{{ milliers(r.montant) }}</td>
+    <td><a class="btn petit" href="{{ url_for('cantine_classe', cid=r.c.id, semaine=lun.isoformat()) }}">Ouvrir</a></td></tr>
+  {% endfor %}
+  </tbody></table></div>
+<p class="aide">Les paiements ne sont possibles que pour une classe dont la configuration (montant par jour) est validée : menu Cantine › <a href="{{ url_for('cantine_config') }}">Configuration</a>. Récapitulatifs par jour, semaine, mois et année : <a href="{{ url_for('cantine_recap') }}">Récapitulatifs</a>.</p>
+{% endif %}
+{% endblock %}

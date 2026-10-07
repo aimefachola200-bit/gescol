@@ -1,0 +1,141 @@
+{% extends "base.html" %}{% block titre %}Examen blanc CEP N° {{ s.numero }}{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<style>
+.btn.vert{color:#fff} /* .vert (couleur de texte) l'emporte sinon sur .btn */
+#cb-table input{padding:4px 5px;font-size:13px}
+#cb-table input.cb-note{width:52px;text-align:center}
+#cb-table input[name=table]{width:70px}
+#cb-table input[name=nom]{width:130px;text-transform:uppercase}
+#cb-table input[name=prenoms]{width:150px}
+#cb-table input[name=ecole]{width:150px}
+#cb-table select{padding:4px;width:auto;min-width:52px}
+.barre-doc select{width:auto}
+#cb-table input.err{outline:2px solid #B42318;background:#FEF3F2}
+#cb-table td.ok{color:#1B7F3B;font-weight:700}
+#cb-table td.ko{color:#B42318;font-weight:700}
+#cb-table tr.suppr td{opacity:.45;text-decoration:line-through}
+#cb-table th.mat{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font-size:11px;text-transform:none;padding:6px 2px}
+.cb-outils{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.cb-outils form{display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap}
+.cb-import{position:relative;cursor:pointer}
+.cb-import input{position:absolute;width:1px;height:1px;opacity:0}
+.cb-sigs .sig-pad canvas{max-width:100%;height:auto}
+</style>
+
+<div class="entete">
+  <div><h1>Examen blanc du CEP N° {{ s.numero }}</h1>
+  <p class="sous">{{ s.centre or 'Centre non précisé' }} · année {{ s.annee }} · {{ s.mats|length }} matière(s) · maîtrise = au moins {{ s.seuil_eff }} matière(s) à 10/20</p></div>
+  <div class="actions">
+    <select aria-label="Charger un autre examen blanc" onchange="if(this.value) location.href=this.value">
+      <option value="">📂 Charger un autre examen…</option>
+      {% for a in autres if a.id != s.id %}<option value="{{ url_for('cep_blanc_session', sid=a.id) }}">N° {{ a.numero }} – {{ a.annee }} – {{ a.centre or '' }}</option>{% endfor %}
+    </select>
+    <a class="btn sec petit" href="{{ url_for('cep_blanc_accueil') }}">← Examens blancs</a>
+  </div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Candidats</div><div class="v cb-compteur">{{ lignes|length }}</div><div class="d">G {{ st.inscrits.G }} · F {{ st.inscrits.F }}</div></div>
+  <div class="kpi"><div class="l">Présents</div><div class="v">{{ st.presents.T }}</div><div class="d">au moins une note</div></div>
+  <div class="kpi"><div class="l">Maîtrise</div><div class="v">{{ st.maitrise.T }}</div><div class="d">G {{ st.maitrise.G }} · F {{ st.maitrise.F }}</div></div>
+  <div class="kpi"><div class="l">Taux de maîtrise</div><div class="v">{{ ('%.2f'|format(st.taux.T)).replace('.', ',') }} %</div><div class="d">des présents</div></div>
+</div>
+
+{# formulaires annexes (reliés par l'attribut form=) #}
+<form id="f-import" method="post" action="{{ url_for('cep_blanc_importer', sid=s.id) }}" enctype="multipart/form-data"></form>
+<form id="f-reinit" method="post" action="{{ url_for('cep_blanc_reinitialiser', sid=s.id) }}"></form>
+
+<div class="carte">
+  <div class="cb-outils">
+    <form method="post" action="{{ url_for('cep_blanc_importer_cm2', sid=s.id) }}" id="f-cm2">
+      {% if cm2 %}<label>Importer les élèves de CM2<br><select name="classe" form="f-cm2">{% for c in cm2 %}<option value="{{ c.id }}">{{ c.nom }}</option>{% endfor %}</select></label>
+      <button class="btn sec petit" form="f-cm2">＋ Ajouter les CM2 de l'école</button>{% else %}<span class="aide">Aucune classe de CM2 dans l'école.</span>{% endif %}
+    </form>
+    <form method="post" action="{{ url_for('cep_blanc_numeroter', sid=s.id) }}" id="f-num">
+      <label>Préfixe<br><input name="prefixe" form="f-num" maxlength="10" style="width:70px" placeholder="ex. A"></label>
+      <label>À partir de<br><input name="debut" form="f-num" type="number" min="1" value="1" style="width:70px"></label>
+      <button class="btn sec petit" form="f-num" data-confirmer="Renuméroter TOUS les candidats dans l'ordre alphabétique (les numéros actuels seront remplacés) ?">🔢 Numéroter les tables</button>
+    </form>
+    <form method="get" action="{{ url_for('cep_blanc_releves', sid=s.id) }}" target="_blank" id="f-rel">
+      <label>Relevés de notes<br><select name="ecole" form="f-rel"><option value="">Tous les candidats</option>
+        {% for e in ecoles %}<option value="{{ e }}">École : {{ e }}</option>{% endfor %}</select></label>
+      <button class="btn sec petit" form="f-rel">📄 Relevés PDF</button>
+    </form>
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('cep_blanc_sauvegarder', sid=s.id, tri=tri) }}" id="f-blanc" autocomplete="off">
+{% call M.barre_doc(sauver=False, charger=False, reinit=False) %}
+  <button class="btn vert petit" title="Enregistrer l'en-tête, les candidats et les notes">💾 Sauvegarder</button>
+  <a class="btn sec petit" href="{{ url_for('cep_blanc_session', sid=s.id, tri=tri) }}" title="Recharger les données enregistrées (abandonne les saisies non sauvegardées)">📂 Charger</a>
+  <span class="sep"></span>
+  <label class="btn sec petit cb-import" title="Importer la liste des candidats (et les notes) depuis un fichier Excel">📥 Importer liste
+    <input type="file" name="fichier" form="f-import" accept=".xlsx,.xlsm,.csv" data-envoi-auto></label>
+  <a class="btn sec petit" href="{{ url_for('cep_blanc_canevas', sid=s.id) }}">📋 Canevas Excel</a>
+  <a class="btn sec petit" href="{{ url_for('cep_blanc_excel', sid=s.id, tri=tri) }}">📊 Exporter Excel</a>
+  <a class="btn sec petit" href="{{ url_for('cep_blanc_pdf', sid=s.id, tri=tri) }}" target="_blank" rel="noopener">📄 PDF</a>
+  <span class="sep"></span>
+  {% if tri == 'merite' %}<a class="btn petit" href="{{ url_for('cep_blanc_session', sid=s.id) }}">🔢 Ordre des numéros de table</a>
+  {% else %}<a class="btn petit" href="{{ url_for('cep_blanc_session', sid=s.id, tri='merite') }}">🏆 Classer par mérite</a>{% endif %}
+  <span class="sep"></span>
+  <select name="quoi" form="f-reinit" aria-label="Que réinitialiser ?" data-nosave><option value="notes">Effacer les notes</option><option value="tout">Vider la liste</option></select>
+  <button class="btn danger petit" form="f-reinit" data-confirmer="Réinitialiser cet examen blanc ? (notes effacées, ou liste vidée selon votre choix)">↺ Réinitialiser</button>
+{% endcall %}
+
+<details class="carte" {{ 'open' if not lignes }}>
+  <summary><b>Gestion du centre</b> <span class="aide">(en-tête des PDF, relevés et fichiers Excel)</span></summary>
+  {{ M.identification(v, champs=('departement','ddemp','cs','commune','annee','chef')) }}
+  <div class="grille-id">
+    <div><label for="b-centre">Centre</label><input id="b-centre" name="centre" value="{{ s.centre or '' }}" maxlength="100"></div>
+    <div><label for="b-num">N° CEP blanc</label><input id="b-num" type="number" name="numero" min="1" max="99" value="{{ s.numero }}"></div>
+    <div><label for="b-date">Date de signature</label><input id="b-date" type="date" name="date_signature" value="{{ s.date_signature or '' }}"></div>
+    <div><label for="b-seuil">Seuil de maîtrise (nombre de matières à 10/20)</label>
+      <input id="b-seuil" type="number" name="seuil" min="1" max="{{ s.mats|length or 1 }}" value="{{ s.seuil or '' }}" placeholder="2/3 : {{ s.seuil_eff }}"></div>
+  </div>
+  <div class="grille2">
+    <div><label for="b-mats">Matières (une par ligne, {{ 15 }} au maximum)</label>
+      <textarea id="b-mats" name="matieres" rows="{{ [s.mats|length + 1, 5]|max }}">{{ s.mats|join('\n') }}</textarea>
+      <p class="aide">Renommer une matière conserve ses notes. Une matière ajoutée apparaît dans le tableau après « Sauvegarder ».</p></div>
+    <div class="cb-sigs">{{ M.signature('cep:%d:chef' % s.id, 'Signature du chef centre') }}</div>
+  </div>
+</details>
+
+<div class="tw"><table class="t compact" id="cb-table" data-nb-mat="{{ s.mats|length }}" data-seuil="{{ s.seuil_eff }}">
+  <thead><tr><th>N° table</th><th>Nom</th><th>Prénoms</th><th>Sexe</th><th>École de provenance</th>
+    {% for m in s.mats %}<th class="mat c" title="{{ m }}">{{ m if m|length <= 26 else m[:24] ~ '…' }}</th>{% endfor %}
+    <th class="c">Total</th><th class="c">Moy.</th><th class="c" title="Matières à 10/20 et plus">≥ 10</th><th class="c">Maîtrise</th><th class="c">Rang</th><th></th></tr></thead>
+  <tbody>
+  {% for l in lignes %}{% set c = l.c %}
+  <tr class="cb-ligne">
+    <td><input type="hidden" name="cid" value="{{ c.id }}"><input name="table" value="{{ c.numero_table or '' }}" aria-label="N° de table"></td>
+    <td><input name="nom" value="{{ c.nom }}" aria-label="Nom" required></td>
+    <td><input name="prenoms" value="{{ c.prenoms or '' }}" aria-label="Prénoms"></td>
+    <td><select name="sexe" aria-label="Sexe"><option value=""></option><option {{ 'selected' if c.sexe == 'M' }}>M</option><option {{ 'selected' if c.sexe == 'F' }}>F</option></select></td>
+    <td><input name="ecole" value="{{ c.ecole or '' }}" aria-label="École de provenance"></td>
+    {% for v in l.notes %}<td class="c"><input class="cb-note" name="n{{ loop.index0 }}" value="{{ cep_num(v) }}" inputmode="decimal" aria-label="{{ s.mats[loop.index0] }}"></td>{% endfor %}
+    <td class="c cb-total"></td><td class="c cb-moy"></td><td class="c cb-ok"></td><td class="cb-dec c"></td><td class="c cb-rang"></td>
+    <td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('cep_blanc_releves', sid=s.id, candidat=c.id) }}" target="_blank" rel="noopener" title="Relevé de notes">📄</a>
+      <input type="checkbox" name="suppr" value="{{ c.id }}" hidden>
+      <button type="button" class="btn danger petit" data-suppr title="Supprimer ce candidat">✕</button></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+<template id="cb-modele"><tr class="cb-ligne">
+    <td><input type="hidden" name="cid" value=""><input name="table" aria-label="N° de table"></td>
+    <td><input name="nom" aria-label="Nom"></td><td><input name="prenoms" aria-label="Prénoms"></td>
+    <td><select name="sexe" aria-label="Sexe"><option value=""></option><option>M</option><option>F</option></select></td>
+    <td><input name="ecole" aria-label="École de provenance" value="{{ ECOLE_COURANTE.nom if ECOLE_COURANTE else '' }}"></td>
+    {% for m in s.mats %}<td class="c"><input class="cb-note" name="n{{ loop.index0 }}" inputmode="decimal" aria-label="{{ m }}"></td>{% endfor %}
+    <td class="c cb-total"></td><td class="c cb-moy"></td><td class="c cb-ok"></td><td class="cb-dec c"></td><td class="c cb-rang"></td>
+    <td><button type="button" class="btn danger petit" data-suppr title="Retirer cette ligne">✕</button></td></tr></template>
+<div class="actions" style="margin:10px 0">
+  <button type="button" class="btn sec" id="cb-ajouter">＋ Ajouter un candidat</button>
+  <button class="btn vert">💾 Sauvegarder</button>
+  <span class="aide">Notes de 0 à 20 (virgule acceptée) ; case vide = pas de note. Entrée = case du dessous.</span>
+</div>
+</form>
+{% if not lignes %}<p class="aide">Aucun candidat : importez la liste (canevas Excel), ajoutez les CM2 de l'école ou « Ajouter un candidat ».</p>{% endif %}
+<script src="{{ url_for('static', filename='cep.js') }}?v={{ VERSION }}" defer></script>
+{% endblock %}

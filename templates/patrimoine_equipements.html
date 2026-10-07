@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% block titre %}Patrimoine – équipements et services{% endblock %}
+{% block contenu %}
+<style>.pat-eq{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:4px 16px}
+.pat-eq label{display:flex;gap:6px;align-items:center;font-weight:normal;margin:4px 0}</style>
+<div class="entete">
+  <div><h1>Équipements et services</h1>
+  <p class="sous">Questions de la fiche de recensement qui ne dépendent pas d'un local enregistré</p></div>
+</div>
+{% include "patrimoine_onglets.html" %}
+{% set eq = s.equipements %}
+<div class="carte">
+  <h2>Déduit des infrastructures enregistrées</h2>
+  <p>{% for k, lib in (('point_eau', "Point d'eau"), ('electricite', 'Électricité'), ('cloture', 'Clôture'), ('cuisine', 'Cuisine / cantine'), ('terrain_sport', 'Terrain de sport'), ('bibliotheque', 'Bibliothèque'), ('salle_informatique', 'Salle informatique'), ('magasin', 'Magasin')) %}
+    <span class="badge {{ 'ok' if eq[k] else 'ko' }}">{{ lib }} : {{ 'oui' if eq[k] else 'non' }}</span> {% endfor %}</p>
+  <p class="aide">Pour modifier ces réponses, ajoutez ou supprimez l'ouvrage correspondant dans <a href="{{ url_for('patrimoine_locaux') }}">Infrastructures</a>.</p>
+</div>
+<form method="post" class="carte">
+  <h2>Autres équipements et services</h2>
+  <div class="pat-eq">
+    {% for k, lib in EQUIPEMENTS %}<label><input type="checkbox" name="{{ k }}" value="1" {{ 'checked' if v.get(k) }}> {{ lib }}</label>{% endfor %}
+  </div>
+  <div class="ligne">
+    <div><label for="sup">Superficie du domaine (ha)</label><input id="sup" name="superficie_ha" inputmode="decimal" value="{{ v.superficie_ha if v.superficie_ha is not none else '' }}"></div>
+    <div><label for="nbo">Nombre d'ouvrages de la bibliothèque</label><input id="nbo" name="nb_ouvrages" inputmode="numeric" value="{{ v.nb_ouvrages if v.nb_ouvrages is not none else '' }}"></div>
+    <div><label for="cso">Organisme de soutien de la cantine</label><input id="cso" name="cantine_soutien" value="{{ v.cantine_soutien or '' }}" maxlength="120" placeholder="Gouvernement, PAM…"></div>
+  </div>
+  <label for="obs">Observations</label><textarea id="obs" name="observations" maxlength="1000">{{ v.observations or '' }}</textarea>
+  <p class="actions"><button class="btn vert">💾 Enregistrer</button></p>
+</form>
+{% endblock %}

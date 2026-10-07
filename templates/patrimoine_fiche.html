@@ -1,0 +1,72 @@
+{% extends "base.html" %}{% block titre %}{{ titre }}{% endblock %}
+{% block contenu %}
+<style>
+.pat-form .ligne>div{margin-bottom:4px}
+.pat-form label{font-weight:600;font-size:13px;display:block;margin:6px 0 3px}
+.pat-form label.coche{font-weight:normal;display:flex;gap:6px;align-items:center;margin-top:28px}
+.pat-form textarea{min-height:64px}
+</style>
+<div class="entete">
+  <div><h1>{{ titre }} — {{ 'modification' if obj else 'ajout' }}</h1>
+  <p class="sous">{{ obj.designation if obj and obj.designation else 'Patrimoine de l’école' }}</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for(liste_ep) }}">← Retour à la liste</a></div>
+</div>
+{% include "patrimoine_onglets.html" %}
+
+<form method="post" class="carte pat-form">
+  <div class="ligne">
+  {% for c in spec %}
+    {% set val = v.get(c.k) %}
+    <div {% if c.pour %}data-pour="{{ c.pour|join(' ') }}"{% endif %} {% if c.type == 'long' %}style="grid-column:1/-1"{% endif %}>
+    {% if c.type == 'bool' %}
+      <label class="coche"><input type="checkbox" name="{{ c.k }}" value="1" {{ 'checked' if val and val not in ('0', 0) }}> {{ c.lib }}</label>
+    {% else %}
+      <label for="f-{{ c.k }}">{{ c.lib }}{{ ' *' if c.req }}</label>
+      {% if c.type == 'choix' %}
+        <select id="f-{{ c.k }}" name="{{ c.k }}" {{ 'required' if c.req }}><option value="">—</option>
+          {% for k, lib in c.opts.items() %}<option value="{{ k }}" {{ 'selected' if val|string == k }}>{{ lib }}</option>{% endfor %}</select>
+      {% elif c.type == 'classe' %}
+        <select id="f-{{ c.k }}" name="{{ c.k }}"><option value="">—</option>
+          {% for cl in cls %}<option value="{{ cl.id }}" {{ 'selected' if val|string == cl.id|string }}>{{ cl.nom }}</option>{% endfor %}</select>
+      {% elif c.type == 'local' %}
+        <select id="f-{{ c.k }}" name="{{ c.k }}"><option value="">—</option>
+          {% for l in locaux %}<option value="{{ l.id }}" {{ 'selected' if val|string == l.id|string }}>{{ l.designation }} ({{ TYPES.get(l.type, l.type) }})</option>{% endfor %}</select>
+      {% elif c.type == 'niveau' %}
+        <input id="f-{{ c.k }}" name="{{ c.k }}" list="dl-niv" value="{{ val or '' }}" maxlength="40">
+        <datalist id="dl-niv">{% for n in niveaux %}<option value="{{ n }}">{% endfor %}</datalist>
+      {% elif c.type == 'long' %}
+        <textarea id="f-{{ c.k }}" name="{{ c.k }}" maxlength="{{ c.max }}">{{ val or '' }}</textarea>
+      {% else %}
+        <input id="f-{{ c.k }}" name="{{ c.k }}" value="{{ '' if val is none else ('%g' % val if val is float else val) }}"
+          {% if c.type in ('entier', 'annee') %}inputmode="numeric"{% elif c.type == 'reel' %}inputmode="decimal"{% endif %}
+          {% if c.type == 'texte' %}maxlength="{{ c.max }}"{% endif %} {% if c.liste %}list="dl-{{ c.k }}"{% endif %} {{ 'required' if c.req }}>
+        {% if c.liste %}<datalist id="dl-{{ c.k }}">{% for o in c.liste %}<option value="{{ o }}">{% endfor %}</datalist>{% endif %}
+      {% endif %}
+      {% if c.aide %}<span class="aide">{{ c.aide }}</span>{% endif %}
+    {% endif %}
+    </div>
+  {% endfor %}
+  </div>
+  <p class="actions">
+    <button class="btn vert">💾 Enregistrer</button>
+    {% if not obj %}<button class="btn sec" name="suivant" value="1">Enregistrer et ajouter un autre</button>{% endif %}
+  </p>
+</form>
+{% if obj %}
+<form method="post" action="{{ url_for('patrimoine_supprimer', code=code, oid=obj.id) }}">
+  <button class="btn danger petit" data-confirmer="Supprimer définitivement cet élément du patrimoine ?">Supprimer</button>
+  {% if code != 'infrastructures' %}<a class="btn sec petit" href="{{ url_for('patrimoine_mouvements', objet=code ~ ':' ~ obj.id) }}">Enregistrer un mouvement</a>{% endif %}
+</form>
+{% endif %}
+
+<script>
+(function () {
+  // champs propres à certains types d'ouvrages (latrines, salle de classe, point d'eau…)
+  var t = document.querySelector('select[name=type]');
+  if (!t) return;
+  function maj() { document.querySelectorAll('[data-pour]').forEach(function (d) {
+    d.hidden = d.dataset.pour.split(' ').indexOf(t.value) < 0; }); }
+  t.addEventListener('change', maj); maj();
+})();
+</script>
+{% endblock %}

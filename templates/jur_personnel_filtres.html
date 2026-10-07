@@ -1,0 +1,23 @@
+{# Filtres communs des pages Personnel (inclus par jur_personnel, jur_aptitude, jur_retraite).
+   Variables : a, annees, cs_liste, zones, grades, categories, ddemp, caches (dict de champs cachés), sans (champs masqués) #}
+{% set sans = sans or () %}
+<form method="get" class="filtres" role="search">
+  {% for k, v in (caches or {}).items() %}{% if v %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endif %}{% endfor %}
+  <div><label for="f-an">Année</label><select id="f-an" name="annee" onchange="this.form.submit()">
+    {% for an in annees %}<option {{ 'selected' if an == a.annee }}>{{ an }}</option>{% endfor %}</select></div>
+  {% if ddemp %}<div><label for="f-cs">Circonscription</label><select id="f-cs" name="cs" onchange="this.form.zone.value='';this.form.submit()"><option value="">Toutes</option>
+    {% for c in cs_liste %}<option value="{{ c.id }}" {{ 'selected' if a.cs == c.id|string }}>{{ c.nom }}</option>{% endfor %}</select></div>{% endif %}
+  <div><label for="f-z">Zone pédagogique</label><select id="f-z" name="zone" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for z in zones %}<option value="{{ z.id }}" {{ 'selected' if a.zone == z.id|string }}>{% if ddemp and not a.cs %}{{ z.cs_nom }} – {% endif %}{{ z.nom }}</option>{% endfor %}</select></div>
+  <div><label for="f-sec">Secteur</label><select id="f-sec" name="secteur" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for k, v in JUR_SECTEURS.items() %}<option value="{{ k }}" {{ 'selected' if a.secteur == k }}>{{ v }}</option>{% endfor %}</select></div>
+  <div><label for="f-sx">Sexe</label><select id="f-sx" name="sexe" onchange="this.form.submit()"><option value="">Tous</option>
+    <option value="M" {{ 'selected' if a.sexe == 'M' }}>Masculin</option><option value="F" {{ 'selected' if a.sexe == 'F' }}>Féminin</option></select></div>
+  {% if 'categorie' not in sans %}<div><label for="f-cat">Catégorie</label><select id="f-cat" name="categorie" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for k, v in categories.items() %}<option value="{{ k }}" {{ 'selected' if a.categorie == k }}>{{ v }}</option>{% endfor %}</select></div>{% endif %}
+  <div><label for="f-gr">Grade</label><select id="f-gr" name="grade" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for l in ('A', 'B', 'C') %}<option value="{{ l }}" {{ 'selected' if a.grade == l }}>Grade {{ l }} (tous)</option>{% endfor %}
+    {% for gr in grades %}<option {{ 'selected' if a.grade == gr }}>{{ gr }}</option>{% endfor %}</select></div>
+  <div><label for="f-q">Recherche</label><input id="f-q" name="q" value="{{ a.q }}" placeholder="Nom, NIP, école…"></div>
+  <div><button class="btn sec petit">Filtrer</button></div>
+</form>

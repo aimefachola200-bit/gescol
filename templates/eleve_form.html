@@ -1,0 +1,57 @@
+{% extends "base.html" %}{% block titre %}Élève{% endblock %}
+{% block contenu %}
+<h1>{{ 'Modifier : ' ~ e.nom ~ ' ' ~ e.prenoms if edition else 'Inscription d’un élève' }}</h1>
+<p class="sous">{{ 'Matricule ' ~ e.matricule if edition and e.matricule else 'Le matricule est attribué automatiquement.' }}</p>
+<form method="post" enctype="multipart/form-data" class="f">
+<div class="carte">
+  <h2 style="margin-top:0">Identité</h2>
+  <div class="ligne">
+    <div><label>Nom *</label><input name="nom" required value="{{ e.nom or '' }}"></div>
+    <div><label>Prénoms *</label><input name="prenoms" required value="{{ e.prenoms or '' }}"></div>
+    <div><label>Sexe *</label><select name="sexe" required><option value="">—</option>
+      <option value="M" {{ 'selected' if e.sexe=='M' }}>Masculin</option><option value="F" {{ 'selected' if e.sexe=='F' }}>Féminin</option></select></div>
+    <div><label>Date de naissance</label><input type="date" name="date_naissance" value="{{ e.date_naissance or '' }}"></div>
+    <div><label>Lieu de naissance</label><input name="lieu_naissance" value="{{ e.lieu_naissance or '' }}"></div>
+  </div>
+  <div style="margin-top:12px">
+    <label>Photo d'identité</label>
+    <div class="photo-capture" data-champ="photo_data" {% if edition and e.photo %}data-src="{{ url_for('eleve_photo', eid=e.id) }}"{% endif %}></div>
+    <p class="aide">Cliquez sur le cadre pour choisir une image, ou « Caméra » pour la prendre avec la webcam du PC ou l'appareil photo du téléphone.
+    Sur une tablette reliée au PC par le Wi-Fi (adresse http://…), utilisez « Appareil photo ».</p>
+  </div>
+</div>
+<div class="carte">
+  <h2 style="margin-top:0">Informations de la carte scolaire et des examens</h2>
+  <div class="ligne">
+    <div><label>Matricule EducMaster</label><input name="matricule_educmaster" value="{{ e.matricule_educmaster or '' }}"></div>
+    <div><label>NIP (numéro d'identification personnel)</label><input name="nip" value="{{ e.nip or '' }}"></div>
+    <div><label>N° de table</label><input name="numero_table" value="{{ e.numero_table or '' }}"></div>
+    <div><label>Centre d'examen</label><input name="centre_examen" value="{{ e.centre_examen or '' }}"></div>
+    <div><label>Années de scolarité (dans le cycle)</label><input name="annees_scolarite" inputmode="numeric" value="{{ e.annees_scolarite or '' }}" placeholder="ex. 6"></div>
+    <div><label>&nbsp;</label><label class="choix"><input type="checkbox" name="redoublant" value="1" {{ 'checked' if e.redoublant and e.redoublant|string != '0' }}> Redoublant(e)</label></div>
+  </div>
+  <p class="aide">Ces informations remplissent automatiquement la carte scolaire du candidat, la fiche d'inscription au CEP et le tableau d'affichage.</p>
+</div>
+<div class="carte">
+  <h2 style="margin-top:0">Scolarité</h2>
+  <div class="ligne">
+    <div><label>Classe *</label><select name="classe_id" required><option value="">—</option>
+      {% for c in cls %}<option value="{{ c.id }}" {{ 'selected' if (e.classe_id|string)==(c.id|string) }}>{{ c.nom }} ({{ c.niveau }})</option>{% endfor %}</select></div>
+    {% if edition %}
+    <div><label>Statut</label><select name="statut">
+      {% for v,l in [('inscrit','Inscrit'),('transfere','Transféré'),('sorti','Sorti / abandon')] %}<option value="{{ v }}" {{ 'selected' if e.statut==v }}>{{ l }}</option>{% endfor %}</select></div>
+    {% else %}<input type="hidden" name="statut" value="inscrit">{% endif %}
+  </div>
+</div>
+<div class="carte">
+  <h2 style="margin-top:0">Parent / tuteur</h2>
+  <div class="ligne">
+    <div><label>Nom du parent</label><input name="parent_nom" value="{{ e.parent_nom or '' }}"></div>
+    <div><label>Téléphone</label><input name="parent_telephone" value="{{ e.parent_telephone or '' }}" placeholder="+229 01 …"></div>
+    <div><label>WhatsApp</label><input name="parent_whatsapp" value="{{ e.parent_whatsapp or '' }}"></div>
+    <div><label>Adresse</label><input name="adresse" value="{{ e.adresse or '' }}"></div>
+  </div>
+</div>
+<div class="actions"><button class="btn">Enregistrer</button><a class="btn sec" href="{{ url_for('eleves') }}">Annuler</a></div>
+</form>
+{% endblock %}

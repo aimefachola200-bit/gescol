@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% block titre %}Historique – documents de l'enseignant{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Historique des documents produits</h1>
+  <p class="sous">Chaque impression est conservée : réimpression à l'identique (mêmes valeurs, mêmes codes de vérification).</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('docs_enseignant_accueil') }}">← Documents</a></div>
+</div>
+<form method="get" class="filtres">
+  <label>Document<br><select name="type" onchange="this.form.submit()">
+    <option value="">Tous les documents</option>
+    {% for k, d in DOCS.items() %}<option value="{{ k }}" {{ 'selected' if k==typ }}>{{ d.titre }}</option>{% endfor %}
+  </select></label>
+  <noscript><button class="btn petit">Filtrer</button></noscript>
+</form>
+{% if lignes %}
+<div class="tw"><table class="t compact">
+  <thead><tr><th>Date</th><th>Document</th><th class="c">Nb</th><th>Année</th><th>Signé</th><th>Codes QR</th><th>Par</th><th></th></tr></thead>
+  <tbody>{% for h in lignes %}
+  <tr><td style="white-space:nowrap">{{ date_fr(h.cree_le) }} {{ h.cree_le[11:16] }}</td>
+    <td>{{ h.libelle }}</td><td class="c">{{ h.nombre }}</td><td>{{ h.annee or '' }}</td>
+    <td>{% if h.signe %}<span class="badge ok">Oui</span>{% else %}<span class="badge att">Non</span>{% endif %}</td>
+    <td style="font-family:monospace;font-size:12px">{% set cs = (h.codes or '').split(',') %}{{ cs[0] }}{% if cs|length > 1 %} … (+{{ cs|length - 1 }}){% endif %}</td>
+    <td>{{ h.auteur or '—' }}</td>
+    <td><div class="actions">
+      <a class="btn sec petit" href="{{ url_for('docs_enseignant_reimprimer', hid=h.id) }}" target="_blank" rel="noopener">📄 Réimprimer</a>
+      {% if peut_supprimer %}<form method="post" action="{{ url_for('docs_enseignant_hist_supprimer', hid=h.id) }}" style="display:inline">
+        <button class="btn danger petit" data-confirmer="Supprimer cette entrée de l'historique ?">Supprimer</button></form>{% endif %}
+    </div></td></tr>
+  {% endfor %}</tbody></table></div>
+{% else %}
+<div class="carte">Aucun document produit{% if typ %} pour ce type{% endif %}. Les documents générés depuis le menu « Documents de l'enseignant » apparaîtront ici.</div>
+{% endif %}
+{% endblock %}

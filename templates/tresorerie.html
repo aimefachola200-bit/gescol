@@ -1,0 +1,49 @@
+{% extends "base.html" %}{% block titre %}Trésorerie{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Trésorerie – journal de caisse</h1><p class="sous">Scolarité encaissée, salaires payés et autres opérations, mois par mois.</p></div>
+  <div class="actions">
+    <form class="filtres" style="margin:0"><input type="month" name="mois" value="{{ mois }}" onchange="this.form.submit()" style="width:auto"></form>
+    <a class="btn sec" href="{{ url_for('tresorerie', mois=mois, format='csv') }}">Exporter (CSV)</a>
+    <a class="btn sec" href="{{ url_for('tresorerie_bilan') }}">Bilan et budget</a>
+  </div>
+</div>
+<div class="grille">
+  <div class="kpi"><div class="l">Solde d'ouverture</div><div class="v">{{ fcfa(ouverture) }}</div><div class="d">depuis la rentrée</div></div>
+  <div class="kpi"><div class="l">Entrées du mois</div><div class="v vert">{{ fcfa(entrees) }}</div></div>
+  <div class="kpi"><div class="l">Sorties du mois</div><div class="v rouge">{{ fcfa(sorties) }}</div></div>
+  <div class="kpi"><div class="l">Solde en fin de mois</div><div class="v {{ 'rouge' if solde < 0 }}">{{ fcfa(solde) }}</div></div>
+</div>
+<details class="carte" {{ 'open' if not ops }}>
+  <summary style="cursor:pointer;font-weight:600">+ Enregistrer une dépense ou une recette</summary>
+  <form method="post" class="f" style="margin-top:10px">
+    <div class="ligne">
+      <div><label>Type</label><select name="type" id="t-type"><option value="sortie">Dépense (sortie)</option><option value="entree">Recette (entrée)</option></select></div>
+      <div><label>Catégorie</label><select name="categorie" id="t-cat"></select></div>
+      <div><label>Date</label><input type="date" name="date" value="{{ aujourdhui }}"></div>
+      <div><label>Montant (FCFA)</label><input name="montant" inputmode="numeric" required></div>
+      <div><label>Mode</label><select name="mode">{% for k, v in MODES_PAIEMENT.items() if k not in ('fedapay','kkiapay') %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+      <div><label>Référence / pièce</label><input name="reference" placeholder="n° facture, transaction…"></div>
+    </div>
+    <label>Libellé</label><input name="libelle" required maxlength="200" placeholder="ex. Facture SBEE septembre">
+    <p><button class="btn">Enregistrer</button></p>
+  </form>
+</details>
+<div class="tw"><table class="t">
+  <tr><th>Date</th><th>Catégorie</th><th>Libellé</th><th>Mode</th><th class="num">Entrée</th><th class="num">Sortie</th><th class="num">Solde</th><th></th></tr>
+  {% for o in ops %}
+  <tr><td style="white-space:nowrap">{{ date_fr(o.date) }}</td><td>{{ o.categorie }}</td><td>{{ o.libelle }}{% if o.reference %}<br><span class="gris">{{ o.reference }}</span>{% endif %}</td>
+    <td>{{ MODES_PAIEMENT.get(o.mode or '', o.mode or '') }}</td>
+    <td class="num vert">{{ fcfa(o.montant) if o.type=='entree' else '' }}</td><td class="num rouge">{{ fcfa(o.montant) if o.type=='sortie' else '' }}</td>
+    <td class="num">{{ fcfa(o.solde) }}</td>
+    <td class="num">{% if o.source=='manuel' %}<form method="post" onsubmit="return confirmer(this)"><input type="hidden" name="action" value="annuler"><input type="hidden" name="id" value="{{ o.id }}"><button class="btn sec petit" title="Annuler cette opération">✕</button></form>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="8" class="gris">Aucune opération ce mois-ci.</td></tr>{% endfor %}
+</table></div>
+<script>
+var CAT={{ categories|tojson }};
+function remplir(){var t=document.getElementById('t-type').value,s=document.getElementById('t-cat');s.innerHTML='';
+  CAT[t].forEach(function(c){if(t==='entree'&&c==='Frais de scolarité')return;var o=document.createElement('option');o.textContent=c;o.value=c;s.appendChild(o)});}
+document.getElementById('t-type').addEventListener('change',remplir);remplir();
+function confirmer(f){var b=f.querySelector('button');if(b.dataset.ok)return true;b.dataset.ok=1;b.textContent='Confirmer ?';return false}
+</script>
+{% endblock %}

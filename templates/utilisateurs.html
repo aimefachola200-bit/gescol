@@ -1,0 +1,40 @@
+{% extends "base.html" %}{% block titre %}Administration{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Utilisateurs</h1><p class="sous">Comptes du personnel et rôles</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('parametres') }}">Paramètres de l'établissement</a>
+    <a class="btn sec" href="{{ url_for('sauvegarde') }}">Sauvegarde</a>
+    <a class="btn sec" href="{{ url_for('journal_page') }}">Journal d'activité</a>
+  </div>
+</div>
+<div class="tw"><table class="t">
+  <tr><th>Nom</th><th>Identifiant</th><th>Rôle</th><th>État</th><th></th></tr>
+  {% for u in users %}
+  <tr><td>{{ u.nom }}</td><td>{{ u.identifiant }}</td><td>{{ ROLES[u.role] }}</td>
+    <td>{% if u.actif %}<span class="badge ok">actif</span>{% else %}<span class="badge ko">désactivé</span>{% endif %}
+      {% if u.doit_changer_mdp %}<span class="badge att">mot de passe provisoire</span>{% endif %}</td>
+    <td class="num"><form method="post" class="actions" style="justify-content:flex-end">
+      <input type="hidden" name="uid" value="{{ u.id }}">
+      <a class="btn sec petit" href="{{ url_for('affectations', uid=u.id) }}">École et classes</a>
+      <button class="btn sec petit" name="action" value="reinit">Réinitialiser le mot de passe</button>
+      {% if u.id != g.user.id %}<button class="btn sec petit" name="action" value="basculer">{{ 'Désactiver' if u.actif else 'Réactiver' }}</button>{% endif %}
+    </form></td></tr>
+  {% endfor %}
+</table></div>
+
+<h2>Nouveau compte</h2>
+<div class="carte">
+<form method="post" class="f">
+  <input type="hidden" name="action" value="creer">
+  <div class="ligne">
+    <div><label>Nom complet</label><input name="nom" required></div>
+    <div><label>Identifiant</label><input name="identifiant" required placeholder="ex. secretariat"></div>
+    <div><label>Rôle</label><select name="role">{% for k,v in ROLES_EDITION.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+    <div><label>Mot de passe provisoire</label><input name="mdp" required minlength="8"></div>
+  </div>
+  <p class="aide">Droits : <b>Secrétaire</b> élèves, classes, documents · <b>Comptable</b> paiements · <b>Enseignant</b> notes · <b>Directeur</b> tout sauf l'administration · <b>Administrateur</b> tout.</p>
+  <button class="btn">Créer le compte</button>
+</form>
+</div>
+{% endblock %}

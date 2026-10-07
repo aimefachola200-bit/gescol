@@ -1,0 +1,69 @@
+{# Composants communs des modules v1.3 #}
+
+{# Barre d'actions : Sauvegarder / Charger / Réinitialiser (en-tête enregistré via /documents-modules) + boutons propres au module #}
+{% macro barre_doc(sauver=True, charger=True, reinit=True) %}
+<div class="barre-doc">
+  {% if sauver %}<button type="button" class="btn vert petit" data-doc-action="sauver" title="Enregistrer l'en-tête sur le serveur">💾 Sauvegarder</button>{% endif %}
+  {% if charger %}<button type="button" class="btn sec petit" data-doc-action="charger" title="Recharger l'en-tête enregistré">📂 Charger</button>{% endif %}
+  {% if reinit %}<button type="button" class="btn sec petit" data-doc-action="reinit" title="Vider le formulaire">↺ Réinitialiser</button>{% endif %}
+  {% if caller is defined %}<span class="sep"></span>{{ caller() }}{% endif %}
+</div>
+{% endmacro %}
+
+{# Champs d'identification. v : dict de valeurs (H.identification). champs : liste de clés à afficher. #}
+{% macro identification(v, champs=('ddemp','cs','ecole','cours','annee','titulaire','directeur')) %}
+<div class="grille-id">
+{% for ch in champs %}
+  {% if ch == 'ddemp' %}
+  <div><label for="id-ddemp">DDEMP (département)</label>
+    <input id="id-ddemp" name="ddemp" data-dep list="dl-dep" value="{{ v.ddemp or v.departement or '' }}" placeholder="Choisir ou saisir">
+    <datalist id="dl-dep">{% for d in DEPARTEMENTS %}<option value="{{ d }}">{% endfor %}</datalist></div>
+  {% elif ch == 'departement' %}
+  <div><label for="id-dep">Département</label>
+    <input id="id-dep" name="departement" list="dl-dep2" value="{{ v.departement or '' }}">
+    <datalist id="dl-dep2">{% for d in DEPARTEMENTS %}<option value="{{ d }}">{% endfor %}</datalist></div>
+  {% elif ch == 'cs' %}
+  <div><label for="id-cs">Circonscription scolaire (CS) <span class="aide nb-cs"></span></label>
+    <input id="id-cs" name="cs" data-cs value="{{ v.cs or '' }}" placeholder="Choisir ou saisir"></div>
+  {% elif ch == 'ecole' %}
+  <div><label for="id-ecole">École</label><input id="id-ecole" name="ecole" value="{{ v.ecole or '' }}"></div>
+  {% elif ch == 'up' %}
+  <div><label for="id-up">Unité pédagogique (UP)</label><input id="id-up" name="up" value="{{ v.up or '' }}"></div>
+  {% elif ch == 'zone' %}
+  <div><label for="id-zone">Zone pédagogique</label><input id="id-zone" name="zone" value="{{ v.zone or '' }}"></div>
+  {% elif ch == 'commune' %}
+  <div><label for="id-commune">Commune</label><input id="id-commune" name="commune" value="{{ v.commune or '' }}"></div>
+  {% elif ch == 'cours' %}
+  <div><label for="id-cours">Cours / classe</label><input id="id-cours" name="cours" value="{{ v.cours or v.classe or '' }}"></div>
+  {% elif ch == 'annee' %}
+  <div><label for="id-annee">Année scolaire</label><input id="id-annee" name="annee" value="{{ v.annee or ANNEE }}" pattern="\d{4}-\d{4}" data-garder></div>
+  {% elif ch in ('titulaire','directeur','admin','ccs','chef') %}
+  {% set titres = {'titulaire': ['Le titulaire','La titulaire','Le maître','La maîtresse','Le professeur principal','La professeure principale'],
+                   'directeur': ['Directeur','Directrice'],
+                   'admin': ['Administrateur','Administratrice'],
+                   'ccs': ['Le CCS','La CCS'],
+                   'chef': ['Chef centre','Cheffe centre']}[ch] %}
+  {% set lib = {'titulaire':'Titulaire','directeur':'Directeur / Directrice','admin':'Administrateur / Administratrice','ccs':'Chef de circonscription (CCS)','chef':'Chef centre'}[ch] %}
+  <div><label for="id-{{ ch }}">{{ lib }}</label>
+    <div class="duo"><select name="{{ ch }}_titre" aria-label="Titre">{% if v[ch ~ '_titre'] and v[ch ~ '_titre'] not in titres %}<option selected>{{ v[ch ~ '_titre'] }}</option>{% endif %}{% for t in titres %}<option {{ 'selected' if v[ch ~ '_titre']==t }}>{{ t }}</option>{% endfor %}</select>
+    <input id="id-{{ ch }}" name="{{ ch }}_nom" value="{{ v[ch ~ '_nom'] or '' }}" placeholder="Nom et prénoms"></div></div>
+  {% endif %}
+{% endfor %}
+</div>
+{% endmacro %}
+
+{# Zone de signature digitale. cle : clé serveur (ex. ecole:1:directeur) ou vide + champ = champ de formulaire #}
+{% macro signature(cle='', titre='Signature', champ='', valeur='') %}
+<div class="sig-pad" {% if cle %}data-cle="{{ cle }}"{% endif %} data-titre="{{ titre }}" {% if champ %}data-champ="{{ champ }}"{% endif %} {% if valeur %}data-valeur="{{ valeur }}"{% endif %}></div>
+{% endmacro %}
+
+{# Choix d'une classe (liste déroulante qui recharge la page) #}
+{% macro choix_classe(classes, cid, nom='classe', etiquette='Classe') %}
+<form method="get" class="filtres">
+  <label>{{ etiquette }}<br><select name="{{ nom }}" onchange="this.form.submit()">
+    <option value="">— choisir —</option>
+    {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if c.id==cid }}>{{ c.nom }}</option>{% endfor %}
+  </select></label>
+  {% if caller is defined %}{{ caller() }}{% endif %}
+</form>
+{% endmacro %}

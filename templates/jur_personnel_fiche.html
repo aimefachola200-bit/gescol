@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% block titre %}Fiche de carrière – {{ f.nom_complet }}{% endblock %}
+{% block contenu %}
+<style>
+.fc-grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.fc-grille .carte{margin:0}
+.fc-grille h2{font-size:15px;margin:0 0 8px;color:var(--bleu)}
+.fc-grille dl{display:grid;grid-template-columns:minmax(140px,45%) 1fr;gap:4px 10px;margin:0;font-size:14px}
+.fc-grille dt{color:var(--gris)}
+.fc-grille dd{margin:0;font-weight:600}
+</style>
+<div class="entete">
+  <div><h1>{{ f.nom_complet }}</h1>
+    <p class="sous">{{ f.fonction_txt }}{% if f.ecole_service %} · {{ f.ecole_service }}{% endif %}{% if f.cs_nom %} · CS {{ f.cs_nom }}{% endif %} · année {{ a.annee }}</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ retour }}">← Retour</a>
+    <a class="btn" href="{{ url_for('jur_personnel_fiche', cle=f.cle, annee=a.annee, pdf=1) }}" target="_blank">Fiche PDF</a>
+    {% if f.source == 'agent' and peut('jur_personnel') %}<a class="btn sec" href="{{ url_for('jur_agent_form', aid=f.agent_id) }}">Modifier</a>{% endif %}
+  </div>
+</div>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Ancienneté générale</div><div class="v">{{ f.anc_txt.generale or '—' }}</div><div class="d">au {{ f.reference.strftime('%d/%m/%Y') }}</div></div>
+  <div class="kpi"><div class="l">Retraite probable</div><div class="v {{ 'rouge' if f.alerte_retraite }}">{{ f.retraite_txt or '—' }}</div>
+    <div class="d">{% if f.retraite %}{{ 'départ atteint' if f.retraite_atteinte else 'reste ' ~ f.restant_txt }}{% else %}{{ f.retraite_raison }}{% endif %}</div></div>
+  <div class="kpi"><div class="l">Visite d'aptitude</div><div class="v">{{ f.apt_o or '—' }}</div><div class="d">{% if f.note_apt is not none %}note {{ f.note_apt }}/20{% endif %}</div></div>
+  <div class="kpi"><div class="l">Note d'évaluation</div><div class="v">{{ f.note_eval if f.note_eval is not none else '—' }}</div><div class="d">sur 20</div></div>
+</div>
+{% if f.source == 'ecole' %}<p class="flash info">Données transmises par l'école ({{ f.ecole_nom }}) : les corrections se font dans GESCOL de l'école, puis l'école renvoie son fichier de transmission.</p>
+{% elif f.source == 'agent_cs' %}<p class="flash info">Agent de la circonscription {{ f.cs_nom }} (données reçues avec le paquet de la CS, en lecture seule).</p>{% endif %}
+<div class="fc-grille">
+  {% for titre, champs in sections %}
+  <div class="carte"><h2>{{ titre }}</h2><dl>
+    {% for lib, val in champs %}<dt>{{ lib }}</dt><dd>{{ val if val else '—' }}</dd>{% endfor %}
+  </dl></div>
+  {% endfor %}
+</div>
+<p class="aide">Anciennetés au 31/12 de l'année en cours (jour inclus), en années et mois révolus. Retraite : naissance + 60 ans (grade A),
+  58 ans (B), 55 ans (C) ; année de naissance seule : 31/12 de l'année ; né(e) un 29/02 : 28/02 si l'année n'est pas bissextile.</p>
+{% endblock %}

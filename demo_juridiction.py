@@ -1,0 +1,227 @@
+# -*- coding: utf-8 -*-
+"""Données de démonstration des applications Circonscription (CS) et DDEMP.
+
+    GESCOL_EDITION=cs    GESCOL_DATA=dossier python3 demo_juridiction.py      → CS de Pobè (Plateau)
+    GESCOL_EDITION=ddemp GESCOL_DATA=dossier python3 demo_juridiction.py      → DDEMP du Plateau (6 CS)
+
+Comptes (mot de passe demo1234) : responsable, cp1, cp2, chef, agent ; admin / admin123.
+Les écoles « envoient » de vrais paquets de transmission (jur_format), importés comme le ferait la CS.
+"""
+import random
+from datetime import date
+
+from werkzeug.security import generate_password_hash
+
+import config
+import jur_format
+import m_juridiction as J
+import referentiel_benin as RB
+from app import app
+from db import ex, q
+
+NOMS = ["ADJAHO", "AGOSSOU", "AKPO", "ASSOGBA", "ATCHATIN", "BIAOU", "DOSSOU", "FADONOUGBO", "GBAGUIDI", "HOUNKPE",
+        "KOUTON", "LAWANI", "OLOU", "OGOUBIYI", "SALAMI", "SOSSOU", "TOSSOU", "YESSOUFOU", "ZINSOU", "OKE", "ADEOTI",
+        "AFOLABI", "IDOWU", "OLADELE", "AMOUSSA", "BELLO", "OGOUNDELE", "KPADONOU", "HOUNSOU", "AHOUANSOU"]
+PRENOMS_H = ["Koffi", "Rachidi", "Moïse", "Salomon", "Aimé", "Jean", "Fiacre", "Sylvain", "Basile", "Gildas", "Bio", "Idrissou"]
+PRENOMS_F = ["Afiavi", "Rosine", "Pélagie", "Bernadette", "Odile", "Mariam", "Céline", "Florence", "Grâce", "Yvette", "Sika", "Nafissatou"]
+VILLAGES = ["Issaba", "Towé", "Igana", "Ahoyéyé", "Pobè-Centre", "Onigbolo", "Okeita", "Iko", "Adjégounlè", "Ita-Djèbou",
+            "Kétou-Centre", "Idigny", "Sakété", "Ifangni", "Adja-Ouèrè", "Massè", "Ikpinlè", "Okpomèta", "Ilikimou", "Banigbé"]
+NIV_EP = ["CI", "CP", "CE1", "CE2", "CM1", "CM2"]
+AGE_EP = {"CI": 6, "CP": 7, "CE1": 8, "CE2": 9, "CM1": 10, "CM2": 11}
+
+
+def personne(rnd, role, categorie, fonction, classe="", sexe=None):
+    sexe = sexe or rnd.choice("MF")
+    lettre = {"FE": rnd.choice("AB"), "ACDPE": rnd.choice("BC"), "ACDPCTD": "C", "PRIVE": "C"}.get(categorie, "B")
+    naiss = rnd.randint(1965, 2000)
+    if rnd.random() < 0.12:
+        naiss = {"A": 1966, "B": 1968, "C": 1971}[lettre] + rnd.randint(0, 2)   # proches de la retraite
+    ps = max(naiss + 22, rnd.randint(1990, 2024))
+    cap = categorie in ("FE", "ACDPE") or rnd.random() < 0.3
+    apt = rnd.random() < 0.6
+    return {
+        "nom": rnd.choice(NOMS), "prenoms": rnd.choice(PRENOMS_H if sexe == "M" else PRENOMS_F), "sexe": sexe,
+        "nip": "" if categorie == "PRIVE" else str(rnd.randint(10**11, 10**12 - 1)),
+        "matricule": "" if categorie == "PRIVE" else str(rnd.randint(100000, 999999)),
+        "date_naissance": f"{naiss}-{rnd.randint(1, 12):02d}-{rnd.randint(1, 28):02d}", "telephone": f"01{rnd.randint(40000000, 99999999)}",
+        "email": "", "fonction": fonction, "role": role, "categorie": categorie,
+        "grade": f"{lettre}{rnd.randint(1, 3)}-{rnd.randint(1, 15)}" if categorie != "PRIVE" else "",
+        "indice_paye": str(rnd.randint(300, 900)), "indice_reel": str(rnd.randint(300, 950)),
+        "date_premiere_ps": f"{ps}-10-01", "date_ps_departement": f"{max(ps, 2005)}-10-01",
+        "date_ps_commune": f"{max(ps, 2010)}-10-01", "date_ps_ecole": f"{max(ps, rnd.randint(2015, 2025))}-10-01",
+        "diplome_academique": rnd.choice(["BEPC", "BAC", "Licence", "Master", "BAC"]), "annee_diplome": str(naiss + 19),
+        "ceap": cap or rnd.random() < 0.5, "annee_ceap": str(ps + 1), "cap": cap, "annee_cap": str(ps + 4) if cap else "",
+        "type_cap": rnd.choice(["EP", "EP", "EM"]) if cap else "", "visite_aptitude": apt,
+        "note_aptitude": round(rnd.uniform(10, 18), 1) if apt else "", "annee_aptitude": str(rnd.randint(2012, 2025)) if apt else "",
+        "departement_a_servir": "Plateau", "nb_visites_cp": rnd.randint(0, 3), "nb_visites_ccs": rnd.randint(0, 1),
+        "participation_up": rnd.choice([60, 75, 80, 90, 100]), "gestion_collegiale": rnd.choice(["", "Trésorier APE", "Coopérative"]),
+        "note_evaluation": round(rnd.uniform(12, 19), 1), "classe": classe, "actif": True,
+    }
+
+
+def paquet_ecole(rnd, code, nom, typ, secteur, dep, cs, zone, an):
+    a0 = int(an[:4])
+    classes, ages, pers = [], {}, []
+    cat_pub = lambda: rnd.choice(["FE", "FE", "ACDPE", "ACDPE", "ACDPCTD"])  # noqa: E731
+    if typ == "EP":
+        double = rnd.random() < 0.25
+        for niv in NIV_EP:
+            for lettre in (("A", "B") if double and niv in ("CI", "CP") else ("",)):
+                g_, f_ = rnd.randint(8, 30), rnd.randint(8, 30)
+                ens = personne(rnd, "enseignant", cat_pub() if secteur == "public" else "PRIVE",
+                               "Instituteur" if secteur == "public" else "Enseignant", f"{niv} {lettre}".strip())
+                pers.append(ens)
+                classes.append({"nom": f"{niv} {lettre}".strip(), "niveau": niv, "garcons": g_, "filles": f_,
+                                "redoublants_g": rnd.randint(0, 3), "redoublants_f": rnd.randint(0, 3),
+                                "titulaire_nom": f"{ens['nom']} {ens['prenoms']}", "titulaire_sexe": ens["sexe"],
+                                "groupe": "simple"})
+                base = AGE_EP[niv]
+                d = ages.setdefault(niv, {})
+                for _ in range(g_ + f_):
+                    a = base + rnd.choice([-1, 0, 0, 0, 1, 1, 2])
+                    d.setdefault(str(a), [0, 0])[rnd.randint(0, 1)] += 1
+    else:
+        for niv in (["Maternelle 1", "Maternelle 2"] if typ == "EM" else ["Espace enfance"]):
+            g_, f_ = rnd.randint(8, 25), rnd.randint(8, 25)
+            ens = personne(rnd, "enseignant", cat_pub() if secteur == "public" else "PRIVE", "Éducateur / Éducatrice",
+                           niv, sexe="F" if rnd.random() < .8 else "M")
+            pers.append(ens)
+            classes.append({"nom": niv, "niveau": niv, "garcons": g_, "filles": f_, "redoublants_g": 0, "redoublants_f": 0,
+                            "titulaire_nom": f"{ens['nom']} {ens['prenoms']}", "titulaire_sexe": ens["sexe"], "groupe": "simple"})
+            ages[niv] = {"4": [g_ // 2, f_ // 2], "5": [g_ - g_ // 2, f_ - f_ // 2]}
+    d = personne(rnd, "directeur", cat_pub() if secteur == "public" else "PRIVE",
+                 "Directeur" if rnd.random() < .6 else "Directrice")
+    d["categorie"] = "FE" if secteur == "public" and rnd.random() < .7 else d["categorie"]
+    pers.insert(0, d)
+    if rnd.random() < 0.5:
+        pers.append(personne(rnd, "soutien", "AUTRE", rnd.choice(["Gardien", "Cuisinière", "Agent d'entretien"])))
+    visites = []
+    for _ in range(rnd.randint(0, 4)):
+        e = rnd.choice(pers[1:] or pers)
+        visites.append({"date": f"{a0}-{rnd.choice([11, 12])}-{rnd.randint(1, 28):02d}", "type": rnd.choice(["CP", "CP", "CCS"]),
+                        "visiteur": rnd.choice(["KOUTON Basile", "OLOU Rosine", "ATCHATIN Nounagnon Salomon"]),
+                        "enseignant": f"{e['nom']} {e['prenoms']}", "enseignant_nip": e["nip"], "classe": e["classe"],
+                        "discipline": rnd.choice(["Français", "Mathématiques", "Éducation scientifique"]),
+                        "sequence": "SA 2", "note": round(rnd.uniform(9, 17), 1), "effectif_g": 20, "effectif_f": 18,
+                        "recommandations": "Renforcer la phase d'évaluation."})
+    secs = {"effectifs": {"classes": classes, "ages": ages, "nouveaux_ci": [rnd.randint(10, 30), rnd.randint(10, 30)],
+                          "handicapes": [rnd.randint(0, 2), rnd.randint(0, 2)], "salles": len(classes)},
+            "personnel": pers, "visites": visites,
+            "cantine": {"existe": secteur == "public" and rnd.random() < .7, "beneficiaires": rnd.randint(50, 200),
+                        "montant_annee": rnd.randint(100, 900) * 1000},
+            "patrimoine": {"salles_classe": len(classes), "salles_bon_etat": max(0, len(classes) - rnd.randint(0, 2)),
+                           "latrines": rnd.randint(0, 4), "point_eau": rnd.random() < .6, "electricite": rnd.random() < .4,
+                           "tables_bancs": rnd.randint(40, 120)}}
+    if typ == "EP":
+        cm2 = [c for c in classes if c["niveau"] == "CM2"]
+        cm1 = [c for c in classes if c["niveau"] == "CM1"]
+        cg, cf = sum(c["garcons"] for c in cm2), sum(c["filles"] for c in cm2)
+        taux = rnd.uniform(0.45, 0.98)
+        secs["cep"] = {"session": str(a0 + 1), "candidats_g": cg, "candidats_f": cf,
+                       "admis_g": round(cg * taux), "admis_f": round(cf * min(1, taux + rnd.uniform(-.08, .08))),
+                       "cm1_g": sum(c["garcons"] for c in cm1), "cm1_f": sum(c["filles"] for c in cm1),
+                       "cm2_g": cg, "cm2_f": cf, "liste": []}
+    ident = {"code": code, "nom": nom, "type": typ, "secteur": secteur, "departement": dep, "cs": cs, "zone": zone,
+             "commune": cs.split()[0].title(), "arrondissement": "", "localite": rnd.choice(VILLAGES), "adresse": "",
+             "telephone": "", "email": "", "directeur_titre": "Directrice" if d["sexe"] == "F" else "Directeur",
+             "directeur_nom": f"{d['nom']} {d['prenoms']}", "directeur_tel": d["telephone"],
+             "annee_creation": str(rnd.randint(1950, 2018))}
+    p = jur_format.nouveau("ecole", code, nom, an, dep, cs, "publique" if secteur == "public" else "privee", "GESCOL démo")
+    p["genere_le"] = f"{date.today().isoformat()} 08:00:00"
+    p["ecoles"] = [{"ecole": ident, "sections": secs}]
+    return jur_format.sceller(p)
+
+
+def ecoles_de_cs(rnd, dep, cs, nb_zones, n):
+    """Liste (code, nom, type, secteur, zone) d'écoles fictives pour une CS."""
+    out = []
+    for i in range(n):
+        typ = "EP" if i < n * 0.7 else ("EM" if i < n * 0.92 else "EE")
+        sect = "prive" if rnd.random() < 0.2 else "public"
+        vil = rnd.choice(VILLAGES)
+        nom = {"EP": ("EPP " if sect == "public" else "EPPr ") + vil, "EM": ("EM " if sect == "public" else "EM privée ") + vil,
+               "EE": "Espace enfance " + vil}[typ] + ("" if i < 10 else f" {i}")
+        code = f"{''.join(ch for ch in J.norm(cs) if ch.isalnum())[:6]}-{typ}{i + 1:03d}"
+        out.append((code, nom, typ, sect, f"Zone pédagogique {1 + i % max(1, nb_zones)}"))
+    return out
+
+
+def agents_cs(rnd, cs_nom):
+    postes = [("ccs", "Chef de la Circonscription Scolaire", "ccs"), ("animation", "Conseiller pédagogique", "cp"),
+              ("animation", "Conseiller pédagogique", "cp"), ("animation", "Conseiller pédagogique", "cp"),
+              ("secretariat", "Chef Division Secrétariat (CDS)", "chef_service"),
+              ("personnel", "Chef Service Personnel et Affaires (CSPAF)", "chef_service"),
+              ("animation", "Chef Division Animation Pédagogique (CDAP)", "chef_service"),
+              ("organisation", "Chef Division Organisation Scolaire et Prévision (CDOSP)", "chef_service"),
+              ("secretariat", "Secrétaire", "administratif"), ("administration", "Agent d'entretien", "soutien")]
+    out = []
+    for svc, poste, role in postes:
+        p = personne(rnd, role, "FE" if role in ("ccs", "cp", "chef_service") else rnd.choice(["ACDPE", "AUTRE"]), poste)
+        p.update(service_code=svc, poste=poste)
+        out.append(p)
+    return out
+
+
+def creer_comptes():
+    for ident, nom, role in (("responsable", "Responsable (démo)", "responsable"), ("cp1", "KOUTON Basile", "cp"),
+                             ("cp2", "OLOU Rosine", "cp"), ("chef", "Chef de division (démo)", "chef_service"),
+                             ("agent", "Agent (démo)", "agent")):
+        if not q("SELECT 1 FROM utilisateurs WHERE identifiant=?", (ident,), un=True):
+            ex("INSERT INTO utilisateurs (identifiant, nom, role, mdp_hash, doit_changer_mdp) VALUES (?,?,?,?,0)",
+               (ident, nom, role, generate_password_hash("demo1234")))
+
+
+def inserer_agents(liste, cs_id=None):
+    import json
+    for a in liste:
+        extra = {k: v for k, v in a.items() if k not in ("nom", "prenoms", "sexe", "nip", "matricule", "telephone", "email",
+                                                         "service_code", "poste")}
+        ex("INSERT INTO jur_agents (cs_id, service_code, poste, nom, prenoms, sexe, nip, matricule, telephone, email, donnees, maj) "
+           "VALUES (?,?,?,?,?,?,?,?,?,?,?,datetime('now','localtime'))",
+           (cs_id, a["service_code"], a["poste"], a["nom"], a["prenoms"], a["sexe"], a["nip"], a["matricule"],
+            a["telephone"], a.get("email", ""), json.dumps(extra, ensure_ascii=False)))
+
+
+def main():
+    niveau = config.EDITION
+    if niveau not in ("cs", "ddemp"):
+        raise SystemExit("Lancez avec GESCOL_EDITION=cs ou GESCOL_EDITION=ddemp")
+    rnd = random.Random(2027)
+    an = config.ANNEE_ACTIVE
+    dep = "Plateau"
+    with app.app_context():
+        creer_comptes()
+        if niveau == "cs":
+            J.configurer("cs", dep, "POBE", responsable_titre="Le Chef de la Circonscription Scolaire",
+                         responsable_nom="Nounagnon Salomon ATCHATIN", ville="Pobè", telephone="0197000000")
+            for code, nom, typ, sect, zone in ecoles_de_cs(rnd, dep, "POBE", 3, 18):
+                J.importer_paquet(paquet_ecole(rnd, code, nom, typ, sect, dep, "POBE", zone, an), "fichier", "démo")
+            inserer_agents(agents_cs(rnd, "POBE"), (J.cs_courante() or {"id": None})["id"])
+            print(f"CS de Pobè : {q('SELECT COUNT(*) n FROM jur_ecoles', un=True)['n']} écoles importées.")
+        else:
+            J.configurer("ddemp", dep, responsable_titre="Le Directeur Départemental", responsable_nom="Gildas AKPO",
+                         ville="Pobè")
+            for c in RB.CIRCONSCRIPTIONS[dep]:
+                p = jur_format.nouveau("cs", f"CS-{c['cs']}", f"Circonscription scolaire de {c['cs'].title()}", an, dep,
+                                       c["cs"], "cs", "GESCOL démo")
+                p["genere_le"] = f"{date.today().isoformat()} 09:00:00"
+                for code, nom, typ, sect, zone in ecoles_de_cs(rnd, dep, c["cs"], c["zones"], rnd.randint(8, 14)):
+                    p["ecoles"] += paquet_ecole(rnd, code, nom, typ, sect, dep, c["cs"], zone, an)["ecoles"]
+                p["cs"] = {"identite": {"departement": dep, "nom": c["cs"], "ccs_titre": "Le Chef de la Circonscription Scolaire",
+                                        "ccs_nom": f"{rnd.choice(PRENOMS_H)} {rnd.choice(NOMS)}"},
+                           "sections": {"agents": agents_cs(rnd, c["cs"])}}
+                J.importer_paquet(jur_format.sceller(p), "fichier", "démo")
+            inserer_agents([dict(personne(rnd, "chef_service", "FE", poste), service_code=svc, poste=poste) for svc, poste in
+                            (("direction", "Directeur Départemental"), ("sec", "Chef du Service des Examens et Concours"),
+                             ("semp", "Chef du Service des Écoles Maternelles et Primaires"),
+                             ("srh", "Chef du Service des Ressources Humaines"),
+                             ("spaf", "Chef du Service de la Planification, de l'Administration et des Finances"),
+                             ("cantines", "Chef du Service de Gestion des Cantines Scolaires"),
+                             ("statistiques", "Chef du Service des Statistiques"))])
+            print(f"DDEMP du Plateau : {q('SELECT COUNT(*) n FROM jur_cs', un=True)['n']} CS, "
+                  f"{q('SELECT COUNT(*) n FROM jur_ecoles', un=True)['n']} écoles importées.")
+        print("Comptes : responsable / cp1 / cp2 / chef / agent (mot de passe demo1234) ; admin / admin123.")
+
+
+if __name__ == "__main__":
+    main()

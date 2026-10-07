@@ -1,0 +1,35 @@
+{% extends "base.html" %}{% block titre %}Patrimoine – infrastructures{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Infrastructures</h1>
+  <p class="sous">Bâtiments, salles, latrines, point d'eau, clôture, électricité, cuisine, logements, terrain de sport…</p></div>
+  <div class="actions"><a class="btn" href="{{ url_for('patrimoine_local', oid=0, type=typ or none) }}">＋ Ajouter</a>
+    <a class="btn sec petit" href="{{ url_for('patrimoine_inventaire_pdf') }}" target="_blank">📄 Inventaire PDF</a></div>
+</div>
+{% include "patrimoine_onglets.html" %}
+{% set sc = s.salles_classe %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Salles de classe</div><div class="v">{{ sc.total }}</div><div class="d">{{ sc.utilisees }} utilisée(s)</div></div>
+  <div class="kpi"><div class="l">En mauvais état</div><div class="v">{{ sc.mauvais }}</div><div class="d">salles de classe</div></div>
+  <div class="kpi"><div class="l">À réhabiliter</div><div class="v">{{ s.besoins|length }}</div><div class="d">ouvrages (tous types)</div></div>
+  <div class="kpi"><div class="l">Cabines de latrines</div><div class="v">{{ s.latrines.cabines_total }}</div><div class="d">{{ s.latrines.cabines_g }} G · {{ s.latrines.cabines_f }} F · {{ s.latrines.cabines_ens }} ens.</div></div>
+</div>
+<form method="get" class="filtres"><label>Nature<br><select name="type" onchange="this.form.submit()"><option value="">Toutes</option>
+  {% for k, lib in TYPES.items() %}<option value="{{ k }}" {{ 'selected' if typ == k }}>{{ lib }} ({{ s.locaux[k].nombre }})</option>{% endfor %}</select></label></form>
+{% if liste %}
+<div class="tw"><table class="t">
+  <thead><tr><th>Nature</th><th>Désignation</th><th>Classe</th><th class="c">Année</th><th>Murs · toit</th><th>Financement</th><th>État</th><th>Détails / besoins</th><th></th></tr></thead>
+  <tbody>
+  {% for l in liste %}
+  <tr><td>{{ TYPES.get(l.type, l.type) }}</td><td><b>{{ l.designation }}</b>{% if l.type == 'salle_classe' and not l.utilisee %}<br><span class="badge">non utilisée</span>{% endif %}</td>
+    <td>{{ l.classe_nom or '' }}</td><td class="c">{{ l.annee_service or '' }}</td>
+    <td>{{ MURS.get(l.murs, '') }}{% if l.toit %} · {{ TOITS.get(l.toit) }}{% endif %}</td><td>{{ FIN.get(l.financement, '') }}</td>
+    <td><span class="badge {{ {'bon':'ok','passable':'att','mauvais':'ko'}.get(l.etat, '') }}">{{ ETATS.get(l.etat, '—') }}</span></td>
+    <td>{% if l.type == 'latrines' %}{{ l.cabines_g or 0 }} G / {{ l.cabines_f or 0 }} F / {{ l.cabines_ens or 0 }} ens.<br>{% endif %}{% if l.source %}{{ l.source }}<br>{% endif %}<span class="aide">{{ l.besoins or '' }}</span></td>
+    <td><a class="btn sec petit" href="{{ url_for('patrimoine_local', oid=l.id) }}">Modifier</a></td></tr>
+  {% endfor %}
+  </tbody></table></div>
+{% else %}
+<div class="carte">Aucune infrastructure enregistrée{{ ' pour cette nature' if typ }}. <a href="{{ url_for('patrimoine_local', oid=0, type=typ or none) }}">Ajouter la première</a>.</div>
+{% endif %}
+{% endblock %}

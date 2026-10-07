@@ -1,0 +1,178 @@
+{% extends "base.html" %}{% block titre %}Relevés mensuels de présence{% if cl %} – {{ cl.nom }}{% endif %}{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<style>
+.btn.vert{color:#fff}
+table.rl{min-width:980px}
+table.rl th{text-transform:none;letter-spacing:0;font-size:11px;line-height:1.25;vertical-align:middle;text-align:center;background:#1F4E79;color:#fff;font-weight:600}
+table.rl th .n{display:block;font-size:10px;opacity:.8;font-weight:400}
+table.rl td{text-align:center;padding:3px 4px}
+table.rl td.mois{font-weight:700;color:#1F4E79;background:#F5F8FC;white-space:nowrap}
+table.rl input{width:72px;text-align:center;padding:4px;font-weight:600}
+table.rl input::placeholder{color:#344054;opacity:.75;font-weight:500}
+table.rl input.manuel{background:#FFFAEB;border-color:#E9A23B}
+table.rl input.err{outline:2px solid #B42318;background:#FEF3F2}
+table.rl td.calc{background:#F9FAFB;font-weight:600}
+table.rl td.pct{background:#EDF7ED;font-weight:700}
+table.rl tr.total td{background:#1F4E79;color:#fff;font-weight:700}
+table.rl tr.moy td{background:#2B3A8F;color:#fff;font-weight:700}
+table.rl tr.avertir td.mois{box-shadow:inset 3px 0 0 #B42318}
+.rl-legende{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--gris);margin:8px 0}
+.rl-legende i{display:inline-block;width:22px;height:14px;border:1px solid #D0D5DD;border-radius:3px;vertical-align:middle;margin-right:4px}
+.rl-sigs{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+#rl-alertes li{color:#B42318;font-size:13px}
+</style>
+
+<div class="entete">
+  <div><h1>Relevés mensuels de présence{% if cl %} – {{ cl.nom }}{% endif %}</h1>
+    <p class="sous">Tableau de relevés mensuels pour l'année scolaire {{ annee }} (modèle officiel « bilan de présence annuelle »)</p></div>
+  <div class="actions">
+    <a class="btn sec petit" href="{{ url_for('registre_accueil', classe=cl.id if cl else None) }}">📋 Registre de présence</a>
+    <a class="btn sec petit" href="{{ url_for('calendrier_scolaire') }}">📅 Calendrier</a>
+  </div>
+</div>
+
+{% set a0 = ANNEE[:4]|int %}
+<form method="get" class="filtres">
+  <label>Classe<br><select name="classe" onchange="this.form.submit()">
+    <option value="">— choisir —</option>
+    {% for c in cls %}<option value="{{ c.id }}" {{ 'selected' if cl and c.id == cl.id }}>{{ c.nom }}</option>{% endfor %}
+  </select></label>
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">
+    {% for y in range(a0 - 3, a0 + 1)|reverse %}{% set an = y ~ '-' ~ (y + 1) %}<option value="{{ an }}" {{ 'selected' if an == annee }}>{{ an }}</option>{% endfor %}
+    {% if annee[:4]|int < a0 - 3 %}<option selected>{{ annee }}</option>{% endif %}
+  </select></label>
+</form>
+
+{% if not cl %}
+<div class="carte">{% if cls %}Choisissez une classe pour afficher son relevé mensuel. Les valeurs sont calculées automatiquement à partir du <a href="{{ url_for('calendrier_scolaire') }}">calendrier</a> (demi-journées de classe) et du <a href="{{ url_for('registre_accueil') }}">registre de présence</a> (absences), et restent modifiables avant l'impression.
+{% else %}Aucune classe ne vous est accessible.{% endif %}</div>
+{% else %}
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Mois renseignés</div><div class="v" id="k-nmois">{{ nmois }}</div><div class="d">de septembre à juin</div></div>
+  <div class="kpi"><div class="l">Présences possibles</div><div class="v" id="k-poss">{{ tot.poss }}</div><div class="d">total de l'année</div></div>
+  <div class="kpi"><div class="l">Absences</div><div class="v" id="k-abs">{{ tot.abs }}</div><div class="d">demi-journées</div></div>
+  <div class="kpi"><div class="l">Présences effectives</div><div class="v" id="k-pct">{{ nb_fr(tot.pct) ~ ' %' if tot.pct is not none else '—' }}</div><div class="d">pourcentage annuel</div></div>
+</div>
+
+<form method="post" id="f-releve" data-doc="releve:{{ cl.id }}:{{ annee }}" action="{{ url_for('releve_pdf', classe=cl.id, annee=annee) }}" target="_blank" autocomplete="off">
+{% call M.barre_doc() %}
+  <button type="submit" class="btn petit" title="PDF A4 paysage conforme au modèle officiel">📄 Télécharger PDF</button>
+  <button type="button" class="btn sec petit" id="b-auto" title="Effacer les corrections manuelles du tableau et revenir aux valeurs calculées">🧮 Valeurs automatiques</button>
+{% endcall %}
+
+<div class="carte">
+  <h3 style="margin-top:0">Renseignements</h3>
+  {{ M.identification(v, champs=('annee','cours','ddemp','cs','ecole','titulaire','directeur')) }}
+</div>
+
+<div class="carte">
+  <h3 style="margin-top:0">Tableau de relevés mensuels</h3>
+  <p class="aide" style="margin-top:0">Les chiffres en gris sont <b>calculés automatiquement</b> (calendrier + registre ; mois en cours : jusqu'à aujourd'hui). Tapez un nombre dans une case pour le <b>corriger à la main</b> (case jaune) ; videz-la pour revenir au calcul. Les colonnes 3, 5 et 6 se calculent toutes seules. Pensez à « 💾 Sauvegarder » pour garder vos corrections.</p>
+  <div class="rl-legende" aria-hidden="true"><span><i style="background:#fff"></i>valeur calculée</span><span><i style="background:#FFFAEB;border-color:#E9A23B"></i>valeur corrigée à la main</span><span><i style="background:#F9FAFB"></i>formule</span></div>
+  <div class="tw"><table class="t rl" id="rl-table">
+    <thead><tr><th>Mois</th>
+      {% for c, lib, s in colonnes %}<th title="{{ lib }}"><span class="n">({{ loop.index }})</span>{{ lib }}</th>{% endfor %}
+    </tr></thead>
+    <tbody>
+    {% for l in lignes %}{% set a = auto.get(l.mois) or {} %}
+      <tr data-mois="{{ l.mois }}"><td class="mois">{{ l.lib }}</td>
+      {% for c, lib, s in colonnes %}
+        {% if s %}
+        <td><input type="number" min="0" step="1" inputmode="numeric" name="{{ c }}_{{ l.mois }}" data-c="{{ c }}"
+             value="{{ sauve.get(c ~ '_' ~ l.mois, '') if c in l.manuel else '' }}"
+             placeholder="{{ a[c] if a and a[c] is not none else '—' }}" class="{{ 'manuel' if c in l.manuel }}"
+             aria-label="{{ l.lib }} – {{ lib }}"></td>
+        {% else %}
+        <td class="calc {{ 'pct' if c == 'pct' }}" data-calc="{{ c }}">{% if l.v %}{{ (nb_fr(l.v[c]) ~ ' %') if c == 'pct' and l.v[c] is not none else nb_fr(l.v[c]) }}{% else %}—{% endif %}</td>
+        {% endif %}
+      {% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="total"><td>TOTAL</td>{% for c, lib, s in colonnes %}<td data-tot="{{ c }}">{{ (nb_fr(tot[c]) ~ ' %') if c == 'pct' and tot[c] is not none else nb_fr(tot[c]) }}</td>{% endfor %}</tr>
+      <tr class="moy"><td>MOYENNE GÉN.</td>{% for c, lib, s in colonnes %}<td data-moy="{{ c }}">{{ '—' if c == 'pct' else '%.1f'|format(moy[c])|replace('.', ',') }}</td>{% endfor %}</tr>
+    </tfoot>
+  </table></div>
+  <ul id="rl-alertes" style="margin:10px 0 0;padding-left:18px"></ul>
+  <p class="aide">(3) = (1) × (2) · (5) = (3) − (4) · (6) = (5) ÷ (3) × 100 · Moyenne générale = total ÷ nombre de mois renseignés (ayant des demi-journées de classe).</p>
+</div>
+</form>
+
+<div class="carte">
+  <h3 style="margin-top:0">Signatures (reportées sur le PDF)</h3>
+  <div class="rl-sigs">
+    {{ M.signature(cle='classe:' ~ cl.id ~ ':titulaire', titre='Signature du / de la titulaire') }}
+    {% if g.user.role in ('admin', 'fondateur', 'directeur') %}
+      {{ M.signature(cle='ecole:' ~ g.ecole.id ~ ':directeur', titre='Signature du directeur / de la directrice (cachet ajouté automatiquement)') }}
+    {% else %}
+      <p class="aide">La signature du directeur / de la directrice et le cachet de l'école sont ajoutés automatiquement au PDF s'ils ont été enregistrés par la direction.</p>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+(function () {
+  var AUTO = {{ auto_json|safe }};
+  var F = document.getElementById('f-releve'), T = document.getElementById('rl-table');
+  var SAISIES = ['dj', 'eff', 'abs', 'n4', 'n5', 'imp'], TOUTES = ['dj', 'eff', 'poss', 'abs', 'effe', 'pct', 'n4', 'n5', 'imp'];
+  function fr(x, pct) {
+    if (x === null || x === undefined) return '—';
+    var s = Number.isInteger(x) ? String(x) : x.toFixed(1).replace('.', ',');
+    return pct ? s + ' %' : s;
+  }
+  function entier(v) { v = String(v || '').replace(/\s/g, ''); return /^\d+$/.test(v) ? parseInt(v, 10) : null; }
+  function r1(x) { return Math.round(x * 10) / 10; }
+  function calculer() {
+    var tot = {}, nmois = 0, alertes = [];
+    TOUTES.forEach(function (c) { tot[c] = 0; });
+    T.querySelectorAll('tbody tr').forEach(function (tr) {
+      var m = tr.dataset.mois, a = AUTO[m] || {}, v = {}, vide = true, lib = tr.querySelector('.mois').textContent;
+      SAISIES.forEach(function (c) {
+        var inp = tr.querySelector('input[data-c="' + c + '"]'), s = entier(inp.value);
+        inp.classList.toggle('manuel', s !== null);
+        inp.classList.toggle('err', inp.value !== '' && s === null);
+        v[c] = s !== null ? s : (a[c] === undefined ? null : a[c]);
+        if (v[c] !== null) vide = false;
+      });
+      tr.classList.remove('avertir');
+      if (vide) { tr.querySelectorAll('[data-calc]').forEach(function (td) { td.textContent = '—'; }); return; }
+      SAISIES.forEach(function (c) { v[c] = v[c] || 0; });
+      v.poss = v.dj * v.eff; v.effe = v.poss - v.abs; v.pct = v.poss ? r1(100 * v.effe / v.poss) : null;
+      tr.querySelectorAll('[data-calc]').forEach(function (td) { td.textContent = fr(v[td.dataset.calc], td.dataset.calc === 'pct'); });
+      TOUTES.forEach(function (c) { if (c !== 'pct') tot[c] += v[c]; });
+      if (v.dj) nmois++;
+      // contrôles de cohérence (avertissements, n'empêchent pas le PDF)
+      var pb = [];
+      if (v.abs > v.poss) pb.push('absences (4) supérieures aux présences possibles (3)');
+      if (v.n4 + v.n5 !== v.eff) pb.push('(7) + (8) devrait être égal à l\'effectif (2)');
+      if (v.imp > v.abs) pb.push('absences imputables (9) supérieures au total des absences (4)');
+      if (v.imp < 5 * v.n5) pb.push('(9) doit valoir au moins 5 × (8)');
+      if (pb.length) { tr.classList.add('avertir'); alertes.push(lib + ' : ' + pb.join(' ; ') + '.'); }
+    });
+    tot.pct = tot.poss ? r1(100 * tot.effe / tot.poss) : null;
+    T.querySelectorAll('[data-tot]').forEach(function (td) { td.textContent = fr(tot[td.dataset.tot], td.dataset.tot === 'pct'); });
+    T.querySelectorAll('[data-moy]').forEach(function (td) {
+      var c = td.dataset.moy; td.textContent = c === 'pct' ? '—' : (nmois ? r1(tot[c] / nmois) : 0).toFixed(1).replace('.', ',');
+    });
+    document.getElementById('k-nmois').textContent = nmois;
+    document.getElementById('k-poss').textContent = tot.poss;
+    document.getElementById('k-abs').textContent = tot.abs;
+    document.getElementById('k-pct').textContent = fr(tot.pct, true);
+    var ul = document.getElementById('rl-alertes'); ul.innerHTML = '';
+    alertes.forEach(function (t) { var li = document.createElement('li'); li.textContent = '⚠ ' + t; ul.appendChild(li); });
+  }
+  T.addEventListener('input', calculer);
+  F.addEventListener('change', calculer);   // après « Charger »
+  F.addEventListener('reinit', calculer);   // après « Réinitialiser »
+  document.getElementById('b-auto').addEventListener('click', function () {
+    if (!confirm('Effacer toutes les corrections manuelles du tableau ?')) return;
+    T.querySelectorAll('input').forEach(function (i) { i.value = ''; }); calculer();
+    GESCOL.toast('Valeurs automatiques rétablies (pensez à sauvegarder).');
+  });
+  calculer();
+})();
+</script>
+{% endif %}
+{% endblock %}

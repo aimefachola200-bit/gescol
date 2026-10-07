@@ -1,0 +1,72 @@
+{% extends "base.html" %}{% block titre %}Impayés de cantine{% endblock %}
+{% block contenu %}
+<style>
+.imp td.ok{color:#1B7F3B;text-align:center}.imp td.ko{color:#B42318;text-align:center;font-weight:700;background:#FEF3F2}
+.imp-nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+</style>
+<div class="entete">
+  <div><h1>Impayés de cantine</h1>
+  <p class="sous">Élèves des classes dont la cantine est configurée et validée qui n'ont pas payé un ou plusieurs jours de classe de la période. Montant dû = montant par jour × jours non payés.</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('cantine_accueil') }}">Paiements de cantine</a>
+    <a class="btn sec" href="{{ url_for('cantine_recap') }}">Récapitulatifs</a>
+  </div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Élèves concernés</div><div class="v rouge">{{ r.concernes }}</div><div class="d">au moins un jour non payé</div></div>
+  <div class="kpi"><div class="l">Jours non payés</div><div class="v">{{ r.n }}</div><div class="d">sur {{ r.jours|length }} jour(s) de cantine</div></div>
+  <div class="kpi"><div class="l">Montant dû</div><div class="v rouge">{{ milliers(r.du_total) }}</div><div class="d">FCFA</div></div>
+  <div class="kpi"><div class="l">Encaissé sur la période</div><div class="v vert">{{ milliers(r.encaisse) }}</div><div class="d">FCFA</div></div>
+</div>
+
+<form class="f carte" method="get">
+  <div class="ligne">
+    <div><label for="i-cl">Classe</label><select id="i-cl" name="classe"><option value="">Toutes les classes</option>{% for c in r.cls %}<option value="{{ c.id }}" {{ 'selected' if c.id == r.cid }}>{{ c.nom }}</option>{% endfor %}</select></div>
+    <div><label for="i-per">Période</label><select id="i-per" name="periode">{% for k, lib in periodes.items() %}<option value="{{ k }}" {{ 'selected' if k == r.periode }}>{{ lib }}</option>{% endfor %}</select></div>
+    <div><label for="i-date">Date (dans la période)</label><input id="i-date" type="date" name="date" value="{{ r.date }}"></div>
+    <div><label class="choix" style="margin-top:28px!important"><input type="checkbox" name="tous" value="1" {{ 'checked' if r.tous }}> Afficher aussi les élèves à jour</label></div>
+  </div>
+  <p style="margin:8px 0 0"><button class="btn sec">Afficher</button></p>
+</form>
+
+{% set prm = dict(periode=r.periode, classe=r.cid or None, tous='1' if r.tous else None) %}
+<div class="imp-nav">
+  <a class="btn sec petit" href="{{ url_for('cantine_impayes', date=r.prec, **prm) }}">← Précédent</a>
+  <b>{{ r.titre }}</b>
+  <a class="btn sec petit" href="{{ url_for('cantine_impayes', date=r.suiv, **prm) }}">Suivant →</a>
+  <span style="flex:1"></span>
+  <a class="btn sec petit" href="{{ url_for('cantine_impayes_pdf', date=r.date, **prm) }}" target="_blank">Liste PDF</a>
+</div>
+
+{% if r.non_ouvertes %}<p class="aide">Classes non comptées (cantine non configurée ou non validée) : {{ r.non_ouvertes|map(attribute='nom')|join(', ') }} —
+  <a href="{{ url_for('cantine_config') }}">Configuration</a>.</p>{% endif %}
+{% if r.futur %}<p class="aide">Les jours à venir ne sont pas comptés.</p>{% endif %}
+
+{% if not r.groupes %}
+<div class="carte">Aucune classe dont la cantine est configurée et validée{{ ' parmi celles choisies' if r.cid }}. Configurez le montant par jour dans <a href="{{ url_for('cantine_config') }}">Cantine › Configuration</a>.</div>
+{% elif not r.jours %}
+<div class="carte">Aucun jour de cantine dans cette période (week-end, congé, jour férié ou date à venir).</div>
+{% else %}
+{% set grille = r.jours|length <= 6 %}
+{% for gr in r.groupes %}
+<h2>{{ gr.c.nom }} <span class="aide">— {{ milliers(gr.cfg.montant_jour) }} F/jour · {{ gr.concernes }} élève(s) concerné(s) · dû {{ milliers(gr.du) }} FCFA</span></h2>
+{% if gr.eleves %}
+<div class="tw"><table class="t imp">
+  <thead><tr><th>N°</th><th>Nom et prénoms</th><th class="c">Sexe</th>
+    {% if grille %}{% for j in r.jours %}<th class="c">{{ jc[j.weekday()] }}<br>{{ j.strftime('%d/%m') }}</th>{% endfor %}{% else %}<th>Jours non payés</th>{% endif %}
+    <th class="c">Nb jours</th><th class="num">Montant dû</th></tr></thead>
+  <tbody>{% for x in gr.eleves %}
+  <tr><td>{{ loop.index }}</td><td>{{ x.e.nom }} {{ x.e.prenoms }}</td><td class="c">{{ x.e.sexe }}</td>
+    {% if grille %}{% for ok in x.cases %}<td class="{{ 'ok' if ok else 'ko' }}">{{ '✓' if ok else '✗' }}</td>{% endfor %}
+    {% else %}<td>{% for j in x.manque %}{{ j.strftime('%d/%m') }}{{ ', ' if not loop.last }}{% else %}—{% endfor %}</td>{% endif %}
+    <td class="c">{{ x.n }}</td><td class="num">{{ milliers(x.du) }}</td></tr>
+  {% endfor %}</tbody>
+  <tfoot><tr><th colspan="{{ 3 + (r.jours|length if grille else 1) }}" style="text-align:left">Total {{ gr.c.nom }}</th><th class="c">{{ gr.n }}</th><th class="num">{{ milliers(gr.du) }}</th></tr></tfoot>
+</table></div>
+{% else %}<div class="carte gris">Tous les élèves de {{ gr.c.nom }} ont payé sur cette période. ✔</div>{% endif %}
+<p><a class="btn petit" href="{{ url_for('cantine_classe', cid=gr.c.id, semaine=gr.semaine) }}">Ouvrir la grille de paiement de {{ gr.c.nom }}</a></p>
+{% endfor %}
+{% endif %}
+<p class="aide">Jours comptés : du lundi au vendredi, jours de classe du calendrier scolaire (congés et jours fériés exclus), jusqu'à aujourd'hui. Pour enregistrer un paiement, ouvrez la grille de paiement de la classe.</p>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}{% block titre %}Visites d'école et de classe{% endblock %}
+{% block contenu %}
+<style>
+.jv-src{font-size:11.5px;white-space:nowrap}
+.jv-t td{vertical-align:top}
+</style>
+<div class="entete">
+  <div><h1>Visites d'école et de classe</h1>
+  <p class="sous">Conseillers pédagogiques (CP) et chefs de circonscription (CCS) · année {{ f.annee }}{% if JUR_NIVEAU == 'ddemp' %} · toutes les circonscriptions du département{% endif %}</p></div>
+  <div class="actions">
+    {% if saisie %}<a class="btn" href="{{ url_for('jur_visite_form') }}">＋ Nouvelle visite</a>{% endif %}
+    <a class="btn sec" href="{{ url_for('jur_bilan_activites', annee=f.annee) }}">Bilan des activités</a>
+    <a class="btn sec" href="{{ url_for('jur_visites', export='xlsx', **args) }}">⇩ Excel</a>
+    <a class="btn sec" href="{{ url_for('jur_visites', export='pdf', **args) }}" target="_blank">📄 PDF</a>
+    <a class="btn sec" href="{{ url_for('jur_visite_vierge') }}" target="_blank">Fiche vierge</a>
+  </div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Visites</div><div class="v">{{ ind.total }}</div><div class="d">selon les filtres</div></div>
+  <div class="kpi"><div class="l">Visites de classe</div><div class="v">{{ ind.classe }}</div><div class="d">+ {{ ind.inspection }} d'inspection</div></div>
+  <div class="kpi"><div class="l">Visites d'école</div><div class="v">{{ ind.ecole }}</div><div class="d">{{ ind.ecoles }} école(s) visitée(s)</div></div>
+  <div class="kpi"><div class="l">CP / CCS</div><div class="v">{{ ind.cp }} / {{ ind.ccs }}</div><div class="d">{{ ind.enseignants }} enseignant(s) visité(s)</div></div>
+  <div class="kpi"><div class="l">Note moyenne</div><div class="v">{{ note_txt(ind.note) or '—' }}</div><div class="d">{{ ind.nb_notes }} visite(s) notée(s)</div></div>
+  <div class="kpi"><div class="l">Déclarées par les écoles</div><div class="v">{{ ind.declarees }}</div><div class="d">lecture seule</div></div>
+</div>
+
+<form method="get" class="filtres carte">
+  <label>Année<br><select name="annee">{% for a in annees %}<option {{ 'selected' if f.annee == a }}>{{ a }}</option>{% endfor %}</select></label>
+  {% if JUR_NIVEAU == 'ddemp' %}<label>Circonscription<br><select name="cs"><option value="">Toutes</option>
+    {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if f.cs == c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+  <label>Zone pédagogique<br><select name="zone"><option value="">Toutes</option>
+    {% for z in zones %}<option value="{{ z.id }}" {{ 'selected' if f.zone == z.id }}>{% if JUR_NIVEAU == 'ddemp' %}{{ z.cs_nom }} – {% endif %}{{ z.nom }}</option>{% endfor %}</select></label>
+  <label>École<br><select name="ecole"><option value="">Toutes</option>
+    {% for e in ecoles %}<option value="{{ e.id }}" {{ 'selected' if f.ecole == e.id }}>{{ e.nom }}</option>{% endfor %}</select></label>
+  <label>Visiteur<br><select name="visiteur"><option value="">Tous</option>
+    {% for k, n in visiteurs %}<option value="{{ k }}" {{ 'selected' if f.visiteur == k }}>{{ n }}</option>{% endfor %}</select></label>
+  <label>Fonction<br><select name="qualite"><option value="">CP et CCS</option>
+    {% for k, lib in QUALITES_FILTRE.items() %}<option value="{{ k }}" {{ 'selected' if f.qualite == k }}>{{ lib }}</option>{% endfor %}</select></label>
+  <label>Type<br><select name="type"><option value="">Tous</option>
+    {% for k, lib in TYPES.items() %}<option value="{{ k }}" {{ 'selected' if f.type == k }}>{{ lib }}</option>{% endfor %}</select></label>
+  <label>Source<br><select name="source"><option value="">Toutes</option>
+    <option value="structure" {{ 'selected' if f.source == 'structure' }}>Saisies de la {{ 'CS' if JUR_NIVEAU == 'cs' else 'CS / DDEMP' }}</option>
+    <option value="ecole" {{ 'selected' if f.source == 'ecole' }}>Déclarées par les écoles</option></select></label>
+  <button class="btn">Filtrer</button> <a class="btn sec" href="{{ url_for('jur_visites') }}">Effacer</a>
+</form>
+
+{% if liste %}
+<div class="tw"><table class="t jv-t">
+  <thead><tr><th>Date</th><th>Type</th><th>Visiteur</th><th>École</th><th>Enseignant(e) · classe</th><th>Discipline · séquence</th><th class="c">Présents</th><th class="c">Note</th><th>Source</th><th></th></tr></thead>
+  <tbody>
+  {% for v in liste %}
+  <tr><td>{{ date_fr(v.date) }}{% if v.heure_debut %}<br><span class="aide">{{ v.heure_debut }}{% if v.heure_fin %}–{{ v.heure_fin }}{% endif %}</span>{% endif %}</td>
+    <td>{{ TYPES[v.type] }}</td>
+    <td><span class="badge {{ 'ok' if v.qualite == 'CCS' else '' }}">{{ v.qualite if v.qualite != 'directeur' else 'Dir.' }}</span> {{ v.visiteur }}</td>
+    <td>{{ v.ecole_nom }}<br><span class="aide">{% if JUR_NIVEAU == 'ddemp' %}{{ v.cs_nom }} · {% endif %}{{ v.zone_nom }}</span></td>
+    <td>{{ v.enseignant or '—' }}<br><span class="aide">{{ v.classe }}</span></td>
+    <td>{{ v.discipline or '—' }}<br><span class="aide">{{ v.sequence }}</span></td>
+    <td class="c">{% if v.eff_t is not none %}{{ v.eff_t }}<br><span class="aide">{{ v.eff_g or 0 }} G / {{ v.eff_f or 0 }} F</span>{% else %}—{% endif %}</td>
+    <td class="c">{{ note_txt(v.note) or '—' }}</td>
+    <td class="jv-src">{% if v.source == 'ecole' %}<span class="badge att">déclarée par l'école</span>{% elif v.source == 'transmise' %}<span class="badge">transmise par la CS</span>{% else %}<span class="badge ok">{{ 'saisie CS' if v.source == 'cs' else 'saisie DDEMP' }}</span>{% if v.aussi_ecole %}<br><span class="aide">aussi déclarée par l'école</span>{% endif %}{% endif %}</td>
+    <td class="actions">{% if v.id %}<a class="btn sec petit" href="{{ url_for('jur_visite_form', vid=v.id) }}">{{ 'Modifier' if v.modifiable else 'Ouvrir' }}</a>
+      <a class="btn sec petit" href="{{ url_for('jur_visite_pdf', vid=v.id) }}" target="_blank">PDF</a>{% else %}<span class="aide">lecture seule</span>{% endif %}</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+{% else %}
+<div class="carte">Aucune visite pour ces critères.
+  {% if saisie %}<a href="{{ url_for('jur_visite_form') }}">Enregistrer une visite</a>.{% endif %}
+  Les visites déclarées par les écoles apparaissent ici dès l'import de leurs fichiers de transmission.</div>
+{% endif %}
+<p class="aide">Les visites déclarées par les écoles (section « visites » de leurs fichiers de transmission) sont en lecture seule ; si une même visite (même date, même enseignant, même visiteur) a aussi été saisie ici, elle n'est comptée qu'une fois.{% if JUR_NIVEAU == 'cs' %} Les visites saisies ici partent vers la DDEMP avec le fichier de la circonscription.{% endif %}</p>
+{% endblock %}

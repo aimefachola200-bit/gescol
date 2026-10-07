@@ -1,0 +1,102 @@
+{% extends "base.html" %}{% block titre %}Bilan des activités des CP et CCS{% endblock %}
+{% block contenu %}
+<style>
+.graphe{max-width:100%;height:auto;display:block}
+.jb-leg{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--gris);margin:4px 0 8px}
+.jb-leg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.jb-mois td,.jb-mois th{text-align:center}
+</style>
+<div class="entete">
+  <div><h1>Bilan des activités des CP et CCS</h1>
+  <p class="sous">Animation pédagogique · année {{ annee }}{% if JUR_NIVEAU == 'ddemp' %} · {{ 'toutes les circonscriptions' if not cs_id else 'une circonscription' }}{% endif %}</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_visites', annee=annee, cs=cs_id or '') }}">Liste des visites</a>
+    <a class="btn sec" href="{{ url_for('jur_bilan_activites', annee=annee, cs=cs_id or '', export='xlsx') }}">⇩ Excel</a>
+    <a class="btn" href="{{ url_for('jur_bilan_activites', annee=annee, cs=cs_id or '', export='pdf') }}" target="_blank">📄 PDF signé</a>
+  </div>
+</div>
+
+<form method="get" class="filtres carte">
+  <label>Année<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  {% if JUR_NIVEAU == 'ddemp' %}<label>Circonscription<br><select name="cs" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if cs_id == c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+  <noscript><button class="btn sec petit">Afficher</button></noscript>
+</form>
+
+{% set t = b.tot %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Visites (CP / CCS)</div><div class="v">{{ t.total }}</div><div class="d">{{ t.cp }} CP · {{ t.ccs }} CCS</div></div>
+  <div class="kpi"><div class="l">Visites de classe</div><div class="v">{{ t.classe + t.inspection }}</div><div class="d">dont {{ t.inspection }} d'inspection · {{ t.ecole }} d'école</div></div>
+  <div class="kpi"><div class="l">Écoles visitées</div><div class="v">{{ t.ecoles_visitees }} / {{ t.ecoles_total }}</div><div class="d">couverture {{ pct(t.taux_ecoles) }}</div></div>
+  <div class="kpi"><div class="l">Enseignants visités</div><div class="v">{{ t.enseignants_visites }} / {{ t.enseignants_total }}</div><div class="d">couverture {{ pct(t.taux_enseignants) }}</div></div>
+  <div class="kpi"><div class="l">Note moyenne</div><div class="v">{{ note_txt(t.note) or '—' }}</div><div class="d">{{ t.nb_notes }} visite(s) notée(s)</div></div>
+  <div class="kpi"><div class="l">Visiteurs actifs</div><div class="v">{{ t.visiteurs }}</div><div class="d">{{ t.declarees }} visite(s) déclarée(s) par les écoles</div></div>
+</div>
+
+{% if not t.total %}
+<div class="carte">Aucune visite de conseiller pédagogique ou de chef de circonscription pour {{ annee }}.
+  {% if peut('jur_visites') %}<a href="{{ url_for('jur_visite_form') }}">Enregistrer une visite</a>, ou importez{% else %}Importez{% endif %} les fichiers de transmission des écoles (section « visites »).</div>
+{% endif %}
+
+{% if b.cs %}
+<div class="carte"><h2>Par circonscription scolaire</h2>
+  <div class="jb-leg"><span><i style="background:{{ COUL.classe }}"></i>Saisies par la CS / DDEMP</span><span><i style="background:{{ COUL.ecole }}"></i>Déclarées par les écoles</span></div>
+  {{ g_cs }}
+  <div class="tw"><table class="t compact">
+    <tr><th>Circonscription</th><th class="num">Saisies CS / DDEMP</th><th class="num">Déclarées écoles</th><th class="num">Total</th><th class="num">Classe</th><th class="num">École</th><th class="num">Visiteurs</th><th class="num">Écoles visitées</th><th class="num">Enseignants visités</th><th class="num">Note moy.</th></tr>
+    {% for c in b.cs %}<tr><td><a href="{{ url_for('jur_bilan_activites', annee=annee, cs=c.cs_id) }}">{{ c.cs_nom }}</a></td><td class="num">{{ c.saisies }}{% if c.transmises_cs %} <span class="aide">({{ c.transmises_cs }} reçues)</span>{% endif %}</td><td class="num">{{ c.declarees }}</td><td class="num"><b>{{ c.total }}</b></td>
+      <td class="num">{{ c.visites_classe }}</td><td class="num">{{ c.visites_ecole }}</td><td class="num">{{ c.visiteurs }}</td>
+      <td class="num">{{ c.ecoles_visitees }} / {{ c.ecoles }} <span class="aide">{{ pct(c.taux_ecoles) }}</span></td>
+      <td class="num">{{ c.enseignants_visites }} / {{ c.enseignants }} <span class="aide">{{ pct(c.taux_enseignants) }}</span></td>
+      <td class="num">{{ note_txt(c.note) or '—' }}</td></tr>{% endfor %}
+  </table></div>
+</div>
+{% endif %}
+
+<div class="carte"><h2>Par visiteur</h2>
+{% if b.visiteurs %}
+  <div class="tw"><table class="t compact">
+    <tr><th>Visiteur</th><th>Fonction</th>{% if JUR_NIVEAU == 'ddemp' %}<th>CS</th>{% endif %}<th class="num">Visites de classe*</th><th class="num">Visites d'école</th><th class="num">Total</th><th class="num">Écoles couvertes (périmètre)</th><th class="num">Enseignants visités (périmètre)</th><th class="num">Note moy.</th></tr>
+    {% for v in b.visiteurs %}<tr>
+      <td><a href="{{ url_for('jur_visites', annee=annee, cs=cs_id or '', visiteur=v.cle) }}"><b>{{ v.visiteur }}</b></a>{% if v.declarees %}<br><span class="aide">dont {{ v.declarees }} déclarée(s) par les écoles</span>{% endif %}</td>
+      <td>{{ v.qualite }}<br><span class="aide">{{ v.perimetre }}</span></td>{% if JUR_NIVEAU == 'ddemp' %}<td>{{ v.cs_nom }}</td>{% endif %}
+      <td class="num">{{ v.visites_classe }}{% if v.visites_inspection %} <span class="aide">(dont {{ v.visites_inspection }} insp.)</span>{% endif %}</td><td class="num">{{ v.visites_ecole }}</td><td class="num"><b>{{ v.total }}</b></td>
+      <td class="num">{{ v.ecoles_perimetre_visitees }} / {{ v.ecoles_perimetre }} <span class="aide">{{ pct(v.taux_ecoles) }}</span>{% if v.ecoles != v.ecoles_perimetre_visitees %}<br><span class="aide">{{ v.ecoles }} au total</span>{% endif %}</td>
+      <td class="num">{{ v.enseignants_perimetre_visites }} / {{ v.enseignants_perimetre }} <span class="aide">{{ pct(v.taux_enseignants) }}</span>{% if v.enseignants != v.enseignants_perimetre_visites %}<br><span class="aide">{{ v.enseignants }} au total</span>{% endif %}</td>
+      <td class="num">{{ note_txt(v.note_moyenne) or '—' }}</td></tr>{% endfor %}
+  </table></div>
+  <p class="aide">* y compris les visites d'inspection. Périmètre d'un CP : sa zone pédagogique (renseignez le « CP de la zone » dans Zones pédagogiques), sinon la circonscription ; d'un CCS : sa circonscription.</p>
+  <h3>Taux de couverture des écoles par visiteur</h3>
+  {{ g_couv }}
+{% else %}<p class="gris">Aucun visiteur pour cette période.</p>{% endif %}
+</div>
+
+{% if b.zones %}
+<div class="carte"><h2>Par zone pédagogique</h2>
+  <div class="tw"><table class="t compact">
+    <tr>{% if JUR_NIVEAU == 'ddemp' %}<th>CS</th>{% endif %}<th>Zone pédagogique</th><th>CP de la zone</th><th class="num">Écoles visitées</th><th class="num">Enseignants visités</th><th class="num">Visites de classe</th><th class="num">Visites d'école</th><th class="num">Note moy.</th></tr>
+    {% for z in b.zones %}<tr>{% if JUR_NIVEAU == 'ddemp' %}<td>{{ z.cs_nom }}</td>{% endif %}<td>{{ z.zone }}</td><td>{{ z.cp or '—' }}</td>
+      <td class="num">{{ z.ecoles_visitees }} / {{ z.ecoles }} <span class="aide">{{ pct(z.taux_ecoles) }}</span></td>
+      <td class="num">{{ z.enseignants_visites }} / {{ z.enseignants }} <span class="aide">{{ pct(z.taux_enseignants) }}</span></td>
+      <td class="num">{{ z.visites_classe }}</td><td class="num">{{ z.visites_ecole }}</td><td class="num">{{ note_txt(z.note) or '—' }}</td></tr>{% endfor %}
+  </table></div>
+</div>
+{% endif %}
+
+<div class="grille2">
+  <div class="carte"><h2>Répartition par mois</h2>
+    <div class="jb-leg">{% for k, lib in TYPES.items() %}<span><i style="background:{{ COUL[k] }}"></i>{{ lib }}</span>{% endfor %}</div>
+    {{ g_mois }}
+    <div class="tw"><table class="t compact jb-mois"><tr><th>Type</th>{% for _, lib in MOIS %}<th>{{ lib }}</th>{% endfor %}<th>Total</th></tr>
+      {% for k, lib in TYPES.items() %}<tr><td>{{ lib }}</td>{% for n in b.mois[k] %}<td>{{ n or '' }}</td>{% endfor %}<td><b>{{ b.mois[k]|sum }}</b></td></tr>{% endfor %}
+    </table></div>
+  </div>
+  <div class="carte"><h2>Visites de classe par discipline</h2>
+    {% if b.disciplines %}{{ g_disc }}
+    <div class="tw"><table class="t compact"><tr><th>Discipline</th><th class="num">Visites</th><th class="num">Note moyenne</th></tr>
+      {% for d in b.disciplines %}<tr><td>{{ d.discipline }}</td><td class="num">{{ d.n }}</td><td class="num">{{ note_txt(d.note) or '—' }}</td></tr>{% endfor %}
+    </table></div>{% else %}<p class="gris">Aucune visite de classe.</p>{% endif %}
+  </div>
+</div>
+<p class="aide">Les visites saisies par la structure et celles déclarées par les écoles sont réunies sans double compte (même date, même enseignant, même visiteur). Les visites des directeurs d'école ne sont pas comptées ici.</p>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block titre %}Notes{% endblock %}
+{% block contenu %}
+<h1>Saisie des notes</h1>
+<p class="sous">Choisissez une classe et une période. Année {{ ANNEE }}.</p>
+<div class="tw"><table class="t">
+  <tr><th>Classe</th><th>Niveau</th>{% for p in PERIODES %}<th class="c">{{ p }}</th>{% endfor %}</tr>
+  {% for c in classes %}
+  <tr><td><b>{{ c.nom }}</b></td><td>{{ c.niveau }}</td>
+    {% for p in PERIODES %}<td class="c">
+      <a class="btn petit" href="{{ url_for('notes_saisie', cid=c.id, p=loop.index) }}">Saisir</a>
+      <a class="btn sec petit" href="{{ url_for('resultats', cid=c.id, p=loop.index) }}">Résultats</a></td>{% endfor %}</tr>
+  {% else %}<tr><td colspan="5" class="gris">Aucune classe.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

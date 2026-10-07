@@ -1,0 +1,96 @@
+{% extends "base.html" %}{% block titre %}Fiches d'inscription au CEP{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<style>
+.btn.vert{color:#fff} /* .vert (couleur de texte) l'emporte sinon sur .btn */
+.cep-photo{width:34px;height:42px;object-fit:cover;border-radius:4px;border:1px solid #D0D5DD;background:#F2F4F7;display:block}
+.cep-manque{font-size:11.5px;color:#B54708}
+.cep-sel{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+</style>
+<div class="entete">
+  <div><h1>Fiches d'inscription au CEP</h1>
+  <p class="sous">Certificat d'Études Primaires · élèves de CM2 · modèle officiel de la DDEMP (Service des Examens et Concours)</p></div>
+  {% if cl %}<div class="actions">
+    <a class="btn" href="{{ url_for('cep_fiches_classe_pdf', cid=cl.id) }}" target="_blank" rel="noopener">📄 PDF de toute la classe</a>
+    <a class="btn sec" href="{{ url_for('cep_candidats_excel', cid=cl.id) }}">📊 Liste des candidats (Excel)</a>
+  </div>{% endif %}
+</div>
+
+{% if not cls %}
+<div class="carte"><p><b>Aucune classe de CM2</b> n'est accessible.</p>
+  <p class="aide">Les fiches d'inscription au CEP concernent les élèves de CM2. Créez une classe de niveau « CM2 » (menu Classes)
+  ou demandez à l'administrateur de vous y affecter.</p></div>
+{% else %}
+{{ M.choix_classe(cls, cl.id if cl else None, etiquette='Classe de CM2') }}
+{% if cl %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Candidats</div><div class="v">{{ lignes|length }}</div><div class="d">{{ cl.nom }} · session {{ p.session }}</div></div>
+  <div class="kpi"><div class="l">Fiches complètes</div><div class="v">{{ nb.complete }}</div><div class="d">prêtes à imprimer</div></div>
+  <div class="kpi"><div class="l">À compléter</div><div class="v">{{ nb.incomplete }}</div><div class="d">informations manquantes</div></div>
+  <div class="kpi"><div class="l">Non commencées</div><div class="v">{{ nb.vide }}</div><div class="d">aucune saisie</div></div>
+</div>
+
+<details class="carte" {{ 'open' if not p.centre }}>
+  <summary><b>Paramètres communs de la classe</b> <span class="aide">(session, centre, DDEMP… repris dans chaque fiche)</span></summary>
+  <form method="post" action="{{ url_for('cep_fiche_parametres', cid=cl.id) }}">
+    <div class="grille-id">
+      <div><label for="p-session">Session de</label><input id="p-session" name="session" value="{{ p.session }}" placeholder="JUIN 2027" maxlength="40"></div>
+      <div><label for="p-centre">Centre de</label><input id="p-centre" name="centre" value="{{ p.centre }}" maxlength="80" placeholder="Centre d'examen"></div>
+      <div><label for="p-option">Option</label><select id="p-option" name="option">{% for o in options %}<option {{ 'selected' if o == p.option }}>{{ o }}</option>{% endfor %}</select></div>
+      <div><label for="id-ddemp">DDEMP (département)</label><input id="id-ddemp" name="ddemp" data-dep list="dl-dep" value="{{ p.ddemp }}">
+        <datalist id="dl-dep">{% for d in DEPARTEMENTS %}<option value="{{ d }}">{% endfor %}</datalist></div>
+      <div><label for="id-cs">Circonscription scolaire <span class="aide nb-cs"></span></label><input id="id-cs" name="cs" data-cs value="{{ p.cs }}"></div>
+      <div><label for="p-commune">Commune</label><input id="p-commune" name="commune" value="{{ p.commune }}"></div>
+      <div><label for="p-fait">Fait à (parents)</label><input id="p-fait" name="fait_a" value="{{ p.fait_a }}"></div>
+      <div><label for="p-cert">Certifié à (directeur)</label><input id="p-cert" name="certifie_a" value="{{ p.certifie_a }}"></div>
+    </div>
+    <div class="actions" style="margin-top:10px">
+      <button class="btn vert">💾 Enregistrer les paramètres</button>
+      <button class="btn sec" name="appliquer" value="1" data-confirmer="Recopier la session, le centre, l'option et « Fait à » dans les fiches de tous les élèves de {{ cl.nom }} ?">Enregistrer et appliquer à toutes les fiches</button>
+    </div>
+  </form>
+</details>
+
+{% if not lignes %}
+<div class="carte"><p>Aucun élève inscrit en {{ cl.nom }}.</p><p class="aide">Inscrivez d'abord les élèves (menu Élèves et inscriptions).</p></div>
+{% else %}
+<form method="get" action="{{ url_for('cep_fiches_classe_pdf', cid=cl.id) }}" target="_blank" data-coches>
+<div class="cep-sel">
+  <button type="button" class="btn sec petit" data-cocher="1">Tout cocher</button>
+  <button type="button" class="btn sec petit" data-cocher="0">Tout décocher</button>
+  <button class="btn petit">📄 PDF des fiches cochées (<span class="nb-coches">0</span>)</button>
+</div>
+<div class="tw"><table class="t">
+  <thead><tr><th></th><th class="c">N°</th><th>Photo</th><th>Nom et prénoms</th><th class="c">Sexe</th><th>Né(e) le / à</th>
+    <th>N° EducMaster</th><th>Établissement choisi n° 1</th><th>État de la fiche</th><th></th></tr></thead>
+  <tbody>
+  {% for l in lignes %}{% set e = l.e %}
+  <tr>
+    <td><input type="checkbox" name="eleve" value="{{ e.id }}" aria-label="Choisir {{ e.nom }} {{ e.prenoms }}"></td>
+    <td class="c">{{ loop.index }}</td>
+    <td>{% if e.photo %}<img class="cep-photo" src="{{ url_for('eleve_photo', eid=e.id) }}" alt="" loading="lazy">{% else %}<span class="cep-photo" title="Pas de photo"></span>{% endif %}</td>
+    <td><a href="{{ url_for('cep_fiche', eid=e.id) }}"><b>{{ e.nom }}</b> {{ e.prenoms }}</a></td>
+    <td class="c">{{ e.sexe }}</td>
+    <td>{{ date_fr(e.date_naissance) if e.date_naissance else '—' }}{% if e.lieu_naissance %}<br><span class="aide">{{ e.lieu_naissance }}</span>{% endif %}</td>
+    <td>{{ e.matricule_educmaster or '—' }}</td>
+    <td>{{ l.v.etab1 or '—' }}</td>
+    <td>{% if l.etat == 'complete' %}<span class="badge ok">Complète</span>
+      {% elif l.etat == 'incomplete' %}<span class="badge att">À compléter</span>
+      {% else %}<span class="badge ko">Non commencée</span>{% endif %}
+      {% if l.manque %}<div class="cep-manque">Manque : {{ l.manque|join(', ') }}</div>{% endif %}</td>
+    <td style="white-space:nowrap"><a class="btn petit" href="{{ url_for('cep_fiche', eid=e.id) }}">Remplir</a>
+      <a class="btn sec petit" href="{{ url_for('cep_fiche_pdf', eid=e.id) }}" target="_blank" rel="noopener">PDF</a></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+</form>
+<p class="aide">La fiche reprend automatiquement l'identité de l'élève (inscription), les informations de l'école (statut,
+directeur, téléphone), le cachet et la signature du directeur (Paramètres de l'école) et la signature digitale de l'élève
+(carte scolaire du candidat). Les cadres « Agent de la DDEMP » restent vides : ils sont remplis par la DDEMP.</p>
+{% endif %}
+{% else %}
+<div class="carte">Choisissez une classe de CM2.</div>
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% block titre %}Écoles{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Écoles</h1>
+<p class="sous">Chaque école a sa fiche (DDEMP, CS, directeur, cachet…). Ces informations remplissent automatiquement les en-têtes de tous les modules : bulletins, relevés, fiches CEP, cartes, tableaux d'affichage.</p></div>
+<div class="actions"><a class="btn" href="{{ url_for('ecole_form') }}">+ Ajouter une école</a></div></div>
+<div class="tw"><table class="t">
+<tr><th>École</th><th>DDEMP / CS</th><th>Directeur</th><th class="num">Classes</th><th class="num">Élèves</th><th>Cachet</th><th></th></tr>
+{% for e in lst %}
+<tr {% if not e.actif %}class="gris"{% endif %}>
+  <td><b>{{ e.nom }}</b> {% if e.sigle %}<span class="badge">{{ e.sigle }}</span>{% endif %}<br><span class="aide">{{ e.statut or '' }} · {{ e.ordre or '' }}{% if ECOLE_COURANTE and ECOLE_COURANTE.id==e.id %} · <b class="vert">école courante</b>{% endif %}</span></td>
+  <td>{{ e.departement or '—' }}<br><span class="aide">{{ e.cs or '' }}</span></td>
+  <td>{{ e.directeur_titre or '' }} {{ e.directeur_nom or '—' }}</td>
+  <td class="num">{{ e.nb_classes }}</td><td class="num">{{ e.nb_eleves }}</td>
+  <td>{% if e.cachet_sup or e.cachet_centre %}<img src="{{ url_for('cachet_svg', sup=e.cachet_sup or '', inf=e.cachet_inf or '', centre=e.cachet_centre or '', couleur=e.cachet_couleur or 'bleu', taille=70) }}" width="54" height="54" alt="Cachet">{% endif %}</td>
+  <td class="num"><div class="actions" style="justify-content:flex-end">
+    {% if e.actif and not (ECOLE_COURANTE and ECOLE_COURANTE.id==e.id) %}<form method="post" action="{{ url_for('ecole_choisir', eid=e.id) }}"><button class="btn sec petit">Travailler sur cette école</button></form>{% endif %}
+    <a class="btn sec petit" href="{{ url_for('ecole_form', eid=e.id) }}">Modifier</a>
+    {% if e.id != 1 %}<form method="post" action="{{ url_for('ecole_basculer', eid=e.id) }}"><button class="btn sec petit">{{ 'Désactiver' if e.actif else 'Réactiver' }}</button></form>{% endif %}
+  </div></td></tr>
+{% endfor %}
+</table></div>
+<p class="aide">Les classes, élèves, paiements et documents sont rattachés à l'école courante (choix en haut du menu). Un administrateur ou le fondateur voit toutes les écoles ; les autres comptes ne voient que l'école qui leur est affectée (Administration → Utilisateurs → École et classes).</p>
+{% endblock %}

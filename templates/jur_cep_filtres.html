@@ -1,0 +1,17 @@
+{# Filtres communs des pages CEP (CS / DDEMP) : année, CS, zone, secteur, présentation #}
+<form method="get" class="filtres" aria-label="Filtres">
+  {% if extra_onglet %}<input type="hidden" name="onglet" value="{{ extra_onglet }}">{% endif %}
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">
+    {% for a in annees %}<option value="{{ a }}" {{ 'selected' if a == fl.annee }}>{{ a }}</option>{% endfor %}</select></label>
+  {% if DDEMP %}<label>Circonscription<br><select name="cs" onchange="this.form.zone && (this.form.zone.value=''); this.form.submit()"><option value="">Toutes</option>
+    {% for c in cs_liste %}<option value="{{ c.id }}" {{ 'selected' if fl.cs_id == c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+  <label>Zone pédagogique<br><select name="zone" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for z in zones %}<option value="{{ z.id }}" {{ 'selected' if fl.zone_id == z.id }}>{% if DDEMP and not fl.cs_id %}{{ z.cs_nom }} – {% endif %}{{ z.nom }}</option>{% endfor %}</select></label>
+  <label>Secteur<br><select name="secteur" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for k, v in JUR_SECTEURS.items() %}<option value="{{ k }}" {{ 'selected' if fl.secteur == k }}>{{ v }}</option>{% endfor %}</select></label>
+  <label>Présentation<br><select name="vue" onchange="this.form.submit()">
+    <option value="ecoles" {{ 'selected' if fl.vue == 'ecoles' }}>Détail par école</option>
+    <option value="synthese" {{ 'selected' if fl.vue == 'synthese' }}>{{ 'Totaux par CS et zone' if DDEMP else 'Totaux par zone' }}</option></select></label>
+  {% if avec_seuil %}<label>Taux « élevé » à partir de (%)<br><input name="seuil" type="number" min="0" max="100" step="1" value="{{ '%g' % fl.seuil }}" style="width:90px"></label>{% endif %}
+  <button class="btn sec petit">Filtrer</button>
+</form>

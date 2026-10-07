@@ -1,0 +1,49 @@
+plugins {
+    id "com.android.application"
+}
+
+// Clé de signature : variables d'environnement (secrets GitHub) si présentes,
+// sinon la clé fournie avec le projet (même clé à chaque fabrication = mises à jour possibles).
+def cleFichier = System.getenv("GESCOL_KEYSTORE") ?: "gescol-release.keystore"
+def cleMdp = System.getenv("GESCOL_KEYSTORE_PASSWORD") ?: "gescol-benin"
+def cleAlias = System.getenv("GESCOL_KEY_ALIAS") ?: "gescol"
+def cleAliasMdp = System.getenv("GESCOL_KEY_PASSWORD") ?: "gescol-benin"
+
+android {
+    namespace "bj.gescol.app"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "bj.gescol.app"
+        minSdk 24
+        targetSdk 34
+        versionCode 6
+        versionName "1.5.0"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(cleFichier)
+            storePassword cleMdp
+            keyAlias cleAlias
+            keyPassword cleAliasMdp
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}

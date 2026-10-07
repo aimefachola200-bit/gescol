@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% block titre %}{{ info[4] }} – {{ e.nom }}{% endblock %}
+{% import "jur_fiche_macros.html" as F with context %}
+{% block contenu %}
+{{ F.style() }}
+<div class="entete"><div><h1>{{ info[3] }}</h1>
+  <p class="sous">{{ e.nom }} ({{ e.code }}) · {{ e.cs_nom or '' }}{% if e.zone_nom %} · {{ e.zone_nom }}{% endif %} · année {{ annee }}</p></div>
+  <div class="actions">
+    <a class="btn sec petit" href="{{ url_for('jur_fiches', annee=annee) }}">← Toutes les fiches</a>
+    {% if vue %}<a class="btn" href="{{ url_for('jur_fiche_pdf', ecole_id=e.id, fiche=fiche, annee=annee) }}">⇩ Fiche officielle (PDF)</a>{% endif %}
+    <a class="btn sec petit" href="{{ url_for('jur_fiche_pdf', ecole_id=e.id, fiche=fiche, annee=annee, vierge=1) }}">Fiche vierge</a>
+  </div></div>
+<nav class="onglets" aria-label="Fiches">{% for c, i in FICHES.items() if e.type in i[2] %}<a href="{{ url_for('jur_fiche_voir', ecole_id=e.id, fiche=c, annee=annee) }}" class="{{ 'actif' if c == fiche }}">{{ i[4] }}</a>{% endfor %}</nav>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">État</div><div class="v">{{ ETATS[etat] }}</div><div class="d">{{ ('reçue le ' ~ date[:10]) if date else 'non transmise' }}</div></div>
+  <div class="kpi"><div class="l">Cases indispensables manquantes</div><div class="v">{{ manquants|length }}</div><div class="d">{{ manquants|join(', ') }}</div></div>
+</div>
+{% if vue %}{{ F.controles(controles) }}{{ F.fiche(vue) }}
+{% else %}<div class="flash info">Cette école n'a pas encore transmis cette fiche pour {{ annee }}. Elle arrivera avec son prochain fichier de transmission.</div>{% endif %}
+{% endblock %}

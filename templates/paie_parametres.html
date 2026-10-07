@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% block titre %}Paramètres de paie{% endblock %}
+{% block contenu %}
+<h1>Paramètres de paie</h1>
+<p class="sous">Taux appliqués aux bulletins de paie. Valeurs par défaut du Bénin ; faites-les confirmer par votre comptable ou la CNSS avant la première paie.</p>
+<form method="post" class="f" style="max-width:760px">
+<div class="carte"><div class="ligne">
+  <div><label>CNSS part salariale (%)</label><input name="paie_cnss_salarie" value="{{ v.paie_cnss_salarie }}"></div>
+  <div><label>CNSS part patronale (%)</label><input name="paie_cnss_patronal" value="{{ v.paie_cnss_patronal }}">
+    <p class="aide">9 % prestations familiales + 6,4 % pensions + risques professionnels (1 à 4 % selon l'activité).</p></div>
+  <div><label>VPS – versement patronal (%)</label><input name="paie_vps" value="{{ v.paie_vps }}"></div>
+</div>
+<label>Barème mensuel de l'ITS</label>
+<input name="paie_its_bareme" value="{{ v.paie_its_bareme }}">
+<p class="aide">Format : <code>plafond:taux</code> séparés par « ; », la dernière tranche est <code>*:taux</code>. Par défaut : 0 % jusqu'à 60 000, 10 % jusqu'à 150 000, 15 % jusqu'à 250 000, 19 % jusqu'à 500 000, 30 % au-delà.</p>
+<label style="font-weight:400;display:flex;gap:8px;align-items:center"><input type="checkbox" name="paie_its_apres_cnss" {{ 'checked' if v.paie_its_apres_cnss=='1' }}> Calculer l'ITS sur le brut diminué de la CNSS salariale</label>
+<label style="font-weight:400;display:flex;gap:8px;align-items:center"><input type="checkbox" name="paie_arrondi_its" {{ 'checked' if v.paie_arrondi_its=='1' }}> Arrondir l'ITS à la dizaine inférieure</label>
+</div>
+{% if exemple %}
+<div class="carte"><b>Exemple pour un brut de 150 000 FCFA :</b>
+  CNSS salarié {{ fcfa(exemple.cnss_salarie) }} · ITS {{ fcfa(exemple.its) }} · <b>net {{ fcfa(exemple.net) }}</b> · CNSS patronale {{ fcfa(exemple.cnss_patronal) }} · VPS {{ fcfa(exemple.vps) }}</div>
+{% endif %}
+<button class="btn">Enregistrer</button>
+</form>
+{% endblock %}

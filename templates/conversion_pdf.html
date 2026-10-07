@@ -1,0 +1,58 @@
+{% extends "base.html" %}{% block titre %}Conversion PDF → Excel / CSV{% endblock %}
+{% block contenu %}
+<style>
+.zone-depot{display:block}.zone-depot input[type=file]{display:none}
+table.cv td,table.cv th{padding:3px 6px;font-size:12.5px;border:1px solid #EAECF0}
+</style>
+<div class="entete">
+  <div><h1>Conversion PDF → Excel / CSV</h1>
+  <p class="sous">Récupérer les tableaux d'un document PDF (liste d'élèves, relevé de notes…) dans un fichier Excel ou CSV</p></div>
+</div>
+
+<div class="carte">
+  <form method="post" enctype="multipart/form-data" id="f-depot">
+    <label class="zone-depot" id="zone-depot" for="cv-fichier">
+      <b>Déposer ici le fichier PDF</b><br>
+      <span class="aide">PDF « texte » (produit par un logiciel). Un PDF scanné (image) ne peut pas être converti.</span><br><br>
+      <span class="btn sec petit">📂 Choisir un fichier</span>
+      <input type="file" id="cv-fichier" name="fichier" accept=".pdf,application/pdf">
+    </label>
+    <noscript><button class="btn" style="margin-top:8px">Convertir</button></noscript>
+  </form>
+</div>
+
+{% if res %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Fichier</div><div class="v" style="font-size:16px">{{ info.nom }}</div><div class="d">converti le {{ info.le }}</div></div>
+  <div class="kpi"><div class="l">Pages</div><div class="v">{{ res.pages }}</div><div class="d">dans le PDF</div></div>
+  <div class="kpi"><div class="l">Tableaux</div><div class="v">{{ res.tableaux|length }}</div><div class="d">extraits</div></div>
+</div>
+<div class="actions" style="margin-bottom:14px">
+  <a class="btn" href="{{ url_for('conversion_xlsx', jeton=jeton) }}">⬇ Excel (.xlsx) – une feuille par tableau</a>
+  <a class="btn sec" href="{{ url_for('conversion_csv', jeton=jeton) }}">⬇ CSV (tous les tableaux)</a>
+</div>
+{% for t in res.tableaux %}
+<div class="carte">
+  <div class="entete" style="margin-bottom:6px"><h2 style="margin:0;font-size:16px">Page {{ t.page }} – tableau {{ t.n }}
+    <span class="aide">({{ t.lignes|length }} ligne(s), détecté par {{ t.methode }})</span></h2>
+    <a class="btn sec petit" href="{{ url_for('conversion_csv', jeton=jeton, t=loop.index) }}">⬇ CSV de ce tableau</a></div>
+  <div class="tw"><table class="cv">
+    {% for l in t.lignes[:15] %}{% set cel = 'th' if loop.first else 'td' %}<tr>{% for c in l %}<{{ cel }}>{{ c }}</{{ cel }}>{% endfor %}</tr>{% endfor %}
+  </table></div>
+  {% if t.lignes|length > 15 %}<p class="aide">… {{ t.lignes|length - 15 }} autre(s) ligne(s) dans le fichier téléchargé.</p>{% endif %}
+</div>
+{% endfor %}
+{% else %}
+<div class="carte aide">Déposez un PDF : GESCOL détecte les tableaux page par page, vous montre un aperçu puis vous propose le téléchargement en Excel (une feuille par tableau) ou en CSV.</div>
+{% endif %}
+
+<script>
+(function () {
+  var z = document.getElementById('zone-depot'), inp = document.getElementById('cv-fichier'), f = document.getElementById('f-depot');
+  inp.addEventListener('change', function () { if (inp.files.length) f.submit(); });
+  ['dragenter', 'dragover'].forEach(function (t) { z.addEventListener(t, function (e) { e.preventDefault(); z.classList.add('survol'); }); });
+  ['dragleave', 'drop'].forEach(function (t) { z.addEventListener(t, function (e) { e.preventDefault(); z.classList.remove('survol'); }); });
+  z.addEventListener('drop', function (e) { if (e.dataTransfer.files.length) { inp.files = e.dataTransfer.files; f.submit(); } });
+})();
+</script>
+{% endblock %}

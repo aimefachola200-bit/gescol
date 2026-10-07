@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% block titre %}Classe{% endblock %}
+{% block contenu %}
+<h1>{{ 'Modifier la classe ' ~ cl.nom if cl else 'Nouvelle classe' }}</h1>
+<div class="carte" style="max-width:520px">
+<form method="post" class="f">
+  <label>Nom de la classe</label>
+  <input name="nom" required value="{{ request.form.nom or (cl.nom if cl else '') }}" placeholder="ex. CM2 A, 4ème B">
+  <label>Niveau</label>
+  {% set niv = request.form.niveau or (cl.niveau if cl else '') %}
+  <select name="niveau" required>
+    <option value="">— choisir —</option>
+    <optgroup label="Maternelle">{% for n in maternelle %}<option {{ 'selected' if n==niv }}>{{ n }}</option>{% endfor %}</optgroup>
+    <optgroup label="Primaire">{% for n in primaire %}<option {{ 'selected' if n==niv }}>{{ n }}</option>{% endfor %}</optgroup>
+    <optgroup label="Secondaire">{% for n in secondaire %}<option {{ 'selected' if n==niv }}>{{ n }}</option>{% endfor %}</optgroup>
+  </select>
+  <label>Frais de scolarité annuels ({{ 'FCFA' }})</label>
+  <input name="frais_scolarite" inputmode="numeric" value="{{ request.form.frais_scolarite or (cl.frais_scolarite if cl else '') }}" placeholder="ex. 85000">
+  <label>Titulaire de la classe</label>
+  {% set tt = request.form.titulaire_titre or (cl.titulaire_titre if cl else 'Le titulaire') %}
+  <div class="duo"><select name="titulaire_titre">{% for t in ['Le titulaire','La titulaire','Le maître','La maîtresse','Le professeur principal','La professeure principale'] %}<option {{ 'selected' if t==tt }}>{{ t }}</option>{% endfor %}</select>
+  <input name="titulaire_nom" value="{{ request.form.titulaire_nom or (cl.titulaire_nom if cl and cl.titulaire_nom else '') }}" placeholder="Nom et prénoms"></div>
+  {% if cl %}<div style="margin-top:12px">{% import "_macros.html" as M with context %}{{ M.signature('classe:' ~ cl.id ~ ':titulaire', 'Signature du titulaire') }}</div>{% endif %}
+  <p class="aide">Le niveau détermine le mode de calcul : appréciations (acquis / en cours / non acquis) en maternelle, règle des 2/3 au primaire, moyenne pondérée au secondaire (sans coefficients en 6ème et 5ème).</p>
+  <div class="actions"><button class="btn">Enregistrer</button><a class="btn sec" href="{{ url_for('classes') }}">Annuler</a></div>
+</form>
+</div>
+{% endblock %}

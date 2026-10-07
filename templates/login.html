@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block titre %}Connexion{% endblock %}
+{% block contenu %}
+<div class="login carte">
+  <h1>GESCOL · {{ ECOLE.sigle }}</h1>
+  <p class="sous">{{ ECOLE.nom }} – année {{ ANNEE }}</p>
+  {% if premiere %}<div class="flash info">Première utilisation sur cet appareil : identifiant <b>admin</b>, mot de passe <b>admin123</b>. Un nouveau mot de passe vous sera demandé.</div>{% endif %}
+  <form method="post" class="f">
+    <label>Identifiant</label><input name="identifiant" autofocus required autocomplete="username">
+    <label>Mot de passe</label><input name="mdp" type="password" required autocomplete="current-password">
+    <p><button class="btn" style="width:100%">Se connecter</button></p>
+  </form>
+  <p class="aide"><a href="{{ url_for('verifier') }}">Vérifier l'authenticité d'un document</a><br><a href="{{ url_for('rejoindre') }}">Votre école veut utiliser GESCOL ? Inscrivez-la</a></p>
+</div>
+<p class="aide" id="android-serveur" hidden>Application Android connectée à <b id="android-adr"></b> · <a href="#" onclick="window.GescolAndroid.changerServeur();return false">Changer de serveur</a></p>
+{% if AUTONOME %}<p class="aide">Application autonome : les données sont enregistrées sur cet appareil. Pensez à télécharger une sauvegarde régulièrement (Administration → Mise en ligne et sauvegardes).</p>{% endif %}
+<script>if(window.GescolAndroid){document.getElementById('android-serveur').hidden=false;document.getElementById('android-adr').textContent=window.GescolAndroid.serveur();}</script>
+{% endblock %}

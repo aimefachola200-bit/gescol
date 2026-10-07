@@ -1,0 +1,68 @@
+{% extends "base.html" %}{% block titre %}Analyse et rapport{% endblock %}
+{% import "_macros.html" as M with context %}
+{% import "resultats_eval_entete.html" as R with context %}
+{% block contenu %}
+{{ R.styles() }}
+<div class="entete">
+  <div><h1>Analyse et rapport des résultats</h1>
+  <p class="sous">Profil de la classe, analyse psychopédagogique et recommandations rédigés automatiquement à partir des statistiques — modifiables avant l'export PDF</p></div>
+</div>
+
+{{ R.choix_classe_ev(classes, cl, evs, ev, 'eval_analyse') }}
+{{ R.vide(classes, cl, evs, 'eval_analyse') }}
+
+{% if cl and ev %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Ont composé</div><div class="v">{{ s.composes.T }} / {{ s.inscrits.T }}</div><div class="d">{{ s.absents.T }} absent(s)</div></div>
+  <div class="kpi"><div class="l">{{ V.taux }}</div><div class="v">{{ s.taux_reussite.T|res_pc }}</div><div class="d">G {{ s.taux_reussite.G|res_pc }} · F {{ s.taux_reussite.F|res_pc }}</div></div>
+  {% if cl.cycle != 'maternelle' %}<div class="kpi"><div class="l">Moyenne de la classe</div><div class="v">{{ s.moyenne.T|res_nb }}</div><div class="d">écart-type {{ s.ecart_type.T|res_nb }}</div></div>{% endif %}
+  <div class="kpi"><div class="l">Matières à renforcer</div><div class="v">{{ renf|length }}</div><div class="d">{{ renf|join(', ') if renf else 'aucune' }}</div></div>
+</div>
+
+<form method="post" action="{{ url_for('eval_analyse_pdf') }}" target="_blank" data-doc="{{ cle }}">
+  <input type="hidden" name="classe" value="{{ cl.id }}"><input type="hidden" name="ev" value="{{ ev.id }}">
+  {% call M.barre_doc() %}
+    <button class="btn petit">📄 Export PDF</button>
+    <a class="btn sec petit" href="{{ url_for('eval_analyse', classe=cl.id, ev=ev.id, auto=1) }}"
+       onclick="return confirm('Remplacer le texte affiché par le texte automatique calculé à partir des statistiques actuelles ?')">↻ Texte automatique</a>
+    <a class="btn sec petit" href="{{ url_for('eval_statistiques', classe=cl.id, ev=ev.id) }}">📈 Statistiques</a>
+  {% endcall %}
+  <p class="aide">
+    {% if enregistre %}Rapport enregistré le {{ enregistre }}{% if repris %} : le texte affiché est votre version retouchée{% endif %}.{% else %}Texte généré automatiquement ; corrigez-le librement puis cliquez sur « 💾 Sauvegarder » pour le garder.{% endif %}
+    Un cadre laissé vide est remplacé par le texte automatique dans le PDF. Les lignes commençant par « - » deviennent des puces.
+  </p>
+
+  {{ R.entete_docs(v, cl) }}
+
+  <div class="carte">
+    <label for="t-profil"><h2 class="res-h" style="margin-top:0">1. Profil de la classe</h2></label>
+    <textarea id="t-profil" name="profil" class="res-texte" rows="7">{{ textes.profil }}</textarea>
+  </div>
+  <div class="carte">
+    <label for="t-analyse"><h2 class="res-h" style="margin-top:0">2. Analyse psychopédagogique</h2></label>
+    <textarea id="t-analyse" name="analyse" class="res-texte" rows="9">{{ textes.analyse }}</textarea>
+  </div>
+  <div class="carte">
+    <label for="t-reco"><h2 class="res-h" style="margin-top:0">3. Recommandations pédagogiques</h2></label>
+    <textarea id="t-reco" name="recommandations" class="res-texte" rows="9">{{ textes.recommandations }}</textarea>
+  </div>
+  <p><button class="btn">📄 Générer le rapport PDF (signé et cacheté)</button></p>
+</form>
+
+<div class="grille2">
+  <div class="res-graph"><h3>Taux de réussite et d'échec par sexe (%)</h3>{{ graph.sexe }}</div>
+  {% if graph.matieres %}<div class="res-graph"><h3>Taux de réussite par matière (%)</h3>{{ graph.matieres }}</div>{% endif %}
+</div>
+
+<details class="carte">
+  <summary><b>Règles utilisées pour la rédaction automatique</b></summary>
+  <ul class="aide">
+    <li>Niveau du taux de {{ V.reussite }} : ≥ 75 % très satisfaisant ; ≥ 50 % satisfaisant ; ≥ 25 % faible ; sinon très faible.</li>
+    <li>Dispersion (écart-type des moyennes) : &lt; 2 classe homogène ; 2 à 3,5 dispersion modérée ; &gt; 3,5 classe très hétérogène (pédagogie différenciée).</li>
+    <li>Écart filles / garçons significatif à partir de 5 points de taux de réussite ; écart par matière signalé à partir de 25 points.</li>
+    <li>Matière à renforcer : moins de 50 % des élèves ont 10/20 ou plus ; élèves en grande difficulté : moyenne &lt; 8/20.</li>
+    <li>Absentéisme préoccupant au-delà de 10 % des inscrits.</li>
+  </ul>
+</details>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% block titre %}Récapitulatif des visites{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Récapitulatif des visites par enseignant</h1>
+  <p class="sous">{{ 'Toutes les années' if r.annee == 'toutes' else 'Année scolaire ' ~ r.annee }} — visites des CP et du CCS</p></div>
+  <div class="actions">
+    <form method="get" style="margin:0"><label class="aide" for="an">Année</label>
+      <select id="an" name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == r.annee }}>{{ a }}</option>{% endfor %}<option value="toutes" {{ 'selected' if r.annee == 'toutes' }}>Toutes</option></select></form>
+    <a class="btn petit" href="{{ url_for('visites_recap_pdf', annee=r.annee) }}" target="_blank">📄 PDF</a>
+    <a class="btn sec petit" href="{{ url_for('visites_recap_xlsx', annee=r.annee) }}">⬇ Excel</a>
+    <a class="btn sec petit" href="{{ url_for('visites_accueil') }}">← Visites</a>
+  </div>
+</div>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Visites</div><div class="v">{{ r.total }}</div><div class="d">{{ r.tot.CP }} CP · {{ r.tot.CCS }} CCS</div></div>
+  <div class="kpi"><div class="l">Enseignants visités</div><div class="v">{{ r.lignes|selectattr('total')|list|length }}</div><div class="d">{{ r.jamais }} jamais visité(s)</div></div>
+  <div class="kpi"><div class="l">Visites d'école</div><div class="v">{{ r.ecole.CP + r.ecole.CCS }}</div><div class="d">sans enseignant désigné</div></div>
+</div>
+{% if r.lignes %}
+<div class="tw"><table class="t">
+  <thead><tr><th>N°</th><th>Enseignant(e)</th><th>Classe(s)</th><th class="c">CP</th><th class="c">CCS</th><th class="c">Total</th><th>Dernière visite</th><th class="c">Note moy.</th><th></th></tr></thead>
+  <tbody>
+  {% for l in r.lignes %}
+  <tr><td>{{ loop.index }}</td><td><b>{{ l.nom }}</b><br><span class="aide">{{ l.fonction }}</span></td><td>{{ l.classes or '—' }}</td>
+    <td class="c">{{ l.cp }}</td><td class="c">{{ l.ccs }}</td><td class="c"><b>{{ l.total }}</b></td>
+    <td>{{ date_fr(l.derniere) if l.derniere else '—' }}</td><td class="c">{{ note_txt(l.moyenne) or '—' }}</td>
+    <td>{% if l.pid %}<a class="btn sec petit" href="{{ url_for('visites_accueil', enseignant=l.pid, annee='' if r.annee == 'toutes' else r.annee) }}">Détail</a>{% endif %}</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+{% else %}
+<div class="carte">Aucune visite ni enseignant à afficher pour cette période.</div>
+{% endif %}
+{% endblock %}

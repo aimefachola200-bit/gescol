@@ -1,0 +1,77 @@
+// GESCOL Autonome : l'application complète (Python + base de données) tourne sur le téléphone ou la tablette,
+// sans PC serveur, sans Wi-Fi et sans Internet. Python est fourni par Chaquopy (https://chaquo.com/chaquopy/).
+// Avant de fabriquer : python3 preparer.py (recopie le code GESCOL et les bibliothèques Python pures).
+plugins {
+    id "com.android.application"
+    id "com.chaquo.python"
+}
+
+def cleFichier = System.getenv("GESCOL_KEYSTORE") ?: "gescol-release.keystore"
+def cleMdp = System.getenv("GESCOL_KEYSTORE_PASSWORD") ?: "gescol-benin"
+def cleAlias = System.getenv("GESCOL_KEY_ALIAS") ?: "gescol"
+def cleAliasMdp = System.getenv("GESCOL_KEY_PASSWORD") ?: "gescol-benin"
+
+android {
+    namespace "bj.gescol.autonome"
+    compileSdk 34
+
+    defaultConfig {
+        // différent de l'application « connectée » : les deux peuvent coexister.
+        // Application jumelle des écoles publiques : GESCOL_APP_ID=bj.gescol.publique, GESCOL_APP_NOM="GESCOL Public"
+        // (et preparer.py --edition publique)
+        applicationId System.getenv("GESCOL_APP_ID") ?: "bj.gescol.autonome"
+        manifestPlaceholders = [appNom: System.getenv("GESCOL_APP_NOM") ?: "GESCOL Autonome"]
+        minSdk 24
+        targetSdk 34
+        versionCode 7
+        versionName "1.5.0"
+        ndk {
+            abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
+        }
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(cleFichier)
+            storePassword cleMdp
+            keyAlias cleAlias
+            keyPassword cleAliasMdp
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+chaquopy {
+    defaultConfig {
+        version "3.11"
+        def py = System.getenv("GESCOL_BUILD_PYTHON")
+        if (py) {
+            buildPython py
+        }
+        pip {
+            // seule bibliothèque compilée nécessaire (images : logo, photos, signatures) ;
+            // les bibliothèques Python pures sont recopiées par preparer.py dans src/main/python
+            install "pillow"
+        }
+        pyc {
+            src false
+        }
+        extractPackages "reportlab"
+    }
+}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}{% block titre %}Patrimoine et ressources{% endblock %}
+{% block contenu %}
+<style>
+.pat-barre{display:flex;height:14px;border-radius:7px;overflow:hidden;background:#F2F4F7;margin:6px 0 4px}
+.pat-barre span{display:block;height:100%}
+.pat-bon{background:#12B76A}.pat-passable{background:#F79009}.pat-mauvais{background:#F04438}
+.pat-leg{font-size:12.5px;color:var(--gris);display:flex;gap:12px;flex-wrap:wrap}
+.pat-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.pat-oui{display:flex;flex-wrap:wrap;gap:6px}
+</style>
+<div class="entete">
+  <div><h1>Patrimoine et ressources</h1>
+  <p class="sous">Infrastructures, mobilier et matériel didactique — année scolaire {{ ANNEE }}</p></div>
+  <div class="actions">
+    <a class="btn petit" href="{{ url_for('patrimoine_inventaire_pdf') }}" target="_blank">📄 Inventaire PDF</a>
+    <a class="btn sec petit" href="{{ url_for('patrimoine_inventaire_xlsx') }}">⬇ Inventaire Excel</a>
+  </div>
+</div>
+{% include "patrimoine_onglets.html" %}
+
+{% set sc = s.salles_classe %}{% set mb = s.mobilier %}{% set dd = s.didactique %}{% set lt = s.latrines %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Salles de classe</div><div class="v">{{ sc.total }}</div><div class="d">{{ sc.bon }} bon · {{ sc.passable }} passable · {{ sc.mauvais }} mauvais</div></div>
+  <div class="kpi"><div class="l">Places assises</div><div class="v">{{ mb.places_assises }}</div><div class="d">pour {{ s.effectifs.t }} élève(s)</div></div>
+  <div class="kpi"><div class="l">Déficit de places</div><div class="v" style="color:{{ 'var(--rouge)' if mb.deficit_places else 'inherit' }}">{{ mb.deficit_places }}</div><div class="d">≈ {{ mb.tables_bancs_manquantes }} table(s)-banc(s) de 2 places</div></div>
+  <div class="kpi"><div class="l">Manuels / élève</div><div class="v">{{ ratio_txt(dd.ratio_global) }}</div><div class="d">{{ dd.manuels_total }} manuel(s) de l'élève</div></div>
+  <div class="kpi"><div class="l">Latrines</div><div class="v">{{ lt.cabines_total }}</div><div class="d">cabines : {{ lt.cabines_g }} G · {{ lt.cabines_f }} F · {{ lt.cabines_ens }} ens.</div></div>
+</div>
+
+{% if vide %}
+<div class="flash info">Le patrimoine de l'école n'est pas encore renseigné. Commencez par les
+  <a href="{{ url_for('patrimoine_local', oid=0) }}">infrastructures</a> (salles de classe, latrines, point d'eau…), puis le
+  <a href="{{ url_for('patrimoine_meuble', oid=0) }}">mobilier</a> de chaque classe et le
+  <a href="{{ url_for('patrimoine_materiel', oid=0) }}">matériel didactique</a>.</div>
+{% endif %}
+
+<div class="grille2">
+  <div class="carte">
+    <h2>État des salles de classe</h2>
+    {% if sc.total %}
+    <div class="pat-barre" role="img" aria-label="{{ sc.bon }} bon, {{ sc.passable }} passable, {{ sc.mauvais }} mauvais">
+      {% for e in ('bon','passable','mauvais') %}{% if sc[e] %}<span class="pat-{{ e }}" style="width:{{ (100 * sc[e] / sc.total)|round(1) }}%"></span>{% endif %}{% endfor %}</div>
+    <div class="pat-leg">{% for e in ('bon','passable','mauvais') %}<span><i class="pat-{{ e }}"></i>{{ ETATS[e] }} : {{ sc[e] }}</span>{% endfor %}</div>
+    <table class="t compact" style="margin-top:10px"><thead><tr><th>Matériau des murs</th><th class="c">Salles</th></tr></thead><tbody>
+      {% for k, n in sc.par_materiau.items() %}<tr><td>{{ MURS.get(k, k) }}</td><td class="c">{{ n }}</td></tr>{% else %}<tr><td colspan="2" class="aide">Matériau non renseigné</td></tr>{% endfor %}
+    </tbody></table>
+    <p class="aide">{{ sc.utilisees }} salle(s) utilisée(s), {{ sc.non_utilisees }} non utilisée(s) · {{ sc.a_rehabiliter }} à réhabiliter.</p>
+    {% else %}<p class="aide">Aucune salle de classe enregistrée. <a href="{{ url_for('patrimoine_local', oid=0, type='salle_classe') }}">Ajouter une salle</a></p>{% endif %}
+  </div>
+
+  <div class="carte">
+    <h2>Équipements et services</h2>
+    {% set eq = s.equipements %}
+    <div class="pat-oui">
+    {% for k, lib in (('point_eau', "Point d'eau"), ('electricite', 'Électricité'), ('cloture', 'Clôture'), ('cuisine', 'Cuisine / cantine'), ('terrain_sport', 'Terrain de sport'), ('bibliotheque', 'Bibliothèque'), ('salle_informatique', 'Salle informatique')) %}
+      <span class="badge {{ 'ok' if eq[k] else 'ko' }}">{{ lib }} : {{ 'oui' if eq[k] else 'non' }}</span>
+    {% endfor %}
+      <span class="badge">Logements : {{ eq.logements }}</span>
+    </div>
+    {% if eq.point_eau_source or eq.electricite_source %}<p class="aide">{% if eq.point_eau_source %}Eau : {{ eq.point_eau_source }}. {% endif %}{% if eq.electricite_source %}Électricité : {{ eq.electricite_source }}.{% endif %}</p>{% endif %}
+    <p class="aide">Latrines : {{ lt.blocs }} bloc(s), {{ lt.cabines_total }} cabine(s){{ ', séparées filles/garçons' if lt.separees }}. Autres réponses (cour ombragée, lavage des mains, boîte à pharmacie…) : <a href="{{ url_for('patrimoine_equipements') }}">Équipements et services</a>.</p>
+  </div>
+
+  <div class="carte">
+    <h2>Places assises par classe</h2>
+    {% if mb.par_classe %}
+    <div class="tw"><table class="t compact"><thead><tr><th>Classe</th><th class="c">Effectif</th><th class="c">Places</th><th class="c">Déficit</th></tr></thead><tbody>
+    {% for p in mb.par_classe %}
+      <tr><td>{{ p.classe }}</td><td class="c">{{ p.effectif }}<br><span class="aide">{{ p.g }} G / {{ p.f }} F</span></td><td class="c">{{ p.places }}</td>
+        <td class="c">{% if p.deficit %}<span class="badge ko">{{ p.deficit }}</span>{% else %}<span class="badge ok">0</span>{% endif %}</td></tr>
+    {% endfor %}</tbody></table></div>
+    {% else %}<p class="aide">Aucune classe dans cette école.</p>{% endif %}
+  </div>
+
+  <div class="carte">
+    <h2>Manuels de l'élève</h2>
+    {% if dd.manuels %}
+    <div class="tw"><table class="t compact"><thead><tr><th>Niveau</th><th>Discipline</th><th class="c">Manuels</th><th class="c">Élèves</th><th class="c">Ratio</th></tr></thead><tbody>
+    {% for m in dd.manuels %}
+      <tr><td>{{ m.niveau }}</td><td>{{ m.discipline }}</td><td class="c">{{ m.utilisables }}</td><td class="c">{{ m.effectif }}</td>
+        <td class="c"><span class="badge {{ 'ok' if m.ratio is not none and m.ratio >= 1 else 'att' }}">{{ ratio_txt(m.ratio) }}</span></td></tr>
+    {% endfor %}</tbody></table></div>
+    {% else %}<p class="aide">Aucun manuel de l'élève enregistré. <a href="{{ url_for('patrimoine_materiel', oid=0, categorie='manuel') }}">Ajouter des manuels</a></p>{% endif %}
+  </div>
+</div>
+
+{% if s.besoins %}
+<div class="carte">
+  <h2>Besoins de réhabilitation ({{ s.besoins|length }})</h2>
+  <div class="tw"><table class="t compact"><thead><tr><th>Ouvrage</th><th>Nature</th><th>État</th><th>Besoins</th></tr></thead><tbody>
+  {% for b in s.besoins %}<tr><td>{{ b.designation }}</td><td>{{ b.type }}</td><td>{{ b.etat }}</td><td>{{ b.besoins or '—' }}</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% endif %}
+
+<div class="carte">
+  <h2>Derniers mouvements</h2>
+  {% if mouvements %}
+  <div class="tw"><table class="t compact"><thead><tr><th>Date</th><th>Sens</th><th>Article</th><th class="c">Qté</th><th>Motif</th></tr></thead><tbody>
+  {% for m in mouvements %}<tr><td>{{ date_fr(m.date) }}</td><td>{{ SENS[m.sens] }}</td><td>{{ m.designation }}</td><td class="c">{{ m.quantite }}</td><td>{{ m.motif or '' }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<p class="aide">Aucun mouvement enregistré.</p>{% endif %}
+  <p class="aide">Cette année : {{ s.mouvements_annee.entree }} entrée(s), {{ s.mouvements_annee.sortie }} sortie(s), {{ s.mouvements_annee.reforme }} réforme(s) (en quantités).</p>
+</div>
+{% endblock %}
