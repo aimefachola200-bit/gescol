@@ -13,6 +13,9 @@ des modèles fournis par le client :
 * certificat de scolarité (nouveau format 2023, en couleur) pour les élèves.
 
 Pour chaque document : PDF individuel, PDF vierge, génération groupée et historique des documents produits.
+Règles communes : la ligne « NIP » (personnel.nip / eleves.nip) précède toujours la ligne du nom sur les certificats
+et dans l'identification des fiches ; quand la griffe de l'école (cachet rectangulaire du nom, ecoles.griffe_*) est
+active, elle remplace le nom en clair sous la signature du directeur (cachet.dessiner_nom).
 """
 import json
 import os
@@ -27,6 +30,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.utils import ImageReader
 from reportlab.platypus import Paragraph, Table, TableStyle
 
+import config
 import pdfs
 from pdfs import GCanvas
 
@@ -169,6 +173,7 @@ CHAMPS = {
     "ecole": ("École", "t"),
     "localite": ("Localité (« de : … »)", "t"),
     "civilite": ("Civilité", "civ"),
+    "nip": ("NIP (Numéro d'Identification Personnel)", "t"),
     "nom_prenoms": ("Nom et prénom(s)", "t"),
     "lieu_naissance": ("Lieu de naissance", "t"),
     "date_naissance": ("Date de naissance", "date"),
@@ -239,7 +244,7 @@ CHAMPS = {
     "observations": ("OBSERVATIONS PARTICULIÈRES", "z"),
 }
 
-_ID_ACE = ["nom_prenoms", "lieu_naissance", "date_naissance", "telephone", "email", "situation_famille",
+_ID_ACE = ["nip", "nom_prenoms", "lieu_naissance", "date_naissance", "telephone", "email", "situation_famille",
            "situation_militaire", "diplome_recrutement", "matricule", "adresse"]
 _ADM = ["date_prise_service", "grade", "categorie", "echelle", "echelon", "emploi"]
 _EVAL = ["periode_debut", "periode_fin", "objectifs", "resultats", "contraintes"]
@@ -253,42 +258,42 @@ SECTIONS = {
                                                       "avenants", "fait_a", "fait_le"]),
                  ("3 - Évaluation", _EVAL), ("Signataires", _SIGN_EVAL)],
     "eval_secondaire": [("En-tête", ["ddes", "etablissement"]),
-                        ("I - Identification de l'agent", ["nom_prenoms", "lieu_naissance", "date_naissance",
+                        ("I - Identification de l'agent", ["nip", "nom_prenoms", "lieu_naissance", "date_naissance",
                                                            "telephone", "email", "classe_recrutement",
                                                            "diplome_recrutement", "matricule", "adresse"]),
                         ("2 - Situation administrative de l'agent", _ADM + ["contrat_initial", "fait_a",
                                                                             "fait_le"]),
                         ("3 - Évaluation", _EVAL), ("Signataires", _SIGN_EVAL)],
     "presence_poste_dir": [("Signataires", ["ref", "soussigne", "directeur_titre", "ecole", "localite", "ccs_nom"]),
-                           ("Agent", ["civilite", "nom_prenoms", "date_naissance", "lieu_naissance",
+                           ("Agent", ["civilite", "nip", "nom_prenoms", "date_naissance", "lieu_naissance",
                                       "date_prise_service", "matricule", "corps_grade", "en_service_a", "cs",
                                       "departement", "suivant", "fonction", "depuis", "jusqu_au", "fait_a",
                                       "fait_le"])],
     "presence_poste_ccs": [("Signataire", ["ref", "ccs_nom", "cs", "departement"]),
-                           ("Agent", ["civilite", "nom_prenoms", "date_naissance", "lieu_naissance",
+                           ("Agent", ["civilite", "nip", "nom_prenoms", "date_naissance", "lieu_naissance",
                                       "date_prise_service", "matricule", "corps_grade", "en_service_a", "acte",
                                       "acte_date", "fonction", "depuis", "jusqu_au", "fait_a", "fait_le"])],
     "attestation_direction": [("Signataire", ["ref", "ccs_nom", "cs"]),
-                              ("Agent", ["civilite", "nom_prenoms", "grade", "matricule", "affecte_a", "du_lieu",
+                              ("Agent", ["civilite", "nip", "nom_prenoms", "grade", "matricule", "affecte_a", "du_lieu",
                                          "direction_de", "depuis", "nb_classes", "pour_compter", "acte",
                                          "acte_date", "remplace_nom", "remplace_matricule", "motif", "fait_a",
                                          "fait_le"])],
     "certificat_travail": [("Signataire", ["ref", "ccs_nom", "cs"]),
-                           ("Agent", ["civilite", "nom_prenoms", "grade", "matricule", "en_service_a", "acte",
+                           ("Agent", ["civilite", "nip", "nom_prenoms", "grade", "matricule", "en_service_a", "acte",
                                       "acte_date", "fonction", "depuis", "jusqu_au", "fait_a", "fait_le"])],
     "prise_service_ccs": [("Signataire", ["ref", "ccs_nom", "cs"]),
-                          ("Agent", ["civilite", "nom_prenoms", "grade", "matricule", "affecte_a", "remplace_nom",
+                          ("Agent", ["civilite", "nip", "nom_prenoms", "grade", "matricule", "affecte_a", "remplace_nom",
                                      "acte", "acte_date", "fonction", "nb_classes", "date_effective", "motif",
                                      "fait_a", "fait_le"])],
     "prise_service_dir": [("Signataire", ["ref", "soussigne", "directeur_titre", "ecole", "localite"]),
-                          ("Agent", ["civilite", "nom_prenoms", "grade", "matricule", "affecte_a", "acte",
+                          ("Agent", ["civilite", "nip", "nom_prenoms", "grade", "matricule", "affecte_a", "acte",
                                      "acte_date", "fonction", "date_effective", "fait_a", "fait_le"])],
     "prise_en_charge": [("En-tête", ["departement", "cs", "ref", "ccs_nom"]),
-                        ("Malade", ["nom_prenoms", "profession", "en_service_a", "indice", "budget",
+                        ("Malade", ["nip", "nom_prenoms", "profession", "en_service_a", "indice", "budget",
                                     "categorie_hosp", "fait_a", "fait_le"])],
     "certificat_scolarite": [("En-tête de l'école", ["ecole_l1", "ecole_l2", "ecole_de", "directeur_titre",
                                                      "ecole_designation"]),
-                             ("Élève", ["nom_prenoms", "sexe", "lieu_naissance", "date_naissance", "matricule",
+                             ("Élève", ["nip", "nom_prenoms", "sexe", "lieu_naissance", "date_naissance", "matricule",
                                         "frequente_du", "frequente_au", "cours", "depuis"]),
                              ("Notes et observations", ["assiduite", "conduite", "travail", "observations"]),
                              ("Signature", ["fait_a", "fait_le", "directeur_nom"])],
@@ -545,16 +550,26 @@ def image_sig(dataurl):
     return pdfs.image_data_url(dataurl) if dataurl else None
 
 
+def griffe_dir(c, cx, cy, largeur=130, griffe=None):
+    """Griffe (cachet rectangulaire du nom) du directeur de l'école courante — ou griffe (lignes, couleur) donnée —
+    centrée en (cx, cy). Retourne la hauteur dessinée (0 si inactive)."""
+    return pdfs.griffe_ecole(c, cx, cy, largeur, griffe)
+
+
 def signature_bloc(c, x_centre, y, titre, nom, fam, size_titre, style_titre="b", image=None, cachet=False,
-                   hauteur=62, size_nom=None, style_nom="b"):
-    """Titre, (cachet + signature), nom. y = ligne de base du titre."""
+                   hauteur=62, size_nom=None, style_nom="b", griffe=None):
+    """Titre, (cachet + signature), nom. y = ligne de base du titre. Si la griffe de l'école est active (cachet=True)
+    ou qu'une griffe est donnée, elle remplace la ligne du nom (nom lisible dans la griffe)."""
     c.setFont(fam[style_titre], size_titre)
     c.drawCentredString(x_centre, y, titre)
     if cachet:
         pdfs.cachet_ecole(c, x_centre - 30, y - 34, 27)
     if image is not None:
         c.drawImage(image, x_centre - 60, y - hauteur + 8, 120, hauteur - 18, preserveAspectRatio=True, mask="auto")
-    if nom:
+    gr = griffe if griffe is not None else (config.ECOLE.get("_griffe") if cachet else None)
+    if nom and gr:
+        griffe_dir(c, x_centre + 12, y - hauteur - 4, 130, gr)
+    elif nom:
         c.setFont(fam[style_nom], size_nom or size_titre)
         c.drawCentredString(x_centre, y - hauteur, nom)
 
@@ -716,17 +731,21 @@ def page_evaluation(c, doc, v, opt):
         titre_i = titres_sig[i]
         largeur_titre = texte_ajuste(c, xs[i], y, lim, titre_i, fam[stl], fs)
         cx = xs[i] + largeur_titre / 2
+        griffe = None
         if not vierge and signer:
             img, cach = image_signataire(qui[i], opt)
             if cach:
                 pdfs.cachet_ecole(c, cx - 25, y - 38, 26)
+                griffe = config.ECOLE.get("_griffe")
             if img is not None:
                 c.drawImage(img, cx - 55, y - 62, 110, 50, preserveAspectRatio=True, mask="auto")
-        if st == "sec":
+        est_nom = bool(v.get("sup_nom" if i == 0 else "resp_nom"))
+        if griffe and est_nom:
+            griffe_dir(c, cx + 10, y - (80 if st == "sec" else 96), min(130, lim), griffe)
+        elif st == "sec":
             if noms[i]:
                 texte_ajuste(c, xs[i], y - 75, lim, noms[i], fam["b"], fs)
         else:
-            est_nom = bool(v.get("sup_nom" if i == 0 else "resp_nom"))
             f_nom = fam["b"] if est_nom and st == "ace" else fam[stl]
             texte_ajuste(c, xs[i], y - (88 if st == "ace" else 95), lim, noms[i],
                          f_nom, fs + (1 if est_nom and st == "ace" else 0))
@@ -792,7 +811,8 @@ def page1_ace(c, v, opt):
 
 
 def lignes_identification(v, secondaire=False):
-    L = [[T("Nom et prénom(s) : " if not secondaire else "Nom et prénoms : "), V("nom_prenoms")],
+    L = [[T("NIP : "), V("nip")],
+         [T("Nom et prénom(s) : " if not secondaire else "Nom et prénoms : "), V("nom_prenoms")],
          [T("Lieu et date de naissance : "), V("_lieu_date")],
          [T("Tél : "), V("telephone", 0.55), T("  E-mail : " if not secondaire else "Email :"), V("email", 1)]]
     if secondaire:
@@ -972,13 +992,15 @@ ACTE = [[T("Suivant l'arrêté /décision /Note de Service N°"), V("acte")],
         [V("_acte_suite", 1), T("du"), D("acte_date", 0.42)]]
 INTRO_CCS = [("centre", [T("Je soussigné "), S("ccs_nom", 150, "bi")]),
              ("centre", [T("Chef de la Circonscription Scolaire de "), S("cs", 70, "n")])]
+# Ligne du NIP (Numéro d'Identification Personnel), toujours placée avant la ligne du nom.
+LIGNE_NIP = [T("NIP (Numéro d'Identification Personnel) : "), V("nip")]
 
 CERTIFICATS = {
     "presence_poste_dir": dict(
         titre="CERTIFICAT DE PRESENCE AU POSTE", cadre="double", pas=29, sig=("ccs", "dir"),
         corps=[[T("Je soussigné (e) "), V("soussigne")],
                [T("Direct"), S("_suf_dir", 32, "n"), T(" de l'Ecole Primaire "), V("ecole", 1), T(" de :")],
-               [V("localite")],
+               [V("localite")], LIGNE_NIP,
                [T("Atteste que "), C("civilite", "Mr ou Mme", "b"), T(" "), V("nom_prenoms")],
                [C("_ne", "Né (e)"), T(" le "), D("date_naissance", 0.55), T(" à "), V("lieu_naissance", 0.45)],
                [T("Première prise de service "), V("date_prise_service")],
@@ -991,7 +1013,7 @@ CERTIFICATS = {
                [T("Depuis le "), D("depuis", 0.8), T(" jusqu'à ce jour "), D("jusqu_au", 1)]]),
     "presence_poste_ccs": dict(
         titre="CERTIFICAT DE PRESENCE AU POSTE", cadre="arrondi", pas=26, sig=("ccs",),
-        corps=INTRO_CCS + [("centre", [T("Certifie que "), C("civilite", "Mr ou Mme", "b")]),
+        corps=INTRO_CCS + [LIGNE_NIP, ("centre", [T("Certifie que "), C("civilite", "Mr ou Mme", "b")]),
                            ("petit", [V("nom_prenoms")]),
                            [C("_ne", "Né (e)"), T(" le "), D("date_naissance", 0.6), T(" à "),
                             V("lieu_naissance", 0.4)],
@@ -1004,7 +1026,7 @@ CERTIFICATS = {
             [T("Depuis le "), D("depuis", 0.8), T(" jusqu'à ce jour "), D("jusqu_au", 1)]]),
     "attestation_direction": dict(
         titre="ATTESTATION DE DIRECTION", cadre="epais", pas=19.5, sig=("ccs",),
-        corps=INTRO_CCS + [("centre", [T("Atteste que "), C("civilite", "Mr ou Mme")]),
+        corps=INTRO_CCS + [LIGNE_NIP, ("centre", [T("Atteste que "), C("civilite", "Mr ou Mme")]),
                            [V("nom_prenoms")],
                            [T("Grade :"), V("grade", 1), T("Matricule"), V("matricule", 1.2)],
                            [C("_affecte", "Affecté (e)"), T(" à "), V("affecte_a")],
@@ -1020,8 +1042,8 @@ CERTIFICATS = {
             [T("Motif "), V("motif")]]),
     "certificat_travail": dict(
         titre="CERTIFICAT DE TRAVAIL", cadre="epais", pas=24, sig=("ccs",),
-        corps=INTRO_CCS + [("centre", [T("Certifie que "), C("civilite", "Mr ou Mme"), T(" "),
-                                       S("nom_prenoms", 180)]),
+        corps=INTRO_CCS + [LIGNE_NIP, ("centre", [T("Certifie que "), C("civilite", "Mr ou Mme"), T(" "),
+                                                  S("nom_prenoms", 180)]),
                            ("vierge", ("centre", [S("_rien", 130)])),
                            [T("Grade : "), V("grade", 1), T(" Matricule"), V("matricule", 0.9)],
                            [T("Est en service à l'école "), V("en_service_a")]] + ACTE + [
@@ -1029,7 +1051,7 @@ CERTIFICATS = {
             [T("Depuis le "), D("depuis", 0.8), T("jusqu'à ce jour "), D("jusqu_au", 0.8)]]),
     "prise_service_ccs": dict(
         titre="CERTIFICAT DE PRISE DE SERVICE", cadre="epais", pas=22.5, sig=("ccs",),
-        corps=INTRO_CCS + [("centre", [T("Certifie que "), C("civilite", "Mr ou Mme", "b")]),
+        corps=INTRO_CCS + [LIGNE_NIP, ("centre", [T("Certifie que "), C("civilite", "Mr ou Mme", "b")]),
                            [V("nom_prenoms")],
                            [T("Grade : "), V("grade", 1), T("Matricule"), V("matricule", 1)],
                            [C("_affecte", "Affecté(e)"), T(" à l'Ecole Primaire "), V("affecte_a")],
@@ -1041,7 +1063,7 @@ CERTIFICATS = {
         titre="CERTIFICAT DE PRISE DE SERVICE", cadre="epais", pas=27.5, sig=("dir",),
         corps=[[T("Je soussigné (e)"), V("soussigne")],
                [T("Direct"), S("_suf_dir", 32, "n"), T(" de l'Ecole Primaire"), V("ecole", 1), T(" de :"),
-                V("localite", 0.6)],
+                V("localite", 0.6)], LIGNE_NIP,
                [T("Certifie que "), C("civilite", "Mr ou Mme"), T(" "), V("nom_prenoms")],
                [T("Grade :"), V("grade", 1), T("Matricule :"), V("matricule", 1)],
                [C("_affecte", "Affecté(e)"), T(" à l'école "), V("affecte_a")]] + ACTE + [
@@ -1049,7 +1071,8 @@ CERTIFICATS = {
             [T("a effectivement pris service le"), D("date_effective")]]),
     "prise_en_charge": dict(
         titre="CERTIFICAT DE PRISE EN CHARGE", cadre="aucun", pas=24.5, sig=("ccs",),
-        corps=[[T("Nom et Prénoms du malade : "), V("nom_prenoms")],
+        corps=[LIGNE_NIP,
+               [T("Nom et Prénoms du malade : "), V("nom_prenoms")],
                ("vierge", [V("_rien")]),
                [T("Profession :"), V("profession")],
                [T("En service à "), V("en_service_a")],
@@ -1139,7 +1162,7 @@ def dessiner_certificat_agent(c, doc, v, opt):
         cadre_titre(c, spec["titre"], spec["cadre"], H_PAGE - haut, *larg,
                     hauteur=46 if spec["cadre"] != "arrondi" else 40, size=16)
         y = H_PAGE - (208 if spec["cadre"] != "arrondi" else 185)
-    pas = spec["pas"]
+    lignes = []
     for ln in spec["corps"]:
         mode, segs = "l", ln
         if isinstance(ln, tuple):
@@ -1148,6 +1171,11 @@ def dessiner_certificat_agent(c, doc, v, opt):
                 if not vierge:
                     continue
                 mode, segs = segs if isinstance(segs, tuple) else ("l", segs)
+        lignes.append((mode, segs))
+    # interligne réduit si nécessaire pour garder la place de la formule, des signatures (griffe) et du QR
+    bas = 268 if len(spec["sig"]) else 240
+    pas = min(spec["pas"], (y - bas) / max(1, len(lignes)))
+    for mode, segs in lignes:
         if mode == "centre":
             ligne(c, x1, y, x2, segs, v, fam, size, align="c")
         elif mode == "petit":
@@ -1190,6 +1218,8 @@ def dessiner_certificat_agent(c, doc, v, opt):
 
 
 def sig_ccs(c, v, cx, y, opt, signer, style="b", size=13.5):
+    """Signature du CCS : titre, signature numérique, nom — ou griffe (opt["griffe_ccs"] = (lignes, couleur),
+    connue dans les applications CS / DDEMP) à la place du nom quand le document est signé."""
     img = image_sig(opt.get("sig_ccs")) if signer else None
     c.setFont(TIMES[style], size)
     c.drawCentredString(cx, y, "Le Chef de la Circonscription Scolaire")
@@ -1197,27 +1227,34 @@ def sig_ccs(c, v, cx, y, opt, signer, style="b", size=13.5):
         c.drawImage(img, cx - 60, y - 70, 120, 55, preserveAspectRatio=True, mask="auto")
     nom = v.get("ccs_nom") or ""
     c.setFont("Times-Bold", 13.5)
-    if nom:
+    if nom and signer and opt.get("griffe_ccs"):
+        griffe_dir(c, cx + 10, y - 92, 150, opt["griffe_ccs"])
+    elif nom:
         c.drawCentredString(cx, y - 88, nom)
     else:
         pointilles(c, cx - 80, cx + 80, y - 88, "Times-Roman", 13.5)
 
 
 def sig_dir(c, v, cx, y, opt, signer):
+    """Signature du directeur : titre, cachet rond + signature numérique, puis griffe (si active) ou nom."""
     titre = titre_dir(v.get("directeur_titre"))
     c.setFont("Times-BoldItalic", 13.5)
     if titre:
         c.drawCentredString(cx, y, titre)
     else:
         c.drawCentredString(cx, y, "L…… Direct………")
+    griffe = None
     if signer:
         pdfs.cachet_ecole(c, cx - 25, y - 45, 28)
         img = pdfs.signature_directeur()
         if img is not None:
             c.drawImage(img, cx - 60, y - 72, 120, 55, preserveAspectRatio=True, mask="auto")
+        griffe = opt.get("griffe_dir") or config.ECOLE.get("_griffe")
     nom = v.get("directeur_nom") or v.get("soussigne") or ""
     c.setFont("Times-Bold", 13.5)
-    if nom:
+    if nom and griffe:
+        griffe_dir(c, cx + 10, y - 92, 150, griffe)
+    elif nom:
         c.drawCentredString(cx, y - 88, nom)
     else:
         pointilles(c, cx - 55, cx + 55, y - 88, "Times-Roman", 13.5)
@@ -1264,6 +1301,8 @@ def dessiner_certificat_scolarite(c, v, opt):
     else:
         debut = "L ……Direct …… de l'Ecole "
     y = flux(c, x1, y, x2, x1, debut, v.get("ecole_designation", ""), 3, pas, fam, size)
+    ligne(c, x1, y, x2, [T("NIP : "), V("nip")], v, fam, size)
+    y -= pas
     y = flux(c, x1, y, x2, x1, "Atteste que l'Elève : ", v.get("nom_prenoms", ""), 2, pas, fam, size)
     ligne(c, x1, y, x2, [C("_ne", "Né (e)"), T(" à "), V("lieu_naissance", 1.35), T(" le "),
                          V("date_naissance", 1)], v, fam, size)
@@ -1293,12 +1332,16 @@ def dessiner_certificat_scolarite(c, v, opt):
     c.setFont("Helvetica-Bold", 11)
     c.drawRightString(X(600), Y(837), titre_sig)
     cx = X(600) - sw(c, titre_sig, "Helvetica-Bold", 11) / 2
+    griffe = None
     if opt.get("signer") and not vierge:
         pdfs.cachet_ecole(c, cx - 22, Y(837) - 40, 26)
         img = pdfs.signature_directeur()
         if img is not None:
             c.drawImage(img, cx - 50, Y(837) - 68, 100, 50, preserveAspectRatio=True, mask="auto")
-    if v.get("directeur_nom"):
+        griffe = config.ECOLE.get("_griffe")
+    if v.get("directeur_nom") and griffe:
+        griffe_dir(c, cx + 8, Y(837) - 86, 120, griffe)
+    elif v.get("directeur_nom"):
         c.setFont("Helvetica-Bold", 10.5)
         c.drawCentredString(cx, Y(837) - 82, v["directeur_nom"])
     c.restoreState()
@@ -1635,7 +1678,8 @@ def enregistrer(app, H):
                        if m >= 10 else "Insuffisant") + f" (moyenne des notes : {fmt_note(round(m, 2))}/20)"
         return dict(
             ecole_l1=l1, ecole_l2=l2, ecole_de=ea["commune"] or ea["ville"], directeur_titre=ea["directeur_titre"],
-            ecole_designation=design, nom_prenoms=f"{e['nom']} {e['prenoms']}", sexe=sexe,
+            ecole_designation=design, nip=(e["nip"] if "nip" in e.keys() else "") or "",
+            nom_prenoms=f"{e['nom']} {e['prenoms']}", sexe=sexe,
             lieu_naissance=e["lieu_naissance"] or "", date_naissance=date_fr(e["date_naissance"]),
             matricule=e["matricule_educmaster"] or e["matricule"] or "",
             frequente_du=date_fr(insc) if insc else "", frequente_au="ce jour" if e["statut"] == "inscrit" else
@@ -1700,9 +1744,18 @@ def enregistrer(app, H):
                     v[k] = val
         return v
 
+    def griffe_ccs():
+        """Griffe du CCS : connue dans les applications CS / DDEMP (responsable de la structure)."""
+        if config.juridiction() and getattr(H, "jur_griffe", None):
+            try:
+                return H.jur_griffe(None)
+            except Exception:  # noqa: BLE001
+                return None
+        return None
+
     def options(doc, v, code=None, signer=True):
         return dict(vierge=False, code=code, signer=signer and peut_signer(),
-                    sig_ccs=H.signature(f"ecole:{H.eco()}:ccs"))
+                    sig_ccs=H.signature(f"ecole:{H.eco()}:ccs"), griffe_ccs=griffe_ccs())
 
     def libelle(doc, v):
         return f"{DOCS[doc]['titre']} – {v.get('nom_prenoms', '')}".strip(" –")
@@ -1960,7 +2013,7 @@ def enregistrer(app, H):
         except ValueError:
             abort(404)
         lots = [(v, dict(vierge=False, code=v.get("_code") or None, signer=bool(h["signe"]),
-                         sig_ccs=H.signature(f"ecole:{H.eco()}:ccs"))) for v in donnees]
+                         sig_ccs=H.signature(f"ecole:{H.eco()}:ccs"), griffe_ccs=griffe_ccs())) for v in donnees]
         return H.pdf_reponse(construire_pdf(h["type"], lots, h["libelle"]), nom_fichier(h["type"], f"h{hid}"))
 
     @app.route("/docs-enseignant/historique/<int:hid>/supprimer", methods=["POST"])

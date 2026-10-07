@@ -7,8 +7,11 @@
    divisions → zones pédagogiques → écoles, avec les nombres), export PDF de l'organigramme et des attributions.
 2. Cachets et signatures (/juridiction/cachets) : cachet de la structure et de chaque service (texte haut / bas /
    centre, couleur), aperçu SVG / PDF, signature digitale (clés jur:service:<id>, jur:structure:responsable).
+   Griffe (cachet rectangulaire du nom, cachet.dessiner_nom) préconçue pour la structure et chaque service : composée
+   automatiquement du titre et du nom du signataire ; réglages dans jur_docs_parametres (griffe_actif, griffe_ligne3,
+   griffe_couleur ; par service : griffe_<code>_actif / _ligne3 / _couleur), aperçu /juridiction/cachets/griffe.svg.
    Fonctions exposées : H.jur_cachet(code|None) → (sup, inf, centre, couleur) ;
-   H.jur_signataire(code|None) → (titre, nom, signature_dataurl).
+   H.jur_signataire(code|None) → (titre, nom, signature_dataurl) ; H.jur_griffe(code|None) → (lignes, couleur) | None.
 3. Attestations et certificats (/juridiction/documents) : reproduction des modèles du client (présence au poste,
    direction, travail, prise / reprise de service, prise en charge, certificats des AME), pré-remplis depuis le
    personnel de la juridiction, numérotés au registre annuel « SO N° …/CS-…/DDEMP-…/SP », signés et cachetés,
@@ -92,6 +95,14 @@ ART_14 = ("Article 14 : Les Chefs de Division de la Circonscription Scolaire (CS
           "Circonscription Scolaire (CCS) parmi les agents de l'État autres que les Conseillers Pédagogiques et les "
           "Inspecteurs.")
 REDIGE = "Attributions rédigées par GESCOL (non reprises du texte officiel) : à adapter par la structure."
+# v1.6 — rubriques des divisions (a_divisions). AOF = arrêté portant Attributions, Organisation et Fonctionnement des
+# structures déconcentrées du MEMP (Circonscriptions scolaires, Directions départementales). Les textes des articles
+# 9 à 14 (CS) sont repris ci-dessus ; les autres attributions ont été rédigées par GESCOL faute du texte officiel.
+AOF = "Arrêté portant attributions, organisation et fonctionnement des structures déconcentrées du MEMP (AOF)"
+SOURCE_AOF = "AOF – article {n}"
+SOURCE_GESCOL = "Rédigé par GESCOL, à conformer à l'AOF"
+HORS_AOF = ("Service hors AOF : les articles 10 à 13 de l'AOF ne prévoient que quatre divisions pour la CS ; ce service "
+            "est conservé parce que la structure y fait référence, en attendant la saisie du texte officiel. ")
 
 # (code, nom, sigle, ordre, parent, référence, attributions, note, titre du signataire)
 SERVICES_DEFAUT = {
@@ -117,7 +128,7 @@ SERVICES_DEFAUT = {
             "- suivre les états de présence, les mutations et les départs à la retraite ;\n"
             "- préparer et suivre l'exécution des crédits délégués et des ressources de la circonscription ;\n"
             "- tenir la comptabilité matières et rendre compte au CCS."),
-         REDIGE, "Le Chef du Service du Personnel et des Affaires financières"),
+         HORS_AOF + REDIGE, "Le Chef du Service du Personnel et des Affaires financières"),
         ("animation", "Division de l'Animation Pédagogique", "CDAP", 5, "ccs", "Article 11", ART_11, "",
          "Le Chef de la Division de l'Animation Pédagogique"),
         ("administration", "Division de l'Administration et des Finances", "CDAF", 6, "ccs", "Article 12", ART_12, "",
@@ -391,6 +402,33 @@ def jur_signataire(code=None):
     a = q("SELECT * FROM jur_agents WHERE id=?", (svc["responsable_id"],), un=True) if svc["responsable_id"] else None
     sig = signature(f"jur:service:{svc['id']}") or (signature(f"jur:agent:{a['id']}") if a else None)
     return (svc.get("signataire_titre") or titre_service(svc)), nom_agent(a), sig
+
+
+def griffe_cle(code, suffixe):
+    """Clé de paramètre de la griffe : structure (code None / racine) ou service."""
+    if not code or code in RACINE.values():
+        return f"griffe_{suffixe}"
+    return f"griffe_{code}_{suffixe}"
+
+
+def jur_griffe_reglages(code=None):
+    """{actif, ligne3, couleur} de la griffe (valeurs enregistrées, sinon défauts : active, sans 3e ligne,
+    couleur du cachet)."""
+    actif = param(griffe_cle(code, "actif"))
+    return {"actif": 1 if actif is None else int(actif or 0),
+            "ligne3": str(param(griffe_cle(code, "ligne3")) or ""),
+            "couleur": str(param(griffe_cle(code, "couleur")) or "")}
+
+
+def jur_griffe(code=None, forcer=False):
+    """(lignes, couleur) de la griffe du responsable de la structure (code None) ou du chef d'un service :
+    ligne 1 = titre du signataire, ligne 2 = nom, ligne 3 facultative. None si désactivée (sauf forcer) ou sans nom."""
+    titre, nom, _sig = jur_signataire(code)
+    r = jur_griffe_reglages(code)
+    if (not r["actif"] and not forcer) or not nom:
+        return None
+    couleur = r["couleur"] if r["couleur"] in COULEURS else (jur_cachet(code)[3] or "bleu")
+    return [titre, nom, r["ligne3"]], couleur
 
 
 def titre_service(svc):
@@ -685,11 +723,11 @@ DOCS = {
         titre="ATTESTATION DE PRESENCE AU POSTE", nom="Attestation de présence au poste",
         desc="Délivrée par le responsable de la structure (CCS / Directeur départemental).",
         cadre="arrondi", pas=24, sig=("resp",), foi=FOI_A, titre_sig_style="bi",
-        corps=INTRO + [("centre", [T("Atteste que "), C("civilite", "Mr ou Mme", "b")]),
+        corps=INTRO + [LIGNE_NIP, ("centre", [T("Atteste que "), C("civilite", "Mr ou Mme", "b")]),
                        ("petit", [V("nom_prenoms")]),
                        [C("_ne", "Né (e)"), T(" le "), D("date_naissance", 0.6), T(" à "), V("lieu_naissance", 0.4)],
                        [T("Première prise de service "), V("date_prise_service")],
-                       [T("Numéro matricule "), V("matricule")], LIGNE_NIP,
+                       [T("Numéro matricule "), V("matricule")],
                        [T("Corps et Grade payé "), V("corps_grade")],
                        [T("Est en service à "), V("en_service_a")],
                        [T("Suivant l'arrêté N°"), V("acte")],
@@ -704,11 +742,11 @@ DOCS = {
         corps=[[T("Je soussigné (e)"), V("soussigne")],
                [T("Direct"), S("_suf_dir", 32, "n"), T(" l'Ecole Primaire "), V("ecole", 1), T(" de :"),
                 V("localite", 0.7)],
-               ("vierge", [V("_rien")]),
+               ("vierge", [V("_rien")]), LIGNE_NIP,
                [T("Atteste que "), C("civilite", "Mr ou Mme", "b"), T(" "), V("nom_prenoms")],
                [C("_ne", "Né (e)"), T(" le "), D("date_naissance", 0.55), T(" à "), V("lieu_naissance", 0.45)],
                [T("Première prise de service "), V("date_prise_service")],
-               [T("Numéro matricule "), V("matricule")], LIGNE_NIP,
+               [T("Numéro matricule "), V("matricule")],
                [T("Corps et Grade payé "), V("corps_grade")],
                [T("Est en service à "), V("en_service_a")],
                LIGNE_CS,
@@ -719,9 +757,9 @@ DOCS = {
         titre="ATTESTATION DE DIRECTION", nom="Attestation de direction",
         desc="Au directeur / à la directrice d'école : école dirigée, nombre de classes, acte, remplacement.",
         cadre="epais", pas=19.5, sig=("resp",), foi=FOI_A,
-        corps=INTRO + [("centre", [T("Atteste que "), C("civilite", "Mr ou Mme")]),
+        corps=INTRO + [LIGNE_NIP, ("centre", [T("Atteste que "), C("civilite", "Mr ou Mme")]),
                        [V("nom_prenoms")],
-                       [T("Grade :"), V("grade", 1), T("Matricule"), V("matricule", 1.2)], LIGNE_NIP,
+                       [T("Grade :"), V("grade", 1), T("Matricule"), V("matricule", 1.2)],
                        [C("_affecte", "Affecté (e)"), T(" à "), V("affecte_a")],
                        [T("Suivant l'arrêté N°"), V("acte")],
                        [V("_acte_suite", 1), T("du "), D("acte_date", 0.6)],
@@ -737,10 +775,11 @@ DOCS = {
         titre="ATTESTATION DE TRAVAIL", nom="Attestation / certificat de travail",
         desc="Titre au choix : « Attestation de travail » ou « Certificat de travail ».",
         cadre="epais", pas=24, sig=("resp",), foi=FOI_A,
-        corps=INTRO + [("centre", [C("_verbe", "Atteste"), T(" que "), C("civilite", "Mr ou Mme"), T(" "),
+        corps=INTRO + [LIGNE_NIP,
+                       ("centre", [C("_verbe", "Atteste"), T(" que "), C("civilite", "Mr ou Mme"), T(" "),
                                    S("nom_prenoms", 180)]),
                        ("vierge", ("centre", [S("_rien", 130)])),
-                       [T("Grade : "), V("grade", 1), T(" Matricule"), V("matricule", 0.9)], LIGNE_NIP,
+                       [T("Grade : "), V("grade", 1), T(" Matricule"), V("matricule", 0.9)],
                        [T("Est en service à l'école "), V("en_service_a")],
                        [T("Suivant le titre d'affectation n°"), V("acte")],
                        [T("du "), V("acte_date", 1), T(" en qualité de "), V("fonction", 1)],
@@ -749,9 +788,9 @@ DOCS = {
         titre="ATTESTATION DE PRISE DE SERVICE", nom="Attestation de prise de service (école primaire)",
         desc="Enseignant affecté dans une école : remplacement, acte, classes, date de prise de service, motif.",
         cadre="epais", pas=22, sig=("resp",), foi=FOI_A,
-        corps=INTRO + [("centre", [T("Atteste que "), C("civilite", "Mr ou Mme", "b")]),
+        corps=INTRO + [LIGNE_NIP, ("centre", [T("Atteste que "), C("civilite", "Mr ou Mme", "b")]),
                        [V("nom_prenoms")],
-                       [T("Grade : "), V("grade", 1), T("Matricule"), V("matricule", 1)], LIGNE_NIP,
+                       [T("Grade : "), V("grade", 1), T("Matricule"), V("matricule", 1)],
                        [C("_affecte", "Affecté(e)"), T(" à l'Ecole Primaire "), V("affecte_a")],
                        [T("En remplacement de "), V("remplace_nom")],
                        [T("Suivant l'Arrêté/Note de Service n°"), V("acte")],
@@ -767,8 +806,9 @@ DOCS = {
         corps=[[T("Je soussigné (e)"), V("soussigne")],
                [T("Direct"), S("_suf_dir", 32, "n"), T(" de l'Ecole Primaire"), V("ecole", 1), T(" de :"),
                 V("localite", 0.6)],
+               LIGNE_NIP,
                [T("Certifie que "), C("civilite", "Mr ou Mme"), T(" "), V("nom_prenoms")],
-               [T("Grade :"), V("grade", 1), T("Matricule :"), V("matricule", 1)], LIGNE_NIP,
+               [T("Grade :"), V("grade", 1), T("Matricule :"), V("matricule", 1)],
                [C("_affecte", "Affecté(e)"), T(" à l'école "), V("affecte_a")],
                [T("Suivant Note de Service ou Titre d'Affection n°"), V("acte")],
                [V("_acte_suite", 0.6), T("du"), D("acte_date", 0.5), T("en qualité"), V("fonction", 0.7)],
@@ -777,9 +817,9 @@ DOCS = {
         titre="CERTIFICAT DE PRISE DE SERVICE", nom="Certificat de prise de service (agent de la structure)",
         desc="Agent affecté à la circonscription / à la direction : remplacement, acte, fonction, motif.",
         cadre="epais", pas=22, sig=("resp",), foi=FOI_C,
-        corps=INTRO + [("centre", [T("Certifie que "), C("civilite", "Mr ou Mme", "b")]),
+        corps=INTRO + [LIGNE_NIP, ("centre", [T("Certifie que "), C("civilite", "Mr ou Mme", "b")]),
                        [V("nom_prenoms")],
-                       [T("Grade : "), V("grade", 1), T("Matricule"), V("matricule", 1)], LIGNE_NIP,
+                       [T("Grade : "), V("grade", 1), T("Matricule"), V("matricule", 1)],
                        [C("_affecte", "Affecté(e)"), T(" à "), C("_affecte_a_lib", "la Circonscription Scolaire de :"),
                         V("affecte_cs")],
                        [T("En remplacement de "), V("remplace_nom")],
@@ -792,11 +832,11 @@ DOCS = {
         titre="CERTIFICAT DE REPRISE DE SERVICE", nom="Certificat de reprise de service",
         desc="Reprise de service à son nouveau poste (après congé, formation, disponibilité…).",
         cadre="epais", pas=22, sig=("resp",), foi=FOI_C,
-        corps=INTRO + [("centre", [T("Certifie que "), C("civilite", "Mr ou Mme", "b")]),
+        corps=INTRO + [LIGNE_NIP, ("centre", [T("Certifie que "), C("civilite", "Mr ou Mme", "b")]),
                        [V("nom_prenoms")],
                        [T("Grade : "), V("grade", 1), T("Matricule"), V("matricule", 1)],
                        [C("_ne", "Né(e)"), T(" le :"), D("date_naissance", 1), T(" à "), V("lieu_naissance", 1)],
-                       [T("Matricule : "), V("matricule")], LIGNE_NIP,
+                       [T("Matricule : "), V("matricule")],
                        [T("Grade : "), V("grade")],
                        [T("Corps :"), V("corps")],
                        [T("A effectivement repris service à son nouveau poste le "), D("date_reprise", 0.6)],
@@ -806,9 +846,9 @@ DOCS = {
         titre="CERTIFICAT DE PRISE EN CHARGE", nom="Certificat de prise en charge (hospitalisation)",
         desc="Admission des fonctionnaires et assimilés : profession, indice, budget, catégorie.",
         cadre="aucun", pas=24, sig=("resp",), foi=None,
-        corps=[[T("Nom et Prénoms du malade : "), V("nom_prenoms")],
+        corps=[LIGNE_NIP,
+               [T("Nom et Prénoms du malade : "), V("nom_prenoms")],
                ("vierge", [V("_rien")]),
-               LIGNE_NIP,
                [T("Profession :"), V("profession")],
                [T("En service à "), V("en_service_a")],
                [T("Indice de traitement :"), V("indice")],
@@ -900,42 +940,42 @@ CHAMPS = {
 _SIG = ["ref", "signataire_genre", "signataire_nom", "signataire_qualite", "signataire_titre"]
 _FAIT = ["fait_a", "fait_le"]
 SECTIONS = {
-    "presence_poste": [("Signataire", _SIG), ("Agent", ["civilite", "nom_prenoms", "date_naissance", "lieu_naissance",
-                                                         "date_prise_service", "matricule", "nip", "corps_grade",
+    "presence_poste": [("Signataire", _SIG), ("Agent", ["civilite", "nip", "nom_prenoms", "date_naissance",
+                                                         "lieu_naissance", "date_prise_service", "matricule", "corps_grade",
                                                          "en_service_a", "acte", "acte_date", "cs_agent",
                                                          "departement_agent", "fonction", "depuis", "jusqu_au"] + _FAIT)],
     "presence_poste_dir": [("Signataires", _SIG + ["soussigne", "directeur_titre", "ecole", "localite"]),
-                           ("Agent", ["civilite", "nom_prenoms", "date_naissance", "lieu_naissance",
-                                      "date_prise_service", "matricule", "nip", "corps_grade", "en_service_a",
+                           ("Agent", ["civilite", "nip", "nom_prenoms", "date_naissance", "lieu_naissance",
+                                      "date_prise_service", "matricule", "corps_grade", "en_service_a",
                                       "cs_agent", "departement_agent", "suivant", "fonction", "depuis",
                                       "jusqu_au"] + _FAIT)],
-    "attestation_direction": [("Signataire", _SIG), ("Agent", ["civilite", "nom_prenoms", "grade", "matricule", "nip",
+    "attestation_direction": [("Signataire", _SIG), ("Agent", ["civilite", "nip", "nom_prenoms", "grade", "matricule",
                                                                 "affecte_a", "acte", "acte_date", "direction_de",
                                                                 "depuis", "nb_classes", "pour_compter", "remplace_nom",
                                                                 "remplace_matricule", "motif"] + _FAIT)],
     "attestation_travail": [("Signataire", _SIG + ["titre_doc"]),
-                            ("Agent", ["civilite", "nom_prenoms", "grade", "matricule", "nip", "en_service_a", "acte",
+                            ("Agent", ["civilite", "nip", "nom_prenoms", "grade", "matricule", "en_service_a", "acte",
                                        "acte_date", "fonction", "depuis", "jusqu_au"] + _FAIT)],
     "attestation_prise_service": [("Signataire", _SIG),
-                                  ("Agent", ["civilite", "nom_prenoms", "grade", "matricule", "nip", "affecte_a",
+                                  ("Agent", ["civilite", "nip", "nom_prenoms", "grade", "matricule", "affecte_a",
                                              "remplace_nom", "acte", "acte_date", "fonction", "nb_classes",
                                              "date_effective", "motif"] + _FAIT)],
     "attestation_prise_service_dir": [("Signataire", ["ref", "soussigne", "directeur_titre", "ecole", "localite"]),
-                                      ("Agent", ["civilite", "nom_prenoms", "grade", "matricule", "nip", "affecte_a",
+                                      ("Agent", ["civilite", "nip", "nom_prenoms", "grade", "matricule", "affecte_a",
                                                  "acte", "acte_date", "fonction", "date_effective"] + _FAIT)],
     "certificat_prise_service": [("Signataire", _SIG),
-                                 ("Agent", ["civilite", "nom_prenoms", "grade", "matricule", "nip", "affecte_cs",
+                                 ("Agent", ["civilite", "nip", "nom_prenoms", "grade", "matricule", "affecte_cs",
                                             "remplace_nom", "acte", "acte_date", "fonction", "date_effective",
                                             "motif"] + _FAIT)],
     "certificat_reprise_service": [("Signataire", _SIG),
-                                   ("Agent", ["civilite", "nom_prenoms", "grade", "matricule", "nip", "date_naissance",
+                                   ("Agent", ["civilite", "nip", "nom_prenoms", "grade", "matricule", "date_naissance",
                                               "lieu_naissance", "corps", "date_reprise", "suivant"] + _FAIT)],
-    "prise_en_charge": [("Signataire", _SIG), ("Malade", ["nom_prenoms", "nip", "profession", "en_service_a", "indice",
+    "prise_en_charge": [("Signataire", _SIG), ("Malade", ["nip", "nom_prenoms", "profession", "en_service_a", "indice",
                                                            "budget", "categorie_hosp"] + _FAIT)],
 }
 SECTIONS["ame_prise_service"] = SECTIONS["ame_reprise_service"] = [
     ("En-tête", ["ref", "ame_departement", "ame_type", "ame_ecole", "ame_groupe"]),
-    ("Aspirant(e)", ["civilite", "nom_prenoms", "titulaire_de", "nip", "edition", "date_service", "titre_affectation",
+    ("Aspirant(e)", ["civilite", "nip", "nom_prenoms", "titulaire_de", "edition", "date_service", "titre_affectation",
                      "titre_affectation_date", "qualite", "classe_attribuee"]),
     ("Visas", ["cp_nom", "cp_tel", "dir_nom", "dir_tel", "lieu_visa", "date_visa", "ape_nom", "ape_tel"])]
 
@@ -975,10 +1015,12 @@ def _fait_segments():
 
 
 def bloc_resp(c, v, cx, y, opt, style="b", size=13.5):
-    """Titre du signataire, cachet et signature numériques (si signé), nom."""
+    """Titre du signataire, cachet et signature numériques (si signé), puis griffe (opt["griffe"], à droite du cachet
+    rond, sous la signature) ou nom en clair."""
     titre = v.get("signataire_titre") or "Le Chef de la Circonscription Scolaire"
     DE.texte_ajuste(c, cx - DE.sw(c, titre, DE.TIMES[style], size) / 2 if DE.sw(c, titre, DE.TIMES[style], size) < 250
                     else cx - 125, y, 250, titre, DE.TIMES[style], size)
+    griffe = None
     if opt.get("signer"):
         ca = opt.get("cachet")
         if ca:
@@ -986,21 +1028,30 @@ def bloc_resp(c, v, cx, y, opt, style="b", size=13.5):
         img = pdfs.image_data_url(opt.get("sig"))
         if img is not None:
             c.drawImage(img, cx - 55, y - 74, 120, 55, preserveAspectRatio=True, mask="auto")
+        griffe = opt.get("griffe")
     nom = v.get("signataire_nom") or ""
     c.setFont("Times-Bold", 13.5)
-    if nom:
+    if nom and griffe:
+        lignes = [titre] + list(griffe[0][1:])      # le titre imprimé sur le document prime sur celui du réglage
+        CACHET.dessiner_nom(c, cx + 10, y - 96, lignes, griffe[1], 150)
+    elif nom:
         c.drawCentredString(cx, y - 92, nom)
     else:
         DE.pointilles(c, cx - 80, cx + 80, y - 92, "Times-Roman", 13.5)
 
 
-def bloc_dir(c, v, cx, y):
+def bloc_dir(c, v, cx, y, opt=None):
+    """Signature du directeur de l'école : nom en clair, ou griffe de l'école (opt["griffe_dir"]) quand l'école est
+    aussi gérée localement (écoles liées) et que le document est signé."""
     titre = DE.titre_dir(v.get("directeur_titre"))
     c.setFont("Times-BoldItalic", 13.5)
     c.drawCentredString(cx, y, titre or "L…… Direct………")
     nom = v.get("soussigne") or ""
+    griffe = (opt or {}).get("griffe_dir") if (opt or {}).get("signer") else None
     c.setFont("Times-Bold", 13.5)
-    if nom:
+    if nom and griffe:
+        CACHET.dessiner_nom(c, cx + 10, y - 96, griffe[0], griffe[1], 150)
+    elif nom:
         c.drawCentredString(cx, y - 92, nom)
     else:
         DE.pointilles(c, cx - 55, cx + 55, y - 92, "Times-Roman", 13.5)
@@ -1078,9 +1129,9 @@ def dessiner_doc_jur(c, doc, v, opt):
     sopt = dict(opt, signer=opt.get("signer") and not vierge)
     if spec["sig"] == ("resp", "dir"):
         bloc_resp(c, v, 170, y, sopt)
-        bloc_dir(c, v, 450, y)
+        bloc_dir(c, v, 450, y, sopt)
     elif spec["sig"] == ("dir",):
-        bloc_dir(c, v, 450, y - 18)
+        bloc_dir(c, v, 450, y - 18, sopt)
     else:
         bloc_resp(c, v, 420, y, sopt, style=spec.get("titre_sig_style", "b"),
                   size=15 if spec.get("titre_sig_style") == "bi" else 13.5)
@@ -1159,12 +1210,12 @@ def dessiner_doc_ame(c, doc, v, opt):
     # corps
     fam, size, x1, x2, pas = DE.TIMES, 11, X(63), X(610), 20.5
     y = Y(276)
+    DE.ligne(c, x1, y, x2, LIGNE_NIP, v, fam, size)
+    y -= pas
     DE.ligne(c, x1, y, x2, [T("Nous, soussignés, certifions que "), C("_civ_ame", "Mme/M."), T(" "), V("nom_prenoms")],
              v, fam, size)
     y -= pas
     DE.ligne(c, x1, y, x2, [T("Titulaire de : "), V("titulaire_de")], v, fam, size)
-    y -= pas
-    DE.ligne(c, x1, y, x2, LIGNE_NIP, v, fam, size)
     y -= pas
     c.setFont("Times-Roman", size)
     c.drawString(x1, y, "et mis(e) à disposition dans le cadre du Programme spécial de pré-insertion professionnelle dans")
@@ -1340,7 +1391,7 @@ def pdf_cachets(lignes):
     c.setFont("Times-Bold", 14)
     c.drawCentredString(W / 2, y - 10, "CACHETS ET SIGNATURES")
     y -= 40
-    for lib, ca, (titre, nom, sig) in lignes:
+    for lib, ca, (titre, nom, sig), griffe in lignes:
         if y < 130:
             c.showPage()
             y = H_PAGE - 50
@@ -1358,6 +1409,8 @@ def pdf_cachets(lignes):
         else:
             c.setFont("Helvetica-Oblique", 7.5)
             c.drawString(x + 330, y - 50, "Signature numérique non enregistrée")
+        if griffe:
+            CACHET.dessiner_nom(c, x + 200, y - 90, griffe[0], griffe[1], 160)
         c.setStrokeColor(colors.HexColor("#D0D5DD"))
         c.line(x, y - 110, W - 60, y - 110)
         y -= 118
@@ -1451,6 +1504,7 @@ def enregistrer(app, H):
     for col in ("parent_code", "reference", "note", "signataire_titre"):
         H.ajouter_colonne("jur_services", col, "TEXT")
     H.jur_cachet = jur_cachet
+    H.jur_griffe = jur_griffe
     H.jur_signataire = jur_signataire
     H.jur_services = services
     try:  # libellés pour la page /verifier
@@ -1603,6 +1657,7 @@ def enregistrer(app, H):
             titre = (f.get("signataire_titre") or "").strip()[:150]
             if f.get("action") == "defaut":
                 vals = {"sup": "", "inf": "", "centre": "", "couleur": "bleu"}
+            code_griffe = None
             if cible == "structure":
                 param_ecrire("cachet_structure", vals)
                 H.journal("jur_cachet", "structure")
@@ -1612,20 +1667,28 @@ def enregistrer(app, H):
                    "signataire_titre=? WHERE id=?",
                    (vals["sup"], vals["inf"], vals["centre"], vals["couleur"], titre or svc["signataire_titre"], svc["id"]))
                 H.journal("jur_cachet", svc["nom"])
+                code_griffe = svc["code"]
+            # griffe (cachet rectangulaire du nom) : actif, 3e ligne, couleur (vide = couleur du cachet)
+            param_ecrire(griffe_cle(code_griffe, "actif"), 1 if f.get("griffe_actif") == "1" else 0)
+            param_ecrire(griffe_cle(code_griffe, "ligne3"), (f.get("griffe_ligne3") or "").strip()[:80])
+            param_ecrire(griffe_cle(code_griffe, "couleur"), f.get("griffe_couleur") if f.get("griffe_couleur") in COULEURS else "")
             flash("Cachet rétabli par défaut." if f.get("action") == "defaut" else "Cachet enregistré.", "success")
             return redirect(url_for("jur_cachets") + (f"#c-{cible}"))
         lignes = [{"cible": "structure", "nom": (s or {}).get("nom") or "Structure", "cachet": cachet_structure(),
                    "perso": bool(param("cachet_structure", {}).get("sup") if param("cachet_structure") else False),
-                   "sig": jur_signataire(None), "cle_sig": "jur:structure:responsable", "titre_mod": False, "code": ""}]
+                   "sig": jur_signataire(None), "cle_sig": "jur:structure:responsable", "titre_mod": False, "code": "",
+                   "griffe": jur_griffe(None), "griffe_reg": jur_griffe_reglages(None)}]
         for x in tous:
             if x["code"] == RACINE.get(niveau()):
                 continue
             lignes.append({"cible": str(x["id"]), "nom": f"{x['sigle'] or ''} – {x['nom']}".strip(" –"),
                            "cachet": jur_cachet(x["code"]), "perso": bool(x["cachet_sup"] or x["cachet_centre"]),
                            "sig": jur_signataire(x["code"]), "cle_sig": f"jur:service:{x['id']}", "titre_mod": True, "code": x["code"],
-                           "titre": x["signataire_titre"] or titre_service(x)})
+                           "titre": x["signataire_titre"] or titre_service(x),
+                           "griffe": jur_griffe(x["code"]), "griffe_reg": jur_griffe_reglages(x["code"])})
         if request.args.get("export") == "pdf":
-            return H.pdf_reponse(pdf_cachets([(l["nom"], l["cachet"], l["sig"]) for l in lignes]), "cachets.pdf")
+            return H.pdf_reponse(pdf_cachets([(l["nom"], l["cachet"], l["sig"], l["griffe"]) for l in lignes]),
+                                 "cachets.pdf")
         return render_template("jur_cachets.html", s=s, lignes=lignes, COULEURS=COULEURS,
                                svg=lambda ca: CACHET.svg(*ca, taille=150))
 
@@ -1641,6 +1704,29 @@ def enregistrer(app, H):
             ca = jur_cachet(a.get("service") or None)
         return Response(CACHET.svg(*ca, taille=int(a.get("taille") or 180) if (a.get("taille") or "").isdigit() else 180),
                         mimetype="image/svg+xml", headers={"Cache-Control": "no-cache"})
+
+    @app.route("/juridiction/cachets/griffe.svg")
+    @H.connexion_requise()
+    def jur_griffe_apercu():
+        """Aperçu SVG de la griffe de la structure (code vide) ou d'un service (code=…) ; ligne3 / couleur / titre
+        de l'adresse pour l'aperçu instantané pendant la saisie."""
+        juridiction_ou_404()
+        a = request.args
+        code = a.get("code") or None
+        gr = jur_griffe(code, forcer=True)
+        if gr is None:
+            titre, nom, _s = jur_signataire(code)
+            gr = [titre, nom or "NOM Prénoms (responsable à désigner)", ""], "bleu"
+        lignes, couleur = list(gr[0]), gr[1]
+        if a.get("titre"):
+            lignes[0] = a.get("titre")[:150]
+        if "ligne3" in a:
+            lignes = lignes[:2] + [a.get("ligne3", "")[:80]]
+        if a.get("couleur") in COULEURS:
+            couleur = a.get("couleur")
+        largeur = int(a.get("largeur") or 260) if (a.get("largeur") or "").isdigit() else 260
+        return Response(CACHET.svg_nom(lignes, couleur, max(120, min(largeur, 600))), mimetype="image/svg+xml",
+                        headers={"Cache-Control": "no-cache"})
 
     @app.route("/juridiction/cachets/apercu.pdf")
     @H.connexion_requise()
@@ -1740,10 +1826,22 @@ def enregistrer(app, H):
             abort(404)
         return DOCS[doc]
 
-    def options(sig_code, signer, code=None, vierge=False):
+    def griffe_dir_ecole(jur_ecole_id):
+        """Griffe du directeur d'une école de la juridiction, si cette école est aussi gérée localement
+        (ecoles.jur_ecole_id) et que sa griffe est active."""
+        if not jur_ecole_id or not getattr(H, "griffe_ecole", None):
+            return None
+        try:
+            r = q("SELECT id FROM ecoles WHERE jur_ecole_id=?", (jur_ecole_id,), un=True)
+            return H.griffe_ecole(r["id"]) if r else None
+        except Exception:  # noqa: BLE001
+            return None
+
+    def options(sig_code, signer, code=None, vierge=False, jur_ecole_id=None):
         _t, _n, sig = jur_signataire(sig_code)
         return dict(structure=structure() or {}, sigle_dep=sigle_departement(structure()), signer=signer,
-                    cachet=jur_cachet(sig_code), sig=sig, code=code, vierge=vierge)
+                    cachet=jur_cachet(sig_code), sig=sig, code=code, vierge=vierge, griffe=jur_griffe(sig_code),
+                    griffe_dir=griffe_dir_ecole(jur_ecole_id))
 
     def signataires():
         """Choix du signataire : responsable de la structure, ou chef d'un service (par délégation)."""
@@ -1821,6 +1919,8 @@ def enregistrer(app, H):
                 flash(m, "danger")
             return redirect(url_for("jur_document_form", doc=doc, p=f.get("p") or None, sig=sig_code or None))
         signer = f.get("signer") == "1"
+        pers = personne(f.get("p")) if f.get("p") else None
+        jur_eid = pers.get("ecole_id") if pers else None
         if f.get("action") != "enregistrer":       # brouillon : ni numéro, ni QR, ni historique
             return H.pdf_reponse(construire_pdf(doc, [(v, options(sig_code, False))], d["nom"] + " (brouillon)"),
                                  f"{doc}_brouillon.pdf")
@@ -1840,10 +1940,10 @@ def enregistrer(app, H):
         ex("INSERT INTO jur_docs_historique (annee, type, numero, ref, personne, libelle, donnees, code, signe, signataire, "
            "cree_le, cree_par) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
            (config.ANNEE_ACTIVE, doc, numero, v["ref"], f.get("p") or "", lib,
-            json.dumps(dict(v, _sig=sig_code), ensure_ascii=False), code, 1 if signer else 0, titre_sig, H.maintenant(),
-            g.user["id"]))
+            json.dumps(dict(v, _sig=sig_code, _ecole_id=jur_eid), ensure_ascii=False), code, 1 if signer else 0, titre_sig,
+            H.maintenant(), g.user["id"]))
         H.journal("jur_document", f"{v['ref']} {lib}")
-        return H.pdf_reponse(construire_pdf(doc, [(v, options(sig_code, signer, code))], lib),
+        return H.pdf_reponse(construire_pdf(doc, [(v, options(sig_code, signer, code, jur_ecole_id=jur_eid))], lib),
                              f"{doc}_{numero:03d}.pdf")
 
     @app.route("/juridiction/documents/<doc>/vierge.pdf")
@@ -1901,8 +2001,10 @@ def enregistrer(app, H):
         except ValueError:
             abort(404)
         sig_code = v.pop("_sig", "") or ""
+        jur_eid = v.pop("_ecole_id", None)
         if sig_code and not service_par_code(sig_code):
             sig_code = ""
         H.journal("jur_document_reimpression", h["ref"] or "")
-        return H.pdf_reponse(construire_pdf(h["type"], [(v, options(sig_code, bool(h["signe"]), h["code"]))],
+        return H.pdf_reponse(construire_pdf(h["type"], [(v, options(sig_code, bool(h["signe"]), h["code"],
+                                                                     jur_ecole_id=jur_eid))],
                                             h["libelle"] + " (réimpression)"), f"{h['type']}_{h['numero'] or hid}.pdf")

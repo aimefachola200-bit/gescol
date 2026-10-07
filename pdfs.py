@@ -186,8 +186,20 @@ def signature_directeur():
     return image_data_url(config.ECOLE.get("_sig_directeur")) or _ecole_img("signature.png")
 
 
-def bloc_signature(c, x, y, titre, nom="", image=None, cachet=False, lieu_date=True, largeur=45 * mm):
-    """Bloc de signature générique centré en x : [lieu, date] titre, signature (image), cachet, nom."""
+def griffe_ecole(c, cx, cy, largeur=38 * mm, griffe=None):
+    """Griffe (cachet rectangulaire du nom du directeur) de l'école courante, centrée en (cx, cy).
+    griffe = (lignes, couleur) pour un autre signataire. Retourne la hauteur dessinée (0 si inactive)."""
+    gr = griffe if griffe is not None else config.ECOLE.get("_griffe")
+    if not gr:
+        return 0
+    import cachet as _cachet
+    return _cachet.dessiner_nom(c, cx, cy, gr[0], gr[1], largeur)
+
+
+def bloc_signature(c, x, y, titre, nom="", image=None, cachet=False, lieu_date=True, largeur=45 * mm, griffe=None):
+    """Bloc de signature générique centré en x : [lieu, date] titre, signature (image), cachet, nom.
+    Quand la griffe de l'école est active (cachet=True) ou qu'une griffe (lignes, couleur) est donnée, elle remplace la
+    ligne du nom (le nom y reste lisible), sous la signature et à droite du cachet rond."""
     c.saveState()
     c.setFillColor(colors.black)
     if lieu_date:
@@ -200,6 +212,11 @@ def bloc_signature(c, x, y, titre, nom="", image=None, cachet=False, lieu_date=T
         cachet_ecole(c, x - 9 * mm, y - 15.5 * mm, 11 * mm)
     if image is not None:
         c.drawImage(image, x - largeur / 2, y - 23 * mm, largeur, 17 * mm, preserveAspectRatio=True, mask="auto")
+    gr = griffe if griffe is not None else (config.ECOLE.get("_griffe") if cachet else None)
+    if gr and nom:
+        h = griffe_ecole(c, x + 4 * mm, y - 29 * mm, 36 * mm, gr)
+        c.restoreState()
+        return y - 29 * mm - h / 2
     if nom:
         c.setFont("Helvetica-Bold", 8.5)
         c.drawCentredString(x, y - 30.5 * mm, nom)
@@ -295,7 +312,9 @@ def _signature(c, x, y, titre="Le Directeur"):
     cachet_ecole(c, x - 17 * mm, y - 35 * mm, 15 * mm)
     if sign:
         c.drawImage(sign, x - 20 * mm, y - 38 * mm, 40 * mm, 18 * mm, preserveAspectRatio=True, mask="auto")
-    if config.ECOLE.get("directeur"):
+    if config.ECOLE.get("_griffe"):
+        griffe_ecole(c, x + 9 * mm, y - 58 * mm + 16, 38 * mm)
+    elif config.ECOLE.get("directeur"):
         c.setFont("Helvetica", 9.5)
         c.drawCentredString(x, y - 58 * mm + 30, config.ECOLE["directeur"])
 
@@ -650,6 +669,29 @@ TITRES = {
 }
 
 
+def lignes_identite(c, x, y, largeur, couples, taille=10.5, pas=16):
+    """Lignes « Libellé : valeur………… » (pointillés jusqu'au bord quand la valeur est vide ou courte).
+    Retourne l'ordonnée sous la dernière ligne."""
+    c.saveState()
+    c.setFillColor(colors.black)
+    for lib, val in couples:
+        c.setFont("Helvetica-Bold", taille)
+        c.drawString(x, y, f"{lib} : ")
+        x1 = x + c.stringWidth(f"{lib} : ", "Helvetica-Bold", taille)
+        val = str(val or "").strip()
+        if val:
+            c.setFont("Helvetica-Bold", taille)
+            c.drawString(x1, y, val)
+            x1 += c.stringWidth(val, "Helvetica-Bold", taille) + 4
+        c.setFont("Helvetica", taille)
+        wp = c.stringWidth(".", "Helvetica", taille)
+        if x + largeur - x1 > 3 * wp:
+            c.drawString(x1, y, "." * int((x + largeur - x1) / wp))
+        y -= pas
+    c.restoreState()
+    return y
+
+
 def certificat(type_doc, eleve, classe, annee, code, situation_financiere=None, destination=""):
     W, H = A4
     m = 22 * mm
@@ -683,6 +725,10 @@ def certificat(type_doc, eleve, classe, annee, code, situation_financiere=None, 
             corps.append("Situation financière : " + (
                 "<b>à jour</b>." if situation_financiere <= 0 else f"reste dû <b>{fcfa(situation_financiere)}</b>."))
     corps.append("En foi de quoi, le présent document lui est délivré pour servir et valoir ce que de droit.")
+    # lignes d'identification : NIP (Numéro d'Identification Personnel) avant la ligne du nom
+    nip = (eleve["nip"] if "nip" in eleve.keys() else "") or ""
+    y = lignes_identite(c, m, y, W - 2 * m, [("NIP", nip), ("Nom et prénoms", f"{eleve['nom']} {eleve['prenoms']}")])
+    y -= 6
     for txt in corps:
         p = Paragraph(txt, ST_TEXTE)
         _, h = p.wrap(W - 2 * m, 400)
@@ -975,7 +1021,7 @@ class _BlocSignatures(_Flowable):
         super().__init__()
         self.sigs = signatures
         self.largeur = largeur
-        self.height = 36 * mm
+        self.height = 38 * mm
 
     def wrap(self, *_):
         return self.largeur, self.height
@@ -993,7 +1039,9 @@ class _BlocSignatures(_Flowable):
                 cachet_ecole(c, x - 9 * mm, y - 15.5 * mm, 11 * mm)
             if image is not None:
                 c.drawImage(image, x - 22 * mm, y - 24 * mm, 44 * mm, 17 * mm, preserveAspectRatio=True, mask="auto")
-            if nom:
+            if nom and avec_cachet and config.ECOLE.get("_griffe"):
+                griffe_ecole(c, x + 4 * mm, y - 29.5 * mm, 34 * mm)
+            elif nom:
                 c.setFont("Helvetica", 8.5)
                 c.drawCentredString(x, y - 30.5 * mm, nom)
 

@@ -1,0 +1,59 @@
+{% extends "base.html" %}{% block titre %}Plan d'action des divisions{% endblock %}
+{% block contenu %}
+<style>
+.taux{display:inline-block;min-width:52px;text-align:center;border-radius:12px;padding:1px 8px;font-weight:600;font-size:12.5px}
+.taux.ok{background:#ECFDF3;color:#067647}.taux.moy{background:#FFFAEB;color:#B54708}.taux.ko{background:#FEF3F2;color:#B42318}.taux.na{background:#F2F4F7;color:#667085}
+table.t.plan tr.div td{background:#E4ECF5;font-weight:700}
+table.t.plan tr.total td{background:#1F4E79;color:#fff;font-weight:700}
+table.t.plan td.mods{font-size:12px;color:#475467}
+.src.aof{color:#067647}.src.gescol{color:#B54708}
+</style>
+{% macro badge_taux(v) %}{% if v is none %}<span class="taux na">—</span>{% elif v >= 75 %}<span class="taux ok">{{ pct(v) }}</span>{% elif v >= 50 %}<span class="taux moy">{{ pct(v) }}</span>{% else %}<span class="taux ko">{{ pct(v) }}</span>{% endif %}{% endmacro %}
+<div class="entete"><div><h1>Plan d'action des divisions</h1>
+  <p class="sous">{{ s.nom if s else '' }} · année scolaire {{ annee }} · toutes les divisions avec leurs lignes d'action et le taux de réalisation (par division et pour la structure).</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_divisions', annee=annee) }}">← Divisions</a>
+    <a class="btn sec" href="{{ url_for('jur_divisions_plan_xlsx', annee=annee) }}">⇩ Excel</a>
+    <a class="btn" href="{{ url_for('jur_divisions_plan_pdf', annee=annee) }}" target="_blank">📄 PDF</a>
+  </div></div>
+
+<form method="get" class="filtres carte">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  <noscript><button class="btn sec petit">Afficher</button></noscript>
+</form>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Divisions</div><div class="v">{{ divisions|length }}</div><div class="d">{{ divisions|selectattr('synthese.total')|list|length }} avec lignes d'action</div></div>
+  <div class="kpi"><div class="l">Lignes d'action</div><div class="v">{{ synthese.total }}</div><div class="d">{{ synthese.prevues }} prévue(s) · {{ synthese.reportees }} reportée(s)</div></div>
+  <div class="kpi"><div class="l">En cours</div><div class="v">{{ synthese.en_cours }}</div><div class="d">lignes en cours de réalisation</div></div>
+  <div class="kpi"><div class="l">Réalisées</div><div class="v">{{ synthese.realisees }}</div><div class="d">lignes réalisées</div></div>
+  <div class="kpi"><div class="l">Taux de réalisation (structure)</div><div class="v">{{ pct(synthese.taux) }}</div><div class="d">moyenne de toutes les lignes</div></div>
+</div>
+
+<section class="carte"><h2>Taux de réalisation par division</h2>
+  <div class="tw"><table class="t compact">
+    <tr><th>Division</th><th>Article AOF</th><th>Source</th><th>Chef</th><th class="num">Lignes</th><th class="num">Prévues</th><th class="num">En cours</th><th class="num">Réalisées</th><th class="num">Reportées</th><th class="num">Taux</th></tr>
+    {% for d in divisions %}{% set sy = d.synthese %}
+    <tr><td><a href="{{ url_for('jur_division', code=d.code, annee=annee) }}#lignes"><b>{{ d.sigle or d.code|upper }}</b> – {{ d.nom }}</a></td>
+      <td>{{ 'Article ' ~ d.article if d.article else '—' }}{% if d.hors_aof %} <span class="badge att">hors AOF</span>{% endif %}</td>
+      <td class="src {{ 'aof' if d.officiel else 'gescol' }}">{{ d.source }}</td><td>{{ d.chef_nom or '—' }}</td>
+      <td class="num">{{ sy.total }}</td><td class="num">{{ sy.prevues }}</td><td class="num">{{ sy.en_cours }}</td><td class="num">{{ sy.realisees }}</td><td class="num">{{ sy.reportees }}</td><td class="num">{{ badge_taux(sy.taux) }}</td></tr>
+    {% endfor %}
+    <tr><td><b>TOTAL STRUCTURE</b></td><td colspan="3"></td><td class="num"><b>{{ synthese.total }}</b></td><td class="num">{{ synthese.prevues }}</td><td class="num">{{ synthese.en_cours }}</td><td class="num">{{ synthese.realisees }}</td><td class="num">{{ synthese.reportees }}</td><td class="num"><b>{{ pct(synthese.taux) }}</b></td></tr>
+  </table></div>
+</section>
+
+<section class="carte" style="margin-top:16px"><h2>Lignes d'action par division</h2>
+  <div class="tw"><table class="t compact plan">
+    <tr><th>N°</th><th>Ligne d'action</th><th>Indicateur / cible</th><th>Échéance</th><th>Responsable</th><th>Modules GESCOL</th><th>État</th><th class="num">Taux</th></tr>
+    {% for d in divisions %}
+    <tr class="div"><td></td><td colspan="5"><a href="{{ url_for('jur_division', code=d.code, annee=annee) }}#lignes">{{ d.sigle or d.code|upper }} – {{ d.nom }}</a> <span class="aide">· {{ d.source }} · chef : {{ d.chef_nom or 'non désigné' }}</span></td><td>{{ d.synthese.realisees }} / {{ d.synthese.total }}</td><td class="num">{{ badge_taux(d.synthese.taux) }}</td></tr>
+    {% for l in d.lignes %}
+    <tr><td>{{ l.ordre }}</td><td>{{ l.libelle }}</td><td>{{ l.indicateur or '' }}{% if l.cible %}<br><span class="aide">Cible : {{ l.cible }}</span>{% endif %}</td><td>{{ l.echeance or '' }}</td><td>{{ l.responsable or '' }}</td>
+      <td class="mods">{% for m in l.modules_libelles %}{{ m }}{{ ' ; ' if not loop.last }}{% else %}—{% endfor %}</td><td>{{ l.etat }}</td><td class="num">{{ badge_taux(l.taux_effectif) }}</td></tr>
+    {% else %}<tr><td></td><td colspan="7" class="gris">Aucune ligne d'action{% if modifiable %} — <a href="{{ url_for('jur_division', code=d.code, annee=annee) }}#lignes">ajouter ou régénérer depuis l'AOF</a>{% endif %}.</td></tr>{% endfor %}
+    {% endfor %}
+    <tr class="total"><td></td><td>TOTAL : {{ synthese.total }} ligne(s) d'action</td><td colspan="4">{{ synthese.realisees }} réalisée(s) · {{ synthese.en_cours }} en cours</td><td></td><td class="num">{{ pct(synthese.taux) }}</td></tr>
+  </table></div>
+</section>
+{% endblock %}

@@ -3,16 +3,108 @@
 <style>
 .attr-txt{white-space:pre-line;line-height:1.5}
 .deux-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:18px}
+.rub{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px;margin:0}
+.rub dt{color:#667085;font-weight:600}.rub dd{margin:0}
+.src.aof{color:#067647;font-weight:600}.src.gescol{color:#B54708;font-weight:600}
+.taux{display:inline-block;min-width:52px;text-align:center;border-radius:12px;padding:1px 8px;font-weight:600;font-size:12.5px}
+.taux.ok{background:#ECFDF3;color:#067647}.taux.moy{background:#FFFAEB;color:#B54708}.taux.ko{background:#FEF3F2;color:#B42318}.taux.na{background:#F2F4F7;color:#667085}
+table.t.la td{vertical-align:top}table.t.la input,table.t.la select{font-size:12.5px;padding:3px 5px;width:100%;box-sizing:border-box}
+table.t.la td.ord input{width:46px}table.t.la td.tx input{width:60px}
+table.t.la td.lib{min-width:220px}table.t.la .mods{font-size:12px;color:#475467}
+table.t.la tr.etat-realisee td{background:#F6FEF9}table.t.la tr.etat-reportee td{background:#FFFBF5}
+details.aof{border:1px dashed #D0D5DD;border-radius:8px;padding:8px 12px;margin-top:10px}
+details.aof summary{cursor:pointer;font-weight:600;color:var(--bleu)}
 </style>
+{% macro badge_taux(v) %}{% if v is none %}<span class="taux na">—</span>{% elif v >= 75 %}<span class="taux ok">{{ pct(v) }}</span>{% elif v >= 50 %}<span class="taux moy">{{ pct(v) }}</span>{% else %}<span class="taux ko">{{ pct(v) }}</span>{% endif %}{% endmacro %}
+{% set sy = d.synthese %}
 <div class="entete"><div><h1>{% if d.sigle %}{{ d.sigle }} — {% endif %}{{ d.nom }}</h1>
-  <p class="sous">Responsable : <b>{{ d.responsable_nom or 'non désigné' }}</b>{% if d.reference %} · {{ d.reference }}{% endif %}{% if d.parent_code %} · rattachée à : {{ d.parent_code|upper }}{% endif %}</p></div>
+  <p class="sous">Rubrique de la division conforme à l'AOF · lignes d'action de l'année {{ annee }} · modules de l'application · agents affectés.</p></div>
   <div class="actions">
-    <a class="btn sec" href="{{ url_for('jur_divisions') }}">← Toutes les divisions</a>
-    {% if peut('jur_structure') %}<a class="btn sec" href="{{ url_for('jur_service_form', sid=d.id) }}">Nom, sigle, responsable</a>{% endif %}
-    <a class="btn" href="{{ url_for('jur_divisions_pdf') }}" target="_blank">📄 PDF</a>
+    <a class="btn sec" href="{{ url_for('jur_divisions', annee=annee) }}">← Toutes les divisions</a>
+    <a class="btn sec" href="{{ url_for('jur_divisions_plan', annee=annee) }}">Vue d'ensemble</a>
+    {% if peut('jur_structure') %}<a class="btn sec" href="{{ url_for('jur_service_form', sid=d.id) }}">Nom, sigle, chef</a>{% endif %}
+    {% if modifiable %}<a class="btn sec" href="{{ url_for('jur_division_import', code=d.code, annee=annee) }}">⇧ Importer (Excel)</a>{% endif %}
+    <a class="btn sec" href="{{ url_for('jur_division_xlsx', code=d.code, annee=annee) }}">⇩ Excel</a>
+    <a class="btn" href="{{ url_for('jur_division_pdf', code=d.code, annee=annee) }}" target="_blank">📄 Plan d'action (PDF)</a>
   </div></div>
 
-<div class="deux-col">
+<form method="get" class="filtres carte">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  <noscript><button class="btn sec petit">Afficher</button></noscript>
+</form>
+
+<section class="carte" id="rubrique"><h2>Rubrique</h2>
+  <dl class="rub">
+    <dt>Sigle</dt><dd><b>{{ d.sigle or d.code|upper }}</b></dd>
+    <dt>Nom</dt><dd>{{ d.nom }}</dd>
+    <dt>Article de l'AOF</dt><dd>{% if d.article %}Article {{ d.article }}{% else %}<span class="gris">non renseigné</span>{% endif %}{% if d.hors_aof %} <span class="badge att">hors AOF</span> <span class="aide">(les articles 10 à 13 ne prévoient pas ce service ; conservé à la demande de la structure)</span>{% endif %}</dd>
+    <dt>Autorité de rattachement</dt><dd>{% if d.parent_nom %}{{ d.parent_nom }}{% elif d.racine %}<span class="aide">Autorité de la structure</span>{% else %}<span class="gris">—</span>{% endif %}</dd>
+    <dt>Chef</dt><dd><b>{{ d.chef_nom or 'non désigné' }}</b>{% if d.chef_titre %} — {{ d.chef_titre }}{% endif %}</dd>
+    <dt>Source</dt><dd><span class="src {{ 'aof' if d.officiel else 'gescol' }}">{{ d.source }}</span></dd>
+    <dt>Lignes d'action {{ annee }}</dt><dd>{{ sy.realisees }} réalisée(s) / {{ sy.total }} {{ badge_taux(sy.taux) }}</dd>
+  </dl>
+  {% if d.note %}<p class="aide" style="margin-top:10px"><i>{{ d.note }}</i></p>{% endif %}
+</section>
+
+<section class="carte" id="attributions" style="margin-top:16px"><h2>Attributions{% if d.article %} <span class="aide">(AOF, article {{ d.article }})</span>{% endif %}</h2>
+  {% if modifiable %}
+  <form method="post">
+    <input type="hidden" name="annee" value="{{ annee }}">
+    <label for="attr">Texte des attributions (une ligne par attribution ; « - » ou « • » en début de ligne = une ligne d'action)</label>
+    <textarea id="attr" name="attributions" rows="12" style="width:100%" maxlength="8000">{{ d.attributions or '' }}</textarea>
+    <div class="actions" style="margin-top:8px"><button class="btn">Enregistrer les attributions</button></div>
+  </form>
+  <details class="aof" {{ 'open' if not d.officiel }}>
+    <summary>{{ 'Saisir le texte de l\'AOF' if not d.officiel else 'Remplacer par un autre texte de l\'AOF' }}</summary>
+    <p class="aide">Collez le texte officiel de l'arrêté (AOF) : il remplace le texte {{ 'rédigé par GESCOL' if not d.officiel else 'actuel' }} et la source devient « AOF – article N ».</p>
+    <form method="post" action="{{ url_for('jur_division_aof', code=d.code) }}">
+      <input type="hidden" name="annee" value="{{ annee }}">
+      <div class="grille-id"><div><label for="article">Numéro de l'article de l'AOF *</label><input id="article" name="article" required placeholder="ex. 12" value="{{ d.article or '' }}" style="max-width:140px"></div></div>
+      <label for="aof_txt">Attributions (texte officiel) *</label>
+      <textarea id="aof_txt" name="attributions" rows="8" style="width:100%" maxlength="8000" required placeholder="La Division … est chargée de :&#10;- … ;&#10;- … ."></textarea>
+      <div class="actions" style="margin-top:8px"><button class="btn" onclick="return confirm('Remplacer les attributions actuelles par le texte officiel de l\'AOF ?')">Enregistrer le texte de l'AOF</button></div>
+    </form>
+  </details>
+  {% else %}<div class="attr-txt">{{ d.attributions or 'Attributions non renseignées.' }}</div>{% endif %}
+</section>
+
+<section class="carte" id="lignes" style="margin-top:16px">
+  <div class="entete" style="margin-bottom:8px"><div><h2 style="margin:0">Lignes d'action {{ annee }}</h2>
+    <p class="aide" style="margin:2px 0 0">Une ligne d'action par attribution de l'AOF, avec indicateur, cible, échéance, responsable, modules GESCOL et état d'avancement. Taux de la division : moyenne des lignes (une ligne réalisée = 100 %).</p></div>
+    {% if modifiable %}<div class="actions">
+      <a class="btn petit" href="{{ url_for('jur_division_ligne_form', code=d.code, annee=annee) }}">+ Ajouter une ligne</a>
+      <form method="post" action="{{ url_for('jur_division_lignes_generer', code=d.code) }}" style="display:inline"><input type="hidden" name="annee" value="{{ annee }}">
+        <button class="btn sec petit" onclick="return confirm('Ajouter les attributions qui n\'ont pas encore de ligne d\'action ? Les lignes existantes sont conservées.')">↻ Régénérer depuis l'AOF</button></form>
+    </div>{% endif %}
+  </div>
+  {% if d.lignes %}
+  {% if modifiable %}{% for l in d.lignes %}<form method="post" id="f{{ l.id }}" action="{{ url_for('jur_division_ligne_rapide', lid=l.id) }}"></form>{% endfor %}{% endif %}
+  <div class="tw"><table class="t compact la">
+    <tr><th>N°</th><th>Ligne d'action</th><th>Indicateur / cible</th><th>Échéance</th><th>Responsable</th><th>Modules GESCOL</th><th>État</th><th>Taux</th><th>Observations</th>{% if modifiable %}<th></th>{% endif %}</tr>
+    {% for l in d.lignes %}
+    <tr class="etat-{{ l.etat|replace('é','e')|replace(' ','-') }}">
+      <td class="ord">{% if modifiable %}<input form="f{{ l.id }}" name="ordre" type="number" min="0" value="{{ l.ordre }}">{% else %}{{ l.ordre }}{% endif %}</td>
+      <td class="lib"><b>{{ l.libelle }}</b></td>
+      <td>{{ l.indicateur or '' }}{% if l.cible %}<br><span class="aide">Cible : {{ l.cible }}</span>{% endif %}</td>
+      <td>{% if modifiable %}<input form="f{{ l.id }}" name="echeance" value="{{ l.echeance or '' }}" placeholder="date / période">{% else %}{{ l.echeance or '' }}{% endif %}</td>
+      <td>{% if modifiable %}<input form="f{{ l.id }}" name="responsable" value="{{ l.responsable or '' }}" list="agents-{{ d.code }}">{% else %}{{ l.responsable or '' }}{% endif %}</td>
+      <td class="mods">{% for m in l.modules_libelles %}{{ m }}{{ ' ; ' if not loop.last }}{% else %}—{% endfor %}</td>
+      <td>{% if modifiable %}<select form="f{{ l.id }}" name="etat">{% for e in ETATS %}<option {{ 'selected' if e == l.etat }}>{{ e }}</option>{% endfor %}</select>{% else %}{{ l.etat }}{% endif %}</td>
+      <td class="tx">{% if modifiable %}<input form="f{{ l.id }}" name="taux" type="number" min="0" max="100" value="{{ l.taux_effectif }}">{% else %}{{ badge_taux(l.taux_effectif) }}{% endif %}</td>
+      <td>{% if modifiable %}<input form="f{{ l.id }}" name="observations" value="{{ l.observations or '' }}">{% else %}{{ l.observations or '' }}{% endif %}</td>
+      {% if modifiable %}<td style="white-space:nowrap"><button form="f{{ l.id }}" class="btn petit">✓</button>
+        <a class="btn sec petit" href="{{ url_for('jur_division_ligne_form', lid=l.id) }}">Modifier</a>
+        <form method="post" action="{{ url_for('jur_division_ligne_supprimer', lid=l.id) }}" style="display:inline" onsubmit="return confirm('Supprimer cette ligne d\'action ?')"><button class="btn danger petit">✕</button></form></td>{% endif %}
+    </tr>
+    {% endfor %}
+    <tr><td></td><td><b>Total : {{ sy.total }} ligne(s)</b></td><td colspan="4">{{ sy.prevues }} prévue(s) · {{ sy.en_cours }} en cours · {{ sy.realisees }} réalisée(s) · {{ sy.reportees }} reportée(s)</td><td></td><td>{{ badge_taux(sy.taux) }}</td><td colspan="{{ 2 if modifiable else 1 }}"></td></tr>
+  </table></div>
+  {% if modifiable %}<datalist id="agents-{{ d.code }}">{% if d.chef_nom %}<option value="{{ d.chef_nom }}">{% endif %}{% for a in d.agents %}<option value="{{ a.prenoms or '' }} {{ a.nom }}">{% endfor %}</datalist>
+  <p class="aide">✓ enregistre le suivi de la ligne (ordre, échéance, responsable, état, taux, observations) ; « Modifier » ouvre la fiche complète (libellé, indicateur, cible, modules).</p>{% endif %}
+  {% else %}<p class="gris">Aucune ligne d'action pour {{ annee }}{% if modifiable %} : ajoutez-en une ou régénérez-les depuis les attributions (une ligne par puce « - … ; »){% endif %}.</p>{% endif %}
+</section>
+
+<div class="deux-col" style="margin-top:16px">
   <section class="carte"><h2>Modules de l'application</h2>
     <p class="aide">Fonctionnalités installées qui concernent cette division. Les modules des autres applications GESCOL (fiches, rapports, cantine, stock…) sont présentés tels que construits.</p>
     {% if d.modules %}<div class="tw"><table class="t compact">
@@ -28,15 +120,4 @@
     </table></div>{% else %}<p class="gris">Aucun agent affecté{% if ep_existe('jur_agents') %} : <a href="{{ url_for('jur_agents') }}">Agents de la structure</a> (champ « service »){% endif %}.</p>{% endif %}
   </section>
 </div>
-
-<section class="carte" id="attributions"><h2>Attributions</h2>
-  {% if modifiable %}
-  <form method="post">
-    <label for="attr">Texte des attributions (une ligne par attribution ; « - » ou « • » en début de ligne)</label>
-    <textarea id="attr" name="attributions" rows="14" style="width:100%" maxlength="8000">{{ d.attributions or '' }}</textarea>
-    <div class="actions" style="margin-top:8px"><button class="btn">Enregistrer les attributions</button></div>
-  </form>
-  {% else %}<div class="attr-txt">{{ d.attributions or 'Attributions non renseignées.' }}</div>{% endif %}
-  {% if d.note %}<p class="aide" style="margin-top:10px"><i>{{ d.note }}</i></p>{% endif %}
-</section>
 {% endblock %}

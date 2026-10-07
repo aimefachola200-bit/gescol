@@ -35,7 +35,8 @@
 {% endcall %}
 {% call groupe('jstruct', 'Services et documents', ep.startswith('jur_organigramme') or ep.startswith('jur_service') or ep.startswith('jur_cachet') or ep.startswith('jur_document') or ep.startswith('jur_division'), '🏛') %}
   {{ lien('jur_organigramme', 'Services et attributions', ep.startswith('jur_organigramme') or ep.startswith('jur_service')) }}
-  {{ lien('jur_divisions', 'Divisions, modules et attributions', ep.startswith('jur_division')) }}
+  {{ lien('jur_divisions', 'Divisions, modules et attributions', ep.startswith('jur_division') and ep != 'jur_divisions_plan') }}
+  {{ lien('jur_divisions_plan', "Plan d'action des divisions", ep == 'jur_divisions_plan') }}
   {{ lien('jur_cachets', 'Cachets et signatures', ep.startswith('jur_cachet')) }}
   {{ lien('jur_documents', 'Attestations et certificats', ep.startswith('jur_document')) }}
 {% endcall %}

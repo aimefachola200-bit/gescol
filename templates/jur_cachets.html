@@ -7,7 +7,7 @@
 @media (max-width:860px){.cachet-ligne{grid-template-columns:1fr}}
 </style>
 <div class="entete"><div><h1>Cachets et signatures</h1>
-<p class="sous">Cachet et signature numérique de la structure et de chaque service : ils sont apposés sur les attestations, certificats et documents signés.</p></div>
+<p class="sous">Cachet, griffe (cachet rectangulaire du nom) et signature numérique de la structure et de chaque service : ils sont apposés sur les attestations, certificats et documents signés.</p></div>
 <div class="actions"><a class="btn sec" href="{{ url_for('jur_cachets', export='pdf') }}" target="_blank">PDF de tous les cachets</a>
 <a class="btn sec" href="{{ url_for('jur_organigramme') }}">Services</a></div></div>
 {% if not s %}<div class="flash info">Configurez d'abord l'identité de la structure : les cachets par défaut en dépendent.</div>{% endif %}
@@ -18,19 +18,25 @@
   <div class="cachet-ligne">
     <div class="apercu"><img alt="Aperçu du cachet" data-apercu src="{{ url_for('jur_cachet_apercu', sup=l.cachet[0], inf=l.cachet[1], centre=l.cachet[2], couleur=l.cachet[3]) }}">
       <a class="btn sec petit" target="_blank" href="{{ url_for('jur_cachet_apercu_pdf', service=l.code or None) }}">Aperçu PDF (impression)</a></div>
-    <form method="post" data-cachet>
+    <form method="post" data-cachet data-code="{{ l.code }}">
       <input type="hidden" name="cible" value="{{ l.cible }}">
       <label>Texte en arc supérieur<input name="sup" maxlength="80" value="{{ l.cachet[0] }}"></label>
       <label>Texte en arc inférieur<input name="inf" maxlength="80" value="{{ l.cachet[1] }}"></label>
       <label>Texte du centre<input name="centre" maxlength="80" value="{{ l.cachet[2] }}"></label>
       <label>Couleur<select name="couleur">{% for k, lib in COULEURS.items() %}<option value="{{ k }}" {{ 'selected' if l.cachet[3]==k }}>{{ lib }}</option>{% endfor %}</select></label>
       {% if l.titre_mod %}<label>Titre du signataire<input name="signataire_titre" maxlength="150" value="{{ l.titre }}"></label>{% endif %}
-      <div class="actions"><button class="btn petit">Enregistrer le cachet</button>
+      <h3 style="margin:12px 0 4px">Griffe (cachet rectangulaire du nom)</h3>
+      <label class="choix"><input type="checkbox" name="griffe_actif" value="1" {{ 'checked' if l.griffe_reg.actif }}> Apposer la griffe sur les documents signés</label>
+      <label>3e ligne (grade / qualité, facultatif)<input name="griffe_ligne3" maxlength="80" value="{{ l.griffe_reg.ligne3 }}" placeholder="Inspecteur de l'Enseignement Primaire"></label>
+      <label>Couleur de la griffe<select name="griffe_couleur"><option value="">Celle du cachet</option>{% for k, lib in COULEURS.items() %}<option value="{{ k }}" {{ 'selected' if l.griffe_reg.couleur==k }}>{{ lib }}</option>{% endfor %}</select></label>
+      <div class="actions"><button class="btn petit">Enregistrer le cachet et la griffe</button>
         <button class="btn sec petit" name="action" value="defaut">Rétablir par défaut</button></div>
     </form>
     <div>
       <p><b>{{ l.sig[0] }}</b><br>{{ l.sig[1] or 'Nom non renseigné (responsable à désigner)' }}</p>
       {{ M.signature(cle=l.cle_sig, titre='Signature : ' ~ l.sig[0]) }}
+      <p style="margin:10px 0 4px"><b>Griffe</b> — préconçue : titre et nom du signataire, en majuscules{% if not l.sig[1] %} (nom à renseigner){% endif %}.</p>
+      <img alt="Aperçu de la griffe" data-griffe width="260" src="{{ url_for('jur_griffe_apercu', code=l.code or None) }}">
     </div>
   </div>
 </section>
@@ -44,6 +50,18 @@ document.querySelectorAll('form[data-cachet]').forEach(function (f) {
     img.src = '{{ url_for("jur_cachet_apercu") }}?' + p.toString();
   }
   f.addEventListener('input', maj); f.addEventListener('change', maj);
+  var ig = f.parentNode.querySelector('img[data-griffe]'), tg;
+  function majGriffe() {
+    clearTimeout(tg);
+    tg = setTimeout(function () {
+      var p = new URLSearchParams({code: f.dataset.code || '', ligne3: f.griffe_ligne3.value, couleur: f.griffe_couleur.value || f.couleur.value});
+      if (f.signataire_titre) { p.set('titre', f.signataire_titre.value); }
+      ig.src = '{{ url_for("jur_griffe_apercu") }}?' + p.toString();
+    }, 250);
+  }
+  ['griffe_ligne3', 'griffe_couleur', 'couleur', 'signataire_titre'].forEach(function (n) {
+    if (f[n]) { f[n].addEventListener('input', majGriffe); f[n].addEventListener('change', majGriffe); }
+  });
 });
 </script>
 {% endblock %}

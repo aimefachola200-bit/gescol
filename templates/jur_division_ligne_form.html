@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% block titre %}Ligne d'action{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ 'Modifier une ligne d\'action' if l else 'Ajouter une ligne d\'action' }} — {{ d.sigle or d.code|upper }}</h1>
+  <p class="sous">{{ d.nom }} · année scolaire {{ annee }} · une ligne d'action = une attribution de l'AOF (commencer par un verbe d'action).</p></div>
+  <a class="btn sec" href="{{ url_for('jur_division', code=d.code, annee=annee) }}#lignes">← Fiche de la division</a></div>
+<form method="post" class="carte">
+  <input type="hidden" name="annee" value="{{ annee }}">
+  <label for="libelle">Ligne d'action (attribution) *</label>
+  <input id="libelle" name="libelle" maxlength="500" style="width:100%" required value="{{ v.libelle or '' }}" placeholder="ex. Assurer les visites d'école et de classe dans les écoles du ressort">
+  <div class="grille-id">
+    <div><label for="ordre">N° d'ordre</label><input id="ordre" name="ordre" type="number" min="0" value="{{ v.ordre if v.ordre is not none else '' }}" placeholder="auto"></div>
+    <div><label for="indicateur">Indicateur</label><input id="indicateur" name="indicateur" maxlength="300" value="{{ v.indicateur or '' }}" placeholder="ex. Nombre de visites réalisées"></div>
+    <div><label for="cible">Cible</label><input id="cible" name="cible" maxlength="200" value="{{ v.cible or '' }}" placeholder="ex. 2 visites par école"></div>
+    <div><label for="echeance">Échéance (date ou période)</label><input id="echeance" name="echeance" maxlength="80" value="{{ v.echeance or '' }}" placeholder="ex. 2027-03-31 ou 2e trimestre"></div>
+    <div><label for="responsable">Responsable (agent ou texte)</label><input id="responsable" name="responsable" maxlength="150" list="agents" value="{{ v.responsable or '' }}">
+      <datalist id="agents">{% if d.chef_nom %}<option value="{{ d.chef_nom }}">{% endif %}{% for a in d.agents %}<option value="{{ a.prenoms or '' }} {{ a.nom }}">{% endfor %}</datalist></div>
+    <div><label for="etat">État</label><select id="etat" name="etat">{% for e in ETATS %}<option {{ 'selected' if e == (v.etat or 'prévue') }}>{{ e }}</option>{% endfor %}</select></div>
+    <div><label for="taux">Taux de réalisation (%)</label><input id="taux" name="taux" type="number" min="0" max="100" value="{{ v.taux if v.taux is not none else 0 }}"></div>
+  </div>
+  <label style="margin-top:8px">Modules GESCOL liés</label>
+  {% if modules %}<div class="grille-id">{% for m in modules %}<label style="font-weight:normal"><input type="checkbox" name="modules" value="{{ m.endpoint }}" {{ 'checked' if m.endpoint in modules_choisis }}> {{ m.libelle }}</label>{% endfor %}</div>
+  {% else %}<p class="aide">Aucun module installé pour cette division.</p>{% endif %}
+  <label for="obs">Observations</label>
+  <textarea id="obs" name="observations" rows="3" style="width:100%">{{ v.observations or '' }}</textarea>
+  <div class="actions" style="margin-top:8px"><button class="btn">Enregistrer</button><a class="btn sec" href="{{ url_for('jur_division', code=d.code, annee=annee) }}#lignes">Annuler</a></div>
+</form>
+{% endblock %}

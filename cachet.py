@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
-"""Cachet officiel circulaire, tel qu'utilisé dans les écoles :
-texte en arc supérieur ★ texte en arc inférieur ★, texte central, bleu ou rouge.
-Deux rendus identiques : SVG (écran) et ReportLab (PDF)."""
+"""Cachets officiels, en deux rendus identiques : SVG (écran) et ReportLab (PDF).
+
+* Cachet circulaire (`svg`, `dessiner`), tel qu'utilisé dans les écoles : texte en arc supérieur ★ texte en arc
+  inférieur ★, texte central, bleu ou rouge.
+* Cachet rectangulaire du nom du responsable, la « griffe » (`svg_nom`, `dessiner_nom`) : bord double (trait épais
+  + trait fin), coins droits, 2 à 3 lignes centrées en majuscules — titre / fonction, NOM Prénoms, et une ligne
+  facultative (grade, qualité). La griffe est préconçue : elle est composée automatiquement à partir du titre et du
+  nom déjà enregistrés (école : directeur ; CS / DDEMP : responsable de la structure ou chef d'un service), et la taille
+  s'ajuste à la longueur du texte dans la largeur demandée.
+"""
 import math
 from html import escape
 
@@ -151,3 +158,94 @@ def _taille_centre(lignes, rayon):
     if plus_large > rayon * 0.98:
         fc *= rayon * 0.98 / plus_large
     return min(fc, rayon * 0.9 / (1.2 * len(lignes)))
+
+
+# ================================================================================================ griffe (cachet du nom)
+GRIFFE_LARGEUR = 120.0   # largeur par défaut en points (≈ 42 mm)
+
+
+def lignes_griffe(lignes):
+    """Nettoie les lignes de la griffe : majuscules, blancs réduits, 3 lignes au plus, lignes vides retirées."""
+    out = []
+    for l in (lignes or []):
+        t = " ".join(str(l or "").split()).upper()
+        if t:
+            out.append(t)
+    return out[:3]
+
+
+def _mise_en_page_griffe(lignes, largeur, hauteur=None):
+    """[(texte, police, taille)], hauteur totale, marge intérieure. La taille de chaque ligne est ajustée pour tenir
+    dans la largeur ; la 2e ligne (le nom) est la plus grande."""
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+    lignes = lignes_griffe(lignes) or [""]
+    base = largeur / 19.0
+    pad = largeur * 0.06
+    spec = []
+    for i, t in enumerate(lignes):
+        if i == 1 or (i == 0 and len(lignes) == 1):
+            police, taille = "Helvetica-Bold", base * 1.3
+        elif i == 0:
+            police, taille = "Helvetica-Bold", base
+        else:
+            police, taille = "Helvetica", base * 0.92
+        dispo = largeur - 2 * pad
+        w = stringWidth(t, police, taille)
+        if w > dispo and w:
+            taille = max(taille * dispo / w, 3.0)
+        spec.append((t, police, taille))
+    h_texte = sum(s[2] * 1.3 for s in spec)
+    h = hauteur or (h_texte + 2 * pad)
+    return spec, h, pad
+
+
+def svg_nom(lignes, couleur="bleu", largeur=260):
+    """Griffe rectangulaire en SVG (largeur en pixels ; hauteur calculée)."""
+    col = COULEURS.get(couleur, couleur or COULEURS["bleu"])
+    spec, h, pad = _mise_en_page_griffe(lignes, float(largeur))
+    L = float(largeur)
+    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {L:.1f} {h:.1f}" width="{L:.0f}" height="{h:.0f}" '
+             f'role="img" aria-label="Griffe : {escape(" / ".join(s[0] for s in spec))}">',
+             f'<g fill="none" stroke="{col}" opacity="0.92">'
+             f'<rect x="1.6" y="1.6" width="{L - 3.2:.1f}" height="{h - 3.2:.1f}" stroke-width="2.4"/>'
+             f'<rect x="{1.6 + pad * 0.55:.1f}" y="{1.6 + pad * 0.55:.1f}" width="{L - 3.2 - pad * 1.1:.1f}" '
+             f'height="{h - 3.2 - pad * 1.1:.1f}" stroke-width="0.8"/></g>',
+             f'<g fill="{col}" font-family="Arial, Helvetica, sans-serif" opacity="0.92" text-anchor="middle">']
+    h_texte = sum(s[2] * 1.3 for s in spec)
+    y = (h - h_texte) / 2
+    for t, police, taille in spec:
+        y += taille * 1.3
+        parts.append(f'<text x="{L / 2:.1f}" y="{y - taille * 0.3:.2f}" font-size="{taille:.2f}" '
+                     f'font-weight="{700 if police.endswith("Bold") else 400}">{escape(t)}</text>')
+    parts.append("</g></svg>")
+    return "".join(parts)
+
+
+def dessiner_nom(c, cx, cy, lignes, couleur="bleu", largeur=GRIFFE_LARGEUR, hauteur=None):
+    """Dessine la griffe sur un canvas ReportLab, centrée en (cx, cy) ; largeur et hauteur en points.
+    Retourne la hauteur dessinée."""
+    from reportlab.lib import colors
+    col = colors.HexColor(COULEURS.get(couleur, COULEURS["bleu"]))
+    spec, h, pad = _mise_en_page_griffe(lignes, float(largeur), hauteur)
+    x0, y0 = cx - largeur / 2, cy - h / 2
+    c.saveState()
+    c.setStrokeColor(col)
+    c.setFillColor(col)
+    c.setLineWidth(max(1.0, largeur * 0.012))
+    c.rect(x0 + 0.8, y0 + 0.8, largeur - 1.6, h - 1.6, stroke=1, fill=0)
+    c.setLineWidth(0.45)
+    d = 0.8 + pad * 0.55
+    c.rect(x0 + d, y0 + d, largeur - 2 * d, h - 2 * d, stroke=1, fill=0)
+    h_texte = sum(s[2] * 1.3 for s in spec)
+    y = cy + h_texte / 2
+    for t, police, taille in spec:
+        y -= taille * 1.3
+        c.setFont(police, taille)
+        c.drawCentredString(cx, y + taille * 0.3, t)
+    c.restoreState()
+    return h
+
+
+def hauteur_nom(lignes, largeur=GRIFFE_LARGEUR):
+    """Hauteur (points) qu'occupera la griffe pour ces lignes et cette largeur."""
+    return _mise_en_page_griffe(lignes, float(largeur))[1]

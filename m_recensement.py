@@ -2190,8 +2190,16 @@ class RenduFiche:
                 for j, t in enumerate(tt):
                     c.drawCentredString(x + larg / 2, self.y - 4 * mm - j * 3.8 * mm, t)
             if self.sig is not None:
-                c.drawImage(self.sig, self.x0 + 4 * mm, self.y - h + 2 * mm, larg - 8 * mm, h - 12 * mm,
-                            preserveAspectRatio=True, mask="auto")
+                from pdfs import griffe_ecole
+                import config as _cfg
+                if _cfg.ECOLE.get("_griffe"):
+                    # griffe du directeur (cachet rectangulaire du nom) sous la signature, dans la case « Directeur »
+                    c.drawImage(self.sig, self.x0 + 4 * mm, self.y - h + 11 * mm, larg - 8 * mm, h - 19 * mm,
+                                preserveAspectRatio=True, mask="auto")
+                    griffe_ecole(c, self.x0 + larg / 2, self.y - h + 5.5 * mm, larg - 12 * mm)
+                else:
+                    c.drawImage(self.sig, self.x0 + 4 * mm, self.y - h + 2 * mm, larg - 8 * mm, h - 12 * mm,
+                                preserveAspectRatio=True, mask="auto")
             self.y -= h
         else:
             xt = self.x0 + 28 * mm

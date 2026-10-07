@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Écoles (ajout, modification, école courante), référentiel DDEMP/CS, signatures digitales,
-cachet officiel, affectations des enseignants."""
+cachet officiel, griffe (cachet rectangulaire du nom du directeur : colonnes ecoles.griffe_actif / griffe_ligne3 /
+griffe_couleur, composée automatiquement depuis directeur_titre et directeur_nom, aperçu /ecoles/<id>/griffe.svg,
+exposée par H.griffe_ecole(ecole_id) et config.ECOLE["_griffe"]), affectations des enseignants."""
 import base64
 import json
 import re
@@ -12,7 +14,8 @@ import referentiel_benin as RB
 
 CHAMPS_ECOLE = ["nom", "sigle", "statut", "ordre", "departement", "cs", "up", "zone", "commune", "ville", "adresse", "bp",
                 "telephone", "email", "directeur_titre", "directeur_nom", "directeur_tel", "admin_titre", "admin_nom",
-                "ccs_titre", "ccs_nom", "cachet_sup", "cachet_inf", "cachet_centre", "cachet_couleur"]
+                "ccs_titre", "ccs_nom", "cachet_sup", "cachet_inf", "cachet_centre", "cachet_couleur",
+                "griffe_actif", "griffe_ligne3", "griffe_couleur"]
 ORDRES = ["Maternelle", "Primaire", "Maternelle et primaire", "Secondaire (collège)", "Secondaire (collège et lycée)",
           "Complexe (maternelle, primaire, secondaire)", "Enseignement technique"]
 RE_CLE_SIGNATURE = re.compile(r"^(ecole:\d+:(directeur|admin|ccs)|classe:\d+:titulaire|eleve:\d+|cep:\d+:chef"
@@ -23,6 +26,10 @@ def enregistrer(app, H):
     q, ex, config = H.q, H.ex, H.config
     # v1.6 : lien d'une école locale avec l'école de la juridiction (jur_ecoles) dans GESCOL Circonscription / DDEMP
     H.ajouter_colonne("ecoles", "jur_ecole_id", "INTEGER")
+    # v1.6 : griffe (cachet rectangulaire du nom du directeur), composée automatiquement depuis directeur_titre / _nom
+    H.ajouter_colonne("ecoles", "griffe_actif", "INTEGER DEFAULT 1")
+    H.ajouter_colonne("ecoles", "griffe_ligne3", "TEXT")
+    H.ajouter_colonne("ecoles", "griffe_couleur", "TEXT")
 
     # ------------------------------------------------------------ école courante
     def ecoles_accessibles():
@@ -47,6 +54,33 @@ def enregistrer(app, H):
 
     H.signature = signature
 
+    def griffe_de(e, ligne3=None, couleur=None, titre=None, nom=None):
+        """(lignes, couleur) de la griffe d'une école (ligne de la table ecoles) : « LE DIRECTEUR / LA DIRECTRICE »,
+        « NOM Prénoms », ligne 3 facultative. None si la griffe est désactivée ou si le nom n'est pas renseigné."""
+        if e is None:
+            return None
+        ks = e.keys() if hasattr(e, "keys") else ()
+        actif = e["griffe_actif"] if "griffe_actif" in ks else 1
+        if actif is not None and int(actif or 0) == 0:
+            return None
+        nom = (nom if nom is not None else (e["directeur_nom"] or "")).strip()
+        if not nom:
+            return None
+        titre = titre if titre is not None else (e["directeur_titre"] or "Directeur")
+        titre = {"directrice": "La Directrice", "directeur": "Le Directeur"}.get(titre.strip().lower(), titre)
+        l3 = ligne3 if ligne3 is not None else ((e["griffe_ligne3"] or "") if "griffe_ligne3" in ks else "")
+        coul = couleur if couleur is not None else ((e["griffe_couleur"] or "") if "griffe_couleur" in ks else "")
+        return [titre, nom, l3], (coul if coul in cachet.COULEURS else (e["cachet_couleur"] if "cachet_couleur" in ks and e["cachet_couleur"] in cachet.COULEURS else "bleu"))
+
+    def griffe_ecole(eid=None):
+        """(lignes, couleur) de la griffe de l'école (par défaut l'école courante), ou None."""
+        e = g.get("ecole") if (eid is None or (g.get("ecole") and g.ecole["id"] == eid)) else None
+        if e is None and eid is not None:
+            e = q("SELECT * FROM ecoles WHERE id=?", (eid,), un=True)
+        return griffe_de(e)
+
+    H.griffe_ecole = griffe_ecole
+
     def appliquer_identite_ecole(e):
         """Recopie la fiche de l'école dans config.ECOLE (en-têtes des documents, matricules…)."""
         if e:
@@ -61,6 +95,7 @@ def enregistrer(app, H):
                 "_cachet": (e["cachet_sup"] or "", e["cachet_inf"] or "", e["cachet_centre"] or "", e["cachet_couleur"] or "bleu")
                 if (e["cachet_sup"] or e["cachet_centre"]) else None,
                 "_sig_directeur": signature(f"ecole:{e['id']}:directeur"),
+                "_griffe": griffe_de(e),
             })
 
     H.appliquer_identite_ecole = appliquer_identite_ecole
@@ -126,6 +161,9 @@ def enregistrer(app, H):
                 return render_template("ecole_form.html", e=f, ordres=ORDRES, edition=bool(eid)), 400
             if f["cachet_couleur"] not in cachet.COULEURS:
                 f["cachet_couleur"] = "bleu"
+            if f["griffe_couleur"] not in cachet.COULEURS:
+                f["griffe_couleur"] = ""
+            f["griffe_actif"] = 1 if f["griffe_actif"] == "1" else 0
             f["sigle"] = f["sigle"].upper()
             if eid:
                 ex(f"UPDATE ecoles SET {', '.join(k + '=?' for k in CHAMPS_ECOLE)} WHERE id=?",
@@ -153,7 +191,7 @@ def enregistrer(app, H):
             return redirect(url_for("ecoles"))
         return render_template("ecole_form.html", e=e or {"statut": "Privée", "directeur_titre": "Directeur",
                                                           "admin_titre": "Administrateur", "ccs_titre": "Le CCS",
-                                                          "cachet_couleur": "bleu"},
+                                                          "cachet_couleur": "bleu", "griffe_actif": 1},
                                ordres=ORDRES, edition=bool(eid))
 
     @app.route("/ecoles/<int:eid>/choisir", methods=["POST"])
@@ -213,6 +251,25 @@ def enregistrer(app, H):
                        a.get("centre", e["cachet_centre"] if e else ""), a.get("couleur", e["cachet_couleur"] if e else "bleu"),
                        int(a.get("taille", 180)))
         return Response(s, mimetype="image/svg+xml", headers={"Cache-Control": "no-cache"})
+
+    @app.route("/ecoles/griffe.svg")
+    @app.route("/ecoles/<int:eid>/griffe.svg")
+    @H.connexion_requise()
+    def ecole_griffe_svg(eid=None):
+        """Aperçu de la griffe (cachet rectangulaire du nom) : école donnée ou courante ; les paramètres titre, nom,
+        ligne3 et couleur de l'adresse permettent l'aperçu instantané pendant la saisie."""
+        e = q("SELECT * FROM ecoles WHERE id=?", (eid,), un=True) if eid else g.get("ecole")
+        if eid and not e:
+            abort(404)
+        a = request.args
+        gr = griffe_de(e, ligne3=a.get("ligne3"), couleur=a.get("couleur"), titre=a.get("titre"), nom=a.get("nom")) \
+            if (e is not None or a.get("nom")) else None
+        if gr is None and a.get("nom"):
+            gr = [a.get("titre") or "Le Directeur", a.get("nom"), a.get("ligne3") or ""], a.get("couleur") or "bleu"
+        lignes, couleur = gr if gr else (["Le Directeur", "NOM Prénoms (à renseigner)"], "bleu")
+        largeur = int(a.get("largeur") or 260) if (a.get("largeur") or "").isdigit() else 260
+        return Response(cachet.svg_nom(lignes, couleur, max(120, min(largeur, 600))), mimetype="image/svg+xml",
+                        headers={"Cache-Control": "no-cache"})
 
     @app.route("/ecoles/<int:eid>/logo.png")
     @H.connexion_requise()

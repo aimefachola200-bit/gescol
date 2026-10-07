@@ -198,6 +198,35 @@ def inserer_up(rnd, cs_id, an):
                     rnd.randint(8, 25) if executee else None, round(rnd.uniform(60, 100), 1) if executee else None, ""))
 
 
+def inserer_lignes_action(rnd, an):
+    """v1.6 (a_divisions) : lignes d'action de chaque division générées depuis les puces de ses attributions (AOF),
+    avec un état varié (prévue / en cours / réalisée / reportée) pour la démonstration."""
+    import json
+    import a_divisions as AD
+    import a_structure as S
+    n = S.niveau()
+    if not n:
+        return
+    a0 = int(an[:4])
+    for svc in S.services():
+        if q("SELECT 1 FROM jur_lignes_action WHERE niveau=? AND service_code=? AND annee=?", (n, svc["code"], an), un=True):
+            continue
+        mods = [m[1] for m in AD.MODULES_PAR_DIVISION.get(svc["code"], [])]
+        chef = svc.get("responsable_nom") or ""
+        for i, lib in enumerate(AD.lignes_depuis_attributions(svc["attributions"]), start=1):
+            etat = rnd.choice(["prévue", "en cours", "en cours", "réalisée", "réalisée", "reportée"])
+            taux = {"prévue": 0, "en cours": rnd.choice([25, 40, 50, 60, 75]), "réalisée": 100, "reportée": rnd.choice([0, 10, 20])}[etat]
+            ech = rnd.choice([f"{a0}-12-20", f"{a0 + 1}-03-31", f"{a0 + 1}-06-30", "Toute l'année", "2e trimestre"])
+            ex("INSERT INTO jur_lignes_action (niveau, service_code, annee, ordre, libelle, indicateur, cible, echeance, responsable, "
+               "modules, etat, taux, observations, maj) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now','localtime'))",
+               (n, svc["code"], an, i, lib, rnd.choice(["Nombre d'activités réalisées", "Taux de couverture", "Rapport transmis", ""]),
+                rnd.choice(["100 %", "Toutes les écoles", "1 par trimestre", ""]), ech, chef,
+                json.dumps(rnd.sample(mods, min(len(mods), rnd.randint(0, 2))), ensure_ascii=False), etat, taux,
+                "Reporté : attente des crédits." if etat == "reportée" else ""))
+        ex("INSERT OR REPLACE INTO jur_lignes_action_gen (niveau, service_code, annee, maj) VALUES (?,?,?,datetime('now','localtime'))",
+           (n, svc["code"], an))
+
+
 def creer_comptes():
     for ident, nom, role in (("responsable", "Responsable (démo)", "responsable"), ("cp1", "KOUTON Basile", "cp"),
                              ("cp2", "OLOU Rosine", "cp"), ("chef", "Chef de division (démo)", "chef_service"),
@@ -285,6 +314,7 @@ def main():
                   f"{q('SELECT COUNT(*) n FROM jur_ecoles', un=True)['n']} écoles importées, "
                   f"{q('SELECT COUNT(*) n FROM jur_up', un=True)['n']} UP.")
         inserer_examen_blanc(rnd, an)
+        inserer_lignes_action(rnd, an)
         print("Comptes : responsable / cp1 / cp2 / chef / agent (mot de passe demo1234) ; admin / admin123.")
 
 

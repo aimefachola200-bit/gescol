@@ -60,6 +60,20 @@
     <img id="apercu-cachet" alt="Aperçu du cachet" width="170" height="170" src="{{ url_for('cachet_svg', sup=e.cachet_sup or '', inf=e.cachet_inf or '', centre=e.cachet_centre or '', couleur=e.cachet_couleur or 'bleu') }}">
   </div>
   <p class="aide">Les deux textes en arc sont séparés par une étoile de chaque côté, comme sur les cachets des écoles.</p>
+
+  <h2>Griffe (cachet rectangulaire du nom)</h2>
+  <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
+    <div style="flex:1;min-width:220px">
+      <label class="choix"><input type="checkbox" name="griffe_actif" value="1" {{ 'checked' if e.griffe_actif is none or e.griffe_actif|int(1) }}> Apposer la griffe sur les documents signés</label>
+      <label for="g-l3">3e ligne (grade / qualité, facultatif)</label><input id="g-l3" name="griffe_ligne3" value="{{ e.griffe_ligne3 or '' }}" maxlength="60" placeholder="Instituteur, Conseiller pédagogique…">
+      <label>Couleur</label>
+      <label class="choix"><input type="radio" name="griffe_couleur" value="" {{ 'checked' if e.griffe_couleur not in ('bleu', 'rouge') }}> Celle du cachet</label>
+      <label class="choix"><input type="radio" name="griffe_couleur" value="bleu" {{ 'checked' if e.griffe_couleur=='bleu' }}> Bleu</label>
+      <label class="choix"><input type="radio" name="griffe_couleur" value="rouge" {{ 'checked' if e.griffe_couleur=='rouge' }}> Rouge</label>
+    </div>
+    <img id="apercu-griffe" alt="Aperçu de la griffe" width="260" src="{{ url_for('ecole_griffe_svg', eid=e.id if edition else None, titre=e.directeur_titre or 'Directeur', nom=e.directeur_nom or '', ligne3=e.griffe_ligne3 or '', couleur=e.griffe_couleur or e.cachet_couleur or 'bleu') }}">
+  </div>
+  <p class="aide">Préconçue : la griffe reprend automatiquement le titre (Directeur / Directrice) et le nom saisis ci-dessus, en majuscules ; elle est dessinée sous la signature, à droite du cachet rond.</p>
   {% if edition %}
   <h2>Signatures</h2>
   <div class="grille2">
@@ -75,6 +89,11 @@
 (function(){var f=document.querySelector('form.f'),img=document.getElementById('apercu-cachet'),t;
 function maj(){clearTimeout(t);t=setTimeout(function(){var p=new URLSearchParams({sup:f.cachet_sup.value,inf:f.cachet_inf.value,centre:f.cachet_centre.value,couleur:f.querySelector('[name=cachet_couleur]:checked').value});img.src='{{ url_for("cachet_svg") }}?'+p;},250);}
 ['cachet_sup','cachet_inf','cachet_centre'].forEach(function(n){f[n].addEventListener('input',maj)});
-f.querySelectorAll('[name=cachet_couleur]').forEach(function(r){r.addEventListener('change',maj)});})();
+f.querySelectorAll('[name=cachet_couleur]').forEach(function(r){r.addEventListener('change',maj)});
+var ig=document.getElementById('apercu-griffe'),tg;
+function majGriffe(){clearTimeout(tg);tg=setTimeout(function(){var gc=f.querySelector('[name=griffe_couleur]:checked'),cc=f.querySelector('[name=cachet_couleur]:checked');
+var p=new URLSearchParams({titre:f.directeur_titre.value,nom:f.directeur_nom.value,ligne3:f.griffe_ligne3.value,couleur:(gc&&gc.value)||(cc&&cc.value)||'bleu'});ig.src='{{ url_for("ecole_griffe_svg") }}?'+p;},250);}
+['directeur_titre','directeur_nom','griffe_ligne3'].forEach(function(n){f[n].addEventListener('input',majGriffe);f[n].addEventListener('change',majGriffe)});
+f.querySelectorAll('[name=griffe_couleur],[name=cachet_couleur]').forEach(function(r){r.addEventListener('change',majGriffe)});})();
 </script>
 {% endblock %}

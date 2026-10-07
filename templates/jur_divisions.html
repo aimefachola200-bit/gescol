@@ -9,34 +9,56 @@
 .div-carte .attr{white-space:pre-line;line-height:1.45;font-size:13px;color:#344054;max-height:150px;overflow:auto;border-left:3px solid #D0D5DD;padding-left:10px}
 .div-carte .pied{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .div-carte .racine{border-color:var(--bleu)}
+.rub{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13px;margin:0}
+.rub dt{color:#667085;font-weight:600}.rub dd{margin:0}
+.taux{display:inline-block;min-width:52px;text-align:center;border-radius:12px;padding:1px 8px;font-weight:600;font-size:12.5px}
+.taux.ok{background:#ECFDF3;color:#067647}.taux.moy{background:#FFFAEB;color:#B54708}.taux.ko{background:#FEF3F2;color:#B42318}.taux.na{background:#F2F4F7;color:#667085}
+.src.aof{color:#067647}.src.gescol{color:#B54708}
 </style>
+{% macro badge_taux(v) %}{% if v is none %}<span class="taux na">—</span>{% elif v >= 75 %}<span class="taux ok">{{ pct(v) }}</span>{% elif v >= 50 %}<span class="taux moy">{{ pct(v) }}</span>{% else %}<span class="taux ko">{{ pct(v) }}</span>{% endif %}{% endmacro %}
 <div class="entete"><div><h1>Divisions, modules et attributions</h1>
-  <p class="sous">{{ 'Circonscription scolaire' if JUR_NIVEAU == 'cs' else 'Direction départementale' }} : chaque division ou service avec son responsable, les modules de l'application qui la concernent et ses attributions.</p></div>
+  <p class="sous">{{ 'Circonscription scolaire' if JUR_NIVEAU == 'cs' else 'Direction départementale' }} : chaque division ou service avec sa rubrique conforme à l'AOF (article, autorité de rattachement, chef, attributions, source), ses lignes d'action de l'année et les modules de l'application qui la concernent.</p></div>
   <div class="actions">
     <a class="btn sec" href="{{ url_for('jur_organigramme') }}">Organigramme</a>
-    <a class="btn" href="{{ url_for('jur_divisions_pdf') }}" target="_blank">📄 PDF divisions, modules et attributions</a>
+    <a class="btn sec" href="{{ url_for('jur_divisions_plan', annee=annee) }}">Plan d'action (vue d'ensemble)</a>
+    <a class="btn" href="{{ url_for('jur_divisions_pdf', annee=annee) }}" target="_blank">📄 PDF divisions, modules et attributions</a>
   </div></div>
 
+<form method="get" class="filtres carte">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  <noscript><button class="btn sec petit">Afficher</button></noscript>
+</form>
+
 <div class="grille indicateurs">
-  <div class="kpi"><div class="l">Divisions et services</div><div class="v">{{ divisions|length }}</div><div class="d">actifs</div></div>
+  <div class="kpi"><div class="l">Divisions et services</div><div class="v">{{ divisions|length }}</div><div class="d">actifs · {{ divisions|selectattr('officiel')|list|length }} avec texte officiel de l'AOF</div></div>
+  <div class="kpi"><div class="l">Lignes d'action {{ annee }}</div><div class="v">{{ synthese.total }}</div><div class="d">{{ synthese.realisees }} réalisée(s) · {{ synthese.en_cours }} en cours</div></div>
+  <div class="kpi"><div class="l">Taux de réalisation</div><div class="v">{{ pct(synthese.taux) }}</div><div class="d">moyenne des lignes de la structure</div></div>
   <div class="kpi"><div class="l">Modules disponibles</div><div class="v">{{ nb_modules }}</div><div class="d">liens vers les fonctionnalités installées</div></div>
   <div class="kpi"><div class="l">Agents affectés</div><div class="v">{{ nb_agents }}</div><div class="d">d'après « Agents de la structure »</div></div>
 </div>
 
 {% if not s %}<div class="flash info">La structure n'est pas encore configurée{% if peut('jur_structure') %} : <a href="{{ url_for('jur_structure') }}">Identité de la structure</a>{% endif %}.</div>{% endif %}
+<p class="aide">AOF : {{ AOF }}. Les rubriques marquées <span class="src gescol">« {{ 'Rédigé par GESCOL' }} »</span> attendent la saisie du texte officiel (bouton « Saisir le texte de l'AOF » sur la fiche de la division).</p>
 
 <div class="div-grille">
 {% for d in divisions %}
   <section class="div-carte {{ 'racine' if d.code == racine }}" id="div-{{ d.code }}">
     <h2><span class="sigle">{{ d.sigle or d.code|upper }}</span>{{ d.nom }}</h2>
-    <p style="margin:0" class="aide">Responsable : <b>{{ d.responsable_nom or 'non désigné' }}</b>{% if d.reference %} · {{ d.reference }}{% endif %}{% if d.agents %} · {{ d.agents|length }} agent(s){% endif %}</p>
+    <dl class="rub">
+      <dt>Article AOF</dt><dd>{% if d.article %}Article {{ d.article }}{% else %}<span class="gris">—</span>{% endif %}{% if d.hors_aof %} <span class="badge att">hors AOF</span>{% endif %}</dd>
+      <dt>Source</dt><dd><span class="src {{ 'aof' if d.officiel else 'gescol' }}">{{ d.source }}</span></dd>
+      {% if d.parent_nom %}<dt>Rattachement</dt><dd>{{ d.parent_nom }}</dd>{% endif %}
+      <dt>Chef</dt><dd><b>{{ d.chef_nom or 'non désigné' }}</b>{% if d.chef_titre %} <span class="aide">({{ d.chef_titre }})</span>{% endif %}{% if d.agents %} · {{ d.agents|length }} agent(s){% endif %}</dd>
+      <dt>Lignes d'action</dt><dd>{{ d.synthese.realisees }} réalisée(s) / {{ d.synthese.total }} {{ badge_taux(d.synthese.taux) }}</dd>
+    </dl>
     <h3 style="margin:6px 0 0;font-size:13.5px">Modules</h3>
     {% if d.modules %}<ul class="mods">{% for m in d.modules %}<li><a href="{{ m.url }}">{{ m.libelle }}</a>{% if not m.acces %} <span class="badge">consultation</span>{% endif %}</li>{% endfor %}</ul>
     {% else %}<p class="aide" style="margin:0">Aucun module installé pour cette division.</p>{% endif %}
     <h3 style="margin:6px 0 0;font-size:13.5px">Attributions</h3>
     <div class="attr">{{ d.attributions or 'Attributions non renseignées.' }}</div>
     <div class="pied">
-      <a class="btn sec petit" href="{{ url_for('jur_division', code=d.code) }}">Fiche de la division{% if peut('jur_divisions') %} · modifier les attributions{% endif %}</a>
+      <a class="btn sec petit" href="{{ url_for('jur_division', code=d.code, annee=annee) }}">Rubrique et lignes d'action{% if modifiable %} · modifier{% endif %}</a>
+      <a class="btn sec petit" href="{{ url_for('jur_division_pdf', code=d.code, annee=annee) }}" target="_blank">📄 Plan d'action</a>
     </div>
   </section>
 {% else %}<div class="carte">Aucune division : configurez d'abord la structure.</div>{% endfor %}

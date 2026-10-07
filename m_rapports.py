@@ -2272,22 +2272,35 @@ def visas_personnel(R, doc, y):
         if img:
             R.c.drawImage(img, x, R.Y(ys[3] + 8), 90, 32, preserveAspectRatio=True, mask="auto")
     if not R.vierge and R.ecole_locale and R.val("cachet") == "Oui":
-        from pdfs import cachet_ecole
+        from pdfs import cachet_ecole, griffe_ecole
         cachet_ecole(R.c, x + 150, R.Y(ys[2]), 24)
+        # griffe du directeur (cachet rectangulaire du nom), à droite du cachet rond
+        griffe_ecole(R.c, x + 245, R.Y(ys[2]), 110)
 
-    def bloc_visa(cx, yy, l1, l2, knom=None, gras=False, taille=None):
+    def bloc_visa(cx, yy, l1, l2, knom=None, gras=False, taille=None, griffe=None):
+        """Visa : titre, sous-titre, nom connu (en clair, ou dans la griffe (lignes, couleur) si elle est donnée)."""
         R.t(cx, yy, l1, taille or fs, "Times-Bold" if gras and serif else ("Helvetica-Bold" if gras else F), centre=True)
         if l2:
             R.t(cx, yy + 11, l2, fs - (0.5 if not gras else 1), F, centre=True)
         if knom:
             s = R.val(knom)
-            if s:
+            if s and griffe:
+                import cachet as _cachet
+                _cachet.dessiner_nom(R.c, cx, R.Y(yy + 52), [griffe[0][0], s] + list(griffe[0][2:]), griffe[1], 130)
+            elif s:
                 R.valeur(cx - 90, cx + 90, yy + 48, s, 8.5, centre=True)
+
+    def griffe_jur():
+        """Griffe du responsable de la juridiction (applications CS / DDEMP), si connue et active."""
+        try:
+            return R.H.jur_griffe(None) if R.H is not None and getattr(R.H, "jur_griffe", None) else None
+        except Exception:  # noqa: BLE001
+            return None
 
     num_cp = R.val("cp_zone_num")
     if R.synth:   # fiche consolidée : visa du responsable de la juridiction seulement
         bloc_visa(W - 230, ys[0] - 4, R.ent.get("visa") or "Le Responsable de la juridiction",
-                  "(Signature- Nom et Prénoms- Date)", "par_nom")
+                  "(Signature- Nom et Prénoms- Date)", "par_nom", griffe=griffe_jur())
         return
     if fin:
         bloc_visa(W - 102 if ep else W - 102, y - 30, "Contrôlé par le Responsable de l'Unité", "Pédagogique", "rup_nom")

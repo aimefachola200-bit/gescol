@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block titre %}Importer les lignes d'action{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Importer les lignes d'action (Excel) — {{ d.sigle or d.code|upper }}</h1>
+  <p class="sous">{{ d.nom }} · une ligne du fichier = une ligne d'action. Une ligne dont le libellé existe déjà pour l'année est mise à jour, les autres sont ajoutées. Le fichier Excel exporté depuis la fiche se réimporte tel quel.</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_division_import', code=d.code, modele=1) }}">⇩ Modèle Excel</a><a class="btn sec" href="{{ url_for('jur_division', code=d.code, annee=annee) }}#lignes">← Fiche de la division</a></div></div>
+<form method="post" enctype="multipart/form-data" class="carte">
+  <div class="grille-id">
+    <div><label for="fichier">Fichier Excel (.xlsx) *</label><input id="fichier" type="file" name="fichier" accept=".xlsx,.csv" required></div>
+    <div><label for="annee">Année scolaire</label><select id="annee" name="annee">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></div>
+  </div>
+  <p class="aide">Colonnes reconnues : Ordre, Ligne d'action, Indicateur, Cible, Échéance, Responsable, Modules GESCOL (libellés séparés par « ; »), État (prévue, en cours, réalisée, reportée), Taux (%), Observations.</p>
+  <div class="actions"><button class="btn">Importer</button></div>
+</form>
+{% endblock %}
