@@ -405,7 +405,7 @@ REGLEMENT_OFFICIEL = [
     (_A, "51", "", "En dehors de la bonne moralité qui est exigée avant le recrutement de vendeuse de mets dans les "
      "établissements scolaires, celles-ci doivent bénéficier d'une visite médicale annuelle et de formations périodiques "
      "en hygiène alimentaire, vestimentaire et environnementale."),
-    (_A, "52", "", "Sur initiative du Chef de Région Pédagogique, ou Chef de Circonscription Scolaire des visites de contrôle "
+    (_A, "52", "", "Sur initiative du Chef de Circonscription Scolaire, des visites de contrôle "
      "inopiné sont organisées dans les établissements scolaires avec l'appui technique des agents de santé et d'hygiène "
      "du milieu puis le Bureau de l'Association des Parents d'Élèves et les Organisations Non Gouvernementales."),
     ("titre", "XIV", "De l'utilisation des latrines", ""),

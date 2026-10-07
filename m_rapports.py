@@ -127,9 +127,7 @@ def schema(doc):
          _champ("initiative", "Si communautaire, précisez l'initiative", num="1.4", larg="long")]
     if ep:
         b.append(_champ("reseau_titre", "", "titre", lib_titre="1.5 Localisation dans le réseau d'animation pédagogique"))
-        if not fin:
-            b.append(_champ("region_ped", "Région pédagogique", num="i-"))
-        num = iter(["i-", "ii-", "iii-", "iv-"][0 if fin else 1:])
+        num = iter(["i-", "ii-", "iii-", "iv-"])
         b += [_champ("cs", "Circonscription scolaire", num=next(num)), _champ("zone", "Zone pédagogique", num=next(num)),
               _champ("up", "Unité pédagogique", num=next(num)),
               _champ("admin_titre", "", "titre", lib_titre="1.6 Localisation dans l'administration territoriale"),
@@ -141,7 +139,6 @@ def schema(doc):
     else:
         n = 5
         for k, lib in [("departement", "Département"), ("commune", "Commune"), ("arrondissement", "Arrondissement")] + \
-                ([] if fin else [("region_ped", "Région pédagogique")]) + \
                 [("cs", "Circonscription scolaire"), ("zone", "Zone pédagogique"), ("up", "Unité pédagogique"),
                  ("village", "Village ou quartier de ville"), ("adresse_postale", "Adresse postale"),
                  ("contact_directeur", "Contact du Directeur/Directrice")]:
@@ -264,12 +261,7 @@ def schema(doc):
          _choix("cachet", "Apposer le cachet de l'école", ["Oui", "Non"]),
          _champ("cp_zone_num", "Conseiller pédagogique : zone n°"), _champ("cp_nom", "Nom du conseiller pédagogique"),
          _champ("rup_nom", "Nom du responsable de l'unité pédagogique")]
-    if fin:
-        b.append(_champ("chef_nom", "Nom du Chef de la Circonscription Scolaire"))
-    else:
-        if ep:
-            b.append(_champ("region_num", "Région pédagogique n°"))
-        b.append(_champ("chef_nom", "Nom du Chef de la Région Pédagogique"))
+    b.append(_champ("chef_nom", "Nom du Chef de la Circonscription Scolaire"))
     S.append({"id": "sig", "titre": "Visas, signatures et contrôles", "blocs": b})
     if ep:
         S.append({"id": "annexe", "titre": "Annexe GESCOL (facultative) : résultats au CEP", "annexe": True, "blocs": [
@@ -1010,10 +1002,10 @@ def calculer_auto(H, doc, annee):
 
 
 # ------------------------------------------------------------------ report des renseignements stables
-REPORT_PREFIXES = ("annee_creation", "ref_creation", "annee_extension", "ref_extension", "initiative", "region_ped",
+REPORT_PREFIXES = ("annee_creation", "ref_creation", "annee_extension", "ref_extension", "initiative",
                    "arrondissement", "village", "fondateur", "classes_autorisees", "sections_autorisees",
                    "salles_existantes", "infra.", "mob.", "man.", "matped", "mob_autre", "ext", "int", "lavage",
-                   "gestion", "g_", "cantine_organisme", "adresse_postale", "contact_directeur", "region_num",
+                   "gestion", "g_", "cantine_organisme", "adresse_postale", "contact_directeur",
                    "cp_zone_num", "cp_nom", "rup_nom", "chef_nom", "bp", "telephone", "email", "cantine")
 PERS_REPORT = ("mat", "nip", "sexe", "naiss", "dacad", "dprof", "grade", "statut", "indice", "qualite", "fdate", "fnature",
                "form", "afp", "adep", "aecole")
@@ -1617,17 +1609,11 @@ def page1_ep(R, doc, annee):
     y += pas
     R.t(X0, y, "1.5 Localisation dans le réseau d'Animation Pédagogique :", fs)
     y += pas
-    if fin:
-        R.champ(X0, y, "i- Circonscription scolaire : ", "cs", X1, fs)
-        y += pas
-        R.champ(X0, y, "ii- Zone pédagogique : ", "zone", 318, fs)
-        R.champ(322, y, "iii- Unité pédagogique : ", "up", X1, fs)
-    else:
-        R.champ(X0, y, "i- Région pédagogique : ", "region_ped", 318, fs)
-        R.champ(326, y, "ii- Circonscription scolaire : ", "cs", X1, fs)
-        y += pas
-        R.champ(X0, y, "iii- Zone pédagogique : ", "zone", 316, fs)
-        R.champ(322, y, "iv- Unité pédagogique : ", "up", X1, fs)
+    # (la « Région pédagogique » n'existe plus : seule la Circonscription scolaire figure sur les fiches)
+    R.champ(X0, y, "i- Circonscription scolaire : ", "cs", X1, fs)
+    y += pas
+    R.champ(X0, y, "ii- Zone pédagogique : ", "zone", 318, fs)
+    R.champ(322, y, "iii- Unité pédagogique : ", "up", X1, fs)
     y += pas
     R.t(X0, y, "1.6 Localisation dans l'administration territoriale :", fs)
     y += pas
@@ -1874,7 +1860,6 @@ def page1_em(R, doc, annee):
     R.champ(x + 30, y, "Si Communautaire, préciser l'initiative ", "initiative", X1, fs)
     y += pas
     ordre = [("departement", "Département"), ("commune", "Commune"), ("arrondissement", "Arrondissement")] + \
-            ([] if fin else [("region_ped", "Région pédagogique")]) + \
             [("cs", "Circonscription scolaire"), ("zone", "Zone pédagogique"), ("up", "Unité pédagogique"),
              ("village", "Village  ou quartier de ville"), ("adresse_postale", "Adresse postale"),
              ("contact_directeur", "Contact du Directeur/Directrice")]
@@ -2315,15 +2300,15 @@ def visas_personnel(R, doc, y):
                   "(Signature- Nom et Prénoms- Date)", "rup_nom")
         bloc_visa(230, ys[3] + 30, f"Contrôlé par le Conseiller Pédagogique de Zone n° {num_cp or '…'}",
                   "(Signature- Nom et Prénoms- Date)", "cp_nom")
-        bloc_visa(620, ys[3] + 30, f"Le Chef de la Région Pédagogique n° {R.val('region_num') or '…..'}",
+        bloc_visa(620, ys[3] + 30, "Le Chef de la Circonscription Scolaire",
                   "(Signature- Nom et Prénoms- Date)", "chef_nom")
     else:
         bloc_visa(620, ys[0] - 4, "Contrôlé par le Responsable d'Unité Pédagogique",
                   "(Date- signature - Nom et Prénoms )", "rup_nom")
         bloc_visa(230, ys[3] + 28, f"Contrôlé par le Conseiller Pédagogique de la zone n° {num_cp or '…………'}",
                   "(Date- signature - Nom et Prénoms )", "cp_nom", gras=True)
-        bloc_visa(620, ys[3] + 30, "Le Chef de Région Pédagogique", "(Date- signature - Nom et Prénoms )", "chef_nom",
-                  gras=True, taille=12)
+        bloc_visa(620, ys[3] + 30, "Le Chef de la Circonscription Scolaire", "(Date- signature - Nom et Prénoms )",
+                  "chef_nom", gras=True, taille=12)
 
 
 def pied_personnel(R, doc, n):
@@ -2519,7 +2504,7 @@ def lignes_personnel(doc, v):
 IDENTITE_RAPPORT = {"nom_ecole", "annee_creation", "ref_creation", "annee_extension", "ref_extension", "initiative",
                     "fondateur", "directeur_titre", "directeur_nom", "zone", "up", "commune", "arrondissement",
                     "village", "bp", "telephone", "email", "adresse_postale", "contact_directeur", "cantine_raison",
-                    "cp_zone_num", "cp_nom", "rup_nom", "region_ped", "region_num", "par_nom", "par_fonction",
+                    "cp_zone_num", "cp_nom", "rup_nom", "par_nom", "par_fonction",
                     "chef_nom", "sig_dir", "cachet"}
 
 

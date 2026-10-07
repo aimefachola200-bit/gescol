@@ -245,7 +245,6 @@ SCHEMA_PRIMAIRE = {
           L("1.5.", "Type :", CH("type_ens", ["Classique", "Inclusif", "Spécialisé", "Autres :"]),
             TX("type_preciser", "Préciser :", w=35)),
           L("1.6.", "Localisation dans le Réseau d'Animation Pédagogique :"),
-          L("", "i. Région Pédagogique N°", NB("region_ped", n=2), ind=6),
           L("", "i. Circonscription Scolaire :", TX("cs", w=110), ind=6),
           L("", "ii. Zone Pédagogique :", CH("zone", ["1", "2", "3", "4", "5", "6"]), ind=6),
           L("", "iii. Unité Pédagogique :", TX("up", w=110), ind=6),
@@ -557,7 +556,6 @@ SCHEMA_MATERNELLE = {
           L("1.5.", "Type :", CH("type_ens", ["Classique", "Inclusif", "Spécialisé", "Autres :"]),
             TX("type_preciser", "Préciser :", w=30)),
           L("1.6.", "Localisation dans le Réseau d'Animation Pédagogique :"),
-          L("", "i. Région Pédagogique N°", NB("region_ped", n=2), ind=6),
           L("", "i. Circonscription Scolaire :", TX("cs", w=110), ind=6),
           L("", "ii. Zone Pédagogique :", CH("zone", ["1", "2", "3", "4", "5", "6"]), ind=6),
           L("", "iii. Unité Pédagogique :", TX("up", w=110), ind=6),
@@ -2183,7 +2181,7 @@ class RenduFiche:
             c.setFont("Helvetica", 9)
             c.drawCentredString(self.W / 2, self.y - 3.5 * mm, "Signatures et Visas")
             self.y -= 5 * mm
-            titres = [["Directeur"], ["RUP"], ["Conseiller Pédagogique"], ["Chef Région", "Pédagogique"]]
+            titres = [["Directeur"], ["RUP"], ["Conseiller Pédagogique"], ["Chef de la", "Circonscription Scolaire"]]
             larg = (self.x1 - self.x0) / 4
             c.setLineWidth(0.6)
             for i, tt in enumerate(titres):
@@ -2562,7 +2560,7 @@ def synthese_valeurs(typ, ecoles, titre="", infos=None):
             nums = [nombre(x) for x in vals if nombre(x) is not None]
             if not nums:
                 continue
-            if k.endswith("_an") or k == "region_ped":
+            if k.endswith("_an"):
                 base[k] = fmt(_mode([nombre(x) for x in vals if nombre(x) is not None]))
             elif ch.get("unite") == "km":
                 base[k] = fmt(round(sum(nums) / len(nums), 1))

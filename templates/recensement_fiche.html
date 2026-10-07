@@ -122,7 +122,7 @@ table.rc-t input.rc-saisi{background:#FFF6D6;font-weight:700}
   {% elif it.i == 'G' %}<div class="rc-g">{% for ch in it.champs %}<label>{{ ch.lib }} <input type="text" name="{{ ch.k }}" value="{{ saisies.get(ch.k, '') }}" placeholder="{{ calc.get(ch.k, '') }}" inputmode="numeric" class="{{ 'rc-saisi' if orig.get(ch.k)=='saisie' else ('rc-calc' if calc.get(ch.k)) }}"></label>{% endfor %}</div>
   {% elif it.i == 'T' %}{{ tableau(tables[it.k]) }}
   {% elif it.i == 'C2' %}{{ items(it.g) }}{{ items(it.d) }}
-  {% elif it.i == 'SIG' %}<p class="aide">Signatures et visas : {{ 'Directeur, RUP, Conseiller Pédagogique, Chef Région Pédagogique' if it.kind == 'primaire' else 'Responsable d’Unité Pédagogique, Conseiller Pédagogique, chef de la Circonscription scolaire' }} (sur le document imprimé). La signature digitale du directeur enregistrée dans GESCOL est reproduite sur le PDF.</p>
+  {% elif it.i == 'SIG' %}<p class="aide">Signatures et visas : {{ 'Directeur, RUP, Conseiller Pédagogique, Chef de la Circonscription Scolaire' if it.kind == 'primaire' else 'Responsable d’Unité Pédagogique, Conseiller Pédagogique, chef de la Circonscription scolaire' }} (sur le document imprimé). La signature digitale du directeur enregistrée dans GESCOL est reproduite sur le PDF.</p>
   {% endif %}
 {% endfor %}
 {% endmacro %}
