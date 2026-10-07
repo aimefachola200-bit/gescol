@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% block titre %}Synthèse des examens{% endblock %}
+{% block contenu %}
+{% set NIV = 'CS' if JUR_NIVEAU == 'cs' else 'DDEMP' %}
+{% set LIBG = 'Circonscription' if JUR_NIVEAU == 'ddemp' else 'Zone pédagogique' %}
+<style>.t tr.g-total td{background:#C9D8EE;font-weight:700}</style>
+<div class="entete">
+  <div><h1>Synthèse des examens par niveau – {{ NIV }}</h1>
+  <p class="sous">Examens blancs (par niveau et session) et CEP officiel · année {{ annee }}</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_cep_blanc_synthese', annee=annee, export='pdf') }}" target="_blank">⎙ PDF</a>
+    <a class="btn sec" href="{{ url_for('jur_cep_blanc_synthese', annee=annee, export='xlsx') }}">⇩ Excel</a>
+    <a class="btn sec petit" href="{{ url_for('jur_cep_blanc') }}">← Examens blancs</a>
+  </div>
+</div>
+<form method="get" class="filtres"><label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option value="{{ a }}" {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label></form>
+
+<h2>1. Résultats par niveau</h2>
+{% if sy.par_niveau %}
+<div class="tw"><table class="t compact">
+  <thead><tr><th rowspan="2">Niveau</th><th rowspan="2">Examen</th><th rowspan="2">Écoles</th><th colspan="3">Présentés</th><th colspan="3">Admis / maîtrise</th><th colspan="3">Taux (%)</th></tr>
+  <tr><th>G</th><th>F</th><th>T</th><th>G</th><th>F</th><th>T</th><th>G</th><th>F</th><th>T</th></tr></thead>
+  <tbody>{% for n in sy.par_niveau %}<tr><td><b>{{ n.niveau }}</b></td><td>{% if n.sid %}<a href="{{ url_for('jur_cep_blanc_session', sid=n.sid) }}">{{ n.libelle }}</a>{% else %}{{ n.libelle }}{% endif %}</td><td class="num">{{ n.ecoles }}</td>
+    <td class="num">{{ n.presentes.G }}</td><td class="num">{{ n.presentes.F }}</td><td class="num">{{ n.presentes.T }}</td>
+    <td class="num">{{ n.admis.G if n.admis.G is not none else '—' }}</td><td class="num">{{ n.admis.F if n.admis.F is not none else '—' }}</td><td class="num">{{ n.admis.T if n.admis.T is not none else '—' }}</td>
+    <td class="num">{{ fr(n.taux.G) }}</td><td class="num">{{ fr(n.taux.F) }}</td><td class="num"><b>{{ fr(n.taux.T) }}</b></td></tr>{% endfor %}</tbody>
+</table></div>
+{% else %}<div class="carte">Aucun examen blanc ni résultat de CEP pour {{ annee }}.</div>{% endif %}
+
+<h2>2. Examen blanc{% if sy.reference %} ({{ sy.reference.nom }}){% endif %} et CEP officiel par {{ LIBG|lower }}</h2>
+<div class="tw"><table class="t compact">
+  <thead><tr><th rowspan="2">{{ LIBG }}</th><th colspan="3">Examen blanc</th><th colspan="3">CEP officiel</th><th rowspan="2">Écart CEP − blanc (points)</th></tr>
+  <tr><th>Présents</th><th>Maîtrise</th><th>Taux (%)</th><th>Présentés</th><th>Admis</th><th>Taux (%)</th></tr></thead>
+  <tbody>{% for c in sy.comparaison + [sy.total] %}
+  <tr class="{{ 'g-total' if c.libelle == 'TOTAL' }}"><td>{{ c.libelle }}</td>
+    <td class="num">{{ c.blanc.presents.T if c.blanc else '—' }}</td><td class="num">{{ c.blanc.maitrise.T if c.blanc else '—' }}</td><td class="num"><b>{{ fr(c.blanc.taux.T) if c.blanc else '—' }}</b></td>
+    <td class="num">{{ c.cep.presents.T if c.cep else '—' }}</td><td class="num">{{ c.cep.admis.T if c.cep and c.cep.admis.T is not none else '—' }}</td><td class="num"><b>{{ fr(c.cep.taux.T) if c.cep else '—' }}</b></td>
+    <td class="num {{ 'vert' if c.ecart is not none and c.ecart > 0 else ('rouge' if c.ecart is not none and c.ecart < 0) }}">{{ ('+' if c.ecart > 0 else '') ~ fr(c.ecart) if c.ecart is not none else '—' }}</td></tr>
+  {% endfor %}</tbody>
+</table></div>
+<p class="aide">Examen blanc : MAÎTRISE = au moins « seuil » matières à 10/20 (règle du primaire). CEP officiel : résultats transmis par les écoles ou importés dans « Examens (CEP) › Candidats et résultats ». Un écart positif signifie que le taux officiel dépasse celui de l'examen blanc.</p>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}{% block titre %}Stock — récapitulatif{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Récapitulatif du stock de vivres</h1>
+  <p class="sous">Par mois et par vivre : entrées, sorties, pertes, stock fin de mois ; consommation moyenne et autonomie — {{ annee }}</p></div>
+  <div class="actions">
+    <a class="btn sec petit" target="_blank" href="{{ url_for('stock_recap_pdf', annee=annee) }}">📄 PDF</a>
+    <a class="btn sec petit" href="{{ url_for('stock_recap_xlsx', annee=annee) }}">⬇ Excel</a>
+  </div>
+</div>
+{% include "stock_onglets.html" %}
+
+<form method="get" class="filtres">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option value="{{ a }}" {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+</form>
+
+<div class="carte">
+  <h2>Synthèse par vivre</h2>
+  <div class="tw"><table class="t compact"><thead><tr>
+    <th>Vivre</th><th>Unité</th><th class="c">Entrées</th><th class="c">Sorties</th><th class="c">Pertes</th><th class="c">Stock actuel</th><th class="c">Conso. / jour</th><th class="c">Conso. / rationnaire</th><th class="c">Autonomie</th>
+  </tr></thead><tbody>
+  {% for x in r %}{% set c = x.conso %}
+  <tr><td><b>{{ x.vivre.nom }}</b></td><td>{{ x.vivre.unite }}</td><td class="c">{{ qte(x.tot.entree) }}</td><td class="c">{{ qte(x.tot.sortie) }}</td><td class="c">{{ qte(x.tot.perte) }}</td>
+    <td class="c"><b>{{ qte(x.stock) }}</b></td>
+    <td class="c">{{ qte(c.par_jour) if c.par_jour is not none else '—' }}<br><span class="aide">{{ c.jours }} jour(s) de sortie</span></td>
+    <td class="c">{{ ('%.3f' % c.par_rationnaire).replace('.', ',') if c.par_rationnaire is not none else '—' }}<br><span class="aide">{{ c.rations }} ration(s)</span></td>
+    <td class="c">{% if c.autonomie is not none %}<span class="badge {{ 'ko' if c.autonomie < 7 else ('att' if c.autonomie < 20 else 'ok') }}">{{ c.autonomie }} jour(s)</span>{% else %}—{% endif %}</td></tr>
+  {% else %}<tr><td colspan="9" class="aide">Aucun vivre actif.</td></tr>{% endfor %}
+  </tbody></table></div>
+  <p class="aide">Consommation par jour = sorties ÷ jours de sortie ; par rationnaire = sorties ÷ rationnaires déclarés lors des sorties ; autonomie = stock actuel ÷ consommation par jour.</p>
+</div>
+
+{% for x in r %}
+<details class="carte" {{ 'open' if loop.first }}>
+  <summary><b>{{ x.vivre.nom }}</b> ({{ x.vivre.unite }}) — stock actuel {{ qte(x.stock) }}</summary>
+  <div class="tw" style="margin-top:10px"><table class="t compact"><thead><tr><th>Mois</th><th class="c">Entrées</th><th class="c">Sorties</th><th class="c">Pertes</th><th class="c">Inventaire</th><th class="c">Stock fin de mois</th></tr></thead><tbody>
+  {% for l in x.lignes %}
+  <tr style="{{ 'color:var(--gris)' if l.vide }}"><td>{{ l.lib }}</td><td class="c">{{ qte(l.entree) if l.entree else '' }}</td><td class="c">{{ qte(l.sortie) if l.sortie else '' }}</td><td class="c">{{ qte(l.perte) if l.perte else '' }}</td>
+    <td class="c">{{ qte(l.inventaire) if l.inventaire is not none else '' }}</td><td class="c">{{ qte(l.fin) }}</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+</details>
+{% endfor %}
+{% endblock %}

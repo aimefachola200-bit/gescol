@@ -1,0 +1,87 @@
+{% extends "base.html" %}{% block titre %}Cantine – vivres et stock{% endblock %}
+{% block contenu %}
+<style>
+tr.alerte td{background:#FFF4F3!important}
+.stk-al{color:var(--rouge);font-size:12.5px;display:block}
+</style>
+<div class="entete">
+  <div><h1>Vivres et stock de la cantine</h1>
+  <p class="sous">Quantité et qualité du stock de vivres — année scolaire {{ annee }}</p></div>
+  <div class="actions">
+    {% if modifiable %}
+    <a class="btn petit" href="{{ url_for('stock_vivre', vid=0) }}">＋ Ajouter un vivre</a>
+    <a class="btn vert petit" href="{{ url_for('stock_mouvement', mid=0, type='entree') }}">⬆ Entrée</a>
+    <a class="btn orange petit" href="{{ url_for('stock_mouvement', mid=0, type='sortie') }}">⬇ Sortie</a>
+    <a class="btn danger petit" href="{{ url_for('stock_mouvement', mid=0, type='perte') }}">Perte</a>
+    <a class="btn sec petit" href="{{ url_for('stock_mouvement', mid=0, type='inventaire') }}">Inventaire</a>
+    <a class="btn sec petit" href="{{ url_for('stock_sortie_jour') }}">Sortie du jour</a>
+    {% endif %}
+    <a class="btn sec petit" href="{{ url_for('stock_pdf', annee=annee) }}" target="_blank">📄 PDF</a>
+    <a class="btn sec petit" href="{{ url_for('stock_xlsx', annee=annee) }}">⬇ Excel</a>
+    {% if modifiable %}<a class="btn sec petit" href="{{ url_for('stock_import') }}">⬆ Charger</a>{% endif %}
+  </div>
+</div>
+{% include "stock_onglets.html" %}
+
+<form method="get" class="filtres">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option value="{{ a }}" {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+</form>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Vivres suivis</div><div class="v">{{ s.vivres }}</div><div class="d">actifs</div></div>
+  <div class="kpi"><div class="l">Alertes</div><div class="v" style="color:{{ 'var(--rouge)' if s.alertes else 'inherit' }}">{{ s.alertes }}</div><div class="d">seuil, qualité, péremption</div></div>
+  <div class="kpi"><div class="l">Valeur du stock</div><div class="v">{{ milliers(s.valeur) if s.valeur else '—' }}</div><div class="d">FCFA (vivres avec prix unitaire)</div></div>
+  <div class="kpi"><div class="l">Entrées / sorties</div><div class="v">{{ qte(s.mouvements.entree) }} / {{ qte(s.mouvements.sortie) }}</div><div class="d">quantités de l'année (toutes unités)</div></div>
+</div>
+
+{% if vide %}
+<div class="flash info">Aucun vivre n'est encore enregistré.
+  {% if modifiable %}<a href="{{ url_for('stock_vivre', vid=0) }}">Ajoutez un vivre</a> ou chargez la
+  <form method="post" action="{{ url_for('stock_vivres_type') }}" style="display:inline"><button class="btn petit">liste type (riz, maïs, haricot, huile, sel…)</button></form>{% endif %}</div>
+{% endif %}
+
+<div class="tw"><table class="t compact"><thead><tr>
+  <th>Vivre</th><th>Catégorie</th><th class="c">Stock</th><th>Unité</th><th class="c">Seuil</th><th>Qualité</th><th>Péremption</th><th class="c">Valeur (FCFA)</th><th>Dernier mouvement</th><th>Alerte</th>{% if modifiable %}<th></th>{% endif %}
+</tr></thead><tbody>
+{% for e in lignes %}{% set v = e.vivre %}
+<tr class="{{ 'alerte' if e.alertes }}">
+  <td><b>{{ v.nom }}</b></td><td>{{ CATEGORIES.get(v.categorie, v.categorie or '') }}</td>
+  <td class="c"><b>{{ qte(e.stock) }}</b></td><td>{{ v.unite }}</td><td class="c">{{ qte(v.seuil_alerte) if v.seuil_alerte is not none else '' }}</td>
+  <td>{% if e.qualite %}<span class="badge {{ 'ko' if e.qualite in ('mauvaise', 'avariee') else ('att' if e.qualite == 'acceptable' else 'ok') }}">{{ QUALITES[e.qualite] }}</span>{% endif %}</td>
+  <td>{{ e.peremption.strftime('%d/%m/%Y') if e.peremption else '' }}</td>
+  <td class="c">{{ milliers(e.valeur) if e.valeur else '' }}</td>
+  <td>{% if e.dernier %}{{ date_fr(e.dernier.date) }} <span class="aide">({{ TYPES[e.dernier.type] }} {{ qte(e.dernier.quantite) }})</span>{% endif %}</td>
+  <td>{% for a in e.alertes %}<span class="stk-al">⚠ {{ a }}</span>{% endfor %}</td>
+  {% if modifiable %}<td style="white-space:nowrap">
+    <a class="btn sec petit" href="{{ url_for('stock_mouvement', mid=0, type='entree', vivre=v.id) }}" title="Entrée">+</a>
+    <a class="btn sec petit" href="{{ url_for('stock_mouvement', mid=0, type='sortie', vivre=v.id) }}" title="Sortie">−</a>
+    <a class="btn sec petit" href="{{ url_for('stock_vivre', vid=v.id) }}">Modifier</a></td>{% endif %}
+</tr>
+{% else %}<tr><td colspan="11" class="aide">Aucun vivre actif.</td></tr>{% endfor %}
+</tbody></table></div>
+
+<div class="grille2" style="margin-top:18px">
+  <div class="carte">
+    <h2>Derniers mouvements ({{ annee }})</h2>
+    {% if derniers %}
+    <table class="t compact"><thead><tr><th>Date</th><th>Type</th><th>Vivre</th><th class="c">Quantité</th></tr></thead><tbody>
+    {% for m in derniers %}<tr><td>{{ date_fr(m.date) }}</td><td><span class="badge {{ {'entree':'ok','sortie':'att','perte':'ko','inventaire':''}[m.type] }}">{{ TYPES[m.type] }}</span></td><td>{{ m.vivre_nom }}</td><td class="c">{{ qte(m.quantite) }} {{ m.unite }}</td></tr>{% endfor %}
+    </tbody></table>
+    <p><a class="btn sec petit" href="{{ url_for('stock_mouvements', annee=annee) }}">Journal complet</a></p>
+    {% else %}<p class="aide">Aucun mouvement cette année.</p>{% endif %}
+  </div>
+  {% if modifiable %}
+  <div class="carte">
+    <h2>Réinitialiser l'année {{ annee }}</h2>
+    <p class="aide">Supprime <b>tous les mouvements</b> (entrées, sorties, pertes, inventaires) de l'année scolaire {{ annee }}. La liste des vivres est conservée. Cette opération est irréversible et consignée dans le journal.</p>
+    <form method="post" action="{{ url_for('stock_reinitialiser') }}" class="f" data-confirmer="Supprimer définitivement tous les mouvements de stock de l'année {{ annee }} ?">
+      <input type="hidden" name="annee" value="{{ annee }}">
+      <label for="rz">Tapez REINITIALISER pour confirmer</label>
+      <input id="rz" name="confirmation" autocomplete="off" style="max-width:220px">
+      <p class="actions" style="margin-top:10px"><button class="btn danger petit">Réinitialiser</button></p>
+    </form>
+  </div>
+  {% endif %}
+</div>
+<p class="aide">Stock = Σ entrées − Σ sorties − Σ pertes, recalé par le dernier inventaire. Alerte si le stock atteint le seuil, si la qualité est mauvaise ou avariée, ou si la péremption est dépassée ou à moins de 30 jours.</p>
+{% endblock %}

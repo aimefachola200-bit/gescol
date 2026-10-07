@@ -1,0 +1,53 @@
+{% extends "base.html" %}{% block titre %}Épreuves d'évaluation{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Élaboration des épreuves</h1>
+  <p class="sous">Comité d'évaluation, épreuves (situation, consignes, items et barèmes) et grilles — année scolaire {{ annee }}</p></div>
+  <div class="actions">
+    {% if modifiable %}<a class="btn petit" href="{{ url_for('epreuve_form', eid=0, annee=annee) }}">＋ Nouvelle épreuve</a>{% endif %}
+    <a class="btn sec petit" href="{{ url_for('epreuves_xlsx', annee=annee, type=f.type, niveau=f.niveau, matiere=f.matiere, statut=f.statut) }}">⬇ Excel</a>
+  </div>
+</div>
+{% include "epreuves_onglets.html" %}
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Épreuves</div><div class="v">{{ liste|length }}</div><div class="d">{{ liste|selectattr('statut', 'equalto', 'validee')|list|length }} validée(s) · {{ liste|selectattr('statut', 'equalto', 'administree')|list|length }} administrée(s)</div></div>
+  <div class="kpi"><div class="l">Comité d'évaluation</div><div class="v">{{ nb_comite }}</div><div class="d">membre(s) actif(s) — <a href="{{ url_for('epreuves_comite', annee=annee) }}">voir</a></div></div>
+  <div class="kpi"><div class="l">Grilles</div><div class="v">{{ nb_grilles }}</div><div class="d">correction, évaluation, observation — <a href="{{ url_for('epreuves_grilles', annee=annee) }}">voir</a></div></div>
+</div>
+
+<form method="get" class="filtres">
+  <label>Année<br><select name="annee">{% for a in annees %}<option value="{{ a }}" {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  <label>Type<br><select name="type"><option value="">Tous</option>{% for k, lib in TYPES_EVAL.items() %}<option value="{{ k }}" {{ 'selected' if f.type == k }}>{{ lib }}</option>{% endfor %}</select></label>
+  <label>Niveau<br><select name="niveau"><option value="">Tous</option>{% for n in NIVEAUX %}<option value="{{ n }}" {{ 'selected' if f.niveau == n }}>{{ n }}</option>{% endfor %}</select></label>
+  <label>Matière<br><select name="matiere"><option value="">Toutes</option>{% for code, lib in mats %}<option value="{{ code }}" {{ 'selected' if f.matiere == code }}>{{ lib }}</option>{% endfor %}</select></label>
+  <label>Statut<br><select name="statut"><option value="">Tous</option>{% for k, lib in STATUTS.items() %}<option value="{{ k }}" {{ 'selected' if f.statut == k }}>{{ lib }}</option>{% endfor %}</select></label>
+  <button class="btn">Filtrer</button>
+</form>
+
+{% if liste %}
+<div class="tw"><table class="t compact"><thead><tr>
+  <th>Titre</th><th>Type</th><th>Niveau</th><th>Matière</th><th class="c">Durée</th><th class="c">Barème</th><th class="c">Items</th><th>Date prévue</th><th>Auteur</th><th>Statut</th><th></th>
+</tr></thead><tbody>
+{% for e in liste %}
+<tr>
+  <td><a href="{{ url_for('epreuve_form', eid=e.id) if modifiable else url_for('epreuve_pdf', eid=e.id) }}"><b>{{ e.titre }}</b></a></td>
+  <td>{{ TYPES_EVAL.get(e.type_evaluation, e.type_evaluation) }} {{ e.numero }}</td><td>{{ e.niveau or '' }}</td><td>{{ e.matiere or '' }}</td>
+  <td class="c">{{ e.duree_minutes ~ ' min' if e.duree_minutes else '' }}</td>
+  <td class="c">{{ num(e.bareme_items) }}{% if e.bareme_total is not none and (e.bareme_total - e.bareme_items)|abs > 0.001 %} <span class="badge ko" title="barème déclaré ≠ somme des items">≠ {{ num(e.bareme_total) }}</span>{% endif %}</td>
+  <td class="c">{{ e['items']|length }}</td><td>{{ date_fr(e.date_prevue) if e.date_prevue else '' }}</td><td>{{ e.auteur or '' }}</td>
+  <td><span class="badge {{ {'brouillon':'', 'validee':'ok', 'administree':'att'}[e.statut] }}">{{ STATUTS[e.statut] }}</span></td>
+  <td style="white-space:nowrap">
+    <a class="btn sec petit" target="_blank" href="{{ url_for('epreuve_pdf', eid=e.id) }}">📄 Sujet</a>
+    <a class="btn sec petit" target="_blank" href="{{ url_for('epreuve_pdf', eid=e.id, corrige=1) }}">Corrigé</a>
+    {% if modifiable %}<a class="btn sec petit" href="{{ url_for('epreuve_form', eid=e.id) }}">Modifier</a>
+    <form method="post" action="{{ url_for('epreuve_dupliquer', eid=e.id) }}" style="display:inline"><button class="btn sec petit">Dupliquer</button></form>
+    <form method="post" action="{{ url_for('epreuve_supprimer', eid=e.id) }}" style="display:inline"><button class="btn danger petit" data-confirmer="Supprimer l'épreuve « {{ e.titre }} » et ses items ?">Supprimer</button></form>{% endif %}
+  </td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+<div class="carte">Aucune épreuve pour ces critères.{% if modifiable %} <a href="{{ url_for('epreuve_form', eid=0, annee=annee) }}">Créer une épreuve</a> : métadonnées, situation d'amorce, consignes, items avec critères et barème ; puis PDF du sujet et du corrigé.{% endif %}</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% block titre %}Tableau synoptique — Personnel{% endblock %}
+{% block contenu %}
+<style>
+.syn-t td,.syn-t th{white-space:nowrap;font-size:12.5px;padding:5px 7px}
+.syn-t tr.alerte td{background:#FEF6EE}
+.syn-t tr.inactif td{opacity:.55}
+</style>
+{% include "synoptique_onglets.html" %}
+<div class="entete">
+  <div><h2 style="margin:0">Tableau synoptique du personnel enseignant</h2>
+    <p class="sous">{{ lst|length }} agent(s){{ '' if tous else ' en activité' }} · anciennetés au {{ reference.strftime('%d/%m/%Y') }} · retraite : A = {{ ages.A }} ans, B = {{ ages.B }} ans, C = {{ ages.C }} ans</p></div>
+  <div class="actions">
+    {% if ecrire %}<a class="btn" href="{{ url_for('synoptique_personnel_form', pid=0) }}">+ Ajouter un agent</a>{% endif %}
+    <a class="btn sec" href="{{ url_for('synoptique_personnel_pdf', tous=1 if tous else None) }}" target="_blank">PDF du personnel</a>
+    <a class="btn sec" href="{{ url_for('synoptique_personnel_liste', tous=None if tous else 1) }}">{{ 'Masquer les agents retirés' if tous else 'Voir aussi les agents retirés' }}</a>
+  </div>
+</div>
+<div class="tw"><table class="t syn-t">
+  <thead><tr><th>N°</th>{% for k, lib, p, w in cols %}<th title="{{ lib }}">{{ p|replace('\n', ' ') }}</th>{% endfor %}{% if ecrire %}<th></th>{% endif %}</tr></thead>
+  <tbody>
+  {% for f, v in lignes %}
+  <tr id="agent-{{ f.id }}" class="{{ 'alerte' if f.alerte_retraite }} {{ 'inactif' if not f.actif }}">
+    <td>{{ loop.index }}</td>
+    {% for k, lib, p, w in cols %}<td>{% if k == 'nom_complet' %}<b>{{ v[k] }}</b>{% if not f.actif %} <span class="badge ko">retiré</span>{% endif %}{% elif k == 'retraite_txt' %}{{ v[k] or '—' }}{% if f.retraite_atteinte %} <span class="badge ko">atteint</span>{% elif f.alerte_retraite %} <span class="badge att">{{ f.restant_txt }}</span>{% endif %}{% else %}{{ v[k] }}{% endif %}</td>{% endfor %}
+    {% if ecrire %}<td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('synoptique_personnel_form', pid=f.id) }}">Modifier</a>
+      {% if f.actif %}<form method="post" action="{{ url_for('synoptique_personnel_retirer', pid=f.id) }}" style="display:inline" onsubmit="return confirm('Retirer {{ f.nom_complet|replace("'", " ") }} du tableau du personnel ?')"><button class="btn danger petit">Retirer</button></form>
+      {% else %}<form method="post" action="{{ url_for('synoptique_personnel_reactiver', pid=f.id) }}" style="display:inline"><button class="btn sec petit">Réactiver</button></form>{% endif %}</td>{% endif %}
+  </tr>
+  {% else %}<tr><td colspan="{{ cols|length + 2 }}" class="aide">Aucun agent. {% if ecrire %}<a href="{{ url_for('synoptique_personnel_form', pid=0) }}">Ajouter un agent</a> ou <a href="{{ url_for('synoptique_import') }}">importer un fichier Excel</a>.{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>
+<p class="aide">Anciennetés (générale, département, école) calculées de la date de prise de service dans chaque lieu au {{ reference.strftime('%d/%m/%Y') }} (31 décembre de la première année de l'année scolaire, jour inclus), en années (a) et mois (m). Date de départ à la retraite calculée selon le grade et la date de naissance : {{ ages.A }} ans (grade A), {{ ages.B }} ans (B), {{ ages.C }} ans (C), départ le 1er jour du trimestre qui suit le trimestre de naissance (né de janvier à mars : 1er avril ; avril–juin : 1er juillet ; juillet–septembre : 1er octobre ; octobre–décembre : 1er janvier suivant). Lignes orangées : départ dans 2 ans ou moins. Ces valeurs ne se saisissent pas.</p>
+{% endblock %}

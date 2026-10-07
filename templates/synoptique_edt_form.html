@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% block titre %}Modifier l'emploi du temps — {{ lib }}{% endblock %}
+{% block contenu %}
+<style>.edtf td{padding:3px}.edtf textarea{min-height:58px;font-size:12.5px;padding:4px 6px}.edtf input{font-size:12.5px;padding:4px 6px}</style>
+{% include "synoptique_onglets.html" %}
+<div class="entete">
+  <div><h2 style="margin:0">Emploi du temps — {{ lib }} : modification</h2><p class="sous">Une case par plage horaire et par jour ; une ligne vide est ignorée.</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('synoptique_edt', niveau=niveau) }}">← Annuler</a></div>
+</div>
+<form method="post" class="carte">
+  <input type="hidden" name="nb_lignes" value="{{ d.lignes|length }}">
+  <div class="tw"><table class="t edtf">
+    <thead><tr><th style="width:120px">Horaires</th>{% for j, l in JOURS %}<th>{{ l }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for l in d.lignes %}{% set i = loop.index0 %}
+    <tr><td><input name="h_{{ i }}" value="{{ l.horaire }}" maxlength="40" placeholder="ex. 08h à 10h15"></td>
+      {% for j, lib_j in JOURS %}<td><textarea name="c_{{ i }}_{{ j }}" maxlength="400">{{ l[j] }}</textarea></td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody></table></div>
+  <label for="e-rem" style="display:block;font-weight:600;margin-top:12px">Remarques (une par ligne)</label>
+  <textarea id="e-rem" name="remarques" rows="3">{{ d.remarques|join('\n') }}</textarea>
+  <label for="e-src" style="display:block;font-weight:600;margin-top:8px">Source / référence</label>
+  <input id="e-src" name="source" value="{{ d.source or '' }}" maxlength="300">
+  <p class="actions" style="margin-top:12px"><button class="btn">💾 Enregistrer</button></p>
+</form>
+{% endblock %}

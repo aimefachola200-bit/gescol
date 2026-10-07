@@ -1,0 +1,9 @@
+{# Onglets du module Vivres et stock de la cantine (variables onglet, annee, annees) #}
+<div class="onglets">
+  <a class="{{ 'actif' if onglet == 'accueil' }}" href="{{ url_for('stock_accueil', annee=annee) }}">État du stock</a>
+  <a class="{{ 'actif' if onglet == 'vivres' }}" href="{{ url_for('stock_vivres') }}">Vivres</a>
+  <a class="{{ 'actif' if onglet == 'mouvements' }}" href="{{ url_for('stock_mouvements', annee=annee) }}">Mouvements</a>
+  <a class="{{ 'actif' if onglet == 'recap' }}" href="{{ url_for('stock_recap', annee=annee) }}">Récapitulatif</a>
+  {% if modifiable %}<a class="{{ 'actif' if onglet == 'import' }}" href="{{ url_for('stock_import') }}">Charger (Excel)</a>{% endif %}
+  {% if ep_existe('cantine_accueil') %}<a href="{{ url_for('cantine_accueil') }}">← Paiements de la cantine</a>{% endif %}
+</div>

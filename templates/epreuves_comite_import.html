@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block titre %}Comité d'évaluation — import Excel{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Importer les membres du comité (Excel)</h1>
+  <p class="sous">Année scolaire {{ annee }} — les membres déjà présents (même nom et prénoms) sont mis à jour</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('epreuves_comite', annee=annee) }}">← Retour au comité</a></div>
+</div>
+{% include "epreuves_onglets.html" %}
+
+<div class="grille2">
+  <form method="post" enctype="multipart/form-data" class="carte f">
+    <input type="hidden" name="annee" value="{{ annee }}">
+    <label for="imp-f">Fichier Excel (.xlsx) ou CSV</label><input id="imp-f" type="file" name="fichier" accept=".xlsx,.csv" required>
+    <p class="actions" style="margin-top:12px"><button class="btn">⬆ Importer</button> <a class="btn sec" href="{{ url_for('epreuves_comite_modele_xlsx') }}">Télécharger le modèle Excel</a></p>
+  </form>
+  <div class="carte">
+    <h2 style="margin-top:0">Colonnes attendues</h2>
+    <p>{% for h in ent %}<code>{{ h }}</code>{{ ', ' if not loop.last }}{% endfor %}.</p>
+    <p class="aide">Seule la colonne « Nom et prénoms » est obligatoire ; les intitulés sont reconnus souplement (Qualité, Diplôme, Fonction, Classe, Téléphone…).</p>
+  </div>
+</div>
+{% endblock %}

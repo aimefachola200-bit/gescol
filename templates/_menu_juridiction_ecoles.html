@@ -1,0 +1,103 @@
+{# v1.6 – Modules des écoles ouverts aux applications GESCOL Circonscription / DDEMP (a_integration).
+   Mêmes liens, endpoints et conditions que le menu des écoles (base.html) : les modules fonctionnent sur
+   « l'école ouverte » (ECOLE_COURANTE). Les menus de l'école publique (cantine, carrière, dépenses…) ou privée
+   (scolarité, paie…) sont choisis selon le statut de l'école ouverte. #}
+{% set PUB_ = ECOLE_COURANTE and (ECOLE_COURANTE.statut or '') == 'Publique' %}
+{% if ECOLE_COURANTE %}
+<div class="sep-ecole" style="padding:10px 14px 4px;font-size:.78rem;opacity:.85;border-top:1px solid rgba(255,255,255,.15);margin-top:8px">
+  École ouverte : <b>{{ ECOLE_COURANTE.nom }}</b>
+  {% if ep_existe('jur_ecoles_modules') %}<br><a href="{{ url_for('jur_ecoles_modules') }}" style="font-size:.75rem">Changer d'école / modules</a>{% endif %}
+</div>
+{{ lien('jur_ecole_accueil', "Tableau de bord de l'école", ep=='jur_ecole_accueil', '🏫') }}
+{% if peut('synoptique') and ep_existe('synoptique_accueil') %}{{ lien('synoptique_accueil', "Tableau synoptique de l'école", ep.startswith('synoptique')) }}{% endif %}
+{% if PUB_ and g.user.role in ('fondateur','admin','directeur','responsable','chef_service') %}{{ lien('directeur_tableau', 'Tableau de bord du directeur', ep.startswith('directeur_tableau'), '📊') }}{% endif %}
+{% if g.user.role == 'enseignant' %}{{ lien('espace_enseignant', 'Mon espace', ep=='espace_enseignant', '★') }}{% endif %}
+{% call groupe('sco', 'Scolarité', ep.startswith('eleve') or ep.startswith('classe') or ep.startswith('appel') or ep.startswith('absences') or ep.startswith('registre') or ep.startswith('releve') or ep.startswith('calendrier') or ep.startswith('affichage'), '👥') %}
+  {{ lien('eleves', 'Élèves et inscriptions', ep.startswith('eleve')) }}
+  {{ lien('classes', 'Classes', ep.startswith('classe')) }}
+  {% if peut('appel') %}{{ lien('appel_accueil', "Registre d'appel (journalier)", ep in ('appel_accueil','appel_classe')) }}
+  {{ lien('appel_stats', 'Absences (statistiques)', ep=='appel_stats') }}{% endif %}
+  {% if peut('registre') %}{{ lien('registre_accueil', 'Registre de présence', ep.startswith('registre')) }}
+  {{ lien('releve_mensuel', 'Relevés mensuels de présence', ep.startswith('releve')) }}
+  {{ lien('calendrier_scolaire', 'Calendrier (jours de classe)', ep.startswith('calendrier')) }}{% endif %}
+  {% if peut('affichage') %}{{ lien('affichage_accueil', "Tableau d'affichage", ep.startswith('affichage')) }}{% endif %}
+{% endcall %}
+{% call groupe('eval', 'Évaluation', ep.startswith('notes') or ep.startswith('eval') or ep.startswith('epreuves') or ep in ('resultats','matieres') or ep.startswith('bilan') or ep.startswith('honneur') or ep.startswith('synthese') or ep=='jur_synthese_eval', '✎') %}
+  {% if peut('epreuves') and ep_existe('epreuves_accueil') %}{{ lien('epreuves_accueil', "Comité d'évaluation, épreuves et grilles", ep.startswith('epreuves')) }}{% endif %}
+  {% if peut('evaluations') %}{{ lien('eval_accueil', 'Saisie des notes (évaluations)', ep.startswith('eval_') and ep not in ('eval_statistiques','eval_analyse')) }}
+  {{ lien('eval_statistiques', 'Statistiques', ep=='eval_statistiques') }}
+  {{ lien('eval_analyse', 'Analyse et rapport', ep=='eval_analyse') }}
+  {{ lien('honneur_accueil', "Tableau d'honneur", ep.startswith('honneur')) }}
+  {{ lien('bilan_annuel', 'Bilan annuel et décision', ep.startswith('bilan')) }}{% endif %}
+  {% if peut('notes') %}{{ lien('notes_accueil', 'Notes par période (bulletins)', ep.startswith('notes') or ep=='resultats') }}{% endif %}
+  {% if peut('synthese') %}{{ lien('synthese_accueil', 'Synthèse École / UP / CS', ep.startswith('synthese')) }}
+  {{ lien('jur_synthese_eval', "Synthèse de l'évaluation (" ~ ('CS' if JUR_NIVEAU == 'cs' else 'DDEMP') ~ ')', ep=='jur_synthese_eval') }}{% endif %}
+  {{ lien('matieres', 'Matières et domaines', ep=='matieres') }}
+{% endcall %}
+{% if peut('cep') %}
+{% call groupe('cep', 'CEP', ep.startswith('cep') or ep.startswith('carte') or ep.startswith('jur_cep_blanc'), '🎓') %}
+  {{ lien('cep_accueil', "Fiches d'inscription au CEP", ep.startswith('cep_fiche') or ep=='cep_accueil') }}
+  {{ lien('carte_editeur', 'Carte scolaire du candidat', ep.startswith('carte')) }}
+  {{ lien('cep_blanc_accueil', "Examen blanc CEP (école)", ep.startswith('cep_blanc')) }}
+  {{ lien('jur_cep_blanc', 'Examen blanc ' ~ ('CS' if JUR_NIVEAU == 'cs' else 'DDEMP'), ep.startswith('jur_cep_blanc') and ep != 'jur_cep_blanc_synthese') }}
+  {{ lien('jur_cep_blanc_synthese', 'Synthèse des examens par niveau', ep=='jur_cep_blanc_synthese') }}
+{% endcall %}{% endif %}
+{% if peut('cantine') %}
+{% call groupe('cant', 'Cantine', ep.startswith('cantine') or ep.startswith('stock'), '🍲') %}
+  {{ lien('cantine_accueil', 'Paiements de cantine', ep in ('cantine_accueil','cantine_classe')) }}
+  {{ lien('cantine_impayes', 'Impayés de cantine', ep=='cantine_impayes') }}
+  {{ lien('cantine_recap', 'Récapitulatifs', ep=='cantine_recap') }}
+  {{ lien('cantine_config', 'Configuration (montants)', ep=='cantine_config') }}
+  {% if peut('stock') and ep_existe('stock_accueil') %}{{ lien('stock_accueil', 'Vivres et stock', ep.startswith('stock')) }}{% endif %}
+{% endcall %}{% endif %}
+{% if peut('paiements') or peut('tresorerie') or peut('paie') or (PUB_ and (peut('carriere') or peut('depenses'))) %}
+{% call groupe('fin', "Finances de l'école", ep.startswith('paiement') or ep=='impayes' or ep.startswith('tresorerie') or ep.startswith('paie') or ep.startswith('depense') or ep.startswith('recette') or ep.startswith('cep_frais'), '💰') %}
+  {% if PUB_ %}
+  {% if peut('depenses') %}{{ lien('depenses_accueil', 'Dépenses (fonds de cantine…)', ep.startswith('depense')) }}
+  {{ lien('recettes_accueil', 'Subventions et recettes', ep.startswith('recette')) }}
+  {{ lien('cep_frais', 'Frais de dossier CEP', ep.startswith('cep_frais')) }}{% endif %}
+  {% if peut('paiements') %}{{ lien('paiements_en_ligne', 'Paiements en ligne (facultatif)', ep=='paiements_en_ligne') }}{% endif %}
+  {% else %}
+  {% if peut('paiements') %}{{ lien('paiements', 'Paiements de scolarité', ep in ('paiements','paiement_nouveau')) }}
+  {{ lien('impayes', 'Impayés', ep=='impayes') }}
+  {{ lien('paiements_en_ligne', 'Paiements en ligne', ep=='paiements_en_ligne') }}{% endif %}
+  {% endif %}
+  {% if peut('tresorerie') %}{{ lien('tresorerie', 'Trésorerie', ep=='tresorerie') }}
+  {{ lien('tresorerie_bilan', 'Bilan et budget', ep in ('tresorerie_bilan','tresorerie_budget')) }}{% endif %}
+  {% if not PUB_ and peut('paie') %}{{ lien('paie_accueil', 'Paie', ep in ('paie_accueil','paie_mois')) }}{% endif %}
+{% endcall %}{% endif %}
+{% if peut('carriere') or peut('paie') %}
+{% call groupe('pers', "Personnel de l'école", ep.startswith('personnel') or ep.startswith('carriere'), '🧑‍🏫') %}
+  {{ lien('personnel', 'Personnel', ep.startswith('personnel')) }}
+  {% if peut('carriere') %}{{ lien('carriere_accueil', 'Gestion de carrière des enseignants', ep.startswith('carriere')) }}{% endif %}
+{% endcall %}{% endif %}
+{% call groupe('vie', 'Vie de la ' ~ ('CS' if JUR_NIVEAU == 'cs' else 'DDEMP'), ep.startswith('maitre_semaine') or ep.startswith('visite') or ep.startswith('patrimoine') or ep.startswith('recensement') or ep.startswith('docs_enseignant') or ep.startswith('rapports') or ep.startswith('synoptique'), '🏫') %}
+  {% if peut('recensement') %}{{ lien('recensement_accueil', "Carte d'identité (recensement, rapports, certificats)", ep.startswith('recensement')) }}{% endif %}
+  {% if peut('recensement') and ep_existe('rapports_accueil') %}{{ lien('rapports_accueil', 'Rapports de rentrée et de fin d’année', ep.startswith('rapports')) }}{% endif %}
+  {% if peut('maitre_semaine') %}{{ lien('maitre_semaine_accueil', 'Maître de semaine (journal)', ep.startswith('maitre_semaine')) }}{% endif %}
+  {% if peut('visites') %}{{ lien('visites_accueil', "Visites de classe et d'école (CP, CCS, DDEMP)", ep.startswith('visite') and not ep.startswith('jur_')) }}{% endif %}
+  {% if peut('patrimoine') %}{{ lien('patrimoine_accueil', 'Ressources et patrimoine', ep.startswith('patrimoine')) }}{% endif %}
+  {% if peut('docs_enseignant') %}{{ lien('docs_enseignant_accueil', "Documents de l'enseignant", ep.startswith('docs_enseignant')) }}{% endif %}
+  {% if peut('synthese') %}{{ lien('jur_synthese_eval', "Synthèse de l'évaluation (" ~ ('CS' if JUR_NIVEAU == 'cs' else 'DDEMP') ~ ')', ep=='jur_synthese_eval') }}{% endif %}
+  {% if peut('synoptique') and ep_existe('synoptique_accueil') %}{{ lien('synoptique_accueil', 'Tableau synoptique', ep.startswith('synoptique')) }}{% endif %}
+{% endcall %}
+{% if peut('communication') or peut('parents') %}
+{% set nb = messages_non_lus() + whatsapp_en_attente() %}
+{% call groupe('par', 'Parents' ~ (' (' ~ nb ~ ')' if nb else ''), ep in ('communication','parents_liste'), '✉') %}
+  {% if peut('communication') %}{{ lien('communication', 'Messages et WhatsApp', ep=='communication') }}{% endif %}
+  {% if peut('parents') %}{{ lien('parents_liste', 'Comptes parents', ep=='parents_liste') }}{% endif %}
+  {% if peut('eleves') %}{{ lien('espace_eleves_acces', 'Comptes élèves', ep=='espace_eleves_acces') }}{% endif %}
+{% endcall %}{% endif %}
+{% if peut('donnees') %}
+{% call groupe('don', 'Données', ep.startswith('donnees') or ep.startswith('educmaster') or ep.startswith('conversion'), '⇅') %}
+  {{ lien('donnees_accueil', 'Import / export', ep.startswith('donnees')) }}
+  {{ lien('educmaster_accueil', 'EducMaster (maternelle, primaire, secondaire)', ep.startswith('educmaster')) }}
+  {{ lien('conversion_pdf', 'Conversion PDF → Excel / CSV', ep.startswith('conversion')) }}
+{% endcall %}{% endif %}
+{% if peut('secretariat') %}
+{% call groupe('sec', 'Secrétariat', ep in ('courrier','archives'), '🗂') %}
+  {{ lien('courrier', 'Courrier', ep=='courrier') }}
+  {{ lien('archives', 'Archives', ep=='archives') }}
+{% endcall %}{% endif %}
+{% if peut('ecoles') and not peut('parametres') %}{{ lien('ecoles', 'Mon école (fiche, cachet)', ep.startswith('ecole_') or ep=='ecoles', '🏫') }}{% endif %}
+{% endif %}

@@ -6,6 +6,7 @@
 
 Comptes (mot de passe demo1234) : responsable, cp1, cp2, chef, agent ; admin / admin123.
 Les écoles « envoient » de vrais paquets de transmission (jur_format), importés comme le ferait la CS.
+v1.6 : unités pédagogiques (jur_up, jur_up_activites) et CP de chaque zone pédagogique (jur_zones.cp_nom).
 """
 import random
 from datetime import date
@@ -162,6 +163,41 @@ def agents_cs(rnd, cs_nom):
     return out
 
 
+THEMES_UP = ["Planification des situations d'apprentissage en mathématiques", "Leçon modèle de lecture au CI",
+             "Évaluation des acquis : construction d'une épreuve", "Gestion d'une classe multigrade",
+             "Exploitation du cahier de textes et du cahier journal", "Didactique de l'éducation scientifique et technologique",
+             "Préparation du CEP blanc", "Techniques d'animation de la maternelle"]
+TYPES_UP = ["Animation pédagogique", "Leçon modèle", "Atelier", "Formation"]
+CP_ZONES = ["KOUTON Basile", "OLOU Rosine", "AKPO Fiacre", "SOSSOU Mariam"]
+
+
+def inserer_up(rnd, cs_id, an):
+    """Unités pédagogiques de démonstration (1 à 2 par zone) avec leurs activités de l'année (v1.6)."""
+    a0 = int(an[:4])
+    zones = q("SELECT * FROM jur_zones WHERE cs_id=? ORDER BY ordre, nom", (cs_id,))
+    for i, z in enumerate(zones):
+        if not z["cp_nom"]:
+            ex("UPDATE jur_zones SET cp_nom=?, cp_telephone=? WHERE id=?",
+               (CP_ZONES[i % len(CP_ZONES)], f"01{rnd.randint(40000000, 99999999)}", z["id"]))
+        ecs = q("SELECT id, nom FROM jur_ecoles WHERE zone_id=? AND actif=1 ORDER BY nom", (z["id"],))
+        for n in range(rnd.randint(1, 2)):
+            num = i * 2 + n + 1
+            siege = ecs[n % len(ecs)] if ecs else None
+            uid = ex("INSERT INTO jur_up (cs_id, zone_id, nom, ecole_siege, ecole_id, rup_nom, rup_tel, corup_nom, corup_tel, "
+                     "nb_ecoles, actif, cree_le, maj) VALUES (?,?,?,?,?,?,?,?,?,?,1,datetime('now','localtime'),datetime('now','localtime'))",
+                     (cs_id, z["id"], f"UP {num}", siege["nom"] if siege else "", siege["id"] if siege else None,
+                      f"{rnd.choice(NOMS)} {rnd.choice(PRENOMS_H + PRENOMS_F)}", f"01{rnd.randint(40000000, 99999999)}",
+                      f"{rnd.choice(NOMS)} {rnd.choice(PRENOMS_H + PRENOMS_F)}", f"01{rnd.randint(40000000, 99999999)}",
+                      max(2, len(ecs) // 2 + rnd.randint(0, 2))))
+            mois = [(a0, 10), (a0, 11), (a0, 12), (a0 + 1, 1), (a0 + 1, 2), (a0 + 1, 3)]
+            for k, (y, m) in enumerate(mois[:rnd.randint(3, 6)]):
+                prevue, executee = 1, 1 if k < 3 and rnd.random() < 0.85 else (1 if rnd.random() < 0.3 else 0)
+                ex("INSERT INTO jur_up_activites (up_id, annee, date, theme, type, prevue, executee, participants, "
+                   "taux_participation, observations, maj) VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now','localtime'))",
+                   (uid, an, f"{y}-{m:02d}-{rnd.randint(5, 26):02d}", rnd.choice(THEMES_UP), rnd.choice(TYPES_UP), prevue, executee,
+                    rnd.randint(8, 25) if executee else None, round(rnd.uniform(60, 100), 1) if executee else None, ""))
+
+
 def creer_comptes():
     for ident, nom, role in (("responsable", "Responsable (démo)", "responsable"), ("cp1", "KOUTON Basile", "cp"),
                              ("cp2", "OLOU Rosine", "cp"), ("chef", "Chef de division (démo)", "chef_service"),
@@ -182,6 +218,29 @@ def inserer_agents(liste, cs_id=None):
             a["telephone"], a.get("email", ""), json.dumps(extra, ensure_ascii=False)))
 
 
+def inserer_examen_blanc(rnd, an):
+    """v1.6 (a_integration) : un examen blanc CS / DDEMP avec des candidats de CM2 pour chaque école primaire
+    (notes aléatoires). Les écoles s'ouvrent ensuite depuis « Administration › Ouvrir une école (modules) »."""
+    import json
+    mats = ["Français", "Mathématiques", "Éducation scientifique et technologique", "Éducation sociale"]
+    niv = "CS" if config.EDITION == "cs" else "DDEMP"
+    sid = ex("INSERT INTO jur_cep_blanc_sessions (annee, numero, nom, date, niveau, matieres, seuil, cree_le) "
+             "VALUES (?,?,?,?,?,?,?,datetime('now','localtime'))",
+             (an, 1, f"Examen blanc {niv} N° 1", f"{int(an[:4]) + 1}-03-15", "CM2", json.dumps(mats, ensure_ascii=False), None))
+    for e in J.ecoles(type_="EP"):
+        eff = J.section(e["id"], "effectifs", an) or {}
+        cm2 = [c for c in eff.get("classes", []) if c.get("niveau") == "CM2"]
+        n = sum(int(c.get("garcons") or 0) + int(c.get("filles") or 0) for c in cm2) or rnd.randint(10, 30)
+        base = rnd.uniform(7, 14)
+        for i in range(min(n, 40)):
+            notes = {m: round(min(20, max(0, rnd.gauss(base, 3.5))), 1) for m in mats}
+            ex("INSERT INTO jur_cep_blanc_resultats (session_id, ecole_id, zone, numero_table, nom, prenoms, sexe, notes, maj) "
+               "VALUES (?,?,?,?,?,?,?,?,datetime('now','localtime'))",
+               (sid, e["id"], e["zone_nom"] or "", f"{e['id']:02d}{i + 1:03d}", rnd.choice(NOMS),
+                rnd.choice(PRENOMS_H + PRENOMS_F), rnd.choice("MF"), json.dumps(notes, ensure_ascii=False)))
+    return sid
+
+
 def main():
     niveau = config.EDITION
     if niveau not in ("cs", "ddemp"):
@@ -197,7 +256,9 @@ def main():
             for code, nom, typ, sect, zone in ecoles_de_cs(rnd, dep, "POBE", 3, 18):
                 J.importer_paquet(paquet_ecole(rnd, code, nom, typ, sect, dep, "POBE", zone, an), "fichier", "démo")
             inserer_agents(agents_cs(rnd, "POBE"), (J.cs_courante() or {"id": None})["id"])
-            print(f"CS de Pobè : {q('SELECT COUNT(*) n FROM jur_ecoles', un=True)['n']} écoles importées.")
+            inserer_up(rnd, J.cs_courante()["id"], an)
+            print(f"CS de Pobè : {q('SELECT COUNT(*) n FROM jur_ecoles', un=True)['n']} écoles importées, "
+                  f"{q('SELECT COUNT(*) n FROM jur_up', un=True)['n']} UP.")
         else:
             J.configurer("ddemp", dep, responsable_titre="Le Directeur Départemental", responsable_nom="Gildas AKPO",
                          ville="Pobè")
@@ -218,8 +279,12 @@ def main():
                              ("spaf", "Chef du Service de la Planification, de l'Administration et des Finances"),
                              ("cantines", "Chef du Service de Gestion des Cantines Scolaires"),
                              ("statistiques", "Chef du Service des Statistiques"))])
+            for c in J.cs_liste():
+                inserer_up(rnd, c["id"], an)
             print(f"DDEMP du Plateau : {q('SELECT COUNT(*) n FROM jur_cs', un=True)['n']} CS, "
-                  f"{q('SELECT COUNT(*) n FROM jur_ecoles', un=True)['n']} écoles importées.")
+                  f"{q('SELECT COUNT(*) n FROM jur_ecoles', un=True)['n']} écoles importées, "
+                  f"{q('SELECT COUNT(*) n FROM jur_up', un=True)['n']} UP.")
+        inserer_examen_blanc(rnd, an)
         print("Comptes : responsable / cp1 / cp2 / chef / agent (mot de passe demo1234) ; admin / admin123.")
 
 

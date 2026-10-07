@@ -96,7 +96,8 @@ table.em select{max-width:260px}
   </div>
   <div class="carte">
     <h2 style="margin-top:0">3 b. Remplir les notes dans le fichier EducMaster</h2>
-    <p>Les notes GESCOL de l'évaluation choisie sont écrites dans les colonnes de matières reconnues du fichier déposé ; le reste du fichier (mise en forme, autres colonnes) est conservé. Rechargez ensuite le fichier sur EducMaster.</p>
+    <p>Les notes GESCOL de l'évaluation choisie sont écrites dans les colonnes de matières reconnues du fichier déposé ; le reste du fichier (mise en forme, autres colonnes) est conservé. Rechargez ensuite le fichier sur EducMaster.
+    {% if cycle == 'maternelle' %}<br><b>Maternelle :</b> ce sont les appréciations des domaines qui sont écrites, sous forme de code : A = Acquis, ECA = En cours d'acquisition, NA = Non acquis.{% endif %}</p>
     {% if evaluations %}
     <form method="post" action="{{ url_for('educmaster_notes') }}">
       <input type="hidden" name="cycle" value="{{ cycle }}">
@@ -109,6 +110,83 @@ table.em select{max-width:260px}
 </div>
 {% elif not e %}
 <div class="carte aide">Déposez le fichier .xlsx téléchargé depuis EducMaster : GESCOL repère lui-même la ligne des en-têtes (même avec des lignes de titre au-dessus) et les colonnes utiles, puis vous montre ce qu'il a reconnu avant toute modification.</div>
+{% endif %}
+
+{# ============================================================ Modèles officiels EducMaster #}
+<div class="carte" id="modeles">
+  <h2 style="margin-top:0">Modèles officiels EducMaster</h2>
+  <p>Modèles d'importation fournis par la plateforme EducMaster. GESCOL ne modifie jamais leur structure : il remplit
+    seulement les cellules de données (fusions, en-têtes et mise en forme conservées). Téléchargez le modèle vierge, ou le
+    modèle <b>rempli</b> par GESCOL pour le charger sur EducMaster, ou importez dans GESCOL un modèle rempli sur l'autre plateforme.</p>
+  {% if not modeles_ok %}<div class="flash danger">Le dossier des modèles officiels (modeles/) est introuvable dans cette installation.</div>{% endif %}
+  <div class="grille" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+
+    <div class="carte">
+      <h3 style="margin-top:0">a. Modèle de notes (primaire)</h3>
+      <p class="aide">4 feuilles : Évaluation formative 1, sommatives 1 à 3. Matricule = matricule EducMaster de l'élève ;
+        « Note obtenue » = note GESCOL, « Note perf. » = barème (20). Correspondance : Dictée, Math, Expression écrite,
+        Compréhension de l'écrit, EST, ES, EA (Oral) = éducation artistique (vivant), EA (Dessin/Couture) = éducation artistique (plastique), EPS.</p>
+      <p><a class="btn sec petit" href="{{ url_for('educmaster_modele_vierge', cle='notes-primaire') }}">⬇ Télécharger le modèle vierge</a></p>
+      {% if classes_primaire %}
+      <form method="get" id="f-modele-notes" action="#">
+        <label for="mn-classe">Classe</label><br>
+        <select id="mn-classe" name="classe" required>
+          {% for c in classes_primaire %}<option value="{{ url_for('educmaster_modele_notes_rempli', cid=c.id) }}">{{ c.nom }}</option>{% endfor %}</select>
+        <button class="btn petit" type="button" onclick="var s=document.getElementById('mn-classe');if(s.value)location.href=s.value">⬇ Télécharger rempli</button>
+      </form>
+      {% else %}<p class="gris">Aucune classe du primaire accessible.</p>{% endif %}
+      <p class="aide">Les notes du fichier sont destinées à EducMaster (chargement sur la plateforme) : aucun import de ce modèle dans GESCOL —
+        utilisez « Déposer le fichier EducMaster » ci-dessus pour mettre à jour les élèves à partir d'un fichier de la plateforme.</p>
+    </div>
+
+    <div class="carte">
+      <h3 style="margin-top:0">b. Modèle des élèves par classe</h3>
+      <p class="aide">Une feuille par niveau (CM2 … CI, Maternelle 2, Maternelle 1) : Nom, Prénom(s), Sexe, Date de naissance,
+        Lieu de naissance, Téléphone de parents, Nationalité, Npi (= NIP).</p>
+      <p><a class="btn sec petit" href="{{ url_for('educmaster_modele_vierge', cle='classe') }}">⬇ Télécharger le modèle vierge</a>
+         <a class="btn petit" href="{{ url_for('educmaster_modele_classe_rempli') }}">⬇ Télécharger rempli (toute l'école)</a></p>
+      <form method="post" action="{{ url_for('educmaster_modele_classe_importer') }}" enctype="multipart/form-data">
+        <p><label for="mc-fichier">Importer un modèle rempli</label><br>
+          <input type="file" id="mc-fichier" name="fichier" accept=".xlsx,.xlsm" required></p>
+        {% set a_choisir = cibles_classe|selectattr(2)|list %}
+        {% if a_choisir %}
+        <details><summary class="aide">Classe cible par niveau ({{ a_choisir|length }} niveau(x) ouvert(s))</summary>
+          {% for feuille, niveau, cls in cibles_classe if cls %}
+          <p><label for="mc-{{ loop.index }}">Feuille « {{ feuille }} » → classe</label><br>
+            <select id="mc-{{ loop.index }}" name="classe_{{ niveau|lower|replace(' ', '_') }}">
+              {% for c in cls %}<option value="{{ c.id }}">{{ c.nom }}</option>{% endfor %}</select></p>
+          {% endfor %}
+        </details>
+        {% else %}<p class="gris">Aucune classe créée : les élèves ne pourront pas être importés.</p>{% endif %}
+        <div class="actions"><button class="btn sec petit" name="simuler" value="1">Simuler</button>
+          <button class="btn petit" data-confirmer="Importer les élèves de ce fichier dans GESCOL (mise à jour / création) ?">⬆ Importer</button></div>
+      </form>
+      <p class="aide">Élève retrouvé par NIP puis par nom + prénoms : sa fiche est mise à jour ; sinon il est créé dans la classe choisie pour le niveau de la feuille.</p>
+    </div>
+
+    <div class="carte">
+      <h3 style="margin-top:0">c. Modèle des agents</h3>
+      <p class="aide">Feuille « Mes agents » : Matricule, Id ANPE (AME), Nom, Prénoms, Sexe, Date et lieu de naissance, Nationalité,
+        Téléphone, Email, IFU, Date de première prise de service. {{ nb_personnel }} agent(s) actif(s) dans l'école.</p>
+      <p><a class="btn sec petit" href="{{ url_for('educmaster_modele_vierge', cle='agents') }}">⬇ Télécharger le modèle vierge</a>
+         <a class="btn petit" href="{{ url_for('educmaster_modele_agents_rempli') }}">⬇ Télécharger rempli</a></p>
+      <form method="post" action="{{ url_for('educmaster_modele_agents_importer') }}" enctype="multipart/form-data">
+        <p><label for="ma-fichier">Importer un modèle rempli</label><br>
+          <input type="file" id="ma-fichier" name="fichier" accept=".xlsx,.xlsm" required></p>
+        <div class="actions"><button class="btn sec petit" name="simuler" value="1">Simuler</button>
+          <button class="btn petit" data-confirmer="Importer les agents de ce fichier dans le personnel de l'école ?">⬆ Importer</button></div>
+      </form>
+      <p class="aide">Agent retrouvé par matricule puis par nom + prénoms : fiche mise à jour ; sinon créé (fonction « Enseignant(e) », à préciser dans sa fiche).</p>
+    </div>
+  </div>
+</div>
+
+{% if rapport_modeles %}
+<div class="carte" id="rapport-modeles"><h2 style="margin-top:0">Dernier import de modèle : {{ rapport_modeles.titre }}</h2>
+  <p>{{ rapport_modeles.stats.maj }} mis à jour · {{ rapport_modeles.stats.crees }} créé(s) · {{ rapport_modeles.stats.inchanges }} inchangé(s) · {{ rapport_modeles.stats.ignores }} ignoré(s)</p>
+  {% if rapport_modeles.details %}<div class="tw"><table class="t compact"><thead><tr><th>Feuille / ligne</th><th>Personne</th><th>Résultat</th><th>Détail</th></tr></thead>
+  <tbody>{% for k, qui, res, det in rapport_modeles.details %}<tr><td>{{ k }}</td><td>{{ qui }}</td><td><span class="badge {{ 'ok' if res in ('Mis à jour','Créé') else 'att' }}">{{ res }}</span></td><td>{{ det }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+</div>
 {% endif %}
 
 {% if rapport %}

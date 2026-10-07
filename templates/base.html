@@ -23,9 +23,9 @@
 <div class="app">
 <aside id="lateral" class="lateral" aria-label="Menu principal">
   <a class="marque" href="{{ url_for('accueil') }}"><span class="logo-g">G</span><span>{{ NOM_APPLI }}<small>{{ ECOLE.sigle or ECOLE.nom }}</small></span></a>
-  {% if ECOLES|length > 1 %}
+  {% if ECOLES|length > 1 or (JURIDICTION and ECOLES) %}
   <form method="post" action="" class="choix-ecole" onsubmit="this.action='/ecoles/'+this.e.value+'/choisir'">
-    <label for="choix-ecole" class="aide">École</label>
+    <label for="choix-ecole" class="aide">{{ 'École ouverte' if JURIDICTION else 'École' }}</label>
     <select id="choix-ecole" name="e" onchange="this.form.requestSubmit()">{% for e in ECOLES %}<option value="{{ e.id }}" {{ 'selected' if ECOLE_COURANTE and e.id==ECOLE_COURANTE.id }}>{{ e.nom }}</option>{% endfor %}</select>
     <input type="hidden" name="suivant" value="{{ request.path }}">
   </form>{% endif %}
@@ -143,8 +143,12 @@
 <div class="zone">
 <header class="barre-haut">
   <button id="btn-menu" class="btn-menu" type="button" aria-expanded="false" aria-controls="lateral" aria-label="Ouvrir le menu">☰</button>
+  {% if JURIDICTION and PAGE_ECOLE is defined and PAGE_ECOLE and ECOLE_COURANTE %}
+  <div class="bh-titre"><strong>{{ JUR.nom if JUR and JUR.nom else NOM_APPLI }}</strong><span class="aide">École ouverte : <b>{{ ECOLE_COURANTE.nom }}</b> · {{ ANNEE }}</span></div>
+  {% else %}
   <div class="bh-titre"><strong>{{ ECOLE.nom }}</strong><span class="aide">{% if ECOLE.cs %}CS {{ ECOLE.cs }} · {% endif %}{{ ANNEE }}</span></div>
-  <div class="bh-user">{{ g.user.nom }} <span class="badge">{{ ROLES[g.user.role] }}</span> · <a href="{{ url_for('mon_compte') }}">Compte</a> · <a href="{{ url_for('logout') }}">Déconnexion</a></div>
+  {% endif %}
+  <div class="bh-user">{{ g.user.nom }} <span class="badge">{{ ROLES[g.role_reel if g.get('role_reel') else g.user.role] }}</span> · <a href="{{ url_for('mon_compte') }}">Compte</a> · <a href="{{ url_for('logout') }}">Déconnexion</a></div>
 </header>
 {% elif g.get('parent') %}
 <header class="top parent">

@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% block titre %}Comité d'évaluation — {{ 'modifier' if obj else 'ajouter' }} un membre{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>{{ 'Modifier le membre' if obj else 'Nouveau membre du comité' }}</h1>
+  <p class="sous">Comité d'évaluation {{ v.annee or annee }}</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('epreuves_comite', annee=v.annee or annee) }}">← Retour au comité</a></div>
+</div>
+{% include "epreuves_onglets.html" %}
+
+<form method="post" class="carte f">
+  <input type="hidden" name="annee" value="{{ v.annee or annee }}">
+  <div class="ligne">
+    <div><label for="m-nom">Nom et prénoms *</label><input id="m-nom" name="nom_prenoms" value="{{ v.nom_prenoms or '' }}" maxlength="120" required></div>
+    <div><label for="m-qual">Qualité</label><input id="m-qual" name="qualite" list="dl-qual" value="{{ v.qualite or '' }}" maxlength="60">
+      <datalist id="dl-qual">{% for o in QUALITES %}<option value="{{ o }}">{% endfor %}</datalist></div>
+    <div><label for="m-qf">Qualification (diplôme / grade / spécialité)</label><input id="m-qf" name="qualification" value="{{ v.qualification or '' }}" maxlength="200" placeholder="ex. CAP, A1-5, spécialité français"></div>
+    <div><label for="m-fn">Fonction dans le comité</label><input id="m-fn" name="fonction_comite" list="dl-fn" value="{{ v.fonction_comite or '' }}" maxlength="60">
+      <datalist id="dl-fn">{% for o in FONCTIONS %}<option value="{{ o }}">{% endfor %}</datalist></div>
+    <div><label for="m-cl">Classe ou niveau</label><input id="m-cl" name="classe_ou_niveau" list="dl-niv" value="{{ v.classe_ou_niveau or '' }}" maxlength="60">
+      <datalist id="dl-niv">{% for n in NIVEAUX %}<option value="{{ n }}">{% endfor %}<option value="Toute l'école"></datalist></div>
+    <div><label for="m-ct">Contact</label><input id="m-ct" name="contact" value="{{ v.contact or '' }}" maxlength="60"></div>
+    <div><label for="m-ordre">Ordre d'affichage</label><input id="m-ordre" name="ordre" inputmode="numeric" value="{{ v.ordre or '' }}"></div>
+    <div><label for="m-actif">État</label><select id="m-actif" name="actif"><option value="1" {{ 'selected' if v.actif in (1, '1', none) }}>Actif</option><option value="0" {{ 'selected' if v.actif in (0, '0') }}>Inactif</option></select></div>
+  </div>
+  <p class="actions" style="margin-top:12px"><button class="btn vert">💾 Enregistrer</button>
+    {% if not obj %}<button class="btn sec" name="suivant" value="1">Enregistrer et ajouter un autre</button>{% endif %}</p>
+</form>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}{% block titre %}Grilles de correction et d'évaluation{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Grilles de correction, d'évaluation et d'observation</h1>
+  <p class="sous">Critères, indicateurs et barèmes (APC) — année scolaire {{ annee }}</p></div>
+  <div class="actions">
+    {% if modifiable %}<a class="btn petit" href="{{ url_for('grille_form', gid=0, annee=annee) }}">＋ Nouvelle grille</a>{% endif %}
+    <a class="btn sec petit" href="{{ url_for('grilles_xlsx', annee=annee) }}">⬇ Excel</a>
+  </div>
+</div>
+{% include "epreuves_onglets.html" %}
+
+<form method="get" class="filtres">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option value="{{ a }}" {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+</form>
+
+{% if modifiable %}
+<div class="carte">
+  <h2 style="margin-top:0">Grilles types (APC)</h2>
+  <p class="actions">
+    {% for code, (titre, typ, lignes) in GRILLES_TYPES.items() %}
+    <a class="btn sec petit" href="{{ url_for('grille_form', gid=0, modele=code, annee=annee) }}">{{ titre.split(' — ')[1] if ' — ' in titre else titre }}</a>
+    {% endfor %}
+  </p>
+  <p class="aide">Chaque grille type se charge dans l'éditeur, où vous adaptez les critères, indicateurs et barèmes avant d'enregistrer.</p>
+</div>
+{% endif %}
+
+{% if liste %}
+<div class="tw"><table class="t compact"><thead><tr>
+  <th>Titre</th><th>Type</th><th>Niveau</th><th>Matière</th><th class="c">Critères</th><th class="c">Barème</th><th>Épreuve liée</th><th></th>
+</tr></thead><tbody>
+{% for gr in liste %}
+<tr>
+  <td><b>{{ gr.titre }}</b><br><span class="aide">{% for l in gr.lignes %}{{ l.critere }}{{ ' · ' if not loop.last }}{% endfor %}</span></td>
+  <td>{{ TYPES_GRILLE.get(gr.type, gr.type) }}</td><td>{{ gr.niveau or '' }}</td><td>{{ gr.matiere or '' }}</td>
+  <td class="c">{{ gr.lignes|length }}</td><td class="c">{{ num(gr.total) if gr.type != 'observation' else 'A / ECA / NA' }}</td>
+  <td>{% if gr.epreuve_id %}<a href="{{ url_for('epreuve_form', eid=gr.epreuve_id) if modifiable else url_for('epreuve_pdf', eid=gr.epreuve_id) }}">épreuve n° {{ gr.epreuve_id }}</a>{% endif %}</td>
+  <td style="white-space:nowrap">
+    <a class="btn sec petit" target="_blank" href="{{ url_for('grille_pdf', gid=gr.id) }}">📄 PDF</a>
+    {% if modifiable %}<a class="btn sec petit" href="{{ url_for('grille_form', gid=gr.id) }}">Modifier</a>
+    <form method="post" action="{{ url_for('grille_dupliquer', gid=gr.id) }}" style="display:inline"><button class="btn sec petit">Dupliquer</button></form>
+    <form method="post" action="{{ url_for('grille_supprimer', gid=gr.id) }}" style="display:inline"><button class="btn danger petit" data-confirmer="Supprimer la grille « {{ gr.titre }} » ?">Supprimer</button></form>{% endif %}
+  </td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}<div class="carte">Aucune grille pour {{ annee }}.{% if modifiable %} Partez d'une grille type ci-dessus ou créez une grille vierge.{% endif %}</div>{% endif %}
+{% endblock %}

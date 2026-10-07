@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% block titre %}{{ u.nom }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ u.nom }}</h1>
+  <p class="sous">{% if JUR_NIVEAU == 'ddemp' %}CS {{ u.cs_nom or '—' }} · {% endif %}{{ u.zone_nom or 'Sans zone pédagogique' }}{% if u.ecole_siege %} · siège : {{ u.ecole_siege }}{% endif %} · activités de l'année {{ annee }}</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_up', annee=annee, cs=u.cs_id if JUR_NIVEAU == 'ddemp' else None) }}">← Toutes les UP</a>
+    {% if saisie %}<a class="btn" href="{{ url_for('jur_up_activite_form', uid=u.id, annee=annee) }}">+ Ajouter une activité</a>
+    <a class="btn sec" href="{{ url_for('jur_up_form', uid=u.id) }}">Modifier l'UP</a>
+    <form method="post" action="{{ url_for('jur_up_supprimer', uid=u.id) }}" style="display:inline" onsubmit="return confirm('Supprimer l\'UP « {{ u.nom }} » et toutes ses activités ?')"><button class="btn danger">Supprimer</button></form>{% endif %}
+  </div></div>
+
+<form method="get" class="filtres carte">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  <noscript><button class="btn sec petit">Afficher</button></noscript>
+</form>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">RUP</div><div class="v" style="font-size:17px">{{ u.rup_nom or '—' }}</div><div class="d">{{ u.rup_tel or '' }}</div></div>
+  <div class="kpi"><div class="l">Co-RUP</div><div class="v" style="font-size:17px">{{ u.corup_nom or '—' }}</div><div class="d">{{ u.corup_tel or '' }}</div></div>
+  <div class="kpi"><div class="l">Écoles membres</div><div class="v">{{ u.nb_ecoles if u.nb_ecoles is not none else '—' }}</div><div class="d">&nbsp;</div></div>
+  <div class="kpi"><div class="l">Prévues / exécutées</div><div class="v">{{ u.prevues }} / {{ u.executees }}</div><div class="d">{{ u.activites }} activité(s) en {{ annee }}</div></div>
+  <div class="kpi"><div class="l">Taux d'exécution</div><div class="v">{{ pct(u.taux) }}</div><div class="d">exécutées ÷ prévues</div></div>
+</div>
+
+<div class="carte"><h2>Activités de l'année {{ annee }}</h2>
+  <div class="tw"><table class="t compact">
+    <tr><th>Date</th><th>Thème</th><th>Type</th><th>Prévue</th><th>Exécutée</th><th class="num">Participants</th><th class="num">Participation</th><th>Observations</th>{% if saisie %}<th></th>{% endif %}</tr>
+    {% for a in acts %}
+    <tr><td>{{ date_fr(a.date) or '—' }}</td><td>{{ a.theme or '—' }}</td><td>{{ a.type or '' }}</td>
+      <td>{% if a.prevue %}<span class="badge ok">prévue</span>{% else %}<span class="badge">non prévue</span>{% endif %}</td>
+      <td>{% if a.executee %}<span class="badge ok">exécutée</span>{% else %}<span class="badge att">à exécuter</span>{% endif %}</td>
+      <td class="num">{{ a.participants if a.participants is not none else '' }}</td><td class="num">{{ pct(a.taux_participation) if a.taux_participation is not none else '' }}</td>
+      <td class="aide">{{ a.observations or '' }}</td>
+      {% if saisie %}<td class="num" style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('jur_up_activite_form', aid=a.id) }}">Modifier</a>
+        <form method="post" action="{{ url_for('jur_up_activite_supprimer', aid=a.id) }}" style="display:inline" onsubmit="return confirm('Supprimer cette activité ?')"><button class="btn danger petit">Supprimer</button></form></td>{% endif %}
+    </tr>
+    {% else %}<tr><td colspan="9" class="gris">Aucune activité pour {{ annee }}.</td></tr>{% endfor %}
+  </table></div>
+</div>
+{% if u.observations %}<div class="carte"><h2>Observations</h2><p style="white-space:pre-line">{{ u.observations }}</p></div>{% endif %}
+{% endblock %}

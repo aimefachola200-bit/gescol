@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block titre %}Règlement intérieur — {{ 'modifier' if a else 'ajouter' }}{% endblock %}
+{% block contenu %}
+{% include "synoptique_onglets.html" %}
+<div class="entete">
+  <div><h2 style="margin:0">Règlement intérieur : {{ 'modification' if a else 'nouvel élément' }}</h2></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('synoptique_reglement') }}">← Retour au règlement</a></div>
+</div>
+<form method="post" class="carte f">
+  <div class="ligne">
+    <div><label for="r-type">Type</label><select id="r-type" name="type">{% for k, l in TYPES.items() %}<option value="{{ k }}" {{ 'selected' if (v.get('type') or 'article') == k }}>{{ l }}</option>{% endfor %}</select></div>
+    <div><label for="r-num">Numéro (ex. 12 ou XIV)</label><input id="r-num" name="numero" value="{{ v.get('numero') or '' }}" maxlength="10"></div>
+    <div><label for="r-ordre">Ordre d'affichage</label><input id="r-ordre" name="ordre" inputmode="numeric" value="{{ v.get('ordre') if v.get('ordre') is not none else '' }}" maxlength="5"><span class="aide">Les éléments s'affichent par ordre croissant (titres officiels : 10, 20, 30…).</span></div>
+  </div>
+  <label for="r-titre">Intitulé (pour un titre)</label><input id="r-titre" name="titre" value="{{ v.get('titre') or '' }}" maxlength="200">
+  <label for="r-texte">Texte</label><textarea id="r-texte" name="texte" rows="8" maxlength="6000">{{ v.get('texte') or '' }}</textarea>
+  <p class="actions" style="margin-top:12px"><button class="btn">💾 Enregistrer</button></p>
+</form>
+{% endblock %}

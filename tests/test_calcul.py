@@ -119,3 +119,53 @@ class TestPaie(unittest.TestCase):
         self.assertEqual(d["vps"], 6000)
         v = calculer_paie(80000, self.P, cnss=False, its=False)
         self.assertEqual((v["cnss_salarie"], v["its"], v["net"]), (0, 0, 80000))
+
+
+class TestCarriere(unittest.TestCase):
+    """Règles de retraite et d'ancienneté (m_carriere) : départ le 1er jour du trimestre suivant le trimestre de
+    naissance ; anciennetés au 31/12 de la première année de l'année scolaire active."""
+
+    def test_retraite_trimestre_suivant(self):
+        from datetime import date
+        from m_carriere import date_retraite
+        self.assertEqual(date_retraite("1967-02-15", "A1-5"), date(2027, 4, 1))     # janv–mars -> 1er avril
+        self.assertEqual(date_retraite("1969-02-28", "B1-12"), date(2027, 4, 1))    # 28/02/2027 -> 01/04/2027
+        self.assertEqual(date_retraite("1970-11-10", "C1-3"), date(2026, 1, 1))     # oct–déc -> 1er janvier suivant
+        self.assertEqual(date_retraite("1966-07-01", "A"), date(2026, 10, 1))       # juil–sept -> 1er octobre
+        self.assertEqual(date_retraite("1966-04-30", "a2-7"), date(2026, 7, 1))     # avril–juin -> 1er juillet
+        self.assertEqual(date_retraite("1968-12-31", "B"), date(2027, 1, 1))
+        self.assertEqual(date_retraite("1968", "A"), date(2029, 1, 1))              # année seule : 1er janvier (année + âge + 1)
+        self.assertIsNone(date_retraite("1968-05-05", "D"))
+        self.assertIsNone(date_retraite("", "A"))
+
+    def test_date_reference(self):
+        from datetime import date
+        from m_carriere import date_reference, anciennete
+        self.assertEqual(date_reference(annee="2026-2027"), date(2026, 12, 31))
+        self.assertEqual(date_reference(annee="2027-2028"), date(2027, 12, 31))
+        self.assertEqual(date_reference(date(2031, 3, 1), annee="n'importe quoi"), date(2031, 12, 31))
+        ref = date(2026, 12, 31)
+        self.assertEqual(anciennete("2020-01-01", ref), (7, 0))                      # 31/12 inclus
+        self.assertEqual(anciennete("2024-02-29", ref), (2, 10))
+        self.assertEqual(anciennete("2026-09-15", ref), (0, 3))
+        self.assertIsNone(anciennete("2027-01-01", ref))
+
+    def test_calculer_fiche(self):
+        from datetime import date
+        from m_carriere import calculer_fiche
+        import config
+        ancien = config.ANNEE_ACTIVE
+        config.ANNEE_ACTIVE = "2026-2027"
+        try:
+            f = calculer_fiche({"nom": "AKPO", "prenoms": "Jean", "grade": "B1-12", "date_naissance": "1969-02-28",
+                                "date_prise_service": "2000-10-01", "date_service_ecole": "2019-09-16"},
+                               auj=date(2026, 10, 7))
+        finally:
+            config.ANNEE_ACTIVE = ancien
+        self.assertEqual(f["reference"], date(2026, 12, 31))
+        self.assertEqual(f["retraite"], date(2027, 4, 1))
+        self.assertEqual(f["retraite_txt"], "01/04/2027")
+        self.assertTrue(f["alerte_retraite"])
+        self.assertEqual(f["anc"]["generale"], (26, 3))
+        self.assertEqual(f["anc"]["ecole"], (7, 3))
+        self.assertEqual(f["anc_txt"]["ecole"], "7 ans 3 mois")

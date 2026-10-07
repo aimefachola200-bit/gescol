@@ -1,10 +1,11 @@
 {# Menu des applications GESCOL Circonscription (CS) et GESCOL DDEMP — inclus par base.html #}
 {% set CS_ = JUR_NIVEAU == 'cs' %}
 {{ lien('jur_tableau', 'Tableau de bord', ep=='jur_tableau', '⌂') }}
-{% call groupe('jstat', 'Statistiques', ep.startswith('jur_stats'), '📊') %}
+{% call groupe('jstat', 'Statistiques', ep.startswith('jur_stats') or ep=='jur_classes', '📊') %}
   {{ lien('jur_stats_ecoles', 'Écoles (nombre, classement)', ep=='jur_stats_ecoles') }}
   {{ lien('jur_stats_effectifs', 'Effectifs des apprenants', ep=='jur_stats_effectifs') }}
   {{ lien('jur_stats_enseignants', 'Enseignants (besoins, écarts)', ep=='jur_stats_enseignants') }}
+  {{ lien('jur_classes', 'Classes par cours et par zone', ep=='jur_classes') }}
 {% endcall %}
 {% call groupe('jcep', 'Examens (CEP)', ep.startswith('jur_cep'), '🎓') %}
   {{ lien('jur_cep', 'Candidats et résultats', ep=='jur_cep' or ep=='jur_cep_ecole') }}
@@ -17,9 +18,11 @@
   {{ lien('jur_retraite', 'Départs à la retraite', ep.startswith('jur_retraite')) }}
   {{ lien('jur_agents', 'Agents de la ' ~ ('circonscription' if CS_ else 'DDEMP'), ep.startswith('jur_agent')) }}
 {% endcall %}
-{% call groupe('jpeda', 'Animation pédagogique', ep.startswith('jur_visite') or ep.startswith('jur_bilan'), '🔎') %}
+{% call groupe('jpeda', 'Animation pédagogique', ep.startswith('jur_visite') or ep.startswith('jur_bilan') or ep.startswith('jur_up') or ep=='jur_cp', '🔎') %}
   {{ lien('jur_visites', "Visites d'école et de classe", ep.startswith('jur_visite')) }}
   {{ lien('jur_bilan_activites', 'Bilan des activités des CP et CCS', ep.startswith('jur_bilan')) }}
+  {{ lien('jur_cp', 'Conseillers pédagogiques (visites, synthèses)', ep=='jur_cp') }}
+  {{ lien('jur_up', 'Unités pédagogiques (UP)', ep.startswith('jur_up')) }}
 {% endcall %}
 {% call groupe('jfiche', 'Fiches des écoles', ep.startswith('jur_fiche'), '📋') %}
   {{ lien('jur_fiches', 'Recensement, rentrée, fin d’année', ep.startswith('jur_fiche') and ep!='jur_fiches_synthese') }}
@@ -30,8 +33,9 @@
   {{ lien('jur_transmission_suivi', 'Suivi des envois', ep=='jur_transmission_suivi') }}
   {% if CS_ %}{{ lien('jur_transmission_envoi', 'Envoyer à la DDEMP', ep=='jur_transmission_envoi') }}{% endif %}
 {% endcall %}
-{% call groupe('jstruct', 'Services et documents', ep.startswith('jur_organigramme') or ep.startswith('jur_service') or ep.startswith('jur_cachet') or ep.startswith('jur_document'), '🏛') %}
+{% call groupe('jstruct', 'Services et documents', ep.startswith('jur_organigramme') or ep.startswith('jur_service') or ep.startswith('jur_cachet') or ep.startswith('jur_document') or ep.startswith('jur_division'), '🏛') %}
   {{ lien('jur_organigramme', 'Services et attributions', ep.startswith('jur_organigramme') or ep.startswith('jur_service')) }}
+  {{ lien('jur_divisions', 'Divisions, modules et attributions', ep.startswith('jur_division')) }}
   {{ lien('jur_cachets', 'Cachets et signatures', ep.startswith('jur_cachet')) }}
   {{ lien('jur_documents', 'Attestations et certificats', ep.startswith('jur_document')) }}
 {% endcall %}

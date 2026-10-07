@@ -6,7 +6,19 @@ Pages (lecture : tout utilisateur connecté ; uniquement en édition cs / ddemp)
     jur_stats_ecoles        /juridiction/statistiques/ecoles
     jur_stats_effectifs     /juridiction/statistiques/effectifs
     jur_stats_enseignants   /juridiction/statistiques/enseignants
-et la fonction H.jur_stats(annee, cs_id=None) → dict de synthèse (pour les autres modules).
+    jur_classes             /juridiction/classes          classes par cours (niveau) et par zone / CS (v1.6)
+    jur_classes_xlsx        /juridiction/classes.xlsx     export Excel du même tableau
+    jur_classes_pdf         /juridiction/classes.pdf      export PDF (paysage, en-tête officiel)
+et les fonctions H.jur_stats(annee, cs_id=None) → dict de synthèse et H.jur_classes_par_niveau(annee, cs_id=None)
+→ tableau des classes par cours (pour les autres modules).
+
+Classes par cours (v1.6) : on compte le NOMBRE DE CLASSES (groupes pédagogiques) de chaque niveau — CI, CP, CE1, CE2,
+CM1, CM2, Maternelle 1, Maternelle 2, Espace enfance (+ niveaux inattendus, en fin de tableau).
+Source principale : la section « effectifs » des paquets transmis par les écoles (clé « classes » : une entrée par
+classe, avec son « niveau »). Replis, dans l'ordre : (a) un dictionnaire « par_niveau » / « niveaux » de la section
+(une classe par niveau renseigné) ; (b) la table locale « classes » (via « ecoles ») lorsque l'école est aussi gérée
+dans cette installation (même nom ou même code) ; (c) sinon l'école compte 0 classe (elle est listée comme « sans
+données »). Une classe multigrade compte pour une classe, au niveau indiqué.
 
 Tous les calculs de base passent par jur_calc (effectifs, enseignants, besoin_enseignants, cep, taux, ecart_type,
 moyenne, cumul) afin que tous les écrans de la juridiction donnent les mêmes chiffres.
@@ -478,6 +490,128 @@ def niveaux_par_groupe(lignes, par):
     return {"niveaux": _ordre_niveaux(tous), "lignes": res}
 
 
+# ======================================================================== classes par cours (v1.6)
+def _classes_locales(e):
+    """Repli : classes de la table locale « classes » si l'école est aussi gérée dans cette installation.
+    Correspondance par code (ecoles.code s'il existe) ou par nom normalisé. {niveau: nb} ou {}."""
+    try:
+        cols = {r[1] for r in _H.get_db().execute("PRAGMA table_info(ecoles)")}
+        if "nom" not in cols:
+            return {}
+        loc = None
+        if "code" in cols and e.get("code"):
+            loc = _H.q("SELECT id FROM ecoles WHERE code=? AND actif=1", (e["code"],), un=True)
+        if not loc:
+            for r in _H.q("SELECT id, nom FROM ecoles WHERE actif=1"):
+                if J.norm(r["nom"]) == J.norm(e.get("nom")):
+                    loc = r
+                    break
+        if not loc:
+            return {}
+        cols_cl = {r[1] for r in _H.get_db().execute("PRAGMA table_info(classes)")}
+        if "ecole_id" not in cols_cl:
+            return {}
+        out = {}
+        for r in _H.q("SELECT niveau FROM classes WHERE ecole_id=?", (loc["id"],)):
+            n = _niveau_canonique(r["niveau"])
+            out[n] = out.get(n, 0) + 1
+        return out
+    except Exception:  # noqa: BLE001 — la table locale peut ne pas exister dans cette édition
+        return {}
+
+
+def classes_ecole(sec, e=None):
+    """Nombre de classes par niveau canonique pour une école. sec = section « effectifs » (ou None).
+    Renvoie ({niveau: nb}, source) avec source ∈ {"classes", "niveaux", "locale", "aucune"}."""
+    sec = sec or {}
+    cl = sec.get("classes")
+    if isinstance(cl, list) and cl:
+        out = {}
+        for c in cl:
+            if not isinstance(c, dict):
+                continue
+            n = _niveau_canonique(c.get("niveau") or c.get("nom"))
+            out[n] = out.get(n, 0) + 1
+        return out, "classes"
+    for cle in ("par_niveau", "niveaux"):
+        d = sec.get(cle)
+        if isinstance(d, dict) and d:
+            out = {}
+            for niv, v in d.items():
+                nb = 0
+                if isinstance(v, dict):
+                    nb = C.entier(v.get("classes")) or (1 if (C.entier(v.get("garcons")) + C.entier(v.get("filles"))
+                                                            + C.entier(v.get("t"))) else 0)
+                elif isinstance(v, (list, tuple)):
+                    nb = 1 if sum(C.entier(x) for x in v) else 0
+                else:
+                    nb = 1 if C.entier(v) else 0
+                if nb:
+                    n = _niveau_canonique(niv)
+                    out[n] = out.get(n, 0) + nb
+            if out:
+                return out, "niveaux"
+    if e is not None:
+        loc = _classes_locales(e)
+        if loc:
+            return loc, "locale"
+    return {}, "aucune"
+
+
+def classes_par_niveau(lignes):
+    """Tableau « classes par cours » pour un ensemble d'écoles (lignes de donnees()) :
+    {"niveaux": [...], "par_niveau": {niveau: nb}, "total": nb, "ecoles": n, "sans_donnees": n, "sources": {src: n}}."""
+    par, sources, sans = {}, {}, 0
+    for l in lignes:
+        d, src = classes_ecole(l["_sec_eff"], {"code": l["code"], "nom": l["nom"]})
+        sources[src] = sources.get(src, 0) + 1
+        if not d:
+            sans += 1
+        for n, nb in d.items():
+            par[n] = par.get(n, 0) + nb
+    niveaux = _ordre_niveaux(par)
+    return {"niveaux": niveaux, "par_niveau": {n: par[n] for n in niveaux}, "total": sum(par.values()),
+            "ecoles": len(lignes), "sans_donnees": sans, "sources": sources}
+
+
+def tableau_classes(lignes, par):
+    """Lignes du tableau « classes par cours et par zone » : CS → par zone ; DDEMP → par circonscription (sous-total)
+    avec le détail des zones de chaque CS. Renvoie {"niveaux", "lignes": [{"nom", "niveau": "zone"|"cs"|"total",
+    "cs_id", "zone_id", "par_niveau", "total", "ecoles", "sans_donnees"}], "total": {...}}."""
+    tous = set()
+    rows = []
+
+    def ligne(nom, lvl, ll, **ids):
+        c = classes_par_niveau(ll)
+        tous.update(c["niveaux"])
+        rows.append(dict(nom=nom, niveau=lvl, par_niveau=c["par_niveau"], total=c["total"], ecoles=c["ecoles"],
+                         sans_donnees=c["sans_donnees"], **ids))
+
+    if par == "cs":
+        for k, nom, ll in groupes(lignes, "cs"):
+            ligne(nom, "cs", ll, cs_id=k, zone_id=None)
+            for kz, nz, lz in groupes(ll, "zone"):
+                ligne(nz, "zone", lz, cs_id=k, zone_id=kz)
+    else:
+        for kz, nz, lz in groupes(lignes, "zone"):
+            ligne(nz, "zone", lz, cs_id=None, zone_id=kz)
+    tot = classes_par_niveau(lignes)
+    tous.update(tot["niveaux"])
+    niveaux = _ordre_niveaux(tous)
+    for r in rows:
+        r["par_niveau"] = {n: r["par_niveau"].get(n, 0) for n in niveaux}
+    tot["par_niveau"] = {n: tot["par_niveau"].get(n, 0) for n in niveaux}
+    return {"niveaux": niveaux, "lignes": rows, "total": tot}
+
+
+def jur_classes_par_niveau(annee=None, cs_id=None, zone_id=None):
+    """Interface pour les autres modules : tableau_classes() de la juridiction (ou d'une CS / zone)."""
+    annee = annee or J.annee()
+    lignes = donnees(annee, cs_id, zone_id)
+    par = "cs" if (config.EDITION == "ddemp" and not cs_id) else "zone"
+    return tableau_classes(lignes, par)
+
+
 def _ligne_age_ep(a):
     return "m5" if a < 5 else ("a16" if a >= 16 else f"a{a}")
 
@@ -717,6 +851,7 @@ def enregistrer(app, H):
     global _H
     _H = H
     H.jur_stats = jur_stats
+    H.jur_classes_par_niveau = jur_classes_par_niveau
 
     @app.template_filter("jur_nb")
     def _f_nb(v, dec=None):
@@ -767,7 +902,80 @@ def enregistrer(app, H):
                                secteurs=par_secteur_type(lignes), COLONNES_ECOLES=COLONNES_ECOLES, CATEGORIES=CATEGORIES,
                                SEUILS={"fort": SEUIL_CEP_FORT, "cand": SEUIL_CEP_CANDIDATS, "faible": SEUIL_CEP_FAIBLE,
                                        "plethore": SEUIL_PLETHORE},
+                               classes=tableau_classes(lignes, par), ABREV=ABREV_PDF,
                                args=args_filtres(flt), page="jur_tableau")
+
+    # ------------------------------------------------------------------ 1 bis. classes par cours et par zone (v1.6)
+    def _classes_contexte():
+        flt = lire_filtres()
+        lignes = donnees(flt["annee"], flt["cs_id"], flt["zone_id"], flt["type"], flt["secteur"], flt["q"])
+        par = flt["par"]
+        return flt, lignes, par, tableau_classes(lignes, par)
+
+    def _classes_entetes(tc, par):
+        lib = "Circonscription / zone pédagogique" if par == "cs" else "Zone pédagogique"
+        return [lib] + [_abr(n) for n in tc["niveaux"]] + ["Total classes", "Écoles", "Sans données"]
+
+    def _classes_lignes(tc):
+        rows = []
+        for r in tc["lignes"]:
+            nom = r["nom"] if r["niveau"] != "zone" or not any(x["niveau"] == "cs" for x in tc["lignes"]) else "    " + r["nom"]
+            rows.append([nom] + [r["par_niveau"][n] for n in tc["niveaux"]] + [r["total"], r["ecoles"], r["sans_donnees"]])
+        t = tc["total"]
+        total = ["Total"] + [t["par_niveau"][n] for n in tc["niveaux"]] + [t["total"], t["ecoles"], t["sans_donnees"]]
+        return rows, total
+
+    @app.route("/juridiction/classes")
+    @H.connexion_requise()
+    def jur_classes():
+        _garde()
+        flt, lignes, par, tc = _classes_contexte()
+        # détail par école (pour vérification : écoles sans données en tête)
+        detail = []
+        for l in sorted(lignes, key=lambda l: (l["cs_nom"], l["zone_nom"], l["nom"])):
+            d, src = classes_ecole(l["_sec_eff"], {"code": l["code"], "nom": l["nom"]})
+            detail.append({"l": l, "par_niveau": {n: d.get(n, 0) for n in tc["niveaux"]}, "total": sum(d.values()), "source": src})
+        return render_template("jur_tableau_classes.html", flt=flt, tc=tc, par=par, lib_groupe=_lib_groupe(par),
+                               detail=detail, ABREV=ABREV_PDF, args=args_filtres(flt), page="jur_classes",
+                               SOURCES_CLASSES={"classes": "liste des classes transmise", "niveaux": "effectifs par niveau",
+                                                "locale": "école gérée localement", "aucune": "aucune donnée"})
+
+    @app.route("/juridiction/classes.xlsx")
+    @H.connexion_requise()
+    def jur_classes_xlsx():
+        _garde()
+        flt, lignes, par, tc = _classes_contexte()
+        ent = [_classes_entetes(tc, par)[0]] + tc["niveaux"] + ["Total classes", "Écoles", "Sans données"]
+        rows, total = _classes_lignes(tc)
+        th = _titre_haut(flt, "Classes par cours et par " + ("circonscription et zone" if par == "cs" else "zone pédagogique"))
+        ent_e = ["École", "Code", "Type", "Secteur", "CS", "Zone pédagogique"] + tc["niveaux"] + ["Total classes", "Source"]
+        rows_e = []
+        for l in sorted(lignes, key=lambda l: (l["cs_nom"], l["zone_nom"], l["nom"])):
+            d, src = classes_ecole(l["_sec_eff"], {"code": l["code"], "nom": l["nom"]})
+            rows_e.append([l["nom"], l["code"], l["type"], J.SECTEURS[l["secteur"]], l["cs_nom"], l["zone_nom"]]
+                          + [d.get(n, 0) for n in tc["niveaux"]] + [sum(d.values()), src])
+        H.journal("jur_classes_xlsx", flt["annee"])
+        return H.xlsx.reponse_classeur("classes_par_cours.xlsx", [
+            ("Classes par cours", ent, rows + [total], {"titre_haut": th}),
+            ("Par école", ent_e, rows_e, {"titre_haut": th})])
+
+    @app.route("/juridiction/classes.pdf")
+    @H.connexion_requise()
+    def jur_classes_pdf():
+        _garde()
+        flt, lignes, par, tc = _classes_contexte()
+        ent = _classes_entetes(tc, par)
+        rows, total = _classes_lignes(tc)
+        n = len(tc["niveaux"])
+        larg = [max(40, 240 - 12 * n - 50)] + [max(9, (240 - 50 - max(40, 240 - 12 * n - 50)) / max(n, 1))] * n + [16, 14, 16]
+        if not rows:
+            rows = [["Aucune école pour ces critères."] + [""] * (len(ent) - 1)]
+        H.journal("jur_classes_pdf", flt["annee"])
+        return _pdf("CLASSES PAR COURS ET PAR " + ("CIRCONSCRIPTION ET ZONE PÉDAGOGIQUE" if par == "cs" else "ZONE PÉDAGOGIQUE"),
+                    ent, rows, flt, "classes_par_cours.pdf", total=total, taille=7.5, largeurs=larg,
+                    sous_titre="Nombre de classes (groupes pédagogiques) par niveau, d'après les effectifs transmis par les écoles",
+                    notes_bas=["Source : section « effectifs » des fichiers de transmission des écoles (une entrée par classe). "
+                               "« Sans données » : écoles n'ayant pas encore transmis leurs effectifs."])
 
     # ------------------------------------------------------------------ 2. statistiques des écoles
     TRIS = {"nom": "Nom", "effectif": "Effectif", "cep": "Taux de réussite au CEP", "ratio": "Ratio élèves/enseignant"}

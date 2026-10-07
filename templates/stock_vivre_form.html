@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% block titre %}Vivre — {{ 'modifier' if obj else 'ajouter' }}{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>{{ 'Modifier le vivre' if obj else 'Ajouter un vivre' }}</h1>
+  <p class="sous">{{ obj.nom if obj else 'Nouvelle denrée suivie en stock' }}</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('stock_vivres') }}">← Liste des vivres</a></div>
+</div>
+{% include "stock_onglets.html" %}
+
+<form method="post" class="carte f">
+  <div class="ligne">
+    <div><label for="v-nom">Nom du vivre *</label><input id="v-nom" name="nom" value="{{ v.get('nom') or '' }}" maxlength="80" required list="dl-nom">
+      <datalist id="dl-nom"><option value="Riz"><option value="Maïs"><option value="Haricot (niébé)"><option value="Gari"><option value="Huile végétale"><option value="Sel"><option value="Sardine"><option value="Sucre"><option value="Tomate concentrée"><option value="Soja"></datalist></div>
+    <div><label for="v-cat">Catégorie</label><select id="v-cat" name="categorie">{% for k, lib in CATEGORIES.items() %}<option value="{{ k }}" {{ 'selected' if v.get('categorie') == k }}>{{ lib }}</option>{% endfor %}</select></div>
+    <div><label for="v-unite">Unité de comptage</label><input id="v-unite" name="unite" value="{{ v.get('unite') or 'kg' }}" maxlength="30" list="dl-unite" required>
+      <datalist id="dl-unite">{% for u in UNITES %}<option value="{{ u }}">{% endfor %}</datalist></div>
+    <div><label for="v-seuil">Seuil d'alerte (quantité)</label><input id="v-seuil" name="seuil_alerte" inputmode="decimal" value="{{ v.get('seuil_alerte') if v.get('seuil_alerte') is string else (qte(v.get('seuil_alerte')) if v.get('seuil_alerte') is not none else '') }}">
+      <span class="aide">alerte quand le stock descend à ce niveau</span></div>
+    <div><label for="v-ordre">Ordre d'affichage</label><input id="v-ordre" name="ordre" inputmode="numeric" value="{{ v.get('ordre') or '' }}"></div>
+    <div><label for="v-actif">État</label><select id="v-actif" name="actif"><option value="1" {{ 'selected' if v.get('actif') in (1, '1', none) }}>Actif</option><option value="0" {{ 'selected' if v.get('actif') in (0, '0') }}>Désactivé</option></select></div>
+  </div>
+  <p class="actions" style="margin-top:12px">
+    <button class="btn vert">💾 Enregistrer</button>
+    {% if not obj %}<button class="btn sec" name="suivant" value="1">Enregistrer et ajouter un autre</button>{% endif %}
+  </p>
+</form>
+{% endblock %}

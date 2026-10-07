@@ -9,6 +9,8 @@
    * export Excel de la liste des candidats.
 2. Carte scolaire du candidat (/carte) : éditeur (aperçu recto/verso en direct), PDF au format carte bancaire
    (85,6 × 54 mm, recto + verso) et planche A4 (10 cartes par page) pour toute une classe. QR code de vérification.
+   « Supprimer la carte » (POST /carte/<eid>/supprimer) efface les corrections propres à la carte, les documents de
+   vérification de type carte et, sur demande, la photo — sans toucher à l'inscription de l'élève.
 3. Examen blanc du CEP (/cep-blanc) : sessions de centre (tables ``cep_blanc_sessions`` / ``cep_blanc_candidats``),
    import Excel ou depuis les CM2 de l'école, saisie des notes, maîtrise et rang, Excel, PDF, relevés de notes.
    Règle du primaire : MAÎTRISE = au moins ``seuil`` matières à 10/20 (2/3 des matières par défaut) ; la moyenne
@@ -16,6 +18,7 @@
 """
 import io
 import json
+import os
 import re
 from datetime import date, datetime
 
@@ -1165,6 +1168,32 @@ def enregistrer(app, H):
         H.journal("carte_reinitialisee", f"{e['nom']} {e['prenoms']}")
         flash("Carte réinitialisée : données de l'inscription rétablies.", "success")
         return redirect(url_for("carte_editeur", eleve=eid))
+
+    @app.route("/carte/<int:eid>/supprimer", methods=["POST"])
+    @H.connexion_requise("cep")
+    def carte_supprimer(eid):
+        """Supprime la carte enregistrée de l'élève (sans toucher à son inscription) : corrections propres à la carte,
+        documents officiels de type carte (code de vérification : le QR code d'une carte déjà imprimée devient invalide)
+        et, si demandé (case « photo »), la photo de l'élève."""
+        e, cl = eleve_autorise(eid)
+        db = H.get_db()
+        db.execute("DELETE FROM documents_modules WHERE cle=?", (cle_carte_eleve(eid),))
+        n_docs = db.execute("DELETE FROM documents WHERE eleve_id=? AND type IN ('carte_candidat', 'carte')", (eid,)).rowcount
+        db.commit()
+        photo = False
+        if request.form.get("photo"):
+            p = H.chemin_photo(e)
+            if p:
+                try:
+                    os.remove(p)
+                    photo = True
+                except OSError:
+                    pass
+            ex("UPDATE eleves SET photo=NULL WHERE id=?", (eid,))
+        H.journal("carte_supprimee", f"{e['nom']} {e['prenoms']} ({n_docs} document(s)" + (", photo" if photo else "") + ")")
+        flash(f"Carte de {e['nom']} {e['prenoms']} supprimée" + (" avec sa photo" if photo else "")
+              + ". L'élève reste inscrit ; un nouveau code de vérification sera attribué à la prochaine carte.", "success")
+        return redirect(url_for("carte_editeur", classe=cl["id"]))
 
     @app.route("/carte/<int:eid>/pdf", methods=["GET", "POST"])
     @H.connexion_requise("cep")

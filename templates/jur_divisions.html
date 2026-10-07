@@ -1,0 +1,44 @@
+{% extends "base.html" %}{% block titre %}Divisions, modules et attributions{% endblock %}
+{% block contenu %}
+<style>
+.div-grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:16px}
+.div-carte{background:var(--carte);border:1px solid var(--bord);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.div-carte h2{margin:0;font-size:16.5px;color:var(--bleu)}
+.div-carte .sigle{display:inline-block;background:#EEF4FA;color:var(--bleu);border-radius:6px;padding:2px 8px;font-weight:700;margin-right:6px}
+.div-carte ul.mods{margin:0;padding-left:18px}.div-carte ul.mods li{margin:2px 0}
+.div-carte .attr{white-space:pre-line;line-height:1.45;font-size:13px;color:#344054;max-height:150px;overflow:auto;border-left:3px solid #D0D5DD;padding-left:10px}
+.div-carte .pied{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.div-carte .racine{border-color:var(--bleu)}
+</style>
+<div class="entete"><div><h1>Divisions, modules et attributions</h1>
+  <p class="sous">{{ 'Circonscription scolaire' if JUR_NIVEAU == 'cs' else 'Direction départementale' }} : chaque division ou service avec son responsable, les modules de l'application qui la concernent et ses attributions.</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_organigramme') }}">Organigramme</a>
+    <a class="btn" href="{{ url_for('jur_divisions_pdf') }}" target="_blank">📄 PDF divisions, modules et attributions</a>
+  </div></div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Divisions et services</div><div class="v">{{ divisions|length }}</div><div class="d">actifs</div></div>
+  <div class="kpi"><div class="l">Modules disponibles</div><div class="v">{{ nb_modules }}</div><div class="d">liens vers les fonctionnalités installées</div></div>
+  <div class="kpi"><div class="l">Agents affectés</div><div class="v">{{ nb_agents }}</div><div class="d">d'après « Agents de la structure »</div></div>
+</div>
+
+{% if not s %}<div class="flash info">La structure n'est pas encore configurée{% if peut('jur_structure') %} : <a href="{{ url_for('jur_structure') }}">Identité de la structure</a>{% endif %}.</div>{% endif %}
+
+<div class="div-grille">
+{% for d in divisions %}
+  <section class="div-carte {{ 'racine' if d.code == racine }}" id="div-{{ d.code }}">
+    <h2><span class="sigle">{{ d.sigle or d.code|upper }}</span>{{ d.nom }}</h2>
+    <p style="margin:0" class="aide">Responsable : <b>{{ d.responsable_nom or 'non désigné' }}</b>{% if d.reference %} · {{ d.reference }}{% endif %}{% if d.agents %} · {{ d.agents|length }} agent(s){% endif %}</p>
+    <h3 style="margin:6px 0 0;font-size:13.5px">Modules</h3>
+    {% if d.modules %}<ul class="mods">{% for m in d.modules %}<li><a href="{{ m.url }}">{{ m.libelle }}</a>{% if not m.acces %} <span class="badge">consultation</span>{% endif %}</li>{% endfor %}</ul>
+    {% else %}<p class="aide" style="margin:0">Aucun module installé pour cette division.</p>{% endif %}
+    <h3 style="margin:6px 0 0;font-size:13.5px">Attributions</h3>
+    <div class="attr">{{ d.attributions or 'Attributions non renseignées.' }}</div>
+    <div class="pied">
+      <a class="btn sec petit" href="{{ url_for('jur_division', code=d.code) }}">Fiche de la division{% if peut('jur_divisions') %} · modifier les attributions{% endif %}</a>
+    </div>
+  </section>
+{% else %}<div class="carte">Aucune division : configurez d'abord la structure.</div>{% endfor %}
+</div>
+{% endblock %}

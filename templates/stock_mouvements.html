@@ -1,0 +1,49 @@
+{% extends "base.html" %}{% block titre %}Stock — journal des mouvements{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Journal des mouvements de stock</h1>
+  <p class="sous">Entrées, sorties, pertes et inventaires — année scolaire {{ annee }}</p></div>
+  <div class="actions">
+    {% if modifiable %}
+    <a class="btn vert petit" href="{{ url_for('stock_mouvement', mid=0, type='entree') }}">⬆ Entrée</a>
+    <a class="btn orange petit" href="{{ url_for('stock_mouvement', mid=0, type='sortie') }}">⬇ Sortie</a>
+    <a class="btn danger petit" href="{{ url_for('stock_mouvement', mid=0, type='perte') }}">Perte</a>
+    <a class="btn sec petit" href="{{ url_for('stock_mouvement', mid=0, type='inventaire') }}">Inventaire</a>
+    <a class="btn sec petit" href="{{ url_for('stock_sortie_jour') }}">Sortie du jour</a>
+    {% endif %}
+    <a class="btn sec petit" target="_blank" href="{{ url_for('stock_mouvements_pdf', annee=annee, vivre=f.vivre, type=f.type, du=f.du, au=f.au) }}">📄 PDF</a>
+    <a class="btn sec petit" href="{{ url_for('stock_mouvements_xlsx', annee=annee, vivre=f.vivre, type=f.type, du=f.du, au=f.au) }}">⬇ Excel</a>
+  </div>
+</div>
+{% include "stock_onglets.html" %}
+
+<form method="get" class="filtres">
+  <label>Année<br><select name="annee">{% for a in annees %}<option value="{{ a }}" {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  <label>Vivre<br><select name="vivre"><option value="">Tous</option>{% for x in vivres %}<option value="{{ x.id }}" {{ 'selected' if f.vivre == x.id }}>{{ x.nom }}</option>{% endfor %}</select></label>
+  <label>Type<br><select name="type"><option value="">Tous</option>{% for k, lib in TYPES.items() %}<option value="{{ k }}" {{ 'selected' if f.type == k }}>{{ lib }}</option>{% endfor %}</select></label>
+  <label>Du<br><input type="date" name="du" value="{{ f.du }}"></label>
+  <label>Au<br><input type="date" name="au" value="{{ f.au }}"></label>
+  <button class="btn">Filtrer</button>
+</form>
+
+{% if liste %}
+<div class="tw"><table class="t compact"><thead><tr>
+  <th>Date</th><th>Type</th><th>Vivre</th><th class="c">Quantité</th><th>Qualité</th><th>Origine</th><th>Fournisseur</th><th>N° bon</th><th class="c">P.U.</th><th>Péremption</th><th class="c">Rationnaires</th><th>Observations</th><th>Saisi par</th>{% if modifiable %}<th></th>{% endif %}
+</tr></thead><tbody>
+{% for m in liste %}
+<tr>
+  <td>{{ date_fr(m.date) }}</td>
+  <td><span class="badge {{ {'entree':'ok','sortie':'att','perte':'ko','inventaire':''}[m.type] }}">{{ TYPES[m.type] }}</span></td>
+  <td>{{ m.vivre_nom }}</td><td class="c"><b>{{ qte(m.quantite) }}</b> {{ m.unite }}</td>
+  <td>{{ QUALITES.get(m.qualite, '') }}</td><td>{{ m.origine or '' }}</td><td>{{ m.fournisseur or '' }}</td><td>{{ m.bon_numero or '' }}</td>
+  <td class="c">{{ milliers(m.prix_unitaire) if m.prix_unitaire else '' }}</td>
+  <td>{{ date_fr(m.date_peremption) if m.date_peremption else '' }}</td><td class="c">{{ m.rationnaires or '' }}</td>
+  <td>{{ m.observations or '' }}</td><td>{{ m.saisi_nom or '' }}</td>
+  {% if modifiable %}<td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('stock_mouvement', mid=m.id) }}">Modifier</a>
+    <form method="post" action="{{ url_for('stock_mouvement_supprimer', mid=m.id) }}" style="display:inline"><button class="btn danger petit" data-confirmer="Supprimer ce mouvement ?">Supprimer</button></form></td>{% endif %}
+</tr>
+{% endfor %}
+</tbody></table></div>
+<p class="aide">{{ liste|length }} mouvement(s).</p>
+{% else %}<div class="carte">Aucun mouvement pour ces critères.</div>{% endif %}
+{% endblock %}

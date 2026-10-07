@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% block titre %}Modifier la planification — {{ lib }}{% endblock %}
+{% block contenu %}
+<style>.planf td{padding:2px}.planf textarea{min-height:52px;font-size:12px;padding:3px 5px;min-width:90px}.planf input{font-size:12px;padding:3px 5px;min-width:70px}</style>
+{% include "synoptique_onglets.html" %}
+<div class="entete">
+  <div><h2 style="margin:0">Planification — {{ lib }} : modification</h2><p class="sous">Une ligne par mois ; une ligne entièrement vide est supprimée.</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('synoptique_planification', niveau=niveau) }}">← Annuler</a></div>
+</div>
+<form method="post" class="carte">
+  <input type="hidden" name="nb_lignes" value="{{ d.lignes|length + 1 }}">
+  <div class="tw"><table class="t planf">
+    <thead><tr>{% for k, lib_k, g_ in cols %}<th>{{ lib_k }}{% if g_ %}<br><span class="aide">{{ g_ }}</span>{% endif %}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for l in d.lignes + [{}] %}{% set i = loop.index0 %}
+    <tr>{% for k in CLES %}<td>{% if k in ('trimestre', 'mois') %}<input name="p_{{ i }}_{{ k }}" value="{{ l.get(k, '') }}" maxlength="{{ 4 if k == 'trimestre' else 20 }}" placeholder="{{ 'I, II, III' if k == 'trimestre' else 'Mois' }}">{% else %}<textarea name="p_{{ i }}_{{ k }}" maxlength="500">{{ l.get(k, '') }}</textarea>{% endif %}</td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody></table></div>
+  <p class="actions" id="fin" style="margin-top:12px"><button class="btn">💾 Enregistrer</button><button class="btn sec" name="action" value="ajouter">+ Enregistrer et ajouter une ligne</button></p>
+</form>
+{% endblock %}

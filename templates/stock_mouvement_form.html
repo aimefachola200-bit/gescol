@@ -1,0 +1,56 @@
+{% extends "base.html" %}{% block titre %}Stock — {{ 'modifier un mouvement' if obj else 'nouveau mouvement' }}{% endblock %}
+{% block contenu %}
+{% set typ = v.get('type') or 'entree' %}
+<div class="entete">
+  <div><h1>{{ 'Modifier le mouvement n° ' ~ obj.id if obj else TYPES.get(typ, 'Mouvement') ~ ' de stock' }}</h1>
+  <p class="sous">{% if typ == 'entree' %}Réception de vivres (PNASI, APE, achat, don){% elif typ == 'sortie' %}Vivres sortis du magasin pour la préparation des repas{% elif typ == 'perte' %}Vivres perdus, avariés ou détruits{% else %}Quantité réellement constatée au magasin : le stock repart de cette valeur{% endif %}</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('stock_accueil') }}">← État du stock</a> <a class="btn sec petit" href="{{ url_for('stock_mouvements') }}">Journal</a></div>
+</div>
+{% include "stock_onglets.html" %}
+
+<form method="post" class="carte f" id="f-mvt">
+  <div class="ligne">
+    <div><label for="m-type">Type de mouvement *</label><select id="m-type" name="type" required>{% for k, lib in TYPES.items() %}<option value="{{ k }}" {{ 'selected' if typ == k }}>{{ lib }}</option>{% endfor %}</select></div>
+    <div><label for="m-vivre">Vivre *</label><select id="m-vivre" name="vivre_id" required><option value="">— choisir —</option>
+      {% for x in vivres %}<option value="{{ x.id }}" {{ 'selected' if v.get('vivre_id')|string == x.id|string }}>{{ x.nom }} ({{ x.unite }})</option>{% endfor %}</select>
+      {% if not vivres %}<span class="aide">Aucun vivre : <a href="{{ url_for('stock_vivre', vid=0) }}">ajoutez-en un</a>.</span>{% endif %}</div>
+    <div><label for="m-date">Date *</label><input id="m-date" type="date" name="date" value="{{ v.get('date') or aujourdhui }}" required></div>
+    <div><label for="m-q">Quantité *</label><input id="m-q" name="quantite" inputmode="decimal" value="{{ v.get('quantite') if v.get('quantite') is string else (qte(v.get('quantite')) if v.get('quantite') is not none else '') }}" required>
+      <span class="aide" id="m-aide-q">dans l'unité du vivre</span></div>
+    <div data-pour="entree inventaire"><label for="m-qual">Qualité</label><select id="m-qual" name="qualite"><option value="">—</option>{% for k, lib in QUALITES.items() %}<option value="{{ k }}" {{ 'selected' if v.get('qualite') == k }}>{{ lib }}</option>{% endfor %}</select></div>
+    <div data-pour="entree"><label for="m-orig">Origine / source</label><input id="m-orig" name="origine" list="dl-orig" value="{{ v.get('origine') or '' }}" maxlength="60">
+      <datalist id="dl-orig">{% for o in ORIGINES %}<option value="{{ o }}">{% endfor %}</datalist></div>
+    <div data-pour="entree"><label for="m-four">Fournisseur</label><input id="m-four" name="fournisseur" value="{{ v.get('fournisseur') or '' }}" maxlength="120"></div>
+    <div data-pour="entree"><label for="m-bon">N° de bon de livraison / de réception</label><input id="m-bon" name="bon_numero" value="{{ v.get('bon_numero') or '' }}" maxlength="60"></div>
+    <div data-pour="entree"><label for="m-pu">Prix unitaire (FCFA par unité)</label><input id="m-pu" name="prix_unitaire" inputmode="numeric" value="{{ v.get('prix_unitaire') or '' }}"><span class="aide">pour valoriser le stock</span></div>
+    <div data-pour="entree"><label for="m-per">Date de péremption</label><input id="m-per" type="date" name="date_peremption" value="{{ v.get('date_peremption') or '' }}"></div>
+    <div data-pour="sortie"><label for="m-rat">Nombre de rationnaires du jour</label><input id="m-rat" name="rationnaires" inputmode="numeric" value="{{ v.get('rationnaires') if v.get('rationnaires') is not none else '' }}"><span class="aide">élèves ayant mangé (proposé d'après les paiements de cantine)</span></div>
+    {% if depenses %}
+    <div data-pour="entree"><label for="m-dep">Dépense liée (module Dépenses)</label><select id="m-dep" name="depense_id"><option value="">— aucune / non concerné —</option>
+      {% for d in depenses %}<option value="{{ d.id }}" {{ 'selected' if v.get('depense_id')|string == d.id|string }}>{{ date_fr(d.date) }} — {{ d.libelle }} — {{ milliers(d.montant) }} F</option>{% endfor %}</select>
+      <span class="aide">rattache l'achat déjà saisi en dépense, sans le ressaisir</span></div>
+    {% endif %}
+  </div>
+  <div><label for="m-obs">Observations</label><textarea id="m-obs" name="observations" rows="2" maxlength="500">{{ v.get('observations') or '' }}</textarea></div>
+  <p class="actions" style="margin-top:12px">
+    <button class="btn vert">💾 Enregistrer</button>
+    {% if not obj %}<button class="btn sec" name="suivant" value="1">Enregistrer et saisir un autre</button>{% endif %}
+    {% if obj %}<a class="btn sec" href="{{ url_for('stock_mouvements', annee=obj.annee) }}">Annuler</a>{% endif %}
+  </p>
+</form>
+{% if obj and modifiable %}
+<form method="post" action="{{ url_for('stock_mouvement_supprimer', mid=obj.id) }}"><button class="btn danger petit" data-confirmer="Supprimer ce mouvement ? Le stock sera recalculé.">Supprimer ce mouvement</button></form>
+{% endif %}
+<script>
+(function(){
+  var t=document.getElementById('m-type'), sel=document.getElementById('m-vivre'), aide=document.getElementById('m-aide-q');
+  function maj(){
+    var typ=t.value;
+    document.querySelectorAll('[data-pour]').forEach(function(d){ d.style.display = d.dataset.pour.split(' ').indexOf(typ)>=0 ? '' : 'none'; });
+    var o=sel.options[sel.selectedIndex], m=o && o.text.match(/\(([^)]+)\)$/);
+    aide.textContent = (typ==='inventaire' ? 'quantité constatée' : 'quantité') + (m ? ' en ' + m[1] : '');
+  }
+  t.addEventListener('change', maj); sel.addEventListener('change', maj); maj();
+})();
+</script>
+{% endblock %}

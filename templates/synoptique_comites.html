@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% block titre %}Tableau synoptique — {{ lib }}{% endblock %}
+{% block contenu %}
+{% include "synoptique_onglets.html" %}
+<nav class="onglets" aria-label="Comités">
+  {% for c, l in COMITES.items() %}<a class="{{ 'actif' if c == comite }}" href="{{ url_for('synoptique_comites', comite=c) }}">{{ l }}{% if c == 'classe' %} (par cours){% endif %}</a>{% endfor %}
+</nav>
+<div class="entete">
+  <div><h2 style="margin:0">{{ lib }}{% if cl %} — {{ cl.nom }} ({{ cl.niveau }}){% endif %}</h2>
+    <p class="sous">{{ lst|length }} membre(s) · année scolaire {{ ANNEE }}</p></div>
+  <div class="actions">
+    {% if comite == 'classe' %}
+    <form method="get" action="{{ url_for('synoptique_comites', comite='classe') }}" class="filtres" style="margin:0">
+      <label for="sel-cl" class="aide">Classe</label>
+      <select id="sel-cl" name="classe_id" onchange="this.form.submit()">{% for c in cls %}<option value="{{ c.id }}" {{ 'selected' if cl and c.id == cl.id }}>{{ c.nom }} ({{ c.niveau }})</option>{% else %}<option>Aucune classe</option>{% endfor %}</select>
+      <noscript><button class="btn sec petit">Voir</button></noscript>
+    </form>
+    {% endif %}
+    {% if ecrire and (comite != 'classe' or cl) %}<a class="btn" href="{{ url_for('synoptique_membre_form', comite=comite, mid=0, classe_id=cl.id if cl else None) }}">+ Ajouter un membre</a>{% endif %}
+    {% if comite != 'classe' or cl %}<a class="btn sec" href="{{ url_for('synoptique_comite_pdf', comite=comite, classe_id=cl.id if cl else None) }}" target="_blank">PDF du comité</a>{% endif %}
+  </div>
+</div>
+<div class="tw"><table class="t">
+  <thead><tr><th>N°</th><th>Nom et prénoms</th><th>Qualité / fonction</th><th>Structure d'origine</th><th>Contact</th><th>Observations</th>{% if ecrire %}<th></th>{% endif %}</tr></thead>
+  <tbody>
+  {% for m in lst %}
+  <tr><td>{{ loop.index }}</td><td><b>{{ m.nom_prenoms }}</b></td><td>{{ m.qualite or '' }}</td><td>{{ m.origine or '' }}</td><td>{{ m.contact or '' }}</td><td>{{ m.observations or '' }}</td>
+    {% if ecrire %}<td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('synoptique_membre_form', comite=comite, mid=m.id, classe_id=m.classe_id) }}">Modifier</a>
+      <form method="post" action="{{ url_for('synoptique_membre_supprimer', comite=comite, mid=m.id) }}" style="display:inline" onsubmit="return confirm('Supprimer ce membre du comité ?')"><button class="btn danger petit">Supprimer</button></form></td>{% endif %}</tr>
+  {% else %}<tr><td colspan="7" class="aide">{% if comite == 'classe' and not cl %}Aucune classe dans cette école : créez d'abord les classes.{% else %}Aucun membre enregistré pour ce comité.{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>
+<p class="aide">Comité de santé (art. 39 et 41 du règlement intérieur), bureau de l'Association des parents d'élèves, comité de direction de l'école et comité de chaque classe (cours). Les membres peuvent aussi être importés depuis un classeur Excel (onglet Import / export).</p>
+{% endblock %}

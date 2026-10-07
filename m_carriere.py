@@ -10,12 +10,19 @@ Gestion de carrière des enseignants (édition « École publique ») et tableau
   ses diplômes (académique, CEAP, CAP) : le directeur valide ou rejette la proposition.
 
 Règles de calcul (documentées aussi à l'écran) :
-* Anciennetés au 31 décembre de l'année civile en cours, en années et mois révolus, en comptant le
-  31/12 inclus (du 01/01/2020 au 31/12/2026 = 7 ans 0 mois ; du 29/02/2024 = 2 ans 10 mois).
-* Date probable de départ à la retraite : date de naissance + âge limite du grade
-  (A = 60 ans, B = 58 ans, C = 55 ans ; la lettre du grade donne la catégorie : A1-5 → A).
-  Né(e) un 29 février : le 28 février si l'année de départ n'est pas bissextile.
-  Si seule l'année de naissance est connue : 31 décembre de l'année (naissance + âge).
+* Date de référence des anciennetés : le 31 décembre de la PREMIÈRE année de l'année scolaire en cours
+  (année active « 2026-2027 » → 31/12/2026 ; si l'année active est illisible : 31/12 de l'année civile courante).
+* Anciennetés (générale, département, commune, école) : de la date de prise de service dans chaque lieu
+  jusqu'à la date de référence, en années et mois révolus, en comptant le 31/12 inclus
+  (du 01/01/2020 au 31/12/2026 = 7 ans 0 mois ; du 29/02/2024 = 2 ans 10 mois).
+* Date de départ à la retraite : selon le grade et l'année de naissance — âge limite A = 60 ans, B = 58 ans,
+  C = 55 ans (la lettre du grade donne la catégorie : A1-5 → A). Le départ a lieu le PREMIER JOUR DU MOIS
+  DU TRIMESTRE QUI SUIT le trimestre de naissance : né(e) de janvier à mars → 1er avril ; d'avril à juin →
+  1er juillet ; de juillet à septembre → 1er octobre ; d'octobre à décembre → 1er janvier de l'année suivante.
+  Exemples : né(e) le 15/02/1967, grade A → 01/04/2027 ; né(e) le 28/02/1969, grade B → 01/04/2027 ;
+  né(e) le 10/11/1970, grade C → 01/01/2026.
+  Si seule l'année de naissance est connue, le trimestre est inconnu : on retient l'hypothèse la plus
+  prudente, le 1er janvier de l'année (naissance + âge + 1), c'est-à-dire la date la plus tardive possible.
   Alerte si le départ intervient dans 2 ans ou moins (ou est déjà atteint).
 """
 import json
@@ -24,6 +31,8 @@ import types
 from datetime import date, datetime, timedelta
 
 from flask import abort, flash, g, redirect, render_template, request, url_for
+
+import config
 
 # ---------------------------------------------------------------- référentiels
 CATEGORIES = [("FE", "FE"), ("ACDPE", "ACDPE"), ("ACDPCTD", "ACDPCTD (AME)")]
@@ -121,9 +130,18 @@ def en_date(iso):
         return None
 
 
-def date_reference(auj=None):
-    """Anciennetés arrêtées au 31 décembre de l'année civile en cours."""
-    return date((auj or date.today()).year, 12, 31)
+def annee_scolaire_debut(annee=None, auj=None):
+    """« 2026-2027 » -> 2026 ; année illisible -> année civile de `auj` (aujourd'hui)."""
+    m = re.match(r"\s*(\d{4})", str(annee if annee is not None else getattr(config, "ANNEE_ACTIVE", "") or ""))
+    if m and 1990 <= int(m.group(1)) <= 2100:
+        return int(m.group(1))
+    return (auj or date.today()).year
+
+
+def date_reference(auj=None, annee=None):
+    """Anciennetés arrêtées au 31 décembre de la première année de l'année scolaire active
+    (« 2026-2027 » -> 31/12/2026) ; si l'année active est illisible : 31/12 de l'année civile en cours."""
+    return date(annee_scolaire_debut(annee, auj), 12, 31)
 
 
 def mois_ecoules(debut, fin):
@@ -149,19 +167,26 @@ def lettre_grade(grade):
 
 
 def date_retraite(naissance, grade):
-    """Date probable de départ à la retraite (date) ou None."""
+    """Date de départ à la retraite (date) ou None.
+    Année = année de naissance + âge du grade (A 60, B 58, C 55) ; jour = 1er jour du mois qui ouvre le
+    trimestre SUIVANT le trimestre de naissance : janv–mars -> 1er avril, avril–juin -> 1er juillet,
+    juil–sept -> 1er octobre, oct–déc -> 1er janvier de l'année suivante.
+    Année de naissance seule (« 1968 ») : trimestre inconnu -> 1er janvier de (année + âge + 1)."""
     age = AGES_RETRAITE.get(lettre_grade(grade))
     if not age or not naissance:
         return None
-    if re.fullmatch(r"\d{4}", naissance):
-        return date(int(naissance) + age, 12, 31)
-    n = en_date(naissance)
+    if isinstance(naissance, date):
+        n = naissance
+    elif re.fullmatch(r"\d{4}", naissance):
+        return date(int(naissance) + age + 1, 1, 1)
+    else:
+        n = en_date(naissance)
     if not n:
         return None
-    try:
-        return date(n.year + age, n.month, n.day)
-    except ValueError:              # né(e) un 29 février, année de départ non bissextile
-        return date(n.year + age, 2, 28)
+    trimestre = (n.month - 1) // 3            # 0..3
+    if trimestre == 3:
+        return date(n.year + age + 1, 1, 1)
+    return date(n.year + age, 3 * (trimestre + 1) + 1, 1)
 
 
 def plus_ans(d, ans):
@@ -600,10 +625,12 @@ def enregistrer(app, H):
         return [("DDEMP", e["ddemp"] or "—"), ("CS", e["cs"] or "—"), ("ÉCOLE", e["ecole"] or "—")]
 
     NOTES_BAS = [
-        "Anciennetés arrêtées au 31 décembre de l'année en cours (31/12 inclus), en années (a) et mois (m) révolus. "
-        "PS = prise de service.",
-        "Retraite : date de naissance + 60 ans (grade A), 58 ans (grade B), 55 ans (grade C) ; si seule l'année de "
-        "naissance est connue : 31/12 de l'année correspondante. Lignes orangées : départ dans 2 ans ou moins.",
+        "Anciennetés arrêtées au 31 décembre de la première année de l'année scolaire en cours (31/12 inclus), "
+        "en années (a) et mois (m) révolus, à partir de la date de prise de service dans chaque lieu. PS = prise de service.",
+        "Retraite : âge limite 60 ans (grade A), 58 ans (grade B), 55 ans (grade C) ; départ le 1er jour du trimestre "
+        "qui suit le trimestre de naissance (né de janvier à mars : 1er avril ; avril–juin : 1er juillet ; "
+        "juillet–septembre : 1er octobre ; octobre–décembre : 1er janvier suivant). Année de naissance seule : "
+        "1er janvier de l'année (naissance + âge + 1). Lignes orangées : départ dans 2 ans ou moins.",
     ]
 
     def pdf_personnel(lst, titre, avant=None):
@@ -702,8 +729,11 @@ def enregistrer(app, H):
             cases = [[lib, val or "……………………"] for lib, val in champs]
             for i in range(0, len(cases), 2):
                 lignes.append(cases[i] + (cases[i + 1] if i + 1 < len(cases) else ["", ""]))
-        notes = ["Anciennetés au 31/12 de l'année en cours (jour inclus), en années et mois révolus. Retraite : date de "
-                 "naissance + 60 ans (grade A), 58 ans (B), 55 ans (C) ; année de naissance seule : 31/12 de l'année."]
+        notes = [f"Anciennetés au {f['reference'].strftime('%d/%m/%Y')} (31/12 de la première année de l'année scolaire, "
+                 "jour inclus), en années et mois révolus. Retraite : 60 ans (grade A), 58 ans (B), 55 ans (C), départ le "
+                 "1er jour du trimestre qui suit le trimestre de naissance (janv.–mars : 1er avril ; avril–juin : 1er juillet ; "
+                 "juil.–sept. : 1er octobre ; oct.–déc. : 1er janvier suivant) ; année de naissance seule : 1er janvier "
+                 "de l'année (naissance + âge + 1)."]
         if f["incomplet"]:
             notes.insert(0, "Renseignements manquants : " + ", ".join(f["manquants"]) + ".")
         sigs = [("L'AGENT", f["nom_complet"], None, False)] + signatures_directeur()

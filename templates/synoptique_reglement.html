@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% block titre %}Règlement intérieur{% endblock %}
+{% block contenu %}
+<style>
+.regl h3{color:var(--bleu);font-size:15px;margin:18px 0 6px}
+.regl p{margin:0 0 8px;white-space:pre-line;line-height:1.45}
+.regl .art{display:flex;gap:10px;align-items:flex-start}
+.regl .art .act{margin-left:auto;white-space:nowrap;flex-shrink:0}
+</style>
+{% include "synoptique_onglets.html" %}
+<div class="entete">
+  <div><h2 style="margin:0">Règlement intérieur de l'école</h2><p class="sous">{{ lst|length }} élément(s) : préambule, titres et articles</p></div>
+  <div class="actions">
+    {% if ecrire %}<a class="btn" href="{{ url_for('synoptique_article_form', rid=0) }}">+ Ajouter un article / un titre</a>
+    <form method="post" action="{{ url_for('synoptique_reglement_retablir') }}" style="display:inline" onsubmit="return confirm('Rétablir le règlement intérieur officiel ? Vos ajouts et modifications seront remplacés.')"><button class="btn sec">Rétablir le règlement officiel</button></form>{% endif %}
+    <a class="btn sec" href="{{ url_for('synoptique_reglement_pdf') }}" target="_blank">PDF</a>
+  </div>
+</div>
+<div class="carte regl">
+  {% for a in lst %}
+    {% if a.type == 'titre' %}<h3 id="art-{{ a.id }}" class="art"><span>TITRE {{ a.numero }} : {{ a.titre|upper }}</span>{% if ecrire %}<span class="act"><a class="btn sec petit" href="{{ url_for('synoptique_article_form', rid=a.id) }}">Modifier</a> <form method="post" action="{{ url_for('synoptique_article_supprimer', rid=a.id) }}" style="display:inline" onsubmit="return confirm('Supprimer ce titre ?')"><button class="btn danger petit">Supprimer</button></form></span>{% endif %}</h3>
+    {% elif a.type == 'preambule' %}<h3 id="art-{{ a.id }}" class="art"><span>{{ (a.titre or 'Préambule')|upper }}</span>{% if ecrire %}<span class="act"><a class="btn sec petit" href="{{ url_for('synoptique_article_form', rid=a.id) }}">Modifier</a></span>{% endif %}</h3><p>{{ a.texte }}</p>
+    {% else %}<div id="art-{{ a.id }}" class="art"><p><b>Article {{ a.numero }} :</b> {{ a.texte }}</p>{% if ecrire %}<span class="act"><a class="btn sec petit" href="{{ url_for('synoptique_article_form', rid=a.id) }}">Modifier</a> <form method="post" action="{{ url_for('synoptique_article_supprimer', rid=a.id) }}" style="display:inline" onsubmit="return confirm('Supprimer cet article ?')"><button class="btn danger petit">Supprimer</button></form></span>{% endif %}</div>
+    {% endif %}
+  {% else %}<p class="aide">Aucun élément.</p>{% endfor %}
+</div>
+<p class="aide">Source : {{ source }}. Le règlement est lu et commenté tous les premiers mois de l'année scolaire et affiché dans les classes (article 62).</p>
+{% endblock %}

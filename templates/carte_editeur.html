@@ -67,6 +67,8 @@
     <button type="button" class="btn sec petit" id="ca-charger" title="Recharger les valeurs enregistrées">📂 Charger</button>
     <button class="btn sec petit" formaction="{{ url_for('carte_pdf', eid=e.id) }}" formtarget="_blank" title="PDF avec les valeurs affichées (même non enregistrées)">📄 Télécharger PDF</button>
     <button type="button" class="btn sec petit" id="ca-reinit" title="Remettre les données de l'inscription et de l'école dans le formulaire">↺ Réinitialiser</button>
+    <button class="btn danger petit" type="submit" form="f-carte-suppr" title="Effacer la carte enregistrée de cet élève (l'élève reste inscrit)">🗑 Supprimer la carte</button>
+    <label class="aide" style="font-size:12px"><input type="checkbox" name="photo" value="1" form="f-carte-suppr"> avec la photo</label>
   {% endcall %}
 
   <div class="carte">
@@ -124,6 +126,8 @@
   </div>
 </form>
 
+<form method="post" id="f-carte-suppr" action="{{ url_for('carte_supprimer', eid=e.id) }}"
+      onsubmit="return confirm('Supprimer la carte enregistrée de {{ (e.nom ~ ' ' ~ e.prenoms)|replace("'", "\\'") }} ? (corrections de la carte, code de vérification' + (this.photo.checked ? ' et photo' : '') + ' — l\'élève reste inscrit)')"></form>
 <div class="ca-apercu carte">
   <h2>Aperçu recto / verso</h2>
   <div class="ca-faces"><div class="ca-zoom">

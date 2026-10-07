@@ -11,6 +11,11 @@ Routes (pages actives seulement en édition cs / ddemp) :
 * /juridiction/visites/<id>/fiche.pdf          jur_visite_pdf         fiche officielle de la visite
 * /juridiction/visites/fiche-vierge.pdf        jur_visite_vierge      fiche vierge imprimable
 * /juridiction/bilan-activites                 jur_bilan_activites    bilan des CP et CCS (+ ?export=xlsx|pdf)
+* /juridiction/cp                              jur_cp                 module des conseillers pédagogiques (v1.6) :
+      un enregistrement par CP (visiteurs CP de l'année ∪ « CP de la zone » de jur_zones ∪ agents CP de jur_agents),
+      avec sa zone, le nombre d'écoles et d'enseignants de la zone, les visites de classe et d'école effectuées,
+      les enseignants visités / restant à visiter (couverture %), la dernière visite et la synthèse par mois ;
+      DDEMP = par CS puis par CP (+ ?export=xlsx|pdf). Fonction exposée : H.jur_synthese_cp(annee, cs_id=None).
 
 Sources des visites (réunies, puis dédoublonnées : même date + même enseignant + même visiteur) :
 1. la table jur_visites (saisies de la structure elle-même : CS ou DDEMP) ;
@@ -518,8 +523,11 @@ def enregistrer(app, H):
             ens_perim = sum(nb_ens.get(e, 0) for e in perim)
             notes = [v["note"] for v in vs if v["note"] is not None]
             par_mois = Counter(mois_de(v["date"]) for v in vs)
+            dates = sorted(v["date"] for v in vs if v["date"])
             par_visiteur.append({
                 "cle": k, "visiteur": nom, "qualite": qual, "fonction": FONCTIONS[qual], "cs_nom": ", ".join(cs_noms),
+                "cs_ids": sorted(cs_ids), "zones": sorted(zones_cp.get(k, set())) if qual == "CP" else [],
+                "derniere": dates[-1] if dates else "", "premiere": dates[0] if dates else "",
                 "visites_classe": sum(1 for v in vs if v["type"] in ("classe", "inspection")),
                 "visites_inspection": sum(1 for v in vs if v["type"] == "inspection"),
                 "visites_ecole": sum(1 for v in vs if v["type"] == "ecole"), "total": len(vs),
@@ -599,7 +607,8 @@ def enregistrer(app, H):
                    enseignants_total=ens_total, enseignants_visites=min(ens_v, ens_total) if ens_total else ens_v,
                    taux_enseignants=C.taux(min(ens_v, ens_total), ens_total), visiteurs=len(par_visiteur))
         return {"annee": annee, "visiteurs": par_visiteur, "zones": par_zone, "cs": par_cs, "mois": mois,
-                "disciplines": disciplines, "tot": tot}
+                "disciplines": disciplines, "tot": tot,
+                "ref": {"ecs": ecs, "nb_ens": nb_ens, "zones": zones, "zones_cp": zones_cp}}
 
     def jur_bilan_visites(annee=None, cs_id=None):
         """Bilan par visiteur (CP / CCS) pour les tableaux de bord : liste de dict
@@ -1131,3 +1140,230 @@ def enregistrer(app, H):
                            "sans double compte (même date, même enseignant, même visiteur)."])
         H.journal("jur_bilan_pdf", b["annee"])
         return H.pdf_reponse(pdf, f"bilan_activites_cp_ccs_{b['annee']}.pdf")
+
+    # ============================================================== module des conseillers pédagogiques (v1.6)
+    def agents_cp(cs_id=None):
+        """Conseillers pédagogiques connus comme agents (jur_agents : rôle « cp » ou poste « Conseiller pédagogique »)."""
+        sql, args = "SELECT a.*, c.nom cs_nom FROM jur_agents a LEFT JOIN jur_cs c ON c.id=a.cs_id WHERE a.actif=1", []
+        if config.EDITION == "cs":
+            sql += " AND (a.cs_id IS NULL OR a.cs_id=?)"
+            args.append(cs_courante_id() or 0)
+        elif cs_id:
+            sql += " AND a.cs_id=?"
+            args.append(cs_id)
+        out = []
+        for a in q(sql + " ORDER BY nom, prenoms", tuple(args)):
+            try:
+                d = json.loads(a["donnees"] or "{}")
+            except ValueError:
+                d = {}
+            if d.get("role") == "cp" or "CONSEILLER PEDAGOGIQUE" in norm(a["poste"]):
+                out.append({"nom": f"{(a['nom'] or '').upper()} {a['prenoms'] or ''}".strip(), "telephone": a["telephone"] or "",
+                            "cs_id": a["cs_id"], "cs_nom": a["cs_nom"] or "", "agent_id": a["id"]})
+        return out
+
+    def tot_cp(lst):
+        """Totaux d'une liste de CP (module des CP)."""
+        notes = [x["note_moyenne"] for x in lst if x["note_moyenne"] is not None]
+        t = {k: sum(x[k] for x in lst) for k in ("visites_classe", "visites_inspection", "visites_ecole", "total",
+                                                 "ecoles_perimetre_visitees", "enseignants_perimetre_visites",
+                                                 "ecoles_zone", "enseignants_zone", "declarees")}
+        t["cps"] = len(lst)
+        t["actifs"] = sum(1 for x in lst if x["total"])
+        t["mois"] = [sum(x["mois"][i] for x in lst) for i in range(len(MOIS))]
+        t["note_moyenne"] = C.moyenne(notes)
+        t["taux_ecoles"] = C.taux(t["ecoles_perimetre_visitees"], t["ecoles_zone"])
+        t["taux_enseignants"] = C.taux(t["enseignants_perimetre_visites"], t["enseignants_zone"])
+        return t
+
+    def synthese_cp(annee, cs_id=None):
+        """Module des CP : un enregistrement par conseiller pédagogique (visiteurs CP de l'année ∪ CP des zones
+        pédagogiques ∪ agents CP), avec sa zone, le nombre d'écoles et d'enseignants de la zone, les visites de classe et
+        d'école effectuées, les enseignants visités / à visiter (couverture), la dernière visite et la synthèse par mois.
+        À la DDEMP sans filtre, le calcul est fait circonscription par circonscription (un CP appartient à une CS).
+        {"annee", "cps": [...], "cs": [{cs_id, cs_nom, cps, tot}] (DDEMP), "tot", "mois_lib"}."""
+        if config.EDITION == "ddemp" and not cs_id:
+            par_cs, out = [], []
+            for c in H.jur_cs_liste():
+                s = _synthese_cp_cs(annee, c["id"])
+                par_cs.append({"cs_id": c["id"], "cs_nom": c["nom"], "cps": s["cps"], "tot": s["tot"]})
+                out += s["cps"]
+            tot = tot_cp(out)
+            tot.update(ecoles_total=sum(c["tot"]["ecoles_total"] for c in par_cs),
+                       enseignants_total=sum(c["tot"]["enseignants_total"] for c in par_cs))
+            return {"annee": annee, "cps": out, "cs": par_cs, "tot": tot, "mois_lib": [lib for _, lib in MOIS]}
+        s = _synthese_cp_cs(annee, cs_id)
+        return {"annee": annee, "cps": s["cps"], "cs": [], "tot": s["tot"], "mois_lib": [lib for _, lib in MOIS]}
+
+    def _synthese_cp_cs(annee, cs_id=None):
+        """Synthèse des CP d'un périmètre (la CS courante, ou une CS de la DDEMP) : {"cps", "tot"}."""
+        b = bilan(annee, cs_id)
+        ecs, nb_ens, zones = b["ref"]["ecs"], b["ref"]["nb_ens"], b["ref"]["zones"]
+        cs_noms = {c["id"]: c["nom"] for c in H.jur_cs_liste()}
+        cps = {}
+
+        def nouveau(cle, nom, cs_ids):
+            return cps.setdefault(cle, {
+                "cle": cle, "visiteur": nom, "cs_ids": set(cs_ids), "zones_ids": set(), "telephone": "",
+                "visites_classe": 0, "visites_inspection": 0, "visites_ecole": 0, "total": 0, "ecoles": 0,
+                "ecoles_perimetre_visitees": 0, "enseignants": 0, "enseignants_perimetre_visites": 0,
+                "note_moyenne": None, "nb_notes": 0, "derniere": "", "premiere": "", "declarees": 0,
+                "mois": [0] * len(MOIS), "disciplines": {}, "source": set()})
+
+        for v in b["visiteurs"]:
+            if v["qualite"] != "CP":
+                continue
+            d = nouveau(v["cle"], v["visiteur"], v["cs_ids"])
+            d.update({k: v[k] for k in ("visites_classe", "visites_inspection", "visites_ecole", "total", "ecoles",
+                                        "ecoles_perimetre_visitees", "enseignants", "enseignants_perimetre_visites",
+                                        "note_moyenne", "nb_notes", "derniere", "premiere", "declarees", "mois", "disciplines")})
+            d["zones_ids"] |= set(v["zones"])
+            d["source"].add("visites")
+        for z in zones:
+            if z["cp_nom"]:
+                d = nouveau(cle_personne(z["cp_nom"]), z["cp_nom"], [z["cs_id"]])
+                d["zones_ids"].add(z["id"])
+                d["source"].add("zone")
+                if not d["telephone"] and z["cp_telephone"]:
+                    d["telephone"] = z["cp_telephone"]
+        for a in agents_cp(cs_id):
+            cid = a["cs_id"] or cs_id or cs_courante_id()
+            d = nouveau(cle_personne(a["nom"]), a["nom"], [cid] if cid else [])
+            d["source"].add("agent")
+            if not d["telephone"]:
+                d["telephone"] = a["telephone"]
+        out = []
+        for d in cps.values():
+            zs = [z for z in zones if z["id"] in d["zones_ids"]]
+            d["cs_ids"] |= {z["cs_id"] for z in zs}
+            if zs:
+                perim = {e for e, x in ecs.items() if x["zone_id"] in d["zones_ids"]}
+                d["perimetre"] = ", ".join(z["nom"] for z in zs)
+            else:
+                perim = {e for e, x in ecs.items() if x["cs_id"] in d["cs_ids"]}
+                d["perimetre"] = "Circonscription (zone non renseignée)"
+            d["zones"] = [z["nom"] for z in zs]
+            d["cs_nom"] = ", ".join(cs_noms[c] for c in sorted(d["cs_ids"]) if c in cs_noms)
+            d["ecoles_zone"] = len(perim)
+            d["enseignants_zone"] = sum(nb_ens.get(e, 0) for e in perim)
+            d["enseignants_perimetre_visites"] = min(d["enseignants_perimetre_visites"], d["enseignants_zone"]) if d["enseignants_zone"] else d["enseignants_perimetre_visites"]
+            d["taux_ecoles"] = C.taux(min(d["ecoles_perimetre_visitees"], d["ecoles_zone"]), d["ecoles_zone"])
+            d["taux_enseignants"] = C.taux(d["enseignants_perimetre_visites"], d["enseignants_zone"])
+            d["a_visiter"] = max(0, d["enseignants_zone"] - d["enseignants_perimetre_visites"])
+            d["source"] = sorted(d["source"])
+            d["cs_ids"] = sorted(d["cs_ids"])
+            d["zones_ids"] = sorted(d["zones_ids"])
+            out.append(d)
+        out.sort(key=lambda x: (x["cs_nom"], -x["total"], x["visiteur"]))
+        tot = tot_cp(out)
+        tot.update(ecoles_total=len(ecs), enseignants_total=sum(nb_ens.values()))
+        return {"cps": out, "tot": tot}
+
+    H.jur_synthese_cp = synthese_cp
+
+    @app.route("/juridiction/cp")
+    @H.connexion_requise()
+    def jur_cp():
+        juridiction_ou_404()
+        annee = annee_demandee(request.args)
+        cs_id = request.args.get("cs", type=int) if config.EDITION == "ddemp" else None
+        s = synthese_cp(annee, cs_id)
+        fmt = request.args.get("export")
+        if fmt == "xlsx":
+            return cp_xlsx(s, cs_id)
+        if fmt == "pdf":
+            return cp_pdf(s, cs_id)
+        g_mois = svg_barres_empilees(s["mois_lib"], [("Visites des CP", COUL["classe"], s["tot"]["mois"])], titre="Visites des CP par mois")
+        g_couv = svg_barres_h([(x["visiteur"], x["taux_enseignants"], f"{x['visiteur']} : {x['enseignants_perimetre_visites']} "
+                                f"enseignant(s) visité(s) sur {x['enseignants_zone']} ({pct(x['taux_enseignants'])})") for x in s["cps"]],
+                              COUL["classe"], maxi=100, suffixe=" %", titre="Couverture des enseignants par CP")
+        return render_template("jur_cp.html", s=s, annee=annee, annees=annees_dispo(), cs=H.jur_cs_liste(), cs_id=cs_id,
+                               MOIS=MOIS, g_mois=g_mois, g_couv=g_couv, note_txt=note_txt, pct=pct, num=num,
+                               date_fr=H.pdfs.date_fr)
+
+    ENT_CP = ["N°", "Conseiller pédagogique", "Circonscription", "Zone(s) pédagogique(s)", "Téléphone", "Écoles de la zone",
+              "Enseignants de la zone", "Visites de classe (dont inspection)", "dont inspections", "Visites d'école",
+              "Total visites", "Écoles visitées", "Taux écoles (%)", "Enseignants visités", "Enseignants restant à visiter",
+              "Taux enseignants (%)", "Note moyenne /20", "Première visite", "Dernière visite", "dont déclarées par les écoles"]
+
+    def ligne_cp(i, x, xlsx=True):
+        f = (lambda v: v) if xlsx else H.pdfs.date_fr
+        return [i, x["visiteur"], x["cs_nom"], ", ".join(x["zones"]) or x["perimetre"], x["telephone"], x["ecoles_zone"],
+                x["enseignants_zone"], x["visites_classe"], x["visites_inspection"], x["visites_ecole"], x["total"],
+                x["ecoles_perimetre_visitees"], x["taux_ecoles"], x["enseignants_perimetre_visites"], x["a_visiter"],
+                x["taux_enseignants"], x["note_moyenne"], f(x["premiere"]), f(x["derniere"]), x["declarees"]]
+
+    def cp_xlsx(s, cs_id):
+        haut = {"titre_haut": [f"Conseillers pédagogiques : visites et synthèses — {s['annee']}", titre_perimetre(cs_id)]}
+        t = s["tot"]
+        l_cp = [ligne_cp(i, x) + x["mois"] for i, x in enumerate(s["cps"], 1)]
+        l_cp.append(["", "TOTAL", "", "", "", t["ecoles_zone"], t["enseignants_zone"], t["visites_classe"], t["visites_inspection"],
+                     t["visites_ecole"], t["total"], t["ecoles_perimetre_visitees"], t["taux_ecoles"], t["enseignants_perimetre_visites"],
+                     max(0, t["enseignants_zone"] - t["enseignants_perimetre_visites"]), t["taux_enseignants"], t["note_moyenne"],
+                     "", "", t["declarees"]] + t["mois"])
+        feuilles = [("Par CP", ENT_CP + s["mois_lib"], l_cp, haut)]
+        if s["cs"]:
+            feuilles.append(("Par CS", ["Circonscription", "CP", "CP actifs", "Visites de classe", "Visites d'école", "Total",
+                                        "Écoles visitées", "Écoles", "Taux écoles (%)", "Enseignants visités", "Enseignants",
+                                        "Taux enseignants (%)", "Note moyenne"],
+                             [[c["cs_nom"], c["tot"]["cps"], c["tot"]["actifs"], c["tot"]["visites_classe"], c["tot"]["visites_ecole"],
+                               c["tot"]["total"], c["tot"]["ecoles_perimetre_visitees"], c["tot"]["ecoles_zone"], c["tot"]["taux_ecoles"],
+                               c["tot"]["enseignants_perimetre_visites"], c["tot"]["enseignants_zone"], c["tot"]["taux_enseignants"],
+                               c["tot"]["note_moyenne"]] for c in s["cs"]], haut))
+        feuilles.append(("Par mois", ["Conseiller pédagogique"] + s["mois_lib"] + ["Total"],
+                         [[x["visiteur"]] + x["mois"] + [sum(x["mois"])] for x in s["cps"]] + [["TOTAL"] + t["mois"] + [sum(t["mois"])]], haut))
+        H.journal("jur_cp_xlsx", s["annee"])
+        return H.xlsx.reponse_classeur(f"conseillers_pedagogiques_{s['annee']}.xlsx", feuilles)
+
+    def cp_pdf(s, cs_id):
+        P = H.pdfs
+        t = s["tot"]
+        ddemp = config.EDITION == "ddemp"
+        cols = [["N°", "Conseiller pédagogique", "Zone(s)", "Zone", None, "Visites", None, None, "Écoles", None, "Enseignants", None, None,
+                 "Note", "Dernière"],
+                ["^", "^", "^", "Écoles", "Ens.", "Classe*", "École", "Total", "Visitées", "Taux", "Visités", "À visiter", "Taux", "moy.", "visite"]]
+        lignes = [[i, x["visiteur"] + (f"\n{x['cs_nom']}" if ddemp else "") + (f"\n{x['telephone']}" if x["telephone"] else ""),
+                   ", ".join(x["zones"]) or x["perimetre"], x["ecoles_zone"], x["enseignants_zone"], x["visites_classe"],
+                   x["visites_ecole"], x["total"],
+                   f"{x['ecoles_perimetre_visitees']}" + (f"\n({x['ecoles']} au total)" if x["ecoles"] != x["ecoles_perimetre_visitees"] else ""),
+                   pct(x["taux_ecoles"]),
+                   f"{x['enseignants_perimetre_visites']}" + (f"\n({x['enseignants']} au total)" if x["enseignants"] != x["enseignants_perimetre_visites"] else ""),
+                   x["a_visiter"], pct(x["taux_enseignants"]), note_txt(x["note_moyenne"]) or "—",
+                   P.date_fr(x["derniere"]) if x["derniere"] else "—"] for i, x in enumerate(s["cps"], 1)]
+        if not lignes:
+            lignes = [["", "Aucun conseiller pédagogique connu pour cette année.", "", "", "", "", "", "", "", "", "", "", "", "", ""]]
+        total = ["", f"TOTAL ({t['cps']} CP)", "", t["ecoles_zone"], t["enseignants_zone"], t["visites_classe"], t["visites_ecole"],
+                 t["total"], t["ecoles_perimetre_visitees"], pct(t["taux_ecoles"]), t["enseignants_perimetre_visites"],
+                 max(0, t["enseignants_zone"] - t["enseignants_perimetre_visites"]), pct(t["taux_enseignants"]),
+                 note_txt(t["note_moyenne"]) or "—", ""]
+        apres = []
+        if s["cs"]:
+            apres.append(P.paragraphe("Synthèse par circonscription scolaire", 9.5, True, espace=6))
+            apres.append(P.mini_tableau(
+                [["CS", "CP", "CP actifs", "Classe", "École", "Total", "Écoles visitées", "Taux écoles", "Ens. visités", "Taux ens.", "Note moy."]] +
+                [[c["cs_nom"], c["tot"]["cps"], c["tot"]["actifs"], c["tot"]["visites_classe"], c["tot"]["visites_ecole"], c["tot"]["total"],
+                  f"{c['tot']['ecoles_perimetre_visitees']} / {c['tot']['ecoles_zone']}", pct(c["tot"]["taux_ecoles"]),
+                  f"{c['tot']['enseignants_perimetre_visites']} / {c['tot']['enseignants_zone']}", pct(c["tot"]["taux_enseignants"]),
+                  note_txt(c["tot"]["note_moyenne"]) or "—"] for c in s["cs"]], taille=7.5))
+        apres.append(P.paragraphe("Synthèse mensuelle des visites par conseiller pédagogique", 9.5, True, espace=6))
+        apres.append(P.mini_tableau([["Conseiller pédagogique"] + s["mois_lib"] + ["Total"]] +
+                                    [[x["visiteur"]] + x["mois"] + [sum(x["mois"])] for x in s["cps"]] +
+                                    [["TOTAL"] + t["mois"] + [sum(t["mois"])]], taille=7.5))
+        titre, nom, img = signataire()
+        with cachet_structure():
+            pdf = P.document_tableau(
+                "CONSEILLERS PÉDAGOGIQUES : VISITES EFFECTUÉES ET SYNTHÈSES", cols, lignes, total=total, paysage=True, taille=7,
+                largeurs=[5, 36, 28, 9, 9, 10, 9, 9, 10, 10, 10, 10, 10, 9, 13],
+                sous_titre=f"Animation pédagogique — {titre_perimetre(cs_id)} — année scolaire {s['annee']}",
+                infos=[("Conseillers pédagogiques", f"{t['cps']} (dont {t['actifs']} ayant visité)"),
+                       ("Visites de classe / d'école", f"{t['visites_classe']} / {t['visites_ecole']}"),
+                       ("Écoles visitées", f"{t['ecoles_perimetre_visitees']} / {t['ecoles_zone']} ({pct(t['taux_ecoles'])})"),
+                       ("Enseignants visités", f"{t['enseignants_perimetre_visites']} / {t['enseignants_zone']} ({pct(t['taux_enseignants'])})"),
+                       ("Note moyenne", note_txt(t["note_moyenne"]) or "—")],
+                infos_haut=infos_haut(None, H.jur_cs(cs_id)["nom"] if cs_id and H.jur_cs(cs_id) else None),
+                apres=apres, signatures=[(titre, nom, img, True)],
+                notes_bas=["* Visites de classe, y compris les visites d'inspection. Zone d'un CP : « CP de la zone » dans "
+                           "Zones pédagogiques ; sans zone renseignée, la circonscription entière. Enseignants à visiter = "
+                           "enseignants de la zone non encore visités dans l'année."])
+        H.journal("jur_cp_pdf", s["annee"])
+        return H.pdf_reponse(pdf, f"conseillers_pedagogiques_{s['annee']}.pdf")

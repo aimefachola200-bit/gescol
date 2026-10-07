@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% block titre %}Stock — sortie du jour{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Sortie du jour</h1>
+  <p class="sous">Vivres sortis du magasin pour les repas du {{ d.strftime('%d/%m/%Y') }} — une ligne par vivre, nombre de rationnaires</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('stock_accueil') }}">← État du stock</a></div>
+</div>
+{% include "stock_onglets.html" %}
+
+<form method="get" class="filtres">
+  <label>Date<br><input type="date" name="date" value="{{ d.isoformat() }}" max="{{ aujourdhui }}"></label>
+  <button class="btn">Changer de jour</button>
+</form>
+
+{% if deja %}
+<div class="flash info">{{ deja|length }} sortie(s) déjà enregistrée(s) ce jour :
+  {% for m in deja %}{{ m.vivre_nom }} {{ qte(m.quantite) }} {{ m.unite }}{{ ', ' if not loop.last }}{% endfor %}.
+  Les quantités saisies ci-dessous s'ajoutent (modifiez ou supprimez les sorties existantes dans le <a href="{{ url_for('stock_mouvements', du=d.isoformat(), au=d.isoformat(), type='sortie') }}">journal</a>).</div>
+{% endif %}
+
+<form method="post" class="carte f">
+  <input type="hidden" name="date" value="{{ d.isoformat() }}">
+  <div class="ligne">
+    <div><label for="sj-rat">Nombre de rationnaires</label><input id="sj-rat" name="rationnaires" inputmode="numeric" value="{{ rationnaires or '' }}">
+      <span class="aide">{{ rationnaires }} paiement(s) de cantine enregistré(s) ce jour (module Cantine) ; corrigez au besoin</span></div>
+    <div><label for="sj-obs">Observations</label><input id="sj-obs" name="observations" maxlength="300" placeholder="menu du jour, remarques…"></div>
+  </div>
+  <div class="tw" style="margin-top:12px"><table class="t compact"><thead><tr><th>Vivre</th><th class="c">Stock actuel</th><th>Quantité sortie</th></tr></thead><tbody>
+  {% for v in lignes %}
+  <tr><td><b>{{ v.nom }}</b> <span class="aide">({{ v.unite }})</span></td><td class="c">{{ qte(v.stock) }} {{ v.unite }}</td>
+    <td><input name="q_{{ v.id }}" inputmode="decimal" style="max-width:120px" placeholder="0"></td></tr>
+  {% else %}<tr><td colspan="3" class="aide">Aucun vivre actif.</td></tr>{% endfor %}
+  </tbody></table></div>
+  <p class="actions" style="margin-top:12px"><button class="btn vert">💾 Enregistrer la sortie du jour</button></p>
+  <p class="aide">Laissez vide les vivres non utilisés. Chaque quantité devient un mouvement « Sortie » daté du jour, avec le nombre de rationnaires (utilisé pour la consommation moyenne par rationnaire).</p>
+</form>
+{% endblock %}

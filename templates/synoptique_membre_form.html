@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block titre %}{{ lib }} — {{ 'modifier' if m else 'ajouter' }} un membre{% endblock %}
+{% block contenu %}
+{% include "synoptique_onglets.html" %}
+<div class="entete">
+  <div><h2 style="margin:0">{{ lib }}{% if cl %} — {{ cl.nom }}{% endif %} : {{ 'modification' if m else 'nouveau membre' }}</h2></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('synoptique_comites', comite=comite, classe_id=cl.id if cl else None) }}">← Retour au comité</a></div>
+</div>
+<form method="post" class="carte f">
+  {% if cl %}<input type="hidden" name="classe_id" value="{{ cl.id }}">{% endif %}
+  <div class="ligne">
+    <div><label for="m-nom">Nom et prénoms *</label><input id="m-nom" name="nom_prenoms" value="{{ v.get('nom_prenoms') or '' }}" maxlength="120" required></div>
+    <div><label for="m-qual">Qualité / fonction dans le comité</label><input id="m-qual" name="qualite" list="dl-qual" value="{{ v.get('qualite') or '' }}" maxlength="60">
+      <datalist id="dl-qual">{% for o in qualites %}<option value="{{ o }}">{% endfor %}</datalist></div>
+    <div><label for="m-orig">Structure / qualité d'origine</label><input id="m-orig" name="origine" list="dl-orig" value="{{ v.get('origine') or '' }}" maxlength="60">
+      <datalist id="dl-orig">{% for o in origines %}<option value="{{ o }}">{% endfor %}</datalist></div>
+    <div><label for="m-contact">Contact</label><input id="m-contact" name="contact" value="{{ v.get('contact') or '' }}" maxlength="60"></div>
+    <div><label for="m-ordre">Ordre d'affichage</label><input id="m-ordre" name="ordre" inputmode="numeric" value="{{ v.get('ordre') if v.get('ordre') is not none else '' }}" maxlength="3"></div>
+  </div>
+  <div><label for="m-obs">Observations</label><textarea id="m-obs" name="observations" rows="2" maxlength="300">{{ v.get('observations') or '' }}</textarea></div>
+  <p class="actions" style="margin-top:12px"><button class="btn">💾 Enregistrer</button></p>
+</form>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}{% import "jur_tableau_commun.html" as T with context %}
+{% block titre %}Classes par cours{% endblock %}
+{% block contenu %}
+{{ T.styles() }}
+<div class="entete"><div><h1>Classes par cours et par {{ 'circonscription' if par == 'cs' else 'zone pédagogique' }}</h1>
+  <p class="sous">{{ JUR.nom or NOM_APPLI }} · année scolaire {{ flt.annee }} · nombre de classes (groupes pédagogiques) par niveau</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_tableau', annee=flt.annee, cs=flt.cs_id if JUR_NIVEAU == 'ddemp' else None) }}">← Tableau de bord</a>
+    <a class="btn sec" href="{{ url_for('jur_classes_xlsx', **args) }}">⇩ Excel</a>
+    <a class="btn" href="{{ url_for('jur_classes_pdf', **args) }}" target="_blank">📄 PDF</a>
+  </div></div>
+{{ T.filtres(flt, 'jur_classes', zone=True, type_=True, secteur=True, recherche=True) }}
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Classes</div><div class="v">{{ tc.total.total|jur_nb }}</div><div class="d">{{ tc.total.ecoles }} école(s)</div></div>
+  {% for n in tc.niveaux %}<div class="kpi"><div class="l">{{ n }}</div><div class="v">{{ tc.total.par_niveau[n] }}</div><div class="d">classe(s)</div></div>{% endfor %}
+  <div class="kpi"><div class="l">Sans données</div><div class="v">{{ tc.total.sans_donnees }}</div><div class="d">école(s) sans effectifs transmis</div></div>
+</div>
+
+<div class="carte"><h2>1. Par {{ 'circonscription et zone pédagogique' if par == 'cs' else 'zone pédagogique' }}</h2>
+  {% if tc.lignes %}
+  <div class="tw"><table class="t serre">
+    <tr><th>{{ 'Circonscription / zone' if par == 'cs' else 'Zone pédagogique' }}</th>{% for n in tc.niveaux %}<th class="num">{{ n }}</th>{% endfor %}<th class="num">Total classes</th><th class="num">Écoles</th><th class="num">Sans données</th></tr>
+    {% for r in tc.lignes %}
+    <tr class="{{ 'b' if r.niveau == 'cs' }}"><td>{% if r.niveau == 'zone' and par == 'cs' %}<span style="padding-left:18px">{{ r.nom }}</span>{% elif r.niveau == 'cs' %}<a href="{{ url_for('jur_classes', annee=flt.annee, cs=r.cs_id) }}">{{ r.nom }}</a>{% else %}{{ r.nom }}{% endif %}</td>
+      {% for n in tc.niveaux %}<td class="num">{{ r.par_niveau[n] or '' }}</td>{% endfor %}
+      <td class="num"><b>{{ r.total }}</b></td><td class="num">{{ r.ecoles }}</td><td class="num">{{ r.sans_donnees or '' }}</td></tr>
+    {% endfor %}
+    <tr class="b"><td>Total</td>{% for n in tc.niveaux %}<td class="num">{{ tc.total.par_niveau[n] }}</td>{% endfor %}
+      <td class="num">{{ tc.total.total }}</td><td class="num">{{ tc.total.ecoles }}</td><td class="num">{{ tc.total.sans_donnees or '' }}</td></tr>
+  </table></div>
+  {% else %}{{ T.vide("Aucune école pour ces critères.") }}{% endif %}
+</div>
+
+<div class="carte"><h2>2. Par école</h2>
+  <p class="aide">Source : « liste des classes transmise » = section effectifs du fichier de l'école ; « effectifs par niveau » = une classe par niveau renseigné ; « école gérée localement » = table des classes de cette installation.</p>
+  <div class="tw"><table class="t serre">
+    <tr><th>École</th><th>Type</th>{% if JUR_NIVEAU == 'ddemp' %}<th>CS</th>{% endif %}<th>Zone</th>{% for n in tc.niveaux %}<th class="num">{{ n }}</th>{% endfor %}<th class="num">Total</th><th>Source</th></tr>
+    {% for d in detail %}{% set l = d.l %}
+    <tr><td><a href="{{ url_for('jur_ecole_fiche', eid=l.id) }}">{{ l.nom }}</a></td><td>{{ l.type }}</td>{% if JUR_NIVEAU == 'ddemp' %}<td>{{ l.cs_nom }}</td>{% endif %}<td>{{ l.zone_nom }}</td>
+      {% for n in tc.niveaux %}<td class="num">{{ d.par_niveau[n] or '' }}</td>{% endfor %}
+      <td class="num"><b>{{ d.total }}</b></td><td>{% if d.source == 'aucune' %}<span class="badge att">{{ SOURCES_CLASSES[d.source] }}</span>{% else %}<span class="aide">{{ SOURCES_CLASSES[d.source] }}</span>{% endif %}</td></tr>
+    {% else %}<tr><td colspan="{{ 6 + tc.niveaux|length }}" class="gris">Aucune école.</td></tr>{% endfor %}
+  </table></div>
+</div>
+{% endblock %}

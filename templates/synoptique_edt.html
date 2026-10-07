@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% block titre %}Emploi du temps — {{ lib }}{% endblock %}
+{% block contenu %}
+<style>
+.edt td{vertical-align:top;white-space:pre-line;font-size:13px}
+.edt td.h{font-weight:600;white-space:nowrap;background:#F9FAFB}
+.edt td.pause{text-align:center;letter-spacing:.2em;background:#EFE9DA;font-weight:600}
+</style>
+{% include "synoptique_onglets.html" %}
+<nav class="onglets" aria-label="Cours">{% for k, l in NIVEAUX %}<a class="{{ 'actif' if k == niveau }}" href="{{ url_for('synoptique_edt', niveau=k) }}">{{ l }}</a>{% endfor %}</nav>
+<div class="entete">
+  <div><h2 style="margin:0">Emploi du temps — {{ lib }}</h2>
+    <p class="sous">{% if d.officiel %}Emploi du temps officiel (non modifié){% else %}Modifié le {{ d.maj }}{% endif %}</p></div>
+  <div class="actions">
+    {% if ecrire %}<a class="btn" href="{{ url_for('synoptique_edt_form', niveau=niveau) }}">✎ Modifier</a>
+    <form method="post" action="{{ url_for('synoptique_edt_reinit', niveau=niveau) }}" style="display:inline" onsubmit="return confirm('Remplacer cet emploi du temps par l&#39;emploi du temps officiel ?')"><button class="btn sec">Réinitialiser (emploi du temps officiel)</button></form>{% endif %}
+    <a class="btn sec" href="{{ url_for('synoptique_edt_pdf', niveau=niveau) }}" target="_blank">PDF</a>
+    <a class="btn sec" href="{{ url_for('synoptique_edt_xlsx', niveau=niveau) }}">Excel</a>
+  </div>
+</div>
+<div class="tw"><table class="t edt">
+  <thead><tr><th>Horaires</th>{% for j, l in JOURS %}<th>{{ l }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for l in d.lignes %}
+  <tr><td class="h">{{ l.horaire }}</td>
+    {% set pause = l.lundi in (RECRE, INTERCLASSE) and l.mardi == l.lundi and l.jeudi == l.lundi %}
+    {% if pause %}<td class="pause" colspan="5">{{ l.lundi }}</td>{% else %}{% for j, lib_j in JOURS %}<td>{{ l[j] }}</td>{% endfor %}{% endif %}</tr>
+  {% endfor %}
+  </tbody></table></div>
+{% if d.remarques %}<div class="carte" style="margin-top:14px"><h2 style="margin-top:0">Remarques</h2><ol>{% for r in d.remarques %}<li>{{ r }}</li>{% endfor %}</ol></div>{% endif %}
+{% if d.source %}<p class="aide">Source : {{ d.source }}</p>{% endif %}
+{% endblock %}

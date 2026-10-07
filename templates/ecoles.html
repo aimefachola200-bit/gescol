@@ -1,8 +1,9 @@
 {% extends "base.html" %}{% block titre %}Écoles{% endblock %}
 {% block contenu %}
-<div class="entete"><div><h1>Écoles</h1>
-<p class="sous">Chaque école a sa fiche (DDEMP, CS, directeur, cachet…). Ces informations remplissent automatiquement les en-têtes de tous les modules : bulletins, relevés, fiches CEP, cartes, tableaux d'affichage.</p></div>
-<div class="actions"><a class="btn" href="{{ url_for('ecole_form') }}">+ Ajouter une école</a></div></div>
+<div class="entete"><div><h1>Écoles{% if JURIDICTION %} (ajout, modification, suppression){% endif %}</h1>
+<p class="sous">Chaque école a sa fiche (DDEMP, CS, directeur, cachet…). Ces informations remplissent automatiquement les en-têtes de tous les modules : bulletins, relevés, fiches CEP, cartes, tableaux d'affichage.{% if JURIDICTION %} Une école créée ici est aussi inscrite dans la liste des écoles de la {{ 'circonscription' if JUR_NIVEAU == 'cs' else 'DDEMP' }}.{% endif %}</p></div>
+<div class="actions">{% if peut('parametres') %}<a class="btn" href="{{ url_for('ecole_form') }}">+ Ajouter une école</a>{% endif %}
+{% if JURIDICTION and ep_existe('jur_ecoles_modules') %}<a class="btn sec" href="{{ url_for('jur_ecoles_modules') }}">Écoles de la juridiction et modules</a>{% endif %}</div></div>
 <div class="tw"><table class="t">
 <tr><th>École</th><th>DDEMP / CS</th><th>Directeur</th><th class="num">Classes</th><th class="num">Élèves</th><th>Cachet</th><th></th></tr>
 {% for e in lst %}
@@ -15,7 +16,8 @@
   <td class="num"><div class="actions" style="justify-content:flex-end">
     {% if e.actif and not (ECOLE_COURANTE and ECOLE_COURANTE.id==e.id) %}<form method="post" action="{{ url_for('ecole_choisir', eid=e.id) }}"><button class="btn sec petit">Travailler sur cette école</button></form>{% endif %}
     <a class="btn sec petit" href="{{ url_for('ecole_form', eid=e.id) }}">Modifier</a>
-    {% if e.id != 1 %}<form method="post" action="{{ url_for('ecole_basculer', eid=e.id) }}"><button class="btn sec petit">{{ 'Désactiver' if e.actif else 'Réactiver' }}</button></form>{% endif %}
+    {% if peut('parametres') and (e.id != 1 or JURIDICTION) %}<form method="post" action="{{ url_for('ecole_basculer', eid=e.id) }}"><button class="btn sec petit">{{ 'Désactiver' if e.actif else 'Réactiver' }}</button></form>
+    {% if ep_existe('ecole_supprimer') %}<form method="post" action="{{ url_for('ecole_supprimer', eid=e.id) }}" onsubmit="return confirm('Supprimer l\'école « {{ e.nom|replace("'", "’") }} » ?{% if e.nb_classes or e.nb_eleves %} Elle a des classes ou des élèves : la suppression sera refusée (désactivez-la).{% endif %}')"><button class="btn danger petit">Supprimer</button></form>{% endif %}{% endif %}
   </div></td></tr>
 {% endfor %}
 </table></div>

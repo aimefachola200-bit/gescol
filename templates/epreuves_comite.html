@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% block titre %}Comité d'évaluation{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Comité d'évaluation</h1>
+  <p class="sous">Membres (qualité, qualification, fonction dans le comité) — année scolaire {{ annee }}</p></div>
+  <div class="actions">
+    {% if modifiable %}<a class="btn petit" href="{{ url_for('epreuves_membre', mid=0, annee=annee) }}">＋ Ajouter un membre</a>
+    <a class="btn sec petit" href="{{ url_for('epreuves_comite_import', annee=annee) }}">⬆ Importer (Excel)</a>{% endif %}
+    <a class="btn sec petit" target="_blank" href="{{ url_for('epreuves_comite_pdf', annee=annee) }}">📄 PDF</a>
+    <a class="btn sec petit" href="{{ url_for('epreuves_comite_xlsx', annee=annee) }}">⬇ Excel</a>
+  </div>
+</div>
+{% include "epreuves_onglets.html" %}
+
+<form method="get" class="filtres">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option value="{{ a }}" {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+</form>
+
+{% if liste %}
+<div class="tw"><table class="t compact"><thead><tr>
+  <th>N°</th><th>Nom et prénoms</th><th>Qualité</th><th>Qualification</th><th>Fonction dans le comité</th><th>Classe / niveau</th><th>Contact</th><th>État</th>{% if modifiable %}<th></th>{% endif %}
+</tr></thead><tbody>
+{% for m in liste %}
+<tr style="{{ 'color:var(--gris)' if not m.actif }}">
+  <td>{{ loop.index }}</td><td><b>{{ m.nom_prenoms }}</b></td><td>{{ m.qualite or '' }}</td><td>{{ m.qualification or '' }}</td>
+  <td>{{ m.fonction_comite or '' }}</td><td>{{ m.classe_ou_niveau or '' }}</td><td>{{ m.contact or '' }}</td>
+  <td>{% if m.actif %}<span class="badge ok">actif</span>{% else %}<span class="badge">inactif</span>{% endif %}</td>
+  {% if modifiable %}<td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('epreuves_membre', mid=m.id) }}">Modifier</a>
+    <form method="post" action="{{ url_for('epreuves_membre_supprimer', mid=m.id) }}" style="display:inline"><button class="btn danger petit" data-confirmer="Retirer « {{ m.nom_prenoms }} » du comité ?">Supprimer</button></form></td>{% endif %}
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+<div class="carte">Aucun membre pour {{ annee }}.{% if modifiable %} <a href="{{ url_for('epreuves_membre', mid=0, annee=annee) }}">Ajoutez le directeur, les enseignants, le CP…</a> ou <a href="{{ url_for('epreuves_comite_import', annee=annee) }}">importez la liste depuis Excel</a>.{% endif %}</div>
+{% endif %}
+<p class="aide">Le comité d'évaluation élabore et valide les épreuves et les grilles de correction de l'école. La liste PDF porte l'en-tête de l'école et la signature du directeur.</p>
+{% endblock %}

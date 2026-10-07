@@ -1,0 +1,148 @@
+{% extends "base.html" %}{% block titre %}Examen blanc N° {{ s.numero }}{% endblock %}
+{% block contenu %}
+{% set NIV = 'CS' if JUR_NIVEAU == 'cs' else 'DDEMP' %}
+<style>
+.t tr.g-zone td{background:#EEF3FA;font-weight:600}
+.t tr.g-cs td{background:#D9E4F2;font-weight:700}
+.t tr.g-total td{background:#C9D8EE;font-weight:700}
+#cb-table input{padding:4px 5px;font-size:13px}
+#cb-table input.cb-note{width:52px;text-align:center}
+#cb-table input[name=table]{width:70px}
+#cb-table input[name=nom]{width:130px;text-transform:uppercase}
+#cb-table input[name=prenoms]{width:150px}
+#cb-table select{padding:4px;width:auto;min-width:52px}
+#cb-table th.mat{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font-size:11px;text-transform:none;padding:6px 2px}
+.onglets a{margin-right:4px}
+</style>
+<div class="entete">
+  <div><h1>{{ s.nom }}</h1>
+  <p class="sous">{{ NIV }} · {{ s.niveau }} · année {{ s.annee }} · {{ s.mats|length }} matière(s) · maîtrise = au moins {{ s.seuil_eff }} matière(s) à 10/20{% if s.date %} · {{ date_fr(s.date) }}{% endif %}</p></div>
+  <div class="actions">
+    <select aria-label="Charger un autre examen blanc" onchange="if(this.value) location.href=this.value">
+      <option value="">📂 Autre examen blanc…</option>
+      {% for a in autres if a.id != s.id %}<option value="{{ url_for('jur_cep_blanc_session', sid=a.id) }}">N° {{ a.numero }} – {{ a.annee }} – {{ a.nom }}</option>{% endfor %}
+    </select>
+    <a class="btn sec" href="{{ url_for('jur_cep_blanc_session', sid=s.id, vue=vue, ecole=ecole.id if ecole else None, export='pdf') }}" target="_blank">⎙ PDF</a>
+    <a class="btn sec" href="{{ url_for('jur_cep_blanc_session', sid=s.id, vue=vue, ecole=ecole.id if ecole else None, export='xlsx') }}">⇩ Excel</a>
+    <a class="btn sec petit" href="{{ url_for('jur_cep_blanc') }}">← Examens blancs</a>
+  </div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Écoles</div><div class="v">{{ tab.global.nb_ecoles }}</div><div class="d">ayant des candidats</div></div>
+  <div class="kpi"><div class="l">Candidats</div><div class="v">{{ st.inscrits.T }}</div><div class="d">G {{ st.inscrits.G }} · F {{ st.inscrits.F }}</div></div>
+  <div class="kpi"><div class="l">Présents</div><div class="v">{{ st.presents.T }}</div><div class="d">au moins une note</div></div>
+  <div class="kpi"><div class="l">Maîtrise</div><div class="v">{{ st.maitrise.T }}</div><div class="d">G {{ st.maitrise.G }} · F {{ st.maitrise.F }}</div></div>
+  <div class="kpi"><div class="l">Taux de maîtrise</div><div class="v">{{ fr(st.taux.T) }} %</div><div class="d">des présents</div></div>
+</div>
+
+<div class="onglets">
+  <a class="btn {{ 'sec' if vue != 'resultats' }} petit" href="{{ url_for('jur_cep_blanc_session', sid=s.id) }}">Résultats par école / zone</a>
+  <a class="btn {{ 'sec' if vue != 'candidats' }} petit" href="{{ url_for('jur_cep_blanc_session', sid=s.id, vue='candidats') }}">Candidats (ordre de mérite)</a>
+  {% if peut('jur_cep') %}<a class="btn {{ 'sec' if vue != 'saisie' }} petit" href="{{ url_for('jur_cep_blanc_session', sid=s.id, vue='saisie', ecole=ecole.id if ecole else None) }}">Saisie par école</a>
+  <a class="btn {{ 'sec' if vue != 'import' }} petit" href="{{ url_for('jur_cep_blanc_session', sid=s.id, vue='import') }}">Import des canevas</a>{% endif %}
+</div>
+
+{% if vue == 'resultats' %}
+{% if not tab.ecoles %}<div class="carte"><p>Aucun candidat. Importez le canevas Excel de chaque école ou saisissez les candidats par école.</p></div>
+{% else %}
+<div class="tw"><table class="t compact">
+  <thead><tr><th rowspan="2">N°</th><th rowspan="2">École</th><th rowspan="2">Secteur</th><th colspan="3">Présents</th><th colspan="3">Maîtrise</th><th colspan="3">Taux de maîtrise (%)</th><th rowspan="2">Moyenne</th><th rowspan="2">Rang</th><th rowspan="2"></th></tr>
+    <tr><th>G</th><th>F</th><th>T</th><th>G</th><th>F</th><th>T</th><th>G</th><th>F</th><th>T</th></tr></thead>
+  <tbody>{% for r in tab.rangees %}{% set d = r.d %}
+  <tr class="g-{{ r.genre }}"><td>{{ r.n if r.genre == 'ecole' else '' }}</td><td>{{ r.libelle }}</td>
+    <td>{{ JUR_SECTEURS[d.secteur] if r.genre == 'ecole' else d.nb_ecoles ~ ' école(s)' }}</td>
+    <td class="num">{{ d.presents.G }}</td><td class="num">{{ d.presents.F }}</td><td class="num">{{ d.presents.T }}</td>
+    <td class="num">{{ d.maitrise.G }}</td><td class="num">{{ d.maitrise.F }}</td><td class="num">{{ d.maitrise.T }}</td>
+    <td class="num">{{ fr(d.taux.G) }}</td><td class="num">{{ fr(d.taux.F) }}</td><td class="num"><b>{{ fr(d.taux.T) }}</b></td>
+    <td class="num">{{ fr(d.moyenne) }}</td><td class="num">{{ d.rang if r.genre == 'ecole' and d.rang else '' }}</td>
+    <td>{% if r.genre == 'ecole' %}<a class="btn sec petit" href="{{ url_for('jur_cep_blanc_session', sid=s.id, vue='candidats', ecole=d.ecole_id) }}">Candidats</a>
+      {% if peut('jur_cep') %}<a class="btn sec petit" href="{{ url_for('jur_cep_blanc_session', sid=s.id, vue='saisie', ecole=d.ecole_id) }}">Saisir</a>{% endif %}{% endif %}</td></tr>
+  {% endfor %}</tbody>
+</table></div>
+<h2>Classement des écoles</h2>
+<div class="tw"><table class="t compact"><tr><th>Rang</th><th>École</th><th>Zone</th>{% if JUR_NIVEAU == 'ddemp' %}<th>CS</th>{% endif %}<th class="num">Présents</th><th class="num">Maîtrise</th><th class="num">Taux (%)</th><th class="num">Moyenne</th></tr>
+  {% for e in tab.classement %}<tr><td><b>{{ e.rang }}</b></td><td>{{ e.nom }}</td><td>{{ e.zone_nom }}</td>{% if JUR_NIVEAU == 'ddemp' %}<td>{{ e.cs_nom }}</td>{% endif %}
+    <td class="num">{{ e.presents.T }}</td><td class="num">{{ e.maitrise.T }}</td><td class="num"><b>{{ fr(e.taux.T) }}</b></td><td class="num">{{ fr(e.moyenne) }}</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+
+{% elif vue == 'candidats' %}
+<form method="get" class="filtres"><input type="hidden" name="vue" value="candidats">
+  <label>École<br><select name="ecole" onchange="this.form.submit()"><option value="">Toutes</option>{% for e in ecoles %}<option value="{{ e.id }}" {{ 'selected' if ecole and ecole.id == e.id }}>{{ e.nom }}</option>{% endfor %}</select></label>
+  <label>Tri<br><select name="tri" onchange="this.form.submit()">{% for k, v in [('merite', 'Ordre de mérite'), ('nom', 'Nom'), ('ecole', 'École'), ('table', 'N° de table')] %}<option value="{{ k }}" {{ 'selected' if tri == k }}>{{ v }}</option>{% endfor %}</select></label>
+</form>
+<div class="tw"><table class="t compact">
+  <thead><tr><th>N° table</th><th>Nom</th><th>Prénoms</th><th>S.</th><th>École</th><th>Zone</th>{% for m in s.mats %}<th class="num">{{ m }}</th>{% endfor %}<th class="num">Total</th><th class="num">Moy.</th><th class="num">≥ 10</th><th>Décision</th><th>Rang</th></tr></thead>
+  <tbody>{% for l in cands %}{% set c = l.c %}
+  <tr><td>{{ c.numero_table or '' }}</td><td><b>{{ c.nom }}</b></td><td>{{ c.prenoms or '' }}</td><td>{{ c.sexe or '' }}</td><td>{{ c.ecole }}</td><td>{{ c.zone_nom or '' }}</td>
+    {% for v in l.notes %}<td class="num {{ 'rouge' if v is not none and v < 10 }}">{{ fr(v) if v is not none else '' }}</td>{% endfor %}
+    <td class="num">{{ fr(l.total) }}</td><td class="num">{{ fr(l.moyenne) }}</td><td class="num">{{ l.reussies ~ '/' ~ s.mats|length if l.nb else '' }}</td>
+    <td class="{{ 'vert' if l.maitrise else ('rouge' if l.maitrise is false) }}"><b>{{ l.decision }}</b></td><td>{{ l.rang_txt }}</td></tr>
+  {% else %}<tr><td colspan="{{ 11 + s.mats|length }}" class="gris">Aucun candidat.</td></tr>{% endfor %}</tbody>
+</table></div>
+
+{% elif vue == 'saisie' %}
+<form method="get" class="filtres"><input type="hidden" name="vue" value="saisie">
+  <label>École<br><select name="ecole" onchange="this.form.submit()"><option value="">— choisir —</option>{% for e in ecoles %}<option value="{{ e.id }}" {{ 'selected' if ecole and ecole.id == e.id }}>{{ e.nom }}{% if e.zone_nom %} ({{ e.zone_nom }}){% endif %}</option>{% endfor %}</select></label>
+</form>
+{% if ecole %}
+<form method="post" action="{{ url_for('jur_cep_blanc_sauvegarder', sid=s.id, jid=ecole.id) }}">
+<div class="tw"><table class="t compact" id="cb-table">
+  <thead><tr><th>N° table</th><th>Nom</th><th>Prénoms</th><th>Sexe</th>{% for m in s.mats %}<th class="mat">{{ m }}</th>{% endfor %}<th>Décision</th><th>Suppr.</th></tr></thead>
+  <tbody>
+  {% for l in saisie %}{% set c = l.c %}
+  <tr><td><input type="hidden" name="cid" value="{{ c.id }}"><input name="table" value="{{ c.numero_table or '' }}" maxlength="20"></td>
+    <td><input name="nom" value="{{ c.nom }}" maxlength="80"></td><td><input name="prenoms" value="{{ c.prenoms or '' }}" maxlength="120"></td>
+    <td><select name="sexe"><option value=""></option><option value="M" {{ 'selected' if c.sexe == 'M' }}>M</option><option value="F" {{ 'selected' if c.sexe == 'F' }}>F</option></select></td>
+    {% for v in l.notes %}<td><input class="cb-note" name="n{{ loop.index0 }}" value="{{ fr(v) if v is not none else '' }}" inputmode="decimal"></td>{% endfor %}
+    <td class="{{ 'vert' if l.maitrise else ('rouge' if l.maitrise is false) }}"><b>{{ l.decision }}</b></td>
+    <td class="c"><input type="checkbox" name="suppr" value="{{ c.id }}"></td></tr>
+  {% endfor %}
+  {% for i in range(nb_vides) %}
+  <tr><td><input type="hidden" name="cid" value=""><input name="table" maxlength="20"></td><td><input name="nom" maxlength="80" placeholder="NOM"></td><td><input name="prenoms" maxlength="120"></td>
+    <td><select name="sexe"><option value=""></option><option value="M">M</option><option value="F">F</option></select></td>
+    {% for m in s.mats %}<td><input class="cb-note" name="n{{ loop.index0 }}" inputmode="decimal"></td>{% endfor %}<td></td><td></td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+<div class="actions"><button class="btn">Enregistrer les candidats et les notes de {{ ecole.nom }}</button>
+  <a class="btn sec" href="{{ url_for('jur_cep_blanc_canevas', sid=s.id, ecole=ecole.id) }}">⇩ Canevas Excel de cette école</a></div>
+</form>
+<form method="post" action="{{ url_for('jur_cep_blanc_vider', sid=s.id, jid=ecole.id) }}" onsubmit="return confirm('Retirer tous les candidats de {{ ecole.nom|replace("'", "’") }} ?')" style="margin-top:8px"><button class="btn danger petit">Retirer tous les candidats de cette école</button></form>
+<p class="aide">Notes de 0 à 20 (vide = absent à l'épreuve). Les lignes vides sont ignorées ; cochez « Suppr. » pour retirer un candidat.</p>
+{% else %}<div class="carte">Choisissez l'école dont vous saisissez les candidats.</div>{% endif %}
+
+{% elif vue == 'import' %}
+<div class="carte">
+  <h2 style="margin-top:0">Importer le canevas Excel d'une école</h2>
+  <p class="aide">Même format que le canevas de l'examen blanc de l'école (GESCOL / GESCOL Public › Examens › Examen blanc CEP › Canevas Excel) : colonnes « N° table », « Nom », « Prénoms », « Sexe (M/F) », « École de provenance », puis une colonne par matière ({{ s.mats|join(', ') }}). Un candidat déjà présent (même école, nom et prénoms) est mis à jour.</p>
+  <form method="post" action="{{ url_for('jur_cep_blanc_importer', sid=s.id) }}" enctype="multipart/form-data" class="f">
+    <div class="ligne">
+      <div><label>École (vide = d'après la colonne « École de provenance »)</label><select name="ecole"><option value="">— d'après le fichier —</option>{% for e in ecoles %}<option value="{{ e.id }}">{{ e.nom }}</option>{% endfor %}</select></div>
+      <div><label>Fichier (.xlsx ou .csv)</label><input type="file" name="fichier" accept=".xlsx,.xlsm,.csv,.txt" required></div>
+    </div>
+    <button class="btn">⇪ Importer</button>
+    <a class="btn sec" href="{{ url_for('jur_cep_blanc_canevas', sid=s.id) }}">⇩ Canevas Excel vierge</a>
+  </form>
+</div>
+{% endif %}
+
+{% if peut('jur_cep') %}
+<details class="carte" style="margin-top:14px"><summary><b>En-tête de l'examen blanc</b> (intitulé, matières, seuil)</summary>
+<form method="post" action="{{ url_for('jur_cep_blanc_entete', sid=s.id) }}" class="f" style="margin-top:8px">
+  <div class="ligne">
+    <div><label>N°</label><input type="number" name="numero" min="1" max="99" value="{{ s.numero }}" style="width:90px"></div>
+    <div><label>Année scolaire</label><input name="annee" value="{{ s.annee }}" style="width:120px"></div>
+    <div><label>Niveau</label><input name="niveau" value="{{ s.niveau }}" maxlength="20" style="width:100px"></div>
+    <div><label>Date</label><input type="date" name="date" value="{{ s.date or '' }}"></div>
+    <div><label>Intitulé</label><input name="nom" value="{{ s.nom }}" maxlength="120"></div>
+  </div>
+  <div class="ligne">
+    <div><label>Matières (une par ligne)</label><textarea name="matieres" rows="5">{{ s.mats|join('\n') }}</textarea></div>
+    <div><label>Seuil de maîtrise (vide = 2/3)</label><input name="seuil" type="number" min="1" max="15" value="{{ s.seuil or '' }}" style="width:90px"></div>
+  </div>
+  <button class="btn sec">Enregistrer l'en-tête</button>
+</form></details>
+{% endif %}
+{% endblock %}

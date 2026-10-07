@@ -1,0 +1,79 @@
+{% extends "base.html" %}{% block titre %}Unités pédagogiques{% endblock %}
+{% block contenu %}
+<style>
+table.t.up td.dates,table.t.up td.themes{font-size:12px;color:#344054;max-width:260px}
+table.t.up tr.zone td{background:#F2F6FB;font-weight:600}
+table.t.up tr.cs td{background:#E4ECF5;font-weight:700}
+table.t.up tr.total td{background:#1F4E79;color:#fff;font-weight:700}
+.taux{display:inline-block;min-width:52px;text-align:center;border-radius:12px;padding:1px 8px;font-weight:600;font-size:12.5px}
+.taux.ok{background:#ECFDF3;color:#067647}.taux.moy{background:#FFFAEB;color:#B54708}.taux.ko{background:#FEF3F2;color:#B42318}.taux.na{background:#F2F4F7;color:#667085}
+</style>
+{% macro badge_taux(v) %}{% if v is none %}<span class="taux na">—</span>{% elif v >= 75 %}<span class="taux ok">{{ pct(v) }}</span>{% elif v >= 50 %}<span class="taux moy">{{ pct(v) }}</span>{% else %}<span class="taux ko">{{ pct(v) }}</span>{% endif %}{% endmacro %}
+{% set t = d.tot %}
+<div class="entete"><div><h1>Unités pédagogiques (UP)</h1>
+  <p class="sous">Animation pédagogique · année {{ annee }} · nombre d'UP par zone pédagogique{% if JUR_NIVEAU == 'ddemp' %} et par circonscription{% endif %}, responsables (RUP, Co-RUP), activités prévues et exécutées.</p></div>
+  <div class="actions">
+    {% if saisie %}<a class="btn" href="{{ url_for('jur_up_form', cs=cs_id if JUR_NIVEAU == 'ddemp' else None) }}">+ Ajouter une UP</a>
+    <a class="btn sec" href="{{ url_for('jur_up_import') }}">⇧ Importer (Excel)</a>{% endif %}
+    <a class="btn sec" href="{{ url_for('jur_up_xlsx', annee=annee, cs=cs_id or '') }}">⇩ Excel</a>
+    <a class="btn sec" href="{{ url_for('jur_up_pdf', annee=annee, cs=cs_id or '') }}" target="_blank">📄 PDF</a>
+  </div></div>
+
+<form method="get" class="filtres carte">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  {% if JUR_NIVEAU == 'ddemp' %}<label>Circonscription<br><select name="cs" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if cs_id == c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+  <noscript><button class="btn sec petit">Afficher</button></noscript>
+</form>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Unités pédagogiques</div><div class="v">{{ t.up }}</div><div class="d">{{ d.zones|length }} zone(s) pédagogique(s){% if JUR_NIVEAU == 'ddemp' %} · {{ d.cs|length }} CS{% endif %}</div></div>
+  <div class="kpi"><div class="l">Activités prévues</div><div class="v">{{ t.prevues }}</div><div class="d">{{ t.activites }} activité(s) enregistrée(s)</div></div>
+  <div class="kpi"><div class="l">Activités exécutées</div><div class="v">{{ t.executees }}</div><div class="d">{{ t.participants }} participation(s)</div></div>
+  <div class="kpi"><div class="l">Taux d'exécution</div><div class="v">{{ pct(t.taux) }}</div><div class="d">exécutées ÷ prévues</div></div>
+  <div class="kpi"><div class="l">Écoles membres</div><div class="v">{{ t.ecoles }}</div><div class="d">d'après les fiches des UP</div></div>
+</div>
+
+{% if not d.ups %}
+<div class="carte">Aucune unité pédagogique enregistrée{% if JUR_NIVEAU == 'ddemp' %} pour ce périmètre{% endif %}.
+  {% if saisie %}<a href="{{ url_for('jur_up_form') }}">Ajouter une UP</a> ou <a href="{{ url_for('jur_up_import') }}">importer un fichier Excel</a> (modèle téléchargeable).{% endif %}</div>
+{% endif %}
+
+{% macro ligne_up(u) %}
+<tr><td><a href="{{ url_for('jur_up_fiche', uid=u.id, annee=annee) }}"><b>{{ u.nom }}</b></a>{% if u.ecole_siege %}<br><span class="aide">Siège : {{ u.ecole_siege }}</span>{% endif %}</td>
+  <td>{{ u.rup_nom or '—' }}{% if u.rup_tel %}<br><span class="aide">{{ u.rup_tel }}</span>{% endif %}</td>
+  <td>{{ u.corup_nom or '—' }}{% if u.corup_tel %}<br><span class="aide">{{ u.corup_tel }}</span>{% endif %}</td>
+  <td class="num">{{ u.nb_ecoles if u.nb_ecoles is not none else '—' }}</td>
+  <td class="num">{{ u.prevues }}</td><td class="num">{{ u.executees }}</td><td class="num">{{ badge_taux(u.taux) }}</td>
+  <td class="dates">{% for x in u.dates %}{{ date_fr(x) }}{{ ', ' if not loop.last }}{% else %}—{% endfor %}</td>
+  <td class="themes">{% for x in u.themes %}{{ x }}{{ ' ; ' if not loop.last }}{% else %}—{% endfor %}</td>
+  {% if saisie %}<td class="num" style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('jur_up_activite_form', uid=u.id, annee=annee) }}">+ Activité</a> <a class="btn sec petit" href="{{ url_for('jur_up_form', uid=u.id) }}">Modifier</a></td>{% endif %}
+</tr>
+{% endmacro %}
+{% macro ligne_tot(lib, x, cls) %}
+<tr class="{{ cls }}"><td>{{ lib }}</td><td colspan="2">{{ x.up }} UP</td><td class="num">{{ x.ecoles }}</td><td class="num">{{ x.prevues }}</td><td class="num">{{ x.executees }}</td><td class="num">{{ badge_taux(x.taux) if cls != 'total' else pct(x.taux) }}</td><td colspan="{{ 3 if saisie else 2 }}"></td></tr>
+{% endmacro %}
+
+{% macro tableau_zones(zones) %}
+{% for z in zones %}
+  {{ ligne_tot(z.zone ~ (' — ' ~ z.cs_nom if JUR_NIVEAU == 'ddemp' and not d.cs else ''), z.tot, 'zone') }}
+  {% for u in z.ups %}{{ ligne_up(u) }}{% else %}<tr><td colspan="{{ 10 if saisie else 9 }}" class="gris" style="padding-left:24px">Aucune UP dans cette zone{% if saisie %} — <a href="{{ url_for('jur_up_form', cs=z.cs_id if JUR_NIVEAU == 'ddemp' else None, zone=z.zone_id) }}">ajouter</a>{% endif %}.</td></tr>{% endfor %}
+{% endfor %}
+{% endmacro %}
+
+<div class="carte"><h2>UP par zone pédagogique{% if JUR_NIVEAU == 'ddemp' %} et par circonscription{% endif %}</h2>
+  <div class="tw"><table class="t compact up">
+    <tr><th>UP</th><th>RUP (nom et prénoms)</th><th>Co-RUP (nom et prénoms)</th><th class="num">Écoles</th><th class="num">Prévues</th><th class="num">Exécutées</th><th class="num">Taux</th><th>Dates ({{ annee }})</th><th>Thèmes</th>{% if saisie %}<th></th>{% endif %}</tr>
+    {% if d.cs %}
+      {% for c in d.cs %}
+        {{ ligne_tot('CS ' ~ c.cs_nom, c.tot, 'cs') }}
+        {{ tableau_zones(c.zones) }}
+      {% endfor %}
+    {% else %}
+      {{ tableau_zones(d.zones) }}
+    {% endif %}
+    {{ ligne_tot('TOTAL ' ~ ('DDEMP' if JUR_NIVEAU == 'ddemp' else 'de la circonscription'), t, 'total') }}
+  </table></div>
+  <p class="aide">Taux d'exécution = activités exécutées ÷ activités prévues de l'année (vert ≥ 75 %, orange ≥ 50 %, rouge en dessous). Les dates et thèmes sont ceux des activités de l'UP pour l'année choisie.</p>
+</div>
+{% endblock %}

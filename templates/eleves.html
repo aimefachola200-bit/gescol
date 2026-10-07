@@ -20,13 +20,31 @@
     <option value="{{ v }}" {{ 'selected' if v==statut }}>{{ l }}</option>{% endfor %}</select>
   <button class="btn sec">Filtrer</button>
 </form>
+{% set suppr = peut('eleves') and ep_existe('eleve_supprimer') %}
+{% if suppr %}<form method="post" action="{{ url_for('eleves_supprimer_selection') }}" id="f-selection"
+  onsubmit="var n=this.querySelectorAll('input[name=ids]:checked').length;if(!n){alert('Cochez au moins un élève.');return false;}var m=(this._mode||'supprimer');return confirm(m==='retirer'?('Retirer '+n+' élève(s) (statut « sorti ») ?'):('Supprimer définitivement '+n+' élève(s) et toutes leurs données ?'));">
+  <input type="hidden" name="mode" value="supprimer" id="sel-mode">{% endif %}
 <div class="tw"><table class="t">
-  <tr><th>Matricule</th><th>Nom et prénoms</th><th>Sexe</th><th>Classe</th><th>Né(e) le</th><th>Parent</th><th>Statut</th></tr>
+  <tr>{% if suppr %}<th><input type="checkbox" aria-label="Tout cocher" onclick="document.querySelectorAll('input[name=ids]').forEach(function(c){c.checked=event.target.checked})"></th>{% endif %}
+    <th>Matricule</th><th>Nom et prénoms</th><th>Sexe</th><th>Classe</th><th>Né(e) le</th><th>Parent</th><th>Statut</th>{% if suppr %}<th></th>{% endif %}</tr>
   {% for e in eleves %}
-  <tr><td>{{ e.matricule }}</td><td><a href="{{ url_for('eleve_detail', eid=e.id) }}"><b>{{ e.nom }}</b> {{ e.prenoms }}</a></td>
+  <tr>{% if suppr %}<td><input type="checkbox" name="ids" value="{{ e.id }}" aria-label="Sélectionner {{ e.nom }} {{ e.prenoms }}"></td>{% endif %}
+    <td>{{ e.matricule }}</td><td><a href="{{ url_for('eleve_detail', eid=e.id) }}"><b>{{ e.nom }}</b> {{ e.prenoms }}</a></td>
     <td>{{ e.sexe }}</td><td>{{ e.classe_nom or '—' }}</td><td>{{ date_fr(e.date_naissance) }}</td>
     <td>{{ e.parent_nom or '' }} <span class="gris">{{ e.parent_telephone or '' }}</span></td>
-    <td><span class="badge {{ 'ok' if e.statut=='inscrit' else 'att' }}">{{ e.statut }}</span></td></tr>
-  {% else %}<tr><td colspan="7" class="gris">Aucun élève trouvé.</td></tr>{% endfor %}
+    <td><span class="badge {{ 'ok' if e.statut=='inscrit' else 'att' }}">{{ e.statut }}</span></td>
+    {% if suppr %}<td class="c" style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('eleve_form', eid=e.id) }}">Modifier</a>
+      <button class="btn danger petit" type="submit" form="f-suppr-{{ e.id }}">Supprimer</button></td>{% endif %}</tr>
+  {% else %}<tr><td colspan="{{ 9 if suppr else 7 }}" class="gris">Aucun élève trouvé.</td></tr>{% endfor %}
 </table></div>
+{% if suppr %}
+  <div class="actions" style="margin-top:8px">
+    <button class="btn danger" onclick="document.getElementById('sel-mode').value='supprimer';this.form._mode='supprimer'">🗑 Supprimer la sélection</button>
+    <button class="btn sec" onclick="document.getElementById('sel-mode').value='retirer';this.form._mode='retirer'">Retirer la sélection (statut « sorti »)</button>
+    <span class="aide">La suppression est refusée pour un élève ayant des paiements non annulés ou des documents officiels émis : il faut alors le retirer.</span>
+  </div>
+</form>
+{% for e in eleves %}<form method="post" id="f-suppr-{{ e.id }}" action="{{ url_for('eleve_supprimer', eid=e.id) }}"
+  onsubmit="return confirm('Supprimer définitivement {{ (e.nom ~ ' ' ~ e.prenoms)|replace("'", "\\'") }} et toutes ses données ?')"></form>{% endfor %}
+{% endif %}
 {% endblock %}

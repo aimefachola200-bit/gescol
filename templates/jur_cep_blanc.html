@@ -1,0 +1,53 @@
+{% extends "base.html" %}{% block titre %}Examen blanc {{ 'CS' if JUR_NIVEAU == 'cs' else 'DDEMP' }}{% endblock %}
+{% block contenu %}
+{% set NIV = 'CS' if JUR_NIVEAU == 'cs' else 'DDEMP' %}
+<div class="entete">
+  <div><h1>Examen blanc {{ NIV }}</h1>
+  <p class="sous">Résultats de toutes les écoles : import du canevas Excel de chaque école ou saisie par école ; maîtrise, taux par école, zone{{ ', circonscription' if JUR_NIVEAU == 'ddemp' }} et classement.</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_cep_blanc_synthese') }}">Synthèse des examens par niveau</a></div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Examens blancs</div><div class="v">{{ sessions|length }}</div><div class="d">toutes années</div></div>
+  <div class="kpi"><div class="l">Candidats</div><div class="v">{{ sessions|sum(attribute='nb') }}</div><div class="d">toutes sessions</div></div>
+</div>
+
+{% if sessions %}
+<div class="tw"><table class="t">
+  <thead><tr><th class="c">N°</th><th>Année</th><th>Examen</th><th>Niveau</th><th>Date</th><th class="c">Matières</th><th class="c">Seuil</th>
+    <th class="c">Écoles</th><th class="c">Candidats</th><th></th></tr></thead>
+  <tbody>{% for s in sessions %}
+  <tr><td class="c"><b>{{ s.numero }}</b></td><td>{{ s.annee }}</td>
+    <td><a href="{{ url_for('jur_cep_blanc_session', sid=s.id) }}"><b>{{ s.nom }}</b></a></td><td>{{ s.niveau }}</td>
+    <td>{{ date_fr(s.date) if s.date else '—' }}</td><td class="c">{{ s.mats|length }}</td><td class="c">{{ s.seuil_eff }}/{{ s.mats|length }}</td>
+    <td class="c">{{ s.nb_ecoles }}</td><td class="c">{{ s.nb }}</td>
+    <td style="white-space:nowrap"><a class="btn petit" href="{{ url_for('jur_cep_blanc_session', sid=s.id) }}">Ouvrir</a>
+      {% if peut('jur_cep') %}<form method="post" action="{{ url_for('jur_cep_blanc_supprimer', sid=s.id) }}" style="display:inline" onsubmit="return confirm('Supprimer DÉFINITIVEMENT l\'examen blanc N° {{ s.numero }} et ses {{ s.nb }} candidat(s) ?')">
+        <button class="btn danger petit">Supprimer</button></form>{% endif %}</td></tr>
+  {% endfor %}</tbody>
+</table></div>
+{% else %}
+<div class="carte"><p>Aucun examen blanc {{ NIV }} pour le moment.</p></div>
+{% endif %}
+
+{% if peut('jur_cep') %}
+<h2>Nouvel examen blanc {{ NIV }}</h2>
+<div class="carte">
+<form method="post" action="{{ url_for('jur_cep_blanc_nouvelle') }}" class="f">
+  <div class="ligne">
+    <div><label>N°</label><input type="number" name="numero" min="1" max="99" value="{{ (sessions[0].numero + 1) if sessions else 1 }}" style="width:90px"></div>
+    <div><label>Année scolaire</label><input name="annee" value="{{ annee }}" pattern="\d{4}-\d{4}" style="width:120px"></div>
+    <div><label>Niveau</label><input name="niveau" value="CM2" maxlength="20" style="width:100px"></div>
+    <div><label>Date</label><input type="date" name="date"></div>
+    <div><label>Intitulé</label><input name="nom" placeholder="Examen blanc {{ NIV }} N° 1" maxlength="120"></div>
+  </div>
+  <div class="ligne">
+    <div><label>Matières (une par ligne)</label><textarea name="matieres" rows="5">{{ matieres|join('\n') }}</textarea></div>
+    <div><label>Seuil de maîtrise (nombre de matières à 10/20 ; vide = 2/3)</label><input name="seuil" type="number" min="1" max="15" style="width:90px"></div>
+  </div>
+  <button class="btn">＋ Créer l'examen blanc</button>
+</form>
+</div>
+{% endif %}
+<p class="aide">Règle du primaire (identique à l'examen blanc de l'école) : un candidat a la <b>MAÎTRISE</b> s'il obtient au moins 10/20 dans le nombre de matières fixé par le seuil (2/3 des matières par défaut). La moyenne ne sert qu'au classement.</p>
+{% endblock %}

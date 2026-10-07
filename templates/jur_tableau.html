@@ -40,6 +40,30 @@
   </table></div>
 </div>
 
+{# ---------------------------------------------------------------- 1 bis. classes par cours et par zone (v1.6) #}
+<div class="carte" id="classes"><h2>Classes par cours et par {{ 'circonscription' if par == 'cs' else 'zone pédagogique' }}</h2>
+  <p class="aide">Nombre de classes (groupes pédagogiques) de chaque niveau, d'après les effectifs transmis par les écoles{% if par == 'cs' %} ; sous-total par circonscription, détail par zone pédagogique{% endif %}.
+    {% if classes.total.sans_donnees %}<b>{{ classes.total.sans_donnees }}</b> école(s) sans données d'effectifs.{% endif %}</p>
+  <div class="actions" style="margin-bottom:8px">
+    <a class="btn sec petit" href="{{ url_for('jur_classes', **args) }}">Détail par école</a>
+    <a class="btn sec petit" href="{{ url_for('jur_classes_xlsx', **args) }}">⇩ Excel</a>
+    <a class="btn sec petit" href="{{ url_for('jur_classes_pdf', **args) }}" target="_blank">📄 PDF</a>
+  </div>
+  {% if classes.total.total or classes.lignes %}
+  <div class="tw"><table class="t serre">
+    <tr><th>{{ 'Circonscription / zone' if par == 'cs' else 'Zone pédagogique' }}</th>{% for n in classes.niveaux %}<th class="num">{{ n }}</th>{% endfor %}<th class="num">Total classes</th><th class="num">Écoles</th><th class="num">Sans données</th></tr>
+    {% for r in classes.lignes %}
+    <tr class="{{ 'b' if r.niveau == 'cs' }}"><td>{% if r.niveau == 'zone' and par == 'cs' %}<span style="padding-left:18px">{{ r.nom }}</span>{% else %}{{ r.nom }}{% endif %}</td>
+      {% for n in classes.niveaux %}<td class="num">{{ r.par_niveau[n] or '' }}</td>{% endfor %}
+      <td class="num"><b>{{ r.total }}</b></td><td class="num">{{ r.ecoles }}</td><td class="num">{{ r.sans_donnees or '' }}</td></tr>
+    {% endfor %}
+    <tr class="b"><td>Total {{ 'départemental' if JUR_NIVEAU == 'ddemp' else 'de la circonscription' }}</td>
+      {% for n in classes.niveaux %}<td class="num">{{ classes.total.par_niveau[n] }}</td>{% endfor %}
+      <td class="num">{{ classes.total.total }}</td><td class="num">{{ classes.total.ecoles }}</td><td class="num">{{ classes.total.sans_donnees or '' }}</td></tr>
+  </table></div>
+  {% else %}{{ T.vide("Aucune classe connue : importez les fichiers de transmission des écoles (section effectifs).") }}{% endif %}
+</div>
+
 {# ---------------------------------------------------------------- 2. effectifs #}
 <div class="carte"><h2>2. Effectifs des apprenants</h2>
   <p class="aide">IP = indice de parité filles/garçons. Classe pléthorique : plus de {{ SEUILS.plethore.EP }} élèves (primaire), plus de {{ SEUILS.plethore.EM }} (maternelle, espace enfance).</p>

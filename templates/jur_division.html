@@ -1,0 +1,42 @@
+{% extends "base.html" %}{% block titre %}{{ d.sigle or d.nom }}{% endblock %}
+{% block contenu %}
+<style>
+.attr-txt{white-space:pre-line;line-height:1.5}
+.deux-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:18px}
+</style>
+<div class="entete"><div><h1>{% if d.sigle %}{{ d.sigle }} — {% endif %}{{ d.nom }}</h1>
+  <p class="sous">Responsable : <b>{{ d.responsable_nom or 'non désigné' }}</b>{% if d.reference %} · {{ d.reference }}{% endif %}{% if d.parent_code %} · rattachée à : {{ d.parent_code|upper }}{% endif %}</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_divisions') }}">← Toutes les divisions</a>
+    {% if peut('jur_structure') %}<a class="btn sec" href="{{ url_for('jur_service_form', sid=d.id) }}">Nom, sigle, responsable</a>{% endif %}
+    <a class="btn" href="{{ url_for('jur_divisions_pdf') }}" target="_blank">📄 PDF</a>
+  </div></div>
+
+<div class="deux-col">
+  <section class="carte"><h2>Modules de l'application</h2>
+    <p class="aide">Fonctionnalités installées qui concernent cette division. Les modules des autres applications GESCOL (fiches, rapports, cantine, stock…) sont présentés tels que construits.</p>
+    {% if d.modules %}<div class="tw"><table class="t compact">
+      <tr><th>Module</th><th>Accès</th></tr>
+      {% for m in d.modules %}<tr><td><a href="{{ m.url }}">{{ m.libelle }}</a></td><td>{% if m.acces %}<span class="badge ok">{{ 'saisie' if m.droit else 'ouvert' }}</span>{% else %}<span class="badge">consultation</span>{% endif %}</td></tr>{% endfor %}
+    </table></div>{% else %}<p class="gris">Aucun module installé pour cette division.</p>{% endif %}
+  </section>
+
+  <section class="carte"><h2>Agents affectés ({{ d.agents|length }})</h2>
+    {% if d.agents %}<div class="tw"><table class="t compact">
+      <tr><th>Nom et prénoms</th><th>Poste</th><th>Téléphone</th></tr>
+      {% for a in d.agents %}<tr><td>{% if ep_existe('jur_agent_form') %}<a href="{{ url_for('jur_agent_form', aid=a.id) }}">{{ a.nom }} {{ a.prenoms or '' }}</a>{% else %}{{ a.nom }} {{ a.prenoms or '' }}{% endif %}</td><td>{{ a.poste or '' }}</td><td>{{ a.telephone or '' }}</td></tr>{% endfor %}
+    </table></div>{% else %}<p class="gris">Aucun agent affecté{% if ep_existe('jur_agents') %} : <a href="{{ url_for('jur_agents') }}">Agents de la structure</a> (champ « service »){% endif %}.</p>{% endif %}
+  </section>
+</div>
+
+<section class="carte" id="attributions"><h2>Attributions</h2>
+  {% if modifiable %}
+  <form method="post">
+    <label for="attr">Texte des attributions (une ligne par attribution ; « - » ou « • » en début de ligne)</label>
+    <textarea id="attr" name="attributions" rows="14" style="width:100%" maxlength="8000">{{ d.attributions or '' }}</textarea>
+    <div class="actions" style="margin-top:8px"><button class="btn">Enregistrer les attributions</button></div>
+  </form>
+  {% else %}<div class="attr-txt">{{ d.attributions or 'Attributions non renseignées.' }}</div>{% endif %}
+  {% if d.note %}<p class="aide" style="margin-top:10px"><i>{{ d.note }}</i></p>{% endif %}
+</section>
+{% endblock %}

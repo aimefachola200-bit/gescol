@@ -63,5 +63,5 @@
   </form>
 </div>
 {% endif %}
-<p class="aide">Anciennetés arrêtées au {{ f.reference.strftime('%d/%m/%Y') }} (jour inclus), en années et mois révolus. Retraite : date de naissance + 60 ans (grade A), 58 ans (grade B), 55 ans (grade C) ; si seule l'année de naissance est connue, 31/12 de l'année correspondante.</p>
+<p class="aide">Anciennetés arrêtées au {{ f.reference.strftime('%d/%m/%Y') }} (31 décembre de la première année de l'année scolaire, jour inclus), en années et mois révolus, à partir de la prise de service dans chaque lieu. Retraite : 60 ans (grade A), 58 ans (grade B), 55 ans (grade C), départ le 1er jour du trimestre qui suit le trimestre de naissance (janvier–mars : 1er avril ; avril–juin : 1er juillet ; juillet–septembre : 1er octobre ; octobre–décembre : 1er janvier suivant) ; si seule l'année de naissance est connue : 1er janvier de l'année (naissance + âge + 1).</p>
 {% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% block titre %}Planification annuelle — {{ lib }}{% endblock %}
+{% block contenu %}
+<style>.plan td,.plan th{font-size:12px;padding:4px 6px;vertical-align:top}.plan th.g{text-align:center;background:#E4ECF5}</style>
+{% include "synoptique_onglets.html" %}
+<nav class="onglets" aria-label="Cours">{% for k, l in NIVEAUX %}<a class="{{ 'actif' if k == niveau }}" href="{{ url_for('synoptique_planification', niveau=k) }}">{{ l }}</a>{% endfor %}</nav>
+<div class="entete">
+  <div><h2 style="margin:0">Planification annuelle des activités pédagogiques — {{ lib }}</h2>
+    <p class="sous">{% if d.officiel %}Planification de référence (non modifiée){% elif d.maj %}Modifiée le {{ d.maj }}{% else %}À renseigner{% endif %} · année scolaire {{ ANNEE }}</p></div>
+  <div class="actions">
+    {% if ecrire %}<a class="btn" href="{{ url_for('synoptique_planification_form', niveau=niveau) }}">✎ Modifier / ajouter des lignes</a>
+    <form method="post" action="{{ url_for('synoptique_planification_reinit', niveau=niveau) }}" style="display:inline" onsubmit="return confirm('Remplacer cette planification par la planification de référence ?')"><button class="btn sec">Réinitialiser</button></form>{% endif %}
+    <a class="btn sec" href="{{ url_for('synoptique_planification_pdf', niveau=niveau) }}" target="_blank">PDF</a>
+    <a class="btn sec" href="{{ url_for('synoptique_planification_xlsx', niveau=niveau) }}">Excel</a>
+  </div>
+</div>
+<div class="tw"><table class="t plan">
+  <thead>
+    <tr><th rowspan="2">Trimestre</th><th rowspan="2">Mois</th><th rowspan="2">Français</th><th rowspan="2">Maths</th><th class="g" colspan="4">Éducation sociale</th><th rowspan="2">EST</th><th rowspan="2">EPS</th><th class="g" colspan="5">Éducation artistique</th><th rowspan="2">Observations</th></tr>
+    <tr><th>Morale</th><th>Civisme</th><th>Histoire</th><th>Géographie</th><th>Chant</th><th>Poésie</th><th>Conte</th><th>Dessin</th><th>Couture</th></tr>
+  </thead>
+  <tbody>
+  {% for l in d.lignes %}<tr>{% for k, lib_k, g_ in cols %}<td>{{ l.get(k, '') }}</td>{% endfor %}</tr>
+  {% else %}<tr><td colspan="16" class="aide">Aucune ligne.</td></tr>{% endfor %}
+  </tbody></table></div>
+{% if ecrire %}
+<form method="post" action="{{ url_for('synoptique_planification_import', niveau=niveau) }}" enctype="multipart/form-data" class="carte" style="margin-top:14px">
+  <b>Importer la planification {{ lib }} depuis Excel</b> <span class="aide">(colonnes : Trimestre, Mois, Français, Maths, Morale, Civisme, Histoire, Géographie, EST, EPS, Chant, Poésie, Conte, Dessin, Couture, Observations — téléchargez l'<a href="{{ url_for('synoptique_planification_xlsx', niveau=niveau) }}">Excel actuel</a> comme modèle)</span>
+  <div class="filtres" style="margin-top:8px"><input type="file" name="fichier" accept=".xlsx,.csv" required><button class="btn sec">Importer</button></div>
+</form>
+{% endif %}
+<p class="aide">Structure de la planification annuelle officielle : trimestres, mois, Français, Maths, Éducation sociale (Morale, Civisme, Histoire, Géographie), EST, EPS, Éducation artistique (Chant, Poésie, Conte, Dessin, Couture). SA = situation d'apprentissage, Séq = séquence, U = unité, D = domaine.</p>
+{% endblock %}

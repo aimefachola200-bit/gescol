@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% block titre %}Cantine – liste des vivres{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Vivres de la cantine</h1>
+  <p class="sous">Denrées suivies en stock : nom, catégorie, unité de comptage et seuil d'alerte</p></div>
+  <div class="actions">
+    {% if modifiable %}
+    <a class="btn petit" href="{{ url_for('stock_vivre', vid=0) }}">＋ Ajouter un vivre</a>
+    <form method="post" action="{{ url_for('stock_vivres_type') }}" style="display:inline"><button class="btn sec petit" data-confirmer="Ajouter les vivres de la liste type qui n'existent pas encore ?">Charger la liste type</button></form>
+    {% endif %}
+    <a class="btn sec petit" href="{{ url_for('stock_xlsx') }}">⬇ Excel</a>
+  </div>
+</div>
+{% include "stock_onglets.html" %}
+
+<div class="tw"><table class="t compact"><thead><tr>
+  <th>Vivre</th><th>Catégorie</th><th>Unité</th><th class="c">Seuil d'alerte</th><th class="c">Stock</th><th class="c">Mouvements</th><th>État</th>{% if modifiable %}<th></th>{% endif %}
+</tr></thead><tbody>
+{% for v in liste %}
+<tr>
+  <td><b>{{ v.nom }}</b></td><td>{{ CATEGORIES.get(v.categorie, v.categorie or '') }}</td><td>{{ v.unite }}</td>
+  <td class="c">{{ qte(v.seuil_alerte) if v.seuil_alerte is not none else '' }}</td><td class="c">{{ qte(v.stock) }}</td><td class="c">{{ v.nb }}</td>
+  <td>{% if v.actif %}<span class="badge ok">actif</span>{% else %}<span class="badge">désactivé</span>{% endif %}</td>
+  {% if modifiable %}<td style="white-space:nowrap">
+    <a class="btn sec petit" href="{{ url_for('stock_vivre', vid=v.id) }}">Modifier</a>
+    {% if v.actif %}
+    <form method="post" action="{{ url_for('stock_vivre_supprimer', vid=v.id) }}" style="display:inline">
+      {% if v.nb %}<button class="btn sec petit" name="desactiver" value="1" data-confirmer="Désactiver « {{ v.nom }} » ? Ses {{ v.nb }} mouvement(s) sont conservés.">Désactiver</button>
+      {% else %}<button class="btn danger petit" data-confirmer="Supprimer le vivre « {{ v.nom }} » ?">Supprimer</button>{% endif %}
+    </form>
+    {% else %}
+    <form method="post" action="{{ url_for('stock_vivre_reactiver', vid=v.id) }}" style="display:inline"><button class="btn sec petit">Réactiver</button></form>
+    {% endif %}
+  </td>{% endif %}
+</tr>
+{% else %}<tr><td colspan="8" class="aide">Aucun vivre. {% if modifiable %}Ajoutez-en un ou chargez la liste type.{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+<p class="aide">Un vivre ayant des mouvements ne peut pas être supprimé : désactivez-le (il disparaît de l'état du stock) ou supprimez d'abord ses mouvements.</p>
+{% endblock %}

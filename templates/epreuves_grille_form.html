@@ -1,0 +1,84 @@
+{% extends "base.html" %}{% block titre %}Grille — {{ 'modifier' if obj else 'nouvelle' }}{% endblock %}
+{% block contenu %}
+<style>
+#lignes .lg{border:1px solid var(--bord);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff}
+#lignes .lg .num{font-weight:700;color:var(--bleu)}
+#lignes textarea{min-height:60px}
+</style>
+<div class="entete">
+  <div><h1>{{ 'Modifier la grille' if obj else 'Nouvelle grille' }}</h1>
+  <p class="sous">{{ obj.titre if obj else 'Critères, indicateurs (un par ligne) et barème' }}</p></div>
+  <div class="actions">
+    {% if obj %}<a class="btn sec petit" target="_blank" href="{{ url_for('grille_pdf', gid=obj.id) }}">📄 PDF</a>
+    <form method="post" action="{{ url_for('grille_dupliquer', gid=obj.id) }}" style="display:inline"><button class="btn sec petit">Dupliquer</button></form>{% endif %}
+    <a class="btn sec petit" href="{{ url_for('epreuves_grilles', annee=v.annee) }}">← Liste des grilles</a>
+  </div>
+</div>
+{% include "epreuves_onglets.html" %}
+
+{% if not obj %}
+<p class="actions">Charger une grille type :
+  {% for code, (titre, typ, lignes) in GRILLES_TYPES.items() %}<a class="btn sec petit" href="{{ url_for('grille_form', gid=0, modele=code, annee=v.annee, epreuve=v.epreuve_id) }}">{{ titre.split(' — ')[1] if ' — ' in titre else titre }}</a> {% endfor %}
+</p>
+{% endif %}
+
+<form method="post" class="carte f" id="f-gr">
+  <input type="hidden" name="annee" value="{{ v.annee }}">
+  <div class="ligne">
+    <div style="grid-column:span 2"><label for="g-titre">Titre *</label><input id="g-titre" name="titre" value="{{ v.titre or '' }}" maxlength="200" required></div>
+    <div><label for="g-type">Type</label><select id="g-type" name="type">{% for k, lib in TYPES_GRILLE.items() %}<option value="{{ k }}" {{ 'selected' if v.type == k }}>{{ lib }}</option>{% endfor %}</select></div>
+    <div><label for="g-niv">Niveau</label><input id="g-niv" name="niveau" list="dl-niv" value="{{ v.niveau or '' }}" maxlength="40">
+      <datalist id="dl-niv">{% for n in NIVEAUX %}<option value="{{ n }}">{% endfor %}</datalist></div>
+    <div><label for="g-mat">Matière</label><select id="g-mat" name="matiere"><option value="">—</option>
+      {% for grp in matieres|groupby('cycle') %}<optgroup label="{{ grp.grouper|capitalize }}">{% for m in grp.list %}<option value="{{ m.val }}" {{ 'selected' if v.matiere_val == m.val }}>{{ m.nom }}</option>{% endfor %}</optgroup>{% endfor %}</select></div>
+    <div><label for="g-ep">Épreuve liée</label><select id="g-ep" name="epreuve_id"><option value="">—</option>
+      {% for e in epreuves %}<option value="{{ e.id }}" {{ 'selected' if v.epreuve_id|string == e.id|string }}>{{ e.titre }}{{ ' (' ~ e.niveau ~ ')' if e.niveau }}</option>{% endfor %}</select></div>
+  </div>
+
+  <h2>Critères</h2>
+  <input type="hidden" name="nb_lignes" id="nb_lignes" value="{{ v.lignes|length }}">
+  <div id="lignes">
+    {% for l in v.lignes %}
+    <div class="lg">
+      <div class="ligne">
+        <div><label><span class="num">Critère {{ loop.index }}</span> *</label><input name="lg_{{ loop.index0 }}_critere" list="dl-crit" value="{{ l.critere }}" maxlength="200"></div>
+        <div style="grid-column:span 2"><label>Indicateurs (un par ligne)</label><textarea name="lg_{{ loop.index0 }}_indicateurs">{{ l.indicateurs|join('\n') }}</textarea></div>
+        <div><label>Barème</label><input name="lg_{{ loop.index0 }}_bareme" class="bar" inputmode="decimal" value="{{ l.bareme if l.bareme is string else num(l.bareme) }}" style="max-width:90px"></div>
+        <div style="grid-column:span 2"><label>Observations / consignes de correction</label><input name="lg_{{ loop.index0 }}_observations" value="{{ l.observations or '' }}" maxlength="300"></div>
+      </div>
+      <p class="actions" style="margin:4px 0 0"><button type="button" class="btn sec petit sup">Retirer ce critère</button></p>
+    </div>
+    {% endfor %}
+  </div>
+  <datalist id="dl-crit">{% for c in CRITERES %}<option value="{{ c }}">{% endfor %}</datalist>
+  <p class="actions"><button type="button" class="btn sec" id="ajouter">＋ Ajouter un critère</button>
+    <span>Barème total : <b id="tot">{{ num(total) }}</b></span></p>
+  <p class="actions" style="margin-top:14px"><button class="btn vert">💾 Enregistrer la grille</button></p>
+  <p class="aide">Grille d'observation (maternelle) : laissez les barèmes vides, le PDF propose les colonnes Acquis / En cours d'acquisition / Non acquis.</p>
+</form>
+{% if obj and modifiable %}
+<form method="post" action="{{ url_for('grille_supprimer', gid=obj.id) }}"><button class="btn danger petit" data-confirmer="Supprimer cette grille ?">Supprimer la grille</button></form>
+{% endif %}
+
+<script>
+(function(){
+  var cont=document.getElementById('lignes'), nb=document.getElementById('nb_lignes'), tot=document.getElementById('tot');
+  function total(){ var s=0; cont.querySelectorAll('.bar').forEach(function(i){ var v=parseFloat((i.value||'').replace(',','.')); if(!isNaN(v)) s+=v; });
+    tot.textContent=(Math.round(s*100)/100).toString().replace('.', ','); }
+  function renum(){ var ls=cont.querySelectorAll('.lg'); nb.value=ls.length;
+    ls.forEach(function(d,i){ d.querySelector('.num').textContent='Critère '+(i+1);
+      d.querySelectorAll('[name]').forEach(function(f){ f.name=f.name.replace(/^lg_\d+_/, 'lg_'+i+'_'); }); }); total(); }
+  function ajouter(){ var i=cont.querySelectorAll('.lg').length, d=document.createElement('div'); d.className='lg';
+    d.innerHTML='<div class="ligne"><div><label><span class="num">Critère '+(i+1)+'</span> *</label><input name="lg_'+i+'_critere" list="dl-crit" maxlength="200"></div>'
+      +'<div style="grid-column:span 2"><label>Indicateurs (un par ligne)</label><textarea name="lg_'+i+'_indicateurs"></textarea></div>'
+      +'<div><label>Barème</label><input name="lg_'+i+'_bareme" class="bar" inputmode="decimal" style="max-width:90px"></div>'
+      +'<div style="grid-column:span 2"><label>Observations / consignes de correction</label><input name="lg_'+i+'_observations" maxlength="300"></div></div>'
+      +'<p class="actions" style="margin:4px 0 0"><button type="button" class="btn sec petit sup">Retirer ce critère</button></p>';
+    cont.appendChild(d); renum(); d.querySelector('input').focus(); }
+  document.getElementById('ajouter').addEventListener('click', ajouter);
+  cont.addEventListener('click', function(e){ if(e.target.classList.contains('sup')){ e.target.closest('.lg').remove(); renum(); } });
+  cont.addEventListener('input', function(e){ if(e.target.classList.contains('bar')) total(); });
+  if(!cont.querySelector('.lg')) ajouter(); else total();
+})();
+</script>
+{% endblock %}

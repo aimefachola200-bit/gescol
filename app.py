@@ -38,7 +38,15 @@ ROLES = {
 }
 # rôles proposés selon l'application
 ROLES_ECOLE = ("fondateur", "admin", "directeur", "secretaire", "comptable", "enseignant")
-ROLES_JURIDICTION = ("admin", "responsable", "cp", "chef_service", "agent")
+ROLES_JURIDICTION = ("admin", "responsable", "cp", "chef_service", "agent",
+                     # v1.6 : comptes directeur / enseignant d'une école de la juridiction (école via
+                     # utilisateurs.ecole_id, classes via affectations) – mêmes droits que dans GESCOL
+                     "directeur", "enseignant")
+# v1.6 : dans GESCOL Circonscription / DDEMP, les modules des écoles sont ouverts aux rôles de la juridiction.
+# Un rôle de juridiction non autorisé par DROITS[module] hérite des droits « école » du rôle équivalent :
+EQUIV_ROLES_JUR = {"responsable": "admin", "chef_service": "directeur", "cp": "directeur", "agent": "secretaire"}
+# le conseiller pédagogique (lecture / écriture pédagogique) n'a pas les droits financiers des écoles
+FINANCES_HORS_CP = {"paiements", "paie", "tresorerie", "depenses", "cantine", "stock"}
 # module -> rôles autorisés en écriture
 DROITS = {
     "eleves": {"admin", "directeur", "secretaire"},
@@ -129,7 +137,18 @@ def peut(module):
     if not g.get("user"):
         return False
     role = "admin" if g.user["role"] == "fondateur" else g.user["role"]
-    return role in DROITS[module]
+    # CS / DDEMP, pages des modules d'école : a_integration a déjà substitué le rôle équivalent (g.role_reel = rôle réel)
+    reel = g.get("role_reel") or role
+    if reel == "cp" and module in FINANCES_HORS_CP:
+        return False
+    if module.startswith("jur_") and reel != role:   # droits de juridiction : toujours selon le rôle réel
+        return reel in DROITS[module]
+    if role in DROITS[module]:
+        return True
+    # applications CS / DDEMP : droits « école » hérités du rôle équivalent (jamais pour les droits jur_*)
+    if config.juridiction() and role in EQUIV_ROLES_JUR and not module.startswith("jur_"):
+        return EQUIV_ROLES_JUR[role] in DROITS[module]
+    return False
 
 
 def eco():
@@ -447,16 +466,13 @@ def create_app(test_config=None):
         return render_template("mon_compte.html")
 
     # ------------------------------------------------------------ tableau de bord
-    @app.route("/")
-    @connexion_requise()
-    def accueil():
-        if config.juridiction():   # Circonscription / DDEMP : tableau de bord de la juridiction
-            for ep_ in ("jur_tableau", "jur_accueil"):
-                if ep_ in app.view_functions:
-                    return redirect(url_for(ep_))
+    def stats_accueil(e_, publique=None):
+        """Indicateurs du tableau de bord d'une école : (stats, effectifs par classe, derniers paiements).
+        publique : None = selon l'édition ; True/False = forcer les indicateurs d'école publique (CS / DDEMP)."""
         a = config.ANNEE_ACTIVE
-        e_ = eco()
-        # élèves / paiements de l'école courante (via leur classe)
+        if publique is None:
+            publique = config.publique()
+        # élèves / paiements de l'école (via leur classe)
         EL = "FROM eleves e JOIN classes c ON c.id=e.classe_id AND c.ecole_id=%d WHERE e.statut='inscrit'" % e_
         PA = "FROM paiements p JOIN eleves e ON e.id=p.eleve_id JOIN classes c ON c.id=e.classe_id AND c.ecole_id=%d WHERE p.annule=0" % e_
         stats = {
@@ -483,9 +499,22 @@ def create_app(test_config=None):
                           FROM classes c LEFT JOIN eleves e ON e.classe_id=c.id AND e.statut='inscrit'
                           WHERE c.ecole_id=? GROUP BY c.id ORDER BY c.nom""", (e_,))
         derniers = q("SELECT p.*, e.nom, e.prenoms " + PA + " ORDER BY p.id DESC LIMIT 8")
-        if config.publique() and getattr(H, "stats_publique", None):
+        if publique and getattr(H, "stats_publique", None):
             # école publique : fonds reçus (subventions, cantine, frais de dossier CEP), dépenses et solde en caisse
             stats.update(H.stats_publique())
+        return stats, par_classe, derniers
+
+    @app.route("/")
+    @connexion_requise()
+    def accueil():
+        if config.juridiction():   # Circonscription / DDEMP : tableau de bord de la juridiction
+            # comptes directeur / enseignant d'une école : tableau de bord de leur école (a_integration)
+            if g.user["role"] in ("directeur", "enseignant") and "jur_ecole_accueil" in app.view_functions:
+                return redirect(url_for("jur_ecole_accueil"))
+            for ep_ in ("jur_tableau", "jur_accueil"):
+                if ep_ in app.view_functions:
+                    return redirect(url_for(ep_))
+        stats, par_classe, derniers = stats_accueil(eco())
         return render_template("accueil.html", s=stats, par_classe=par_classe, derniers=derniers)
 
     # ------------------------------------------------------------ classes
@@ -598,7 +627,7 @@ def create_app(test_config=None):
         if request.method == "POST":
             f = {k: request.form.get(k, "").strip()[:200] for k in (
                 "nom", "prenoms", "sexe", "date_naissance", "lieu_naissance", "classe_id", "parent_nom",
-                "parent_telephone", "parent_whatsapp", "adresse", "statut") + CHAMPS_CARTE}
+                "parent_telephone", "parent_whatsapp", "adresse", "statut", "nationalite") + CHAMPS_CARTE}
             f["nom"] = f["nom"].upper()
             erreurs = []
             if not f["nom"] or not f["prenoms"]:
@@ -626,7 +655,7 @@ def create_app(test_config=None):
                 f["annees_scolarite"] = ""
             f["redoublant"] = "1" if request.form.get("redoublant") else "0"
             champs = ("nom", "prenoms", "sexe", "date_naissance", "lieu_naissance", "classe_id", "parent_nom",
-                      "parent_telephone", "parent_whatsapp", "adresse", "statut") + CHAMPS_CARTE + ("redoublant",)
+                      "parent_telephone", "parent_whatsapp", "adresse", "statut", "nationalite") + CHAMPS_CARTE + ("redoublant",)
             vals = [f[k] or None for k in champs]
             if e:
                 ex(f"UPDATE eleves SET {', '.join(k + '=?' for k in champs)} WHERE id=?", vals + [eid])
@@ -675,6 +704,106 @@ def create_app(test_config=None):
         if not p:
             abort(404)
         return send_file(p, max_age=0)
+
+    # --- suppression d'un élève (v1.6). Suppression physique refusée s'il a des paiements non annulés ou des
+    # documents officiels émis (bulletins, reçus, certificats…) : on propose alors « Retirer » (statut = sorti).
+    # Les cartes (carte, carte_candidat) sont générées automatiquement par l'aperçu : elles ne bloquent pas.
+    DOCS_CARTE = ("carte", "carte_candidat")
+
+    def eleve_de_l_ecole(eid):
+        e = eleve_ou_404(eid)
+        if not q("SELECT 1 FROM classes WHERE id=? AND ecole_id=?", (e["classe_id"] or 0, eco()), un=True):
+            abort(404)
+        return e
+
+    def blocages_suppression(eid):
+        """Liste (texte) de ce qui empêche la suppression physique de l'élève."""
+        b = []
+        n = q("SELECT COUNT(*) n FROM paiements WHERE eleve_id=? AND annule=0", (eid,), un=True)["n"]
+        if n:
+            b.append(f"{n} paiement(s) non annulé(s)")
+        marque = ",".join("?" * len(DOCS_CARTE))
+        n = q(f"SELECT COUNT(*) n FROM documents WHERE eleve_id=? AND type NOT IN ({marque})", [eid, *DOCS_CARTE], un=True)["n"]
+        if n:
+            b.append(f"{n} document(s) officiel(s) émis (bulletin, reçu, certificat…)")
+        return b
+
+    def supprimer_eleve_physique(e):
+        """Efface l'élève et toutes ses données (notes, présences, cartes, comptes, photo…)."""
+        db = get_db()
+        eid = e["id"]
+        tables = [r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name!='eleves'")]
+        for t in tables:
+            cols = {r[1] for r in db.execute(f"PRAGMA table_info({t})")}
+            if "eleve_id" in cols:
+                db.execute(f"DELETE FROM {t} WHERE eleve_id=?", (eid,))
+        db.execute("DELETE FROM documents_modules WHERE cle LIKE ?", (f"e%:carte:eleve:{eid}",))
+        db.execute("DELETE FROM signatures WHERE cle=?", (f"eleve:{eid}",))
+        db.execute("DELETE FROM eleves WHERE id=?", (eid,))
+        db.commit()
+        p = chemin_photo(e)
+        if p:
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+
+    def retirer_eleve(e):
+        ex("UPDATE eleves SET statut='sorti' WHERE id=?", (e["id"],))
+
+    @app.route("/eleves/<int:eid>/supprimer", methods=["POST"])
+    @connexion_requise("eleves")
+    def eleve_supprimer(eid):
+        e = eleve_de_l_ecole(eid)
+        qui = f"{e['matricule'] or ''} {e['nom']} {e['prenoms']}".strip()
+        if request.form.get("mode") == "retirer":
+            retirer_eleve(e)
+            journal("eleve_retire", qui)
+            flash(f"{e['nom']} {e['prenoms']} retiré(e) (statut « sorti ») : sa fiche et son historique sont conservés.", "success")
+            return redirect(url_for("eleves"))
+        blocages = blocages_suppression(eid)
+        if blocages:
+            flash(f"Suppression impossible pour {e['nom']} {e['prenoms']} : " + ", ".join(blocages)
+                  + ". Utilisez « Retirer » (statut « sorti ») pour le sortir des listes en conservant son historique.", "danger")
+            return redirect(url_for("eleve_form", eid=eid))
+        supprimer_eleve_physique(e)
+        journal("eleve_supprime", qui)
+        flash(f"Élève {e['nom']} {e['prenoms']} supprimé définitivement, avec ses notes, présences et cartes.", "success")
+        return redirect(url_for("eleves"))
+
+    @app.route("/eleves/supprimer-selection", methods=["POST"])
+    @connexion_requise("eleves")
+    def eleves_supprimer_selection():
+        ids = [int(x) for x in request.form.getlist("ids") if str(x).isdigit()][:500]
+        mode = request.form.get("mode", "supprimer")
+        if not ids:
+            flash("Cochez au moins un élève.", "warning")
+            return redirect(url_for("eleves"))
+        faits, retires, refus = 0, 0, []
+        for eid in ids:
+            e = q("""SELECT e.* FROM eleves e JOIN classes c ON c.id=e.classe_id WHERE e.id=? AND c.ecole_id=?""",
+                  (eid, eco()), un=True)
+            if not e:
+                continue
+            if mode == "retirer":
+                retirer_eleve(e)
+                retires += 1
+                continue
+            if blocages_suppression(eid):
+                refus.append(f"{e['nom']} {e['prenoms']}")
+                continue
+            supprimer_eleve_physique(e)
+            faits += 1
+        journal("eleves_supprimes", f"{faits} supprimé(s), {retires} retiré(s), {len(refus)} refusé(s)")
+        if faits:
+            flash(f"{faits} élève(s) supprimé(s) définitivement.", "success")
+        if retires:
+            flash(f"{retires} élève(s) retiré(s) (statut « sorti »).", "success")
+        if refus:
+            flash(f"{len(refus)} élève(s) non supprimé(s) (paiements ou documents officiels existants) : "
+                  + ", ".join(refus[:10]) + (" …" if len(refus) > 10 else "")
+                  + ". Utilisez « Retirer la sélection » pour eux.", "warning")
+        return redirect(url_for("eleves"))
 
     # ------------------------------------------------------------ notes
     @app.route("/notes")
@@ -1285,7 +1414,8 @@ def create_app(test_config=None):
         enregistrer_document=enregistrer_document, absences_eleve=absences_eleve, bornes_annee=bornes_annee,
         resultats_classe=resultats_classe, periode_de=periode_de, lire_parametres=lire_parametres,
         chemin_photo=chemin_photo, ROLES=ROLES, DROITS=DROITS, enregistrer_photo_data=enregistrer_photo_data,
-        CHAMPS_CARTE=CHAMPS_CARTE, fcfa_txt=fcfa)
+        CHAMPS_CARTE=CHAMPS_CARTE, fcfa_txt=fcfa, stats_accueil=stats_accueil,
+        ROLES_JURIDICTION=ROLES_JURIDICTION, EQUIV_ROLES_JUR=EQUIV_ROLES_JUR)
     import importlib
     import notif
 

@@ -1,0 +1,88 @@
+{% extends "base.html" %}{% block titre %}Conseillers pédagogiques{% endblock %}
+{% block contenu %}
+<style>
+.graphe{max-width:100%;height:auto;display:block}
+.jc-mois td,.jc-mois th{text-align:center}
+table.t tr.cs td{background:#E4ECF5;font-weight:700}
+table.t tr.total td{background:#F2F6FB;font-weight:700}
+.src{font-size:11px;color:#667085}
+</style>
+{% set t = s.tot %}
+<div class="entete">
+  <div><h1>Conseillers pédagogiques : visites et synthèses</h1>
+  <p class="sous">Animation pédagogique · année {{ annee }} · par CP{% if JUR_NIVEAU == 'ddemp' %} et par circonscription{% endif %} : zone, écoles et enseignants de la zone, visites opérées, couverture, dernière visite, synthèse mensuelle.</p></div>
+  <div class="actions">
+    {% if peut('jur_visites') %}<a class="btn" href="{{ url_for('jur_visite_form') }}">+ Enregistrer une visite</a>{% endif %}
+    <a class="btn sec" href="{{ url_for('jur_bilan_activites', annee=annee, cs=cs_id or '') }}">Bilan CP et CCS</a>
+    <a class="btn sec" href="{{ url_for('jur_cp', annee=annee, cs=cs_id or '', export='xlsx') }}">⇩ Excel</a>
+    <a class="btn sec" href="{{ url_for('jur_cp', annee=annee, cs=cs_id or '', export='pdf') }}" target="_blank">📄 PDF signé</a>
+  </div>
+</div>
+
+<form method="get" class="filtres carte">
+  <label>Année<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  {% if JUR_NIVEAU == 'ddemp' %}<label>Circonscription<br><select name="cs" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if cs_id == c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+  <noscript><button class="btn sec petit">Afficher</button></noscript>
+</form>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Conseillers pédagogiques</div><div class="v">{{ t.cps }}</div><div class="d">{{ t.actifs }} ayant effectué des visites</div></div>
+  <div class="kpi"><div class="l">Visites de classe</div><div class="v">{{ t.visites_classe }}</div><div class="d">dont {{ t.visites_inspection }} d'inspection · {{ t.visites_ecole }} visite(s) d'école</div></div>
+  <div class="kpi"><div class="l">Écoles visitées</div><div class="v">{{ t.ecoles_perimetre_visitees }} / {{ t.ecoles_zone }}</div><div class="d">couverture {{ pct(t.taux_ecoles) }}</div></div>
+  <div class="kpi"><div class="l">Enseignants visités</div><div class="v">{{ t.enseignants_perimetre_visites }} / {{ t.enseignants_zone }}</div><div class="d">couverture {{ pct(t.taux_enseignants) }}</div></div>
+  <div class="kpi"><div class="l">Note moyenne</div><div class="v">{{ note_txt(t.note_moyenne) or '—' }}</div><div class="d">{{ t.declarees }} visite(s) déclarée(s) par les écoles</div></div>
+</div>
+
+{% if not s.cps %}
+<div class="carte">Aucun conseiller pédagogique connu pour {{ annee }} : renseignez le « CP de la zone » dans <a href="{{ url_for('jur_zones') }}">Zones pédagogiques</a>, ajoutez les CP dans « Agents »{% if peut('jur_visites') %} ou <a href="{{ url_for('jur_visite_form') }}">enregistrez une visite</a>{% endif %}.</div>
+{% endif %}
+
+{% macro ligne(i, x) %}
+<tr><td class="num">{{ i }}</td>
+  <td><a href="{{ url_for('jur_visites', annee=annee, cs=cs_id or '', visiteur=x.cle, qualite='CP') }}"><b>{{ x.visiteur }}</b></a>{% if x.telephone %}<br><span class="aide">{{ x.telephone }}</span>{% endif %}
+    <br><span class="src">{{ x.source|join(' · ') }}</span></td>
+  {% if JUR_NIVEAU == 'ddemp' and not s.cs %}<td>{{ x.cs_nom }}</td>{% endif %}
+  <td>{{ x.zones|join(', ') or x.perimetre }}</td>
+  <td class="num">{{ x.ecoles_zone }}</td><td class="num">{{ x.enseignants_zone }}</td>
+  <td class="num">{{ x.visites_classe }}{% if x.visites_inspection %} <span class="aide">({{ x.visites_inspection }} insp.)</span>{% endif %}</td>
+  <td class="num">{{ x.visites_ecole }}</td><td class="num"><b>{{ x.total }}</b></td>
+  <td class="num">{{ x.ecoles_perimetre_visitees }} / {{ x.ecoles_zone }} <span class="aide">{{ pct(x.taux_ecoles) }}</span></td>
+  <td class="num">{{ x.enseignants_perimetre_visites }} / {{ x.enseignants_zone }} <span class="aide">{{ pct(x.taux_enseignants) }}</span>{% if x.a_visiter %}<br><span class="aide">{{ x.a_visiter }} à visiter</span>{% endif %}</td>
+  <td class="num">{{ note_txt(x.note_moyenne) or '—' }}</td>
+  <td>{{ date_fr(x.derniere) if x.derniere else '—' }}</td></tr>
+{% endmacro %}
+{% macro ligne_tot(lib, x, cls) %}
+<tr class="{{ cls }}"><td></td><td>{{ lib }}</td>{% if JUR_NIVEAU == 'ddemp' and not s.cs %}<td></td>{% endif %}<td>{{ x.cps }} CP · {{ x.actifs }} actif(s)</td>
+  <td class="num">{{ x.ecoles_zone }}</td><td class="num">{{ x.enseignants_zone }}</td><td class="num">{{ x.visites_classe }}</td><td class="num">{{ x.visites_ecole }}</td><td class="num">{{ x.total }}</td>
+  <td class="num">{{ x.ecoles_perimetre_visitees }} / {{ x.ecoles_zone }} <span class="aide">{{ pct(x.taux_ecoles) }}</span></td>
+  <td class="num">{{ x.enseignants_perimetre_visites }} / {{ x.enseignants_zone }} <span class="aide">{{ pct(x.taux_enseignants) }}</span></td>
+  <td class="num">{{ note_txt(x.note_moyenne) or '—' }}</td><td></td></tr>
+{% endmacro %}
+
+<div class="carte"><h2>Par conseiller pédagogique</h2>
+  <div class="tw"><table class="t compact">
+    <tr><th class="num">N°</th><th>Conseiller pédagogique</th>{% if JUR_NIVEAU == 'ddemp' and not s.cs %}<th>CS</th>{% endif %}<th>Zone(s) pédagogique(s)</th><th class="num">Écoles de la zone</th><th class="num">Enseignants de la zone</th><th class="num">Visites de classe*</th><th class="num">Visites d'école</th><th class="num">Total</th><th class="num">Écoles visitées</th><th class="num">Enseignants visités / à visiter</th><th class="num">Note moy.</th><th>Dernière visite</th></tr>
+    {% if s.cs %}
+      {% for c in s.cs %}
+        {{ ligne_tot('CS ' ~ c.cs_nom, c.tot, 'cs') }}
+        {% for x in c.cps %}{{ ligne(loop.index, x) }}{% else %}<tr><td></td><td colspan="12" class="gris">Aucun CP connu pour cette circonscription.</td></tr>{% endfor %}
+      {% endfor %}
+    {% else %}
+      {% for x in s.cps %}{{ ligne(loop.index, x) }}{% endfor %}
+    {% endif %}
+    {{ ligne_tot('TOTAL', t, 'total') }}
+  </table></div>
+  <p class="aide">* y compris les visites d'inspection. Sources d'un CP : « visites » (visites de l'année), « zone » (CP de la zone pédagogique), « agent » (Agents de la structure). Couverture = enseignants de la zone visités au moins une fois dans l'année.</p>
+  {% if s.cps %}<h3>Couverture des enseignants par CP</h3>{{ g_couv }}{% endif %}
+</div>
+
+<div class="carte"><h2>Synthèse mensuelle</h2>
+  {{ g_mois }}
+  <div class="tw"><table class="t compact jc-mois">
+    <tr><th style="text-align:left">Conseiller pédagogique</th>{% for lib in s.mois_lib %}<th>{{ lib }}</th>{% endfor %}<th>Total</th></tr>
+    {% for x in s.cps %}<tr><td style="text-align:left">{{ x.visiteur }}</td>{% for v in x.mois %}<td>{{ v or '' }}</td>{% endfor %}<td><b>{{ x.total }}</b></td></tr>{% endfor %}
+    <tr class="total"><td style="text-align:left">Total</td>{% for v in t.mois %}<td>{{ v }}</td>{% endfor %}<td>{{ t.total }}</td></tr>
+  </table></div>
+</div>
+{% endblock %}

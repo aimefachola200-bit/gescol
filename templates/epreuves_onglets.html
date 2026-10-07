@@ -1,0 +1,7 @@
+{# Onglets du module Comité d'évaluation, épreuves et grilles (variables onglet, annee) #}
+<div class="onglets">
+  <a class="{{ 'actif' if onglet == 'comite' }}" href="{{ url_for('epreuves_comite', annee=annee) }}">Comité d'évaluation</a>
+  <a class="{{ 'actif' if onglet == 'epreuves' }}" href="{{ url_for('epreuves_accueil', annee=annee) }}">Épreuves</a>
+  <a class="{{ 'actif' if onglet == 'grilles' }}" href="{{ url_for('epreuves_grilles', annee=annee) }}">Grilles</a>
+  {% if ep_existe('eval_accueil') %}<a href="{{ url_for('eval_accueil') }}">← Saisie des évaluations</a>{% endif %}
+</div>

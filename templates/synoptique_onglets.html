@@ -1,0 +1,19 @@
+{# En-tête et onglets communs du tableau synoptique (variables : onglet, ident, ecrire) #}
+<div class="entete">
+  <div><h1>Tableau synoptique de l'école</h1>
+    <p class="sous">{{ ident.epp or ECOLE.nom }} — année scolaire {{ ANNEE }}{% if ident.ddemp %} · DDEMP {{ ident.ddemp }}{% endif %}{% if ident.cs %} · CS {{ ident.cs }}{% endif %}</p></div>
+  <div class="actions">
+    <a class="btn petit" href="{{ url_for('synoptique_pdf') }}" target="_blank">📄 PDF complet</a>
+    <a class="btn sec petit" href="{{ url_for('synoptique_xlsx') }}">⬇ Excel</a>
+    {% if ecrire %}<a class="btn sec petit" href="{{ url_for('synoptique_import') }}">⬆ Import / export</a>{% endif %}
+  </div>
+</div>
+<nav class="onglets" aria-label="Rubriques du tableau synoptique">
+  <a class="{{ 'actif' if onglet == 'identite' }}" href="{{ url_for('synoptique_accueil') }}">Identité</a>
+  <a class="{{ 'actif' if onglet == 'personnel' }}" href="{{ url_for('synoptique_personnel_liste') }}">Personnel</a>
+  <a class="{{ 'actif' if onglet == 'comites' }}" href="{{ url_for('synoptique_comites') }}">Comités</a>
+  <a class="{{ 'actif' if onglet == 'edt' }}" href="{{ url_for('synoptique_edt') }}">Emplois du temps</a>
+  <a class="{{ 'actif' if onglet == 'planification' }}" href="{{ url_for('synoptique_planification') }}">Planification</a>
+  <a class="{{ 'actif' if onglet == 'reglement' }}" href="{{ url_for('synoptique_reglement') }}">Règlement intérieur</a>
+  {% if ecrire %}<a class="{{ 'actif' if onglet == 'import' }}" href="{{ url_for('synoptique_import') }}">Import / export</a>{% endif %}
+</nav>

@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% block titre %}Stock — charger depuis Excel{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Charger les vivres et les mouvements (Excel)</h1>
+  <p class="sous">Import d'un classeur .xlsx (ou CSV) : feuille « Vivres » et / ou feuille « Mouvements »</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('stock_accueil') }}">← État du stock</a></div>
+</div>
+{% include "stock_onglets.html" %}
+
+<div class="grille2">
+  <form method="post" enctype="multipart/form-data" class="carte f">
+    <h2 style="margin-top:0">Importer</h2>
+    <label for="imp-f">Fichier Excel (.xlsx) ou CSV</label><input id="imp-f" type="file" name="fichier" accept=".xlsx,.csv" required>
+    <p class="actions" style="margin-top:12px"><button class="btn">⬆ Importer</button> <a class="btn sec" href="{{ url_for('stock_modele_xlsx') }}">Télécharger le modèle Excel</a></p>
+    <p class="aide">Les vivres existants (même nom) sont mis à jour, les autres ajoutés ; un mouvement dont le vivre est inconnu crée ce vivre. Les mouvements importés s'ajoutent à ceux déjà saisis.</p>
+  </form>
+  <div class="carte">
+    <h2 style="margin-top:0">Format attendu</h2>
+    <p><b>Feuille « Vivres »</b> : {% for h in ent_vivres %}<code>{{ h }}</code>{{ ', ' if not loop.last }}{% endfor %}.</p>
+    <p><b>Feuille « Mouvements »</b> : {% for h in ent_mouvements %}<code>{{ h }}</code>{{ ', ' if not loop.last }}{% endfor %}.<br>
+      Type : Entrée, Sortie, Perte ou Inventaire ; qualité : {% for lib in QUALITES.values() %}{{ lib }}{{ ', ' if not loop.last }}{% endfor %} ; dates au format JJ/MM/AAAA.</p>
+    <p class="aide">Un classeur d'une seule feuille est reconnu comme « Mouvements » s'il contient une colonne Date, sinon comme « Vivres ». L'<a href="{{ url_for('stock_xlsx') }}">export Excel</a> de l'état du stock contient une feuille Vivres réimportable.</p>
+  </div>
+</div>
+{% endblock %}

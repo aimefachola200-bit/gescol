@@ -21,6 +21,8 @@ RE_CLE_SIGNATURE = re.compile(r"^(ecole:\d+:(directeur|admin|ccs)|classe:\d+:tit
 
 def enregistrer(app, H):
     q, ex, config = H.q, H.ex, H.config
+    # v1.6 : lien d'une école locale avec l'école de la juridiction (jur_ecoles) dans GESCOL Circonscription / DDEMP
+    H.ajouter_colonne("ecoles", "jur_ecole_id", "INTEGER")
 
     # ------------------------------------------------------------ école courante
     def ecoles_accessibles():
@@ -45,15 +47,8 @@ def enregistrer(app, H):
 
     H.signature = signature
 
-    @app.before_request
-    def charger_ecole():
-        liste = ecoles_accessibles()
-        choix = session.get("ecole_id")
-        e = next((x for x in liste if x["id"] == choix), None) or (liste[0] if liste else None)
-        if e is None:
-            e = q("SELECT * FROM ecoles ORDER BY id", un=True)
-        g.ecole = e
-        g.ecoles = liste
+    def appliquer_identite_ecole(e):
+        """Recopie la fiche de l'école dans config.ECOLE (en-têtes des documents, matricules…)."""
         if e:
             config.ECOLE.update({
                 "id": e["id"], "nom": e["nom"], "sigle": e["sigle"] or "", "adresse": e["adresse"] or "",
@@ -68,13 +63,29 @@ def enregistrer(app, H):
                 "_sig_directeur": signature(f"ecole:{e['id']}:directeur"),
             })
 
+    H.appliquer_identite_ecole = appliquer_identite_ecole
+
+    @app.before_request
+    def charger_ecole():
+        liste = ecoles_accessibles()
+        choix = session.get("ecole_id")
+        e = next((x for x in liste if x["id"] == choix), None) or (liste[0] if liste else None)
+        if e is None:
+            e = q("SELECT * FROM ecoles ORDER BY id", un=True)
+        g.ecole = e
+        g.ecoles = liste
+        appliquer_identite_ecole(e)
+
     @app.context_processor
     def ctx_ecoles():
         return dict(DEPARTEMENTS=RB.DEPARTEMENTS, ECOLE_COURANTE=g.get("ecole"), ECOLES=g.get("ecoles") or [],
                     signature_de=signature)
 
     def modifier_ecole_depuis_parametres(nouv):
-        """La page Paramètres modifie aussi la fiche de l'école courante."""
+        """La page Paramètres modifie aussi la fiche de l'école courante (pas dans les applications CS / DDEMP :
+        les paramètres y décrivent la structure, pas l'école ouverte)."""
+        if config.juridiction():
+            return
         ex("""UPDATE ecoles SET nom=?, sigle=?, adresse=?, ville=?, telephone=?, email=?, directeur_nom=? WHERE id=?""",
            (nouv.get("ecole_nom"), nouv.get("ecole_sigle"), nouv.get("ecole_adresse"), nouv.get("ecole_ville"),
             nouv.get("ecole_telephone"), nouv.get("ecole_email"), nouv.get("ecole_directeur"), ecole_id()))
@@ -125,6 +136,9 @@ def enregistrer(app, H):
                          [f[k] for k in CHAMPS_ECOLE] + [H.maintenant()])
                 H.journal("ecole_creee", f["nom"])
                 session["ecole_id"] = eid
+                # applications CS / DDEMP : l'école apparaît aussi dans la liste des écoles de la juridiction
+                if config.juridiction() and getattr(H, "jur_lier_ecole", None):
+                    H.jur_lier_ecole(eid)
             logo = request.files.get("logo")
             if logo and logo.filename:
                 try:
@@ -151,10 +165,40 @@ def enregistrer(app, H):
         suivant = request.form.get("suivant", "")
         return redirect(suivant if suivant.startswith("/") and not suivant.startswith("//") else url_for("accueil"))
 
+    @app.route("/ecoles/<int:eid>/supprimer", methods=["POST"])
+    @H.connexion_requise("parametres")
+    def ecole_supprimer(eid):
+        """Supprime une école sans élèves ni classes (sinon : la désactiver). Dans les applications CS / DDEMP,
+        l'école liée de la juridiction est retirée de la liste (actif=0, données conservées)."""
+        e = q("SELECT * FROM ecoles WHERE id=?", (eid,), un=True)
+        if not e:
+            abort(404)
+        if eid == 1 and not config.juridiction():
+            flash("L'école principale ne peut pas être supprimée.", "warning")
+            return redirect(url_for("ecoles"))
+        nb_classes = q("SELECT COUNT(*) n FROM classes WHERE ecole_id=?", (eid,), un=True)["n"]
+        nb_eleves = q("SELECT COUNT(*) n FROM eleves x JOIN classes c ON c.id=x.classe_id WHERE c.ecole_id=?", (eid,), un=True)["n"]
+        if nb_classes or nb_eleves:
+            flash(f"« {e['nom']} » a {nb_classes} classe(s) et {nb_eleves} élève(s) : elle ne peut pas être supprimée. "
+                  "Désactivez-la (ses données sont conservées) ou supprimez d'abord ses classes.", "danger")
+            return redirect(url_for("ecoles"))
+        if q("SELECT COUNT(*) n FROM ecoles", un=True)["n"] <= 1:
+            flash("Impossible de supprimer la dernière école.", "warning")
+            return redirect(url_for("ecoles"))
+        ex("DELETE FROM ecoles WHERE id=?", (eid,))
+        ex("UPDATE utilisateurs SET ecole_id=NULL WHERE ecole_id=?", (eid,))
+        if config.juridiction() and e["jur_ecole_id"]:
+            ex("UPDATE jur_ecoles SET actif=0, maj=datetime('now','localtime') WHERE id=?", (e["jur_ecole_id"],))
+        if session.get("ecole_id") == eid:
+            session.pop("ecole_id", None)
+        H.journal("ecole_supprimee", e["nom"])
+        flash(f"École « {e['nom']} » supprimée.", "success")
+        return redirect(url_for("ecoles"))
+
     @app.route("/ecoles/<int:eid>/basculer", methods=["POST"])
     @H.connexion_requise("parametres")
     def ecole_basculer(eid):
-        if eid == 1:
+        if eid == 1 and not config.juridiction():
             flash("L'école principale ne peut pas être désactivée.", "warning")
         else:
             ex("UPDATE ecoles SET actif=1-actif WHERE id=?", (eid,))
@@ -196,7 +240,7 @@ def enregistrer(app, H):
     def signature_enregistrer(cle):
         if not RE_CLE_SIGNATURE.match(cle) or g.user["role"] == "comptable":
             abort(403)
-        if cle.startswith("ecole:") and g.user["role"] not in ("admin", "fondateur", "directeur"):
+        if cle.startswith("ecole:") and g.user["role"] not in ("admin", "fondateur", "directeur", "responsable", "chef_service"):
             abort(403)
         if cle.startswith("jur:") and g.user["role"] not in ("admin", "fondateur", "responsable", "chef_service", "cp"):
             abort(403)

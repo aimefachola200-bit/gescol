@@ -12,6 +12,8 @@
       <option value="M" {{ 'selected' if e.sexe=='M' }}>Masculin</option><option value="F" {{ 'selected' if e.sexe=='F' }}>Féminin</option></select></div>
     <div><label>Date de naissance</label><input type="date" name="date_naissance" value="{{ e.date_naissance or '' }}"></div>
     <div><label>Lieu de naissance</label><input name="lieu_naissance" value="{{ e.lieu_naissance or '' }}"></div>
+    <div><label>Nationalité</label><input name="nationalite" value="{{ e.nationalite or '' }}" placeholder="Béninoise" list="nationalites"></div>
+    <datalist id="nationalites"><option value="Béninoise"><option value="Togolaise"><option value="Nigériane"><option value="Nigérienne"><option value="Burkinabè"><option value="Ghanéenne"><option value="Ivoirienne"></datalist>
   </div>
   <div style="margin-top:12px">
     <label>Photo d'identité</label>
@@ -54,4 +56,20 @@
 </div>
 <div class="actions"><button class="btn">Enregistrer</button><a class="btn sec" href="{{ url_for('eleves') }}">Annuler</a></div>
 </form>
+{% if edition and ep_existe('eleve_supprimer') %}
+<div class="carte" style="border-color:#FDA29B">
+  <h2 style="margin-top:0">Supprimer ou retirer cet élève</h2>
+  <p class="aide"><b>Supprimer</b> efface définitivement la fiche et toutes ses données (notes, présences, cartes, accès à l'espace élève).
+    Refusé si l'élève a des paiements non annulés ou des documents officiels émis : utilisez alors <b>Retirer</b>, qui passe
+    l'élève au statut « sorti » en conservant son historique.</p>
+  <div class="actions">
+    <form method="post" action="{{ url_for('eleve_supprimer', eid=e.id) }}" style="display:inline"
+          onsubmit="return confirm('Supprimer définitivement {{ (e.nom ~ ' ' ~ e.prenoms)|replace("'", "\\'") }} et toutes ses données ?')">
+      <button class="btn danger">🗑 Supprimer définitivement</button></form>
+    <form method="post" action="{{ url_for('eleve_supprimer', eid=e.id) }}" style="display:inline"
+          onsubmit="return confirm('Retirer cet élève (statut « sorti ») ?')">
+      <input type="hidden" name="mode" value="retirer"><button class="btn sec">Retirer (statut « sorti »)</button></form>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

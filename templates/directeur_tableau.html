@@ -77,7 +77,7 @@
     <td class="num">{{ car_fmt_nombre(f.participation_up) }}</td><td class="long">{{ f.gestion_collegiale or '' }}</td><td class="num">{{ car_fmt_nombre(f.note_evaluation) }}</td></tr>
   {% endfor %}
 </table></div>
-<p class="aide">Lignes orangées : départ à la retraite dans 2 ans ou moins. Retraite = date de naissance + 60 ans (grade A), 58 ans (B), 55 ans (C).</p>
+<p class="aide">Lignes orangées : départ à la retraite dans 2 ans ou moins. Anciennetés au {{ reference.strftime('%d/%m/%Y') }} (31/12 de la première année de l'année scolaire) depuis la prise de service dans chaque lieu. Retraite : 60 ans (grade A), 58 ans (B), 55 ans (C), départ le 1er jour du trimestre qui suit le trimestre de naissance (janv.–mars : 1er avril ; avril–juin : 1er juillet ; juil.–sept. : 1er octobre ; oct.–déc. : 1er janvier suivant). {% if ep_existe('synoptique_accueil') %}Voir aussi le <a href="{{ url_for('synoptique_accueil') }}">tableau synoptique de l'école</a>.{% endif %}</p>
 {% else %}
 <div class="carte gris">Aucun agent enregistré pour cette école.{% if peut('carriere') %} <a href="{{ url_for('personnel_form') }}">Ajouter un agent</a>.{% endif %}</div>
 {% endif %}
