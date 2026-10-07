@@ -1099,3 +1099,58 @@ def enregistrer(app, H):
                                                "dans chaque école ouverte."])
         H.journal("jur_synthese_eval_pdf", f"{type_} {numero} {annee}")
         return H.pdf_reponse(pdf, f"synthese_evaluation_{nom_niveau()}_{type_}{numero}_{annee}.pdf")
+
+    # ================================================================== WhatsApp et SMS : directeurs et enseignants
+    @app.route("/juridiction/messages", methods=["GET", "POST"])
+    @H.connexion_requise()
+    def jur_messages():
+        """Messages WhatsApp / SMS aux directeurs et aux enseignants de la juridiction (liens en 1 clic, comme les
+        messages aux parents dans GESCOL) : destinataires filtrés par CS, zone, école, fonction ; texte commun."""
+        garde()
+        import m_juridiction as J
+        import notif
+        annee = config.ANNEE_ACTIVE
+        f = {k: (request.values.get(k) or "").strip() for k in ("cs", "zone", "ecole", "qui", "texte", "recherche")}
+        qui = f["qui"] or "directeurs"
+        try:
+            cs_id = int(f["cs"]) if f["cs"] else None
+            zone_id = int(f["zone"]) if f["zone"] else None
+            ecole_id = int(f["ecole"]) if f["ecole"] else None
+        except ValueError:
+            cs_id = zone_id = ecole_id = None
+        if not ddemp():
+            c = J.cs_courante()
+            cs_id = c["id"] if c else cs_id
+        dest = []
+        if qui in ("directeurs", "tous"):
+            for e in J.ecoles(cs_id=cs_id, zone_id=zone_id):
+                if ecole_id and e["id"] != ecole_id:
+                    continue
+                dest.append({"nom": e["directeur_nom"] or "", "tel": e["directeur_tel"] or e["telephone"] or "",
+                             "fonction": e["directeur_titre"] or "Directeur", "ecole": e["nom"], "zone": e["zone_nom"] or "",
+                             "cs": e["cs_nom"] or "", "type": "directeur"})
+        if qui in ("enseignants", "tous"):
+            for p in J.personnel(annee, cs_id, zone_id, inclure_agents=False):
+                if ecole_id and p.get("ecole_id") != ecole_id:
+                    continue
+                if (p.get("role") or "").lower() == "directeur" and qui == "tous":
+                    continue   # déjà listé comme directeur
+                dest.append({"nom": f"{p.get('nom') or ''} {p.get('prenoms') or ''}".strip(), "tel": p.get("telephone") or "",
+                             "fonction": p.get("fonction") or "Enseignant(e)", "ecole": p.get("ecole_nom") or "",
+                             "zone": p.get("zone_nom") or "", "cs": p.get("cs_nom") or "", "type": "enseignant"})
+        if f["recherche"]:
+            r = J.norm(f["recherche"])
+            dest = [d for d in dest if r in J.norm(f"{d['nom']} {d['ecole']}")]
+        dest.sort(key=lambda d: (d["cs"], d["zone"], d["ecole"], d["nom"]))
+        s = J.structure() or {}
+        texte = f["texte"] or (f"Bonjour, message de la {s.get('nom') or ('Circonscription scolaire' if not ddemp() else 'DDEMP')} : ")
+        for d in dest:
+            d["whatsapp"] = notif.lien_whatsapp(d["tel"], texte.replace("{nom}", d["nom"]))
+            n = notif.normaliser_tel(d["tel"]) if d["tel"] else ""
+            d["sms"] = f"sms:+{n}?body={__import__('urllib.parse').parse.quote(texte.replace('{nom}', d['nom']))}" if n else None
+        if request.method == "POST":
+            H.journal("jur_messages", f"{qui} : {len(dest)} destinataire(s)")
+        return render_template("jur_messages.html", f=f, qui=qui, dest=dest, texte=texte, annee=annee,
+                               cs_liste=J.cs_liste() if ddemp() else [], zones=J.zones(cs_id) if cs_id else J.zones(),
+                               ecoles=J.ecoles(cs_id=cs_id, zone_id=zone_id), DDEMP=ddemp(),
+                               sans_tel=sum(1 for d in dest if not d["tel"]))

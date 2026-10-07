@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% block titre %}WhatsApp et SMS : directeurs et enseignants{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>WhatsApp et SMS : directeurs et enseignants</h1>
+    <p class="sous">Messages en 1 clic aux directeurs et aux enseignants des écoles de la {{ 'DDEMP' if DDEMP else 'circonscription' }} · année {{ annee }} · numéros issus des fiches des écoles et des transmissions.</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('reglages_messages') }}">Réglages WhatsApp / SMS</a></div>
+</div>
+<div class="carte">
+<form method="post" class="form" id="f-msg">
+  <div class="grille">
+    <label>Destinataires
+      <select name="qui">{% for k, lib in [('directeurs', 'Directeurs / directrices'), ('enseignants', 'Enseignants'), ('tous', 'Directeurs et enseignants')] %}<option value="{{ k }}" {{ 'selected' if qui == k }}>{{ lib }}</option>{% endfor %}</select></label>
+    {% if DDEMP %}<label>Circonscription <select name="cs"><option value="">Toutes</option>{% for c in cs_liste %}<option value="{{ c.id }}" {{ 'selected' if f.cs == c.id|string }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+    <label>Zone pédagogique <select name="zone"><option value="">Toutes</option>{% for z in zones %}<option value="{{ z.id }}" {{ 'selected' if f.zone == z.id|string }}>{{ z.nom }}{% if DDEMP %} ({{ z.cs_nom }}){% endif %}</option>{% endfor %}</select></label>
+    <label>École <select name="ecole"><option value="">Toutes</option>{% for e in ecoles %}<option value="{{ e.id }}" {{ 'selected' if f.ecole == e.id|string }}>{{ e.nom }}</option>{% endfor %}</select></label>
+    <label>Recherche (nom, école) <input name="recherche" value="{{ f.recherche }}"></label>
+  </div>
+  <label>Texte du message (le mot <code>{nom}</code> est remplacé par le nom du destinataire)
+    <textarea name="texte" rows="3" style="width:100%">{{ texte }}</textarea></label>
+  <p><button class="btn">Préparer les messages</button>
+    <span class="aide">{{ dest|length }} destinataire(s){% if sans_tel %} · <b class="rouge">{{ sans_tel }} sans numéro</b>{% endif %}. Chaque bouton ouvre WhatsApp ou l'application SMS du téléphone avec le message prêt à envoyer.</span></p>
+</form>
+</div>
+<div class="tw"><table class="t">
+  <thead><tr><th>N°</th><th>Nom et prénoms</th><th>Fonction</th><th>École</th>{% if DDEMP %}<th>CS</th>{% endif %}<th>Zone</th><th>Téléphone</th><th>Envoyer</th></tr></thead>
+  <tbody>
+  {% for d in dest %}
+  <tr><td>{{ loop.index }}</td><td><b>{{ d.nom or '—' }}</b></td><td>{{ d.fonction }}</td><td>{{ d.ecole }}</td>{% if DDEMP %}<td>{{ d.cs }}</td>{% endif %}<td>{{ d.zone }}</td>
+    <td>{{ d.tel or '—' }}</td>
+    <td style="white-space:nowrap">{% if d.whatsapp %}<a class="btn petit" href="{{ d.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a> <a class="btn sec petit" href="{{ d.sms }}">SMS</a>{% else %}<span class="aide">pas de numéro</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="9" class="aide">Aucun destinataire : renseignez les téléphones des directeurs (Juridiction → Écoles) ou recevez les transmissions des écoles.</td></tr>{% endfor %}
+  </tbody></table></div>
+{% endblock %}

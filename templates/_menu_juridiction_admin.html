@@ -1,13 +1,14 @@
 {# Administration des applications CS / DDEMP (v1.6 : complétée par a_integration – mêmes liens que base.html) #}
 {% if peut('parametres') %}
-{% call groupe('adm', 'Administration', ep in ('utilisateurs','journal_page','parametres','en_ligne_page','demandes_ecoles','reglages_messages','reglages_paiement_en_ligne','affectations','jur_ecoles_modules') or ep.startswith('ecole'), '⚙') %}
+{% call groupe('adm', 'Administration', ep in ('utilisateurs','journal_page','parametres','en_ligne_page','demandes_ecoles','reglages_messages','reglages_paiement_en_ligne','affectations','jur_ecoles_modules','jur_messages') or ep.startswith('ecole'), '⚙') %}
   {{ lien('ecoles', 'Écoles (ajout, modification, suppression)', ep.startswith('ecole')) }}
   {% if ep_existe('jur_ecoles_modules') %}{{ lien('jur_ecoles_modules', 'Ouvrir une école (modules)', ep=='jur_ecoles_modules') }}{% endif %}
   {{ lien('parametres', 'Paramètres généraux', ep=='parametres') }}
   {{ lien('en_ligne_page', 'Mise en ligne et sauvegardes', ep=='en_ligne_page') }}
   {{ lien('utilisateurs', 'Utilisateurs et affectations (comptes directeur, enseignant…)', ep in ('utilisateurs','affectations')) }}
   {{ lien('reglages_paiement_en_ligne', 'Paiement en ligne', ep=='reglages_paiement_en_ligne') }}
-  {{ lien('reglages_messages', 'WhatsApp et SMS (directeurs, enseignants)', ep=='reglages_messages') }}
+  {% if ep_existe('jur_messages') %}{{ lien('jur_messages', 'WhatsApp et SMS : directeurs et enseignants', ep=='jur_messages') }}{% endif %}
+  {{ lien('reglages_messages', 'Réglages WhatsApp et SMS', ep=='reglages_messages') }}
   {{ lien('demandes_ecoles', 'Écoles, CS et DDEMP candidates', ep.startswith('demandes')) }}
   {{ lien('journal_page', "Journal d'activité", ep=='journal_page') }}
 {% endcall %}{% endif %}

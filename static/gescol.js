@@ -227,6 +227,29 @@
     $$('form', racine).forEach(initCascade);
     $$('form[data-doc]', racine).forEach(initDoc);
     $$('[data-coches]', racine).forEach(initCoches);
+    $$('input[type=password]', racine).forEach(initOeil);
+  }
+
+  // Œil pour afficher / masquer un mot de passe (saisie sur téléphone)
+  function initOeil(inp) {
+    if (inp.dataset.oeil) return;
+    inp.dataset.oeil = '1';
+    var cadre = document.createElement('span');
+    cadre.className = 'mdp-cadre';
+    inp.parentNode.insertBefore(cadre, inp);
+    cadre.appendChild(inp);
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'mdp-oeil'; b.title = 'Afficher le mot de passe';
+    b.setAttribute('aria-label', 'Afficher ou masquer le mot de passe');
+    b.innerHTML = '&#128065;';
+    b.addEventListener('click', function () {
+      var vis = inp.type === 'password';
+      inp.type = vis ? 'text' : 'password';
+      b.classList.toggle('actif', vis);
+      b.title = vis ? 'Masquer le mot de passe' : 'Afficher le mot de passe';
+      inp.focus();
+    });
+    cadre.appendChild(b);
   }
   window.GESCOL.init = init;
   document.addEventListener('DOMContentLoaded', function () { init(document); initMenu(); });

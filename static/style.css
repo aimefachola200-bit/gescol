@@ -198,3 +198,9 @@ form.f label.choix,label.choix{display:inline-flex!important;align-items:center;
 
 .btn[hidden],[hidden].btn{display:none!important}
 .duo select{flex:0 0 auto;width:auto;max-width:48%}.duo input{flex:1;min-width:120px}
+
+/* v1.6 : œil des champs mot de passe */
+.mdp-cadre{position:relative;display:block}
+.mdp-cadre input{width:100%;padding-right:2.6em;box-sizing:border-box}
+.mdp-oeil{position:absolute;right:.3em;top:50%;transform:translateY(-50%);border:0;background:transparent;cursor:pointer;font-size:1.15em;line-height:1;padding:.2em .35em;color:#6B7A90;border-radius:6px}
+.mdp-oeil.actif,.mdp-oeil:hover{color:#1F4E79;background:#E8EEF5}

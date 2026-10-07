@@ -45,7 +45,7 @@
   {{ lien('jur_zones', 'Circonscriptions et zones' if not CS_ else 'Zones pédagogiques', ep=='jur_zones') }}
   {% if peut('jur_structure') %}{{ lien('jur_structure', 'Identité de la structure', ep=='jur_structure') }}{% endif %}
 {% endcall %}
+{% include "_menu_juridiction_admin.html" %}
 {# v1.6 : modules des écoles ouverts à la CS / DDEMP (Données, Secrétariat, Cantine, Vie, Évaluation, CEP…) #}
 {% include "_menu_juridiction_ecoles.html" ignore missing %}
-{% include "_menu_juridiction_admin.html" %}
 {{ lien('verifier', 'Vérifier un document', ep=='verifier', '✔') }}

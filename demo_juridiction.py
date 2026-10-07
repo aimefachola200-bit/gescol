@@ -20,7 +20,7 @@ import referentiel_benin as RB
 from app import app
 from db import ex, q
 
-NOMS = ["ADJAHO", "AGOSSOU", "AKPO", "ASSOGBA", "ATCHATIN", "BIAOU", "DOSSOU", "FADONOUGBO", "GBAGUIDI", "HOUNKPE",
+NOMS = ["ADJAHO", "AGOSSOU", "AKPO", "ASSOGBA", "AVOCE", "BIAOU", "DOSSOU", "FADONOUGBO", "GBAGUIDI", "HOUNKPE",
         "KOUTON", "LAWANI", "OLOU", "OGOUBIYI", "SALAMI", "SOSSOU", "TOSSOU", "YESSOUFOU", "ZINSOU", "OKE", "ADEOTI",
         "AFOLABI", "IDOWU", "OLADELE", "AMOUSSA", "BELLO", "OGOUNDELE", "KPADONOU", "HOUNSOU", "AHOUANSOU"]
 PRENOMS_H = ["Koffi", "Rachidi", "Moïse", "Salomon", "Aimé", "Jean", "Fiacre", "Sylvain", "Basile", "Gildas", "Bio", "Idrissou"]
@@ -100,7 +100,7 @@ def paquet_ecole(rnd, code, nom, typ, secteur, dep, cs, zone, an):
     for _ in range(rnd.randint(0, 4)):
         e = rnd.choice(pers[1:] or pers)
         visites.append({"date": f"{a0}-{rnd.choice([11, 12])}-{rnd.randint(1, 28):02d}", "type": rnd.choice(["CP", "CP", "CCS"]),
-                        "visiteur": rnd.choice(["KOUTON Basile", "OLOU Rosine", "ATCHATIN Nounagnon Salomon"]),
+                        "visiteur": rnd.choice(["KOUTON Basile", "OLOU Rosine", "HOUNGBO Pascal"]),
                         "enseignant": f"{e['nom']} {e['prenoms']}", "enseignant_nip": e["nip"], "classe": e["classe"],
                         "discipline": rnd.choice(["Français", "Mathématiques", "Éducation scientifique"]),
                         "sequence": "SA 2", "note": round(rnd.uniform(9, 17), 1), "effectif_g": 20, "effectif_f": 18,
@@ -281,7 +281,7 @@ def main():
         creer_comptes()
         if niveau == "cs":
             J.configurer("cs", dep, "POBE", responsable_titre="Le Chef de la Circonscription Scolaire",
-                         responsable_nom="Nounagnon Salomon ATCHATIN", ville="Pobè", telephone="0197000000")
+                         responsable_nom="Pascal HOUNGBO", ville="Pobè", telephone="0197000000")
             for code, nom, typ, sect, zone in ecoles_de_cs(rnd, dep, "POBE", 3, 18):
                 J.importer_paquet(paquet_ecole(rnd, code, nom, typ, sect, dep, "POBE", zone, an), "fichier", "démo")
             inserer_agents(agents_cs(rnd, "POBE"), (J.cs_courante() or {"id": None})["id"])
