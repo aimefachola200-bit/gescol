@@ -44,6 +44,7 @@ Elles se téléchargent sur la même page : https://aimefachola200-bit.github.io
     - attestation de direction ;
     - certificat de scolarité.
     - Tous sont pré-remplis.
+- **Version 1.6 :** tableau synoptique de l'école (avant le tableau de bord), vivres et stock de la cantine, comité d'évaluation et épreuves, EducMaster maternelle et modèles officiels, suppression des inscrits et des cartes, ligne NIP et griffe sur les certificats, nouvelle règle de retraite (1er jour du trimestre suivant le trimestre de naissance) : voir le [README](README.md).
 - **Inchangés :** Scolarité, Évaluations, Examens (CEP), Cantine, Parents, Données, Secrétariat, Administration et « Vérifier un document ».
 
 ---

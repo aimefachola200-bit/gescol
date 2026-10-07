@@ -21,7 +21,7 @@
   {% for f, v in lignes %}
   <tr id="agent-{{ f.id }}" class="{{ 'alerte' if f.alerte_retraite }} {{ 'inactif' if not f.actif }}">
     <td>{{ loop.index }}</td>
-    {% for k, lib, p, w in cols %}<td>{% if k == 'nom_complet' %}<b>{{ v[k] }}</b>{% if not f.actif %} <span class="badge ko">retiré</span>{% endif %}{% elif k == 'retraite_txt' %}{{ v[k] or '—' }}{% if f.retraite_atteinte %} <span class="badge ko">atteint</span>{% elif f.alerte_retraite %} <span class="badge att">{{ f.restant_txt }}</span>{% endif %}{% else %}{{ v[k] }}{% endif %}</td>{% endfor %}
+    {% for k, lib, p, w in cols %}<td>{% if k == 'nom_complet' %}<b>{% if ecrire %}<a href="{{ url_for('synoptique_personnel_form', pid=f.id) }}" title="Modifier la fiche de {{ v[k] }}">{{ v[k] }}</a>{% else %}{{ v[k] }}{% endif %}</b>{% if not f.actif %} <span class="badge ko">retiré</span>{% endif %}{% elif k == 'retraite_txt' %}{{ v[k] or '—' }}{% if f.retraite_atteinte %} <span class="badge ko">atteint</span>{% elif f.alerte_retraite %} <span class="badge att">{{ f.restant_txt }}</span>{% endif %}{% else %}{{ v[k] }}{% endif %}</td>{% endfor %}
     {% if ecrire %}<td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('synoptique_personnel_form', pid=f.id) }}">Modifier</a>
       {% if f.actif %}<form method="post" action="{{ url_for('synoptique_personnel_retirer', pid=f.id) }}" style="display:inline" onsubmit="return confirm('Retirer {{ f.nom_complet|replace("'", " ") }} du tableau du personnel ?')"><button class="btn danger petit">Retirer</button></form>
       {% else %}<form method="post" action="{{ url_for('synoptique_personnel_reactiver', pid=f.id) }}" style="display:inline"><button class="btn sec petit">Réactiver</button></form>{% endif %}</td>{% endif %}

@@ -30,6 +30,18 @@ Tout se télécharge sur la même page : https://aimefachola200-bit.github.io/ge
 
 Le fichier contient : les effectifs, le personnel avec sa carrière, les visites, le CEP, les fiches de recensement, les rapports de rentrée et de fin d'année, le patrimoine et la cantine.
 
+## Nouveautés de la version 1.6
+
+- **Tableau de bord** : en plus des indicateurs existants, le **nombre de classes par cours et par zone pédagogique** (DDEMP : par circonscription), avec détail par école, Excel et PDF.
+- **Divisions, modules et attributions** (Services et documents) : chaque division ou service a sa **rubrique conforme à l'AOF** (article, autorité de rattachement, chef, attributions, source) et ses **lignes d'action** de l'année (générées depuis le texte de l'AOF, suivi : état, taux, échéance, responsable), avec les modules de l'application qui la concernent ; plan d'action de la structure, PDF, Excel, import. Les rubriques « rédigées par GESCOL » attendent la saisie du texte officiel (bouton « Saisir le texte de l'AOF »).
+- **Unités pédagogiques (UP)** (Animation pédagogique) : nombre d'UP par zone (et par CS pour la DDEMP), RUP et Co-RUP, activités prévues / exécutées, dates, thèmes, pourcentage d'exécution ; Excel, PDF, import.
+- **Conseillers pédagogiques** : par CP, nombre de visites opérées, couverture des écoles et des enseignants, synthèse par mois ; Excel, PDF.
+- **Modules des écoles ouverts à la CS / DDEMP** : chaque école de la juridiction peut être **ouverte** (Juridiction → Écoles et modules) ; les menus Scolarité, Évaluation (comité d'évaluation, épreuves, statistiques, analyse, bilan annuel, synthèse), CEP (fiches, carte, examen blanc de l'école, **examen blanc CS / DDEMP** et **synthèse des examens par niveau**), Cantine (paiements et **vivres et stock**), Vie de la CS / DDEMP (carte d'identité : recensement et rapports, visites, patrimoine, documents de l'enseignant, **synthèse de l'évaluation CS / DDEMP**, tableau synoptique), Données (import / export, EducMaster maternel et primaire, conversion PDF), Secrétariat, Personnel et carrière, et l'Administration complète (écoles : ajout, modification, suppression ; paramètres ; mise en ligne et sauvegardes ; utilisateurs et affectations avec **comptes directeur et enseignant** ; paiement en ligne ; WhatsApp et SMS ; écoles / CS / DDEMP candidates ; journal) sont disponibles. Les rôles de la juridiction héritent des droits correspondants (responsable → administrateur, chef de division → directeur, CP → directeur hors finances, agent → secrétaire).
+- **Cachets et signatures** : **griffe** (cachet rectangulaire du nom) préconçue pour le responsable et chaque service, apposée sur les attestations et certificats ; ligne **NIP** avant le nom sur tous les documents.
+- La « Région pédagogique » (CRP) n'apparaît plus nulle part.
+
+GESCOL Circonscription et GESCOL DDEMP restent **deux applications distinctes** (fichiers d'installation, dossiers de données et ports différents) ; elles ne sont pas installées ensemble.
+
 ## Ce que contiennent les applications
 
 - **Tableau de bord** de la juridiction :

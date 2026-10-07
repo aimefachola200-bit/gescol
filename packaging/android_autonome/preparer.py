@@ -51,6 +51,8 @@ def copier_gescol():
     for d in ("templates", "static"):
         shutil.copytree(os.path.join(RACINE, d), os.path.join(WEB, d),
                         ignore=shutil.ignore_patterns("__pycache__", "*.ico"))
+    # modèles officiels EducMaster (v1.6) : à côté des modules Python (m_donnees les cherche près de lui)
+    shutil.copytree(os.path.join(RACINE, "modeles"), os.path.join(PY, "modeles"), dirs_exist_ok=True)
 
 
 def sans_compile(dossier):

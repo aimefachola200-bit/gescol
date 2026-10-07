@@ -1,10 +1,10 @@
 ﻿; Inno Setup : fabrique GESCOL-Installation-x.y.z.exe à partir de dist\GESCOL
 ; Compiler depuis la racine du projet :  iscc /DVersion=1.3.0 packaging\windows\gescol.iss
-; Applications jumelles :  iscc /DVersion=1.5.0 /DEdition=publique|cs|ddemp packaging\windows\gescol.iss
+; Applications jumelles :  iscc /DVersion=1.6.0 /DEdition=publique|cs|ddemp packaging\windows\gescol.iss
 ;   -> GESCOL-Public-Installation-x.y.z.exe (dossier, données, port 5001 et raccourcis séparés)
 
 #ifndef Version
-  #define Version "1.5.0"
+  #define Version "1.6.0"
 #endif
 #ifndef Edition
   #define Edition "privee"
