@@ -40,11 +40,7 @@
   {{ lien('jur_zones', 'Circonscriptions et zones' if not CS_ else 'Zones pédagogiques', ep=='jur_zones') }}
   {% if peut('jur_structure') %}{{ lien('jur_structure', 'Identité de la structure', ep=='jur_structure') }}{% endif %}
 {% endcall %}
-{% if peut('parametres') %}
-{% call groupe('adm', 'Administration', ep in ('utilisateurs','journal_page','parametres','en_ligne_page','affectations'), '⚙') %}
-  {{ lien('parametres', 'Paramètres généraux', ep=='parametres') }}
-  {{ lien('en_ligne_page', 'Mise en ligne et sauvegardes', ep=='en_ligne_page') }}
-  {{ lien('utilisateurs', 'Utilisateurs', ep in ('utilisateurs','affectations')) }}
-  {{ lien('journal_page', "Journal d'activité", ep=='journal_page') }}
-{% endcall %}{% endif %}
+{# v1.6 : modules des écoles ouverts à la CS / DDEMP (Données, Secrétariat, Cantine, Vie, Évaluation, CEP…) #}
+{% include "_menu_juridiction_ecoles.html" ignore missing %}
+{% include "_menu_juridiction_admin.html" %}
 {{ lien('verifier', 'Vérifier un document', ep=='verifier', '✔') }}

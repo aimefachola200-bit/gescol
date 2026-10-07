@@ -79,6 +79,12 @@ DROITS = {
     "patrimoine": {"admin", "directeur", "secretaire"},
     "recensement": {"admin", "directeur", "secretaire"},
     "docs_enseignant": {"admin", "directeur", "secretaire", "enseignant"},
+    # v1.6
+    "synoptique": {"admin", "directeur", "secretaire"},          # tableau synoptique de l'école
+    "stock": {"admin", "directeur", "comptable", "secretaire"},   # vivres et stock de la cantine
+    "epreuves": {"admin", "directeur", "enseignant"},             # comité d'évaluation, épreuves et grilles
+    "jur_up": {"admin", "responsable", "cp", "chef_service"},     # activités des unités pédagogiques (CS / DDEMP)
+    "jur_divisions": {"admin", "responsable", "chef_service"},    # divisions, modules et attributions (CS / DDEMP)
 }
 TYPES_DOCS = {
     "carte": "Carte d'élève",
@@ -340,7 +346,10 @@ MODULES = ["m_en_ligne", "m_ecoles", "m_parents", "m_paiement_en_ligne", "m_appe
            # transmission école → CS (dans GESCOL / GESCOL Public)
            "m_transmission",
            # applications Circonscription scolaire et DDEMP (chargés dans toutes les éditions, menus seulement là)
-           "m_juridiction", "a_transmission", "a_tableau", "a_cep", "a_personnel", "a_structure", "a_visites", "a_fiches"]
+           "m_juridiction", "a_transmission", "a_tableau", "a_cep", "a_personnel", "a_structure", "a_visites", "a_fiches",
+           # v1.6 : tableau synoptique, vivres et stock, comité d'évaluation et épreuves (toutes éditions) ;
+           # CS / DDEMP : divisions, unités pédagogiques, modules des écoles ouverts aux applications d'administration
+           "m_synoptique", "m_stock_cantine", "m_epreuves", "a_divisions", "a_up", "a_integration"]
 
 
 def create_app(test_config=None):

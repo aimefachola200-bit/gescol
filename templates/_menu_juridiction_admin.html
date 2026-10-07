@@ -1,0 +1,8 @@
+{# Administration des applications CS / DDEMP (v1.6 : complétée par a_integration) #}
+{% if peut('parametres') %}
+{% call groupe('adm', 'Administration', ep in ('utilisateurs','journal_page','parametres','en_ligne_page','affectations'), '⚙') %}
+  {{ lien('parametres', 'Paramètres généraux', ep=='parametres') }}
+  {{ lien('en_ligne_page', 'Mise en ligne et sauvegardes', ep=='en_ligne_page') }}
+  {{ lien('utilisateurs', 'Utilisateurs', ep in ('utilisateurs','affectations')) }}
+  {{ lien('journal_page', "Journal d'activité", ep=='journal_page') }}
+{% endcall %}{% endif %}
