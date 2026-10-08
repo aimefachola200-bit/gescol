@@ -1,0 +1,69 @@
+{% extends "base.html" %}{% block titre %}Tableau synoptique — {{ 'Modifier' if f else 'Ajouter' }} un agent{% endblock %}
+{% block contenu %}
+{% include "jur_synoptique_onglets.html" %}
+<div class="entete">
+  <div><h2 style="margin:0">{{ f.nom_complet if f else 'Nouvel agent' }}</h2><p class="sous">Fiche du tableau synoptique du personnel de la {{ 'DDEMP' if ddemp else 'circonscription' }}</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('jur_synoptique_personnel') }}">← Retour au tableau</a>
+    {% if f and ep_existe('jur_agent_form') %}<a class="btn sec petit" href="{{ url_for('jur_agent_form', aid=f.id) }}">Fiche agent (Personnel et carrière)</a>{% endif %}</div>
+</div>
+{% macro champ(k, label, type='text', max=120, liste=None, aide=None, ph='') %}
+  <div><label for="s-{{ k }}">{{ label }}</label>
+    <input id="s-{{ k }}" name="{{ k }}" value="{{ '' if v.get(k) is none else v.get(k) }}" {% if type == 'num' %}inputmode="numeric"{% elif type == 'dec' %}inputmode="decimal"{% endif %} maxlength="{{ max }}" {% if liste %}list="dl-{{ k }}"{% endif %} placeholder="{{ ph }}">
+    {% if liste %}<datalist id="dl-{{ k }}">{% for o in liste %}<option value="{{ o }}">{% endfor %}</datalist>{% endif %}
+    {% if aide %}<span class="aide">{{ aide }}</span>{% endif %}</div>
+{% endmacro %}
+{% macro ouinon(k, label) %}
+  <div><label for="s-{{ k }}">{{ label }}</label><select id="s-{{ k }}" name="{{ k }}"><option value="">—</option><option value="oui" {{ 'selected' if v.get(k) == 'oui' }}>Oui</option><option value="non" {{ 'selected' if v.get(k) == 'non' }}>Non</option></select></div>
+{% endmacro %}
+<form method="post" class="carte f">
+  <h2 style="margin-top:0">Identification</h2>
+  <div class="ligne">
+    {{ champ('nom', 'Nom *', max=80) }}{{ champ('prenoms', 'Prénoms') }}
+    <div><label for="s-sexe">Sexe</label><select id="s-sexe" name="sexe"><option value="">—</option><option value="M" {{ 'selected' if v.get('sexe') == 'M' }}>Masculin</option><option value="F" {{ 'selected' if v.get('sexe') == 'F' }}>Féminin</option></select></div>
+    {{ champ('matricule', 'N° matricule', max=30) }}{{ champ('nip', 'NIP', max=12, type='num') }}
+    {{ champ('date_naissance', 'Date de naissance', max=10, ph='jj/mm/aaaa ou année seule') }}
+    {{ champ('telephone', 'Contact (téléphone)', max=40) }}{{ champ('email', 'E-mail', max=80) }}
+  </div>
+  <h2>Poste et situation administrative</h2>
+  <div class="ligne">
+    {{ champ('poste', 'Fonction / poste (CCS, CP, chef de division, secrétaire, agent…)', max=120, liste=postes) }}
+    <div><label for="s-service_code">Service / division</label><select id="s-service_code" name="service_code"><option value="">—</option>{% for c, n in services %}<option value="{{ c }}" {{ 'selected' if v.get('service_code') == c }}>{{ n }}</option>{% endfor %}</select></div>
+    <div><label for="s-role">Rôle</label><select id="s-role" name="role">{% for c, n in roles.items() %}<option value="{{ c }}" {{ 'selected' if (v.get('role') or 'administratif') == c }}>{{ n }}</option>{% endfor %}</select></div>
+    {{ champ('promotion', lib.promotion, max=40, ph='ex. 2005 (année de sortie / promotion)') }}
+    <div><label for="s-categorie">Catégorie</label><select id="s-categorie" name="categorie"><option value="">—</option>{% for c, n in categories.items() %}<option value="{{ c }}" {{ 'selected' if v.get('categorie') == c }}>{{ n }}</option>{% endfor %}</select></div>
+    {{ champ('grade', 'Grade (A, B, C1-1 à 15)', max=20, liste=grades, ph='ex. A1-5, B1-12, C1-3') }}
+    {{ champ('indice_reel', 'Indice réel', type='num', max=6) }}{{ champ('indice_paye', 'Indice payé', type='num', max=6) }}
+    {{ champ('date_premiere_ps', lib.date_premiere_ps, max=10, ph='jj/mm/aaaa') }}
+    {{ champ('date_ps_departement', lib.date_ps_departement, max=10, ph='jj/mm/aaaa') }}
+    {{ champ('date_ps_commune', lib.date_ps_commune, max=10, ph='jj/mm/aaaa') }}
+    {{ champ('date_ps_ecole', 'Prise de service dans la structure (poste actuel)', max=10, ph='jj/mm/aaaa') }}
+    {{ champ('date_derniere_formation', lib.date_derniere_formation, max=10, ph='jj/mm/aaaa') }}
+    <div><label for="s-departement_a_servir">{{ lib.departement_a_servir }}</label><select id="s-departement_a_servir" name="departement_a_servir"><option value="">—</option>{% for d in departements %}<option {{ 'selected' if v.get('departement_a_servir') == d }}>{{ d }}</option>{% endfor %}</select></div>
+  </div>
+  {% if f %}
+  <div class="grille" style="margin-top:12px">
+    <div class="kpi"><div class="l">Ancienneté générale</div><div class="v" style="font-size:17px">{{ f.anc_txt.generale or '—' }}</div></div>
+    <div class="kpi"><div class="l">Dans le département</div><div class="v" style="font-size:17px">{{ f.anc_txt.departement or '—' }}</div></div>
+    <div class="kpi"><div class="l">Dans la structure</div><div class="v" style="font-size:17px">{{ f.anc_txt.ecole or '—' }}</div></div>
+    <div class="kpi"><div class="l">Départ à la retraite</div><div class="v {{ 'rouge' if f.alerte_retraite }}" style="font-size:17px">{{ f.retraite_txt or '—' }}</div><div class="d">{% if f.retraite %}{{ 'atteint' if f.retraite_atteinte else 'reste ' ~ f.restant_txt }} ({{ f.age_retraite }} ans, grade {{ f.lettre }}){% else %}{{ f.retraite_raison }}{% endif %}</div></div>
+  </div>
+  {% endif %}
+  <p class="aide">Calculs automatiques au {{ reference.strftime('%d/%m/%Y') }} : anciennetés à partir de la prise de service dans chaque lieu ; retraite à {{ ages.A }} ans (A), {{ ages.B }} ans (B), {{ ages.C }} ans (C), le 1er jour du trimestre suivant le trimestre de naissance.</p>
+  <h2>Diplômes</h2>
+  <div class="ligne">
+    {{ champ('diplome_academique', lib.diplome_academique, max=80, liste=diplomes) }}{{ champ('annee_diplome', "Année d'obtention", type='num', max=4) }}
+    {{ ouinon('ceap', 'CEAP') }}{{ champ('annee_ceap', 'Année du CEAP', type='num', max=4) }}
+    {{ ouinon('cap', 'CAP') }}{{ champ('annee_cap', 'Année du CAP', type='num', max=4) }}
+    <div><label for="s-type_cap">Type de CAP</label><select id="s-type_cap" name="type_cap"><option value="">—</option><option {{ 'selected' if v.get('type_cap') == 'EP' }}>EP</option><option {{ 'selected' if v.get('type_cap') == 'EM' }}>EM</option></select></div>
+  </div>
+  <h2>Visite d'aptitude et évaluation</h2>
+  <div class="ligne">
+    {{ ouinon('visite_aptitude', "Visite d'aptitude") }}{{ champ('note_aptitude', 'Note (/20)', type='dec', max=6) }}{{ champ('annee_aptitude', 'Année de la visite', type='num', max=4) }}
+    {{ champ('note_evaluation', "Note d'évaluation (/20)", type='dec', max=6) }}
+    {{ champ('nb_visites_cp', 'Visites du CP', type='num', max=2) }}{{ champ('nb_visites_ccs', 'Visites du CCS', type='num', max=2) }}
+    {{ champ('participation_up', "Participation à l'UP (%)", type='dec', max=6) }}
+  </div>
+  <div><label for="s-gestion_collegiale">Gestion collégiale (responsabilités)</label><textarea id="s-gestion_collegiale" name="gestion_collegiale" rows="2" maxlength="500">{{ v.get('gestion_collegiale') or '' }}</textarea></div>
+  <p class="actions" style="margin-top:14px"><button class="btn">💾 Enregistrer</button>{% if not f %}<button class="btn sec" name="suivant" value="1">Enregistrer et ajouter un autre</button>{% endif %}</p>
+</form>
+{% endblock %}

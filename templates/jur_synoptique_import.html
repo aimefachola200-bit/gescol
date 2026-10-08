@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block titre %}Tableau synoptique — Import / export{% endblock %}
+{% block contenu %}
+{% include "jur_synoptique_onglets.html" %}
+<div class="grille2" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px">
+  <form method="post" enctype="multipart/form-data" class="carte f">
+    <h2 style="margin-top:0">Importer depuis Excel</h2>
+    <p class="aide">Classeur .xlsx avec une feuille <b>Personnel</b> (colonnes reconnues souplement : N° matricule, NIP, Nom et prénoms ou Nom / Prénoms, Sexe, Promotion, Catégorie, Fonction / poste, Service / division (code ou nom : {% for c, n in services %}{{ c }} = {{ n }}{{ ', ' if not loop.last }}{% endfor %}), Grade, Indice réel, Indice payé, Date de naissance, dates de prise de service, Date de la dernière formation, Diplôme académique, CEAP, CAP, Visite d'aptitude, Note d'aptitude, Note d'évaluation, Contact) et, au besoin, une feuille <b>Comités</b> (colonnes Comité, Instance, Nom et prénoms, Qualité / fonction, Structure d'origine, Contact, Observations). Les agents existants (même matricule, NIP ou nom et prénoms) sont mis à jour, les autres ajoutés. Les anciennetés et la retraite sont recalculées.</p>
+    <label for="imp-f">Fichier Excel</label><input id="imp-f" type="file" name="fichier" accept=".xlsx" required>
+    <p class="actions" style="margin-top:12px"><button class="btn">⬆ Importer</button> <a class="btn sec" href="{{ url_for('jur_synoptique_modele_xlsx') }}">Télécharger le modèle Excel</a></p>
+  </form>
+  <div class="carte">
+    <h2 style="margin-top:0">Exporter</h2>
+    <p><a class="btn" href="{{ url_for('jur_synoptique_xlsx') }}">⬇ Classeur Excel complet</a> <span class="aide">feuilles Identité, Personnel, {{ 'Circonscriptions, ' if ddemp }}Zones, UP, Écoles, Services, Comités</span></p>
+    <p><a class="btn sec" href="{{ url_for('jur_synoptique_pdf') }}" target="_blank">📄 PDF complet (paysage)</a></p>
+    <p class="aide">Le classeur exporté peut être corrigé puis réimporté (feuilles Personnel et Comités).</p>
+  </div>
+</div>
+{% endblock %}

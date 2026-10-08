@@ -15,6 +15,11 @@ courante » (table ``ecoles``, ``g.ecole``). Ce module les ouvre à la CS / DDEM
    Page /juridiction/ecoles-modules : liste des écoles, bouton « Ouvrir cette école », modules disponibles.
    Sur les pages des modules d'école, l'identité de l'école ouverte (et non celle de la structure) alimente
    ``config.ECOLE`` (en-têtes, matricules) ; ``g.publique_ecole`` dit si l'école ouverte est publique.
+   Aucune école n'est ouverte tant que l'utilisateur n'en a pas choisi une (m_ecoles : ``g.ecole`` = None ;
+   l'école d'exemple n° 1 n'est jamais ouverte d'office) : les adresses des modules d'école (hors préfixes
+   ``PREFIXES_STRUCTURE`` : juridiction, administration, connexion, fichiers, espaces publics, API) affichent
+   alors la page « Choisissez une école à ouvrir » (jur_ecole_a_choisir.html, HTTP 200). POST
+   /juridiction/ecole/fermer ferme l'école ouverte (un compte rattaché à une école la garde ouverte).
 3. Tableau de bord de l'école ouverte : /juridiction/ecole (mêmes indicateurs que l'accueil de GESCOL).
 4. Examen blanc CS / DDEMP (/juridiction/cep-blanc) : une session regroupe les résultats de toutes les écoles ;
    import du canevas Excel de chaque école (même format que l'examen blanc de l'école : N° table, Nom, Prénoms,
@@ -60,11 +65,32 @@ CREATE INDEX IF NOT EXISTS i_jur_cbr_session ON jur_cep_blanc_resultats(session_
 # pages communes (structure) : tout autre endpoint hors « jur_* » est une page de module d'école
 ENDPOINTS_COMMUNS = {
     "accueil", "login", "logout", "mon_compte", "static", "verifier", "utilisateurs", "journal_page", "parametres",
-    "image_ecole", "sauvegarde", "en_ligne_page", "demandes_ecoles", "demandes_ecoles_csv", "reglages_messages",
-    "reglages_paiement_en_ligne", "affectations", "manifeste", "service_worker", "hors_ligne", "installer",
+    "image_ecole", "sauvegarde", "sauvegarde_maintenant", "sauvegarde_telecharger", "restaurer", "en_ligne_page",
+    "demandes_ecoles", "demandes_ecoles_csv", "reglages_messages", "reglages_paiement_en_ligne", "paie_parametres",
+    "affectations", "manifeste", "service_worker", "hors_ligne", "installer", "sante",
     "referentiel_js", "rejoindre", "signature_png", "signature_enregistrer", "cachet_svg", "ecoles", "ecole_form",
-    "ecole_choisir", "ecole_basculer", "ecole_supprimer", "ecole_logo", "interdit", "introuvable",
+    "ecole_choisir", "ecole_basculer", "ecole_supprimer", "ecole_logo", "ecole_griffe_svg", "interdit", "introuvable",
 }
+# adresses accessibles sans école ouverte (structure, administration, connexion, fichiers, espaces publics et API) :
+# toute autre adresse est une page de module d'école et demande une école ouverte (page « Choisissez une école »)
+PREFIXES_STRUCTURE = (
+    "/juridiction", "/login", "/logout", "/static", "/verifier", "/parametres", "/utilisateurs", "/journal",
+    "/administration", "/ecoles", "/sauvegarde", "/mon-compte", "/demandes-ecoles", "/communication/reglages",
+    "/paiements/en-ligne/reglages", "/paie/parametres", "/manifest.webmanifest", "/sw.js", "/hors-ligne",
+    "/installer", "/referentiel.js", "/rejoindre", "/sante", "/signatures", "/cachet.svg",
+    # espaces publics (élèves, parents), API de transmission et de notification, retours de paiement en ligne
+    "/eleve", "/parent", "/api", "/webhooks", "/paiement",
+)
+
+
+def adresse_structure(chemin):
+    """Vrai si l'adresse reste accessible sans école ouverte (préfixes « structure » ci-dessus)."""
+    if chemin == "/":
+        return True
+    for p in PREFIXES_STRUCTURE:
+        if chemin == p or chemin.startswith(p + "/") or chemin.startswith(p + "?") or chemin.startswith(p + "."):
+            return True
+    return False
 # modules proposés sur la page « écoles et modules » : (endpoint, libellé, droit)
 MODULES_ECOLE = [
     ("jur_ecole_accueil", "Tableau de bord de l'école", None),
@@ -121,7 +147,9 @@ def enregistrer(app, H):
 
     # ================================================================ 2. écoles locales ↔ écoles de la juridiction
     def ecoles_locales():
-        return q("SELECT * FROM ecoles WHERE actif=1 ORDER BY nom")
+        """Écoles locales de la juridiction : liées à une école de jur_ecoles ou créées par l'utilisateur ;
+        l'école d'exemple n° 1 (m_ecoles : ``ecole_exemple_vide``) n'en fait pas partie."""
+        return H.ecoles_sans_exemple(q("SELECT * FROM ecoles WHERE actif=1 ORDER BY nom"))
 
     def locales_par_jur():
         """{jur_ecole_id: ligne ecoles} pour les écoles locales liées."""
@@ -129,12 +157,7 @@ def enregistrer(app, H):
 
     def _ecole1_vierge():
         """L'école n° 1 créée par défaut, encore jamais utilisée : on la réutilise pour la première école ouverte."""
-        e = q("SELECT * FROM ecoles WHERE id=1", un=True)
-        if not e or e["jur_ecole_id"] or e["nom"] != config.DEFAUTS["ecole_nom"]:
-            return None
-        if q("SELECT 1 FROM classes WHERE ecole_id=1 LIMIT 1", un=True):
-            return None
-        return e
+        return H.ecole_exemple_vide()
 
     def valeurs_depuis_jur(je):
         c = H.jur_cs(je["cs_id"]) if je["cs_id"] else None
@@ -227,6 +250,19 @@ def enregistrer(app, H):
             u["role"] = H.EQUIV_ROLES_JUR[g.role_reel]
             g.user = u
 
+    @app.before_request
+    def exiger_ecole_ouverte():
+        """Modules d'école sans école ouverte (CS / DDEMP) : page « Choisissez une école à ouvrir » (HTTP 200)
+        avec la liste des écoles de la juridiction ; les pages de la structure, de l'administration, la connexion,
+        les fichiers, les espaces publics (/eleve, /parent) et les API ne sont pas concernés."""
+        if not config.juridiction() or not g.get("user") or g.get("ecole"):
+            return
+        ep = request.endpoint or ""
+        if not ep or not g.get("page_ecole") or adresse_structure(request.path):
+            return
+        d = donnees_ecoles_modules()
+        return render_template("jur_ecole_a_choisir.html", suivant=request.path if request.method == "GET" else "", **d)
+
     @app.context_processor
     def ctx_integration():
         if not config.juridiction():
@@ -247,10 +283,10 @@ def enregistrer(app, H):
         return [("DDEMP", s.get("departement") or "")] + ([] if ddemp() else [("CS", s.get("cs") or "")])
 
     # ---------------------------------------------------------------- page « écoles et modules »
-    @app.route("/juridiction/ecoles-modules")
-    @H.connexion_requise()
-    def jur_ecoles_modules():
-        garde()
+    def donnees_ecoles_modules():
+        """Contexte des pages « écoles et modules » et « choisissez une école » : écoles de la juridiction
+        (filtre CS / recherche), école locale liée et école ouverte, effectifs, écoles locales non reliées,
+        modules disponibles."""
         f = request.args
         cs_id = int(f.get("cs") or 0) or None
         liste = H.jur_ecoles(cs_id=cs_id, recherche=f.get("q") or None)
@@ -268,20 +304,45 @@ def enregistrer(app, H):
         non_liees = [e for e in ecoles_locales() if not e["jur_ecole_id"]]
         modules = [(ep, lib) for ep, lib, droit in MODULES_ECOLE
                    if ep in app.view_functions and (droit is None or H.peut(droit))]
-        return render_template("jur_ecoles_modules.html", lignes=lignes, non_liees=non_liees, modules=modules,
-                               cs=H.jur_cs_liste(), f=f, nb_liees=len(locales))
+        return dict(lignes=lignes, non_liees=non_liees, modules=modules, cs=H.jur_cs_liste(), f=f, nb_liees=len(locales))
+
+    @app.route("/juridiction/ecoles-modules")
+    @H.connexion_requise()
+    def jur_ecoles_modules():
+        garde()
+        return render_template("jur_ecoles_modules.html", **donnees_ecoles_modules())
+
+    def suivant_sur():
+        s = request.form.get("suivant", "")
+        return s if s.startswith("/") and not s.startswith("//") else None
 
     @app.route("/juridiction/ecoles-modules/<int:jid>/ouvrir", methods=["POST"])
-    @H.connexion_requise("ecoles")
+    @H.connexion_requise()
     def jur_ecole_ouvrir(jid):
+        """Tout compte connecté peut ouvrir une école de la juridiction (aucune n'est ouverte d'office) ; un compte
+        rattaché à une école (directeur, enseignant…) n'ouvre que la sienne."""
         garde()
         eid = assurer_ecole_locale(jid)
         if g.user["ecole_id"] and g.user["ecole_id"] != eid and g.user["role"] not in ("admin", "fondateur", "responsable"):
             abort(403)
         session["ecole_id"] = eid
-        suivant = request.form.get("suivant", "")
         flash(f"École ouverte : {H.jur_ecole(jid)['nom']}.", "success")
-        return redirect(suivant if suivant.startswith("/") and not suivant.startswith("//") else url_for("jur_ecole_accueil"))
+        return redirect(suivant_sur() or url_for("jur_ecole_accueil"))
+
+    @app.route("/juridiction/ecole/fermer", methods=["POST"])
+    @H.connexion_requise()
+    def jur_ecole_fermer():
+        """Ferme l'école ouverte : plus aucune école n'est ouverte tant que l'utilisateur n'en choisit pas une."""
+        garde()
+        e = g.get("ecole")
+        session.pop("ecole_id", None)
+        if e:
+            if g.user["ecole_id"] == e["id"]:
+                flash("Votre compte est rattaché à cette école : elle reste ouverte.", "warning")
+            else:
+                flash(f"École fermée : {e['nom']}.", "success")
+        s = suivant_sur()
+        return redirect(s if s and adresse_structure(s) else url_for("jur_ecoles_modules"))
 
     @app.route("/juridiction/ecoles-modules/tout-ouvrir", methods=["POST"])
     @H.connexion_requise("parametres")

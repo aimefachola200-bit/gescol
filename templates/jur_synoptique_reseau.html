@@ -1,0 +1,51 @@
+{% extends "base.html" %}{% block titre %}Tableau synoptique — Réseau{% endblock %}
+{% block contenu %}
+<style>
+table.t.reseau tr.cs td{background:#E4ECF5;font-weight:700}
+table.t.reseau tr.zone td{background:#F2F6FB;font-weight:600}
+table.t.reseau td.ups{font-size:12px;color:#344054}
+</style>
+{% include "jur_synoptique_onglets.html" %}
+<div class="entete">
+  <div><h2 style="margin:0">{{ 'Circonscriptions, zones pédagogiques, UP et écoles' if ddemp else 'Zones pédagogiques, UP et écoles' }}</h2>
+    <p class="sous">{{ r.zones|length }} zone(s) · {{ r.nb_up }} UP · {{ r.nb_ecoles }} école(s) · {{ r.enseignants }} enseignant(s) transmis</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_synoptique_reseau_pdf') }}" target="_blank">📄 PDF du réseau</a>
+    {% if ep_existe('jur_zones') %}<a class="btn sec" href="{{ url_for('jur_zones') }}">Modifier les zones</a>{% endif %}
+    {% if ep_existe('jur_up') %}<a class="btn sec" href="{{ url_for('jur_up') }}">Unités pédagogiques</a>{% endif %}</div>
+</div>
+
+{% if ddemp %}
+<h3>Circonscriptions scolaires du département</h3>
+<div class="tw"><table class="t">
+  <thead><tr><th>N°</th><th>Circonscription</th><th>CCS</th><th>Téléphone</th><th class="num">Zones</th><th class="num">UP</th><th class="num">Écoles</th><th class="num">Enseignants</th></tr></thead>
+  <tbody>{% for c in r.cs %}<tr><td>{{ c.cs.numero or '' }}</td><td><b>{{ c.cs.nom }}</b></td><td>{{ c.cs.ccs_nom or '—' }}</td><td>{{ c.cs.telephone or '' }}</td>
+    <td class="num">{{ c.nb_zones }}</td><td class="num">{{ c.nb_up }}</td><td class="num">{{ c.nb_ecoles }}</td><td class="num">{{ c.enseignants }}</td></tr>
+  {% else %}<tr><td colspan="8" class="aide">Aucune circonscription.</td></tr>{% endfor %}</tbody></table></div>
+{% endif %}
+
+<h3>Zones pédagogiques, conseillers pédagogiques et unités pédagogiques</h3>
+<div class="tw"><table class="t">
+  <thead><tr>{% if ddemp %}<th>CS</th>{% endif %}<th>N°</th><th>Zone pédagogique</th><th>CP de zone</th><th class="num">Écoles</th><th class="num">UP</th><th>Unités pédagogiques : RUP et Co-RUP</th><th class="num">Enseignants</th></tr></thead>
+  <tbody>{% for z in r.zones %}<tr>{% if ddemp %}<td>{{ z.cs_nom }}</td>{% endif %}<td>{{ z.numero }}</td><td><b>{{ z.nom }}</b></td>
+    <td>{{ z.cp_nom or '—' }}{% if z.cp_tel %}<br><span class="aide">{{ z.cp_tel }}</span>{% endif %}</td>
+    <td class="num">{{ z.nb_ecoles }}</td><td class="num">{{ z.nb_up }}</td>
+    <td style="font-size:12.5px">{% for u in z.ups %}<b>{{ u.nom }}</b> : RUP {{ u.rup_nom or '—' }}{% if u.rup_tel %} ({{ u.rup_tel }}){% endif %} ; Co-RUP {{ u.corup_nom or '—' }}{% if u.corup_tel %} ({{ u.corup_tel }}){% endif %}<br>{% else %}—{% endfor %}</td>
+    <td class="num">{{ z.enseignants }}</td></tr>
+  {% else %}<tr><td colspan="8" class="aide">Aucune zone pédagogique.</td></tr>{% endfor %}</tbody></table></div>
+
+<h3>Écoles par zone pédagogique</h3>
+<div class="tw"><table class="t reseau">
+  <thead><tr><th>École</th><th>Type</th><th>Secteur</th><th>Directeur / directrice</th><th>Téléphone</th><th class="num">Enseignants</th><th class="num">Garçons</th><th class="num">Filles</th><th class="num">Total</th></tr></thead>
+  <tbody>
+  {% for z in r.zones %}
+    <tr class="zone"><td colspan="9">{% if ddemp %}{{ z.cs_nom }} — {% endif %}{{ z.nom }} · {{ z.nb_ecoles }} école(s)</td></tr>
+    {% for e in z.ecoles %}<tr><td style="padding-left:22px">{% if ep_existe('jur_ecole_fiche') %}<a href="{{ url_for('jur_ecole_fiche', eid=e.id) }}">{{ e.nom }}</a>{% else %}{{ e.nom }}{% endif %}</td>
+      <td>{{ e.type }}</td><td>{{ SECTEURS.get(e.secteur, e.secteur) }}</td><td>{{ e.directeur_titre or '' }} {{ e.directeur_nom or '' }}</td><td>{{ e.directeur_tel or e.telephone or '' }}</td>
+      <td class="num">{{ e.enseignants }}</td><td class="num">{{ e.effectif_g if e.effectif_g is not none else '—' }}</td><td class="num">{{ e.effectif_f if e.effectif_f is not none else '—' }}</td><td class="num">{{ e.effectif if e.effectif is not none else '—' }}</td></tr>
+    {% else %}<tr><td colspan="9" class="aide" style="padding-left:22px">Aucune école dans cette zone.</td></tr>{% endfor %}
+  {% endfor %}
+  {% if r.sans_zone %}<tr class="zone"><td colspan="9">Écoles sans zone pédagogique</td></tr>
+    {% for e in r.sans_zone %}<tr><td style="padding-left:22px">{{ e.nom }}{% if ddemp and e.cs_nom %} <span class="aide">({{ e.cs_nom }})</span>{% endif %}</td><td>{{ e.type }}</td><td>{{ SECTEURS.get(e.secteur, e.secteur) }}</td><td>{{ e.directeur_titre or '' }} {{ e.directeur_nom or '' }}</td><td>{{ e.directeur_tel or e.telephone or '' }}</td><td class="num">{{ e.enseignants }}</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>{% endfor %}{% endif %}
+  </tbody></table></div>
+<p class="aide">Effectifs et enseignants : d'après les sections « effectifs » et « personnel » transmises par les écoles pour l'année {{ ANNEE }} (— si rien n'a été transmis). CP de zone : menu Juridiction › Zones pédagogiques ; RUP et Co-RUP : menu Animation pédagogique › Unités pédagogiques.</p>
+{% endblock %}

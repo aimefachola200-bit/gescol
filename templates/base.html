@@ -23,11 +23,16 @@
 <div class="app">
 <aside id="lateral" class="lateral" aria-label="Menu principal">
   <a class="marque" href="{{ url_for('accueil') }}"><span class="logo-g">G</span><span>{{ NOM_APPLI }}<small>{{ ECOLE.sigle or ECOLE.nom }}</small></span></a>
-  {% if ECOLES|length > 1 or (JURIDICTION and ECOLES) %}
+  {% if JURIDICTION and not ECOLE_COURANTE %}
+  {# CS / DDEMP : aucune école ouverte tant que l'utilisateur n'en a pas choisi une (a_integration) #}
+  <div class="choix-ecole"><span class="aide">École ouverte</span><br><b style="font-size:13px">Aucune école ouverte</b>
+    {% if ep_existe('jur_ecoles_modules') %}<br><a href="{{ url_for('jur_ecoles_modules') }}" style="font-size:12px">Choisir une école</a>{% endif %}</div>
+  {% elif ECOLES|length > 1 or (JURIDICTION and ECOLES) %}
   <form method="post" action="" class="choix-ecole" onsubmit="this.action='/ecoles/'+this.e.value+'/choisir'">
     <label for="choix-ecole" class="aide">{{ 'École ouverte' if JURIDICTION else 'École' }}</label>
     <select id="choix-ecole" name="e" onchange="this.form.requestSubmit()">{% for e in ECOLES %}<option value="{{ e.id }}" {{ 'selected' if ECOLE_COURANTE and e.id==ECOLE_COURANTE.id }}>{{ e.nom }}</option>{% endfor %}</select>
     <input type="hidden" name="suivant" value="{{ request.path }}">
+    {% if JURIDICTION and ep_existe('jur_ecole_fermer') %}<button type="submit" class="btn sec petit" style="margin-top:4px;font-size:11px;padding:1px 7px" formaction="{{ url_for('jur_ecole_fermer') }}" onclick="this.form.onsubmit=null">Fermer l'école</button>{% endif %}
   </form>{% endif %}
   <nav id="menu">
     {% if JURIDICTION %}{% include "_menu_juridiction.html" %}{% else %}

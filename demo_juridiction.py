@@ -270,6 +270,30 @@ def inserer_examen_blanc(rnd, an):
     return sid
 
 
+def inserer_synoptique(niveau, an):
+    """v1.6 (a_synoptique) : identité de la structure (tableau synoptique de la CS / DDEMP) et quelques membres de
+    comités (conseil de direction, cantines, jury CEP)."""
+    if q("SELECT 1 FROM jur_synoptique_identite WHERE id=1", un=True):
+        return
+    if niveau == "cs":
+        ident = {"ddemp_nom": "Gildas AKPO", "arrondissements": "Pobè, Issaba, Towé, Igana, Ahoyéyé", "commune": "Pobè",
+                 "resp_grade": "A1-7", "resp_prise_fonction": "2021-10-01", "annee_creation": "1998", "adresse": "Quartier Alakoutin, Pobè"}
+    else:
+        ident = {"commune": "Pobè", "resp_grade": "A1-9", "resp_prise_fonction": "2020-09-15", "annee_creation": "1990",
+                 "adresse": "Route de Kétou, Pobè"}
+    cols = list(ident)
+    ex(f"INSERT INTO jur_synoptique_identite (id, {', '.join(cols)}, maj) VALUES (1, {', '.join('?' * len(cols))}, datetime('now','localtime'))",
+       tuple(ident[k] for k in cols))
+    membres = [("conseil", "", "HOUNGBO Pascal" if niveau == "cs" else "AKPO Gildas", "Président(e)", "CS" if niveau == "cs" else "DDEMP"),
+               ("conseil", "", "KOUTON Basile", "Membre", "CS" if niveau == "cs" else "DDEMP"),
+               ("cantine", "", "DOSSOU Paul", "Président(e)", "Mairie / commune"),
+               ("cantine", "", "HOUNSOU Marie", "Trésorier(ère)", "APE / parents d'élèves"),
+               ("cep", "", "OLOU Rosine", "Secrétaire", "CS" if niveau == "cs" else "DDEMP")]
+    for i, (comite, lib, nom, qual, orig) in enumerate(membres, 1):
+        ex("INSERT INTO jur_synoptique_membres (annee, comite, libelle, ordre, nom_prenoms, qualite, origine, contact, observations, maj) "
+           "VALUES (?,?,?,?,?,?,?,?,?,datetime('now','localtime'))", (an, comite, lib, i, nom, qual, orig, "", ""))
+
+
 def main():
     niveau = config.EDITION
     if niveau not in ("cs", "ddemp"):
@@ -315,6 +339,7 @@ def main():
                   f"{q('SELECT COUNT(*) n FROM jur_up', un=True)['n']} UP.")
         inserer_examen_blanc(rnd, an)
         inserer_lignes_action(rnd, an)
+        inserer_synoptique(niveau, an)
         print("Comptes : responsable / cp1 / cp2 / chef / agent (mot de passe demo1234) ; admin / admin123.")
 
 

@@ -83,6 +83,74 @@ class TestIntegrationCS(unittest.TestCase):
             cls.jur = [dict(r) for r in q("SELECT * FROM jur_ecoles WHERE type='EP' AND actif=1 AND nom IN "
                                           "(SELECT nom FROM jur_ecoles GROUP BY nom HAVING COUNT(*)=1) ORDER BY id LIMIT 3")]
 
+    # ------------------------------------------------------------ 0. aucune école ouverte tant qu'on n'en choisit pas
+    def test_00_aucune_ecole_ouverte(self):
+        with app.app_context():
+            e1 = q("SELECT * FROM ecoles WHERE id=1", un=True)
+            self.assertEqual(e1["nom"], "Établissement Scolaire CPFA")   # école d'exemple créée par db.py
+            self.assertIsNone(e1["jur_ecole_id"])
+        # modules d'école : page de choix (200), pas la liste des élèves ; l'école d'exemple n'est pas ouverte
+        for url in ("/eleves", "/classes", "/evaluations", "/cep", "/cantine", "/recensement", "/personnel", "/donnees",
+                    "/secretariat/courrier", "/synoptique", "/eleves?q=x"):
+            r = self.c.get(url)
+            self.assertEqual(r.status_code, 200, url)
+            h = txt(r)
+            self.assertIn("Choisissez une école", h, url)
+            self.assertIn("Ouvrir cette école", h, url)
+            self.assertNotIn("Établissement Scolaire CPFA", h, url)
+        h = txt(self.c.get("/eleves"))
+        self.assertIn("Aucune école ouverte", h)
+        self.assertIn("Choisir une école", h)
+        self.assertNotIn('id="choix-ecole"', h)
+        self.assertNotIn("CPFA", h)
+        self.assertIn(f'value="/eleves"', h)   # retour à la page demandée après ouverture
+        # identité affichée : la structure (pas l'école d'exemple)
+        self.assertIn("Circonscription scolaire de Pobe", h)
+        # POST sur un module d'école : page de choix aussi (rien n'est enregistré)
+        r = self.c.post("/classes/nouvelle", data={"nom": "SANS ECOLE", "niveau": "CM2", "frais_scolarite": "0"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Choisissez une école", txt(r))
+        with app.app_context():
+            self.assertIsNone(q("SELECT 1 FROM classes WHERE nom='SANS ECOLE'", un=True))
+        # pages de la juridiction, de l'administration et publiques : accessibles sans école
+        for url in ("/juridiction/tableau-de-bord", "/juridiction/ecoles", "/juridiction/ecoles-modules", "/juridiction/cep-blanc",
+                    "/juridiction/synthese-evaluation", "/parametres", "/utilisateurs", "/journal", "/ecoles", "/mon-compte",
+                    "/verifier", "/administration/en-ligne", "/demandes-ecoles", "/communication/reglages",
+                    "/paiements/en-ligne/reglages", "/manifest.webmanifest", "/sw.js", "/referentiel.js", "/hors-ligne",
+                    "/eleve/connexion", "/parent/connexion", "/sante"):
+            r = self.c.get(url)
+            self.assertEqual(r.status_code, 200, f"{url} -> {r.status_code}")
+            if url.startswith(("/juridiction", "/parametres", "/utilisateurs", "/ecoles", "/journal")):
+                self.assertNotIn("Choisissez une école à ouvrir", txt(r), url)
+        self.assertEqual(self.c.get("/").status_code, 302)
+        r = self.c.get("/juridiction/ecole")   # tableau de bord de l'école : renvoie au choix
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(r.headers["Location"].endswith("/juridiction/ecoles-modules"))
+        # l'école d'exemple n'apparaît ni dans « écoles et modules », ni dans Administration › Écoles
+        h = txt(self.c.get("/juridiction/ecoles-modules"))
+        self.assertIn("Aucune école ouverte", h)
+        self.assertNotIn("CPFA", h)
+        self.assertNotIn("non reliées", h)
+        self.assertNotIn("CPFA", txt(self.c.get("/ecoles")))
+        with app.app_context():   # … mais elle n'est pas supprimée
+            self.assertTrue(q("SELECT 1 FROM ecoles WHERE id=1", un=True))
+        # ouverture depuis la page de choix avec retour sur la page demandée
+        r = self.c.post(f"/juridiction/ecoles-modules/{self.jur[1]['id']}/ouvrir", data={"suivant": "/eleves"})
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(r.headers["Location"].endswith("/eleves"))
+        h = txt(self.c.get("/eleves"))
+        self.assertNotIn("Choisissez une école", h)
+        self.assertIn(self.jur[1]["nom"], h)
+        with app.app_context():   # la première école ouverte réutilise la ligne n° 1 (plus d'école d'exemple)
+            self.assertEqual(q("SELECT id FROM ecoles WHERE jur_ecole_id=?", (self.jur[1]["id"],), un=True)["id"], 1)
+        # fermeture : plus aucune école ouverte
+        r = self.c.post("/juridiction/ecole/fermer", follow_redirects=True)
+        self.assertIn("École fermée", txt(r))
+        self.assertIn("Choisissez une école", txt(self.c.get("/eleves")))
+        self.assertIn("Aucune école ouverte", txt(self.c.get("/juridiction/tableau-de-bord")))
+        # l'école n° 1, désormais reliée, reste proposée
+        self.assertIn(self.jur[1]["nom"], txt(self.c.get("/juridiction/ecoles-modules")))
+
     # ------------------------------------------------------------ 1. ouverture d'une école et modules
     def test_01_ouvrir_ecole_et_modules(self):
         r = self.c.get("/juridiction/ecoles-modules")
@@ -113,9 +181,15 @@ class TestIntegrationCS(unittest.TestCase):
                     "/recensement", "/secretariat/courrier", "/donnees", "Écoles (ajout, modification, suppression)",
                     "Écoles, CS et DDEMP candidates", "WhatsApp et SMS"):
             self.assertIn(mot, html)
-        # sélecteur d'école visible en juridiction ; rôle réel affiché
+        # sélecteur d'école visible en juridiction ; bouton « Fermer l'école » ; rôle réel affiché
         self.assertIn('id="choix-ecole"', html)
+        self.assertIn("Fermer l'école", html)
+        self.assertIn("/juridiction/ecole/fermer", html)
         self.assertIn("Responsable (CCS / Directeur départemental)", html)
+        hm = txt(self.c.get("/juridiction/ecoles-modules"))
+        self.assertIn(f"École ouverte : {self.jur[0]['nom']}", hm)
+        self.assertIn("école ouverte", hm)
+        self.assertIn("Fermer", hm)
         # page de juridiction : identité de la structure, pas celle de l'école
         html_j = txt(self.c.get("/juridiction/tableau-de-bord"))
         self.assertIn("Circonscription scolaire de Pobe", html_j)
@@ -126,8 +200,12 @@ class TestIntegrationCS(unittest.TestCase):
         self.assertEqual(r.status_code, 302)
         with app.app_context():
             cid = q("SELECT id FROM classes WHERE nom='CM2 TEST'", un=True)["id"]
-        # chef de service : écrit un élève (droits du directeur), pas les paramètres
+        # chaque compte ouvre l'école pour lui-même (session) : tant qu'il ne l'a pas fait, page de choix
+        jid = self.jur[0]["id"]
         chef = client("chef")
+        self.assertIn("Choisissez une école", txt(chef.get("/eleves")))
+        self.assertEqual(chef.post(f"/juridiction/ecoles-modules/{jid}/ouvrir").status_code, 302)
+        # chef de service : écrit un élève (droits du directeur), pas les paramètres
         r = chef.post("/eleves/nouveau", data={"nom": "DOSSOU", "prenoms": "Ayi", "sexe": "F", "classe_id": str(cid), "statut": "inscrit"})
         self.assertEqual(r.status_code, 302)
         with app.app_context():
@@ -136,6 +214,7 @@ class TestIntegrationCS(unittest.TestCase):
         self.assertEqual(chef.get("/directeur").status_code, 200)   # contrôle direct de rôle (m_carriere) : rôle substitué
         # agent : droits du secrétaire
         agent = client("agent")
+        agent.post(f"/juridiction/ecoles-modules/{jid}/ouvrir")
         self.assertEqual(agent.get("/parametres").status_code, 403)
         self.assertEqual(agent.get("/eleves").status_code, 200)
         self.assertEqual(agent.post("/eleves/nouveau", data={"nom": "AGENT", "prenoms": "X", "sexe": "M", "classe_id": str(cid),
@@ -143,6 +222,7 @@ class TestIntegrationCS(unittest.TestCase):
         self.assertEqual(agent.get("/juridiction/cep-blanc/synthese").status_code, 200)
         # conseiller pédagogique : pédagogie oui, finances non ; pas les droits jur_* d'un chef
         cp = client("cp1")
+        cp.post(f"/juridiction/ecoles-modules/{jid}/ouvrir")
         self.assertEqual(cp.get("/evaluations").status_code, 200)
         self.assertEqual(cp.get("/paiements").status_code, 403)
         self.assertEqual(cp.get("/cantine").status_code, 403)
@@ -157,7 +237,7 @@ class TestIntegrationCS(unittest.TestCase):
         with app.app_context():
             eid = q("SELECT id FROM ecoles WHERE jur_ecole_id=?", (self.jur[0]["id"],), un=True)["id"]
             ex("UPDATE utilisateurs SET doit_changer_mdp=0, ecole_id=? WHERE identifiant='dir1'", (eid,))
-        d = client("dir1", "motdepasse1")
+        d = client("dir1", "motdepasse1")   # compte rattaché à une école : elle est ouverte d'office
         r = d.get("/")
         self.assertEqual(r.status_code, 302)
         self.assertTrue(r.headers["Location"].endswith("/juridiction/ecole"))

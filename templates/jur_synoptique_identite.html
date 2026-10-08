@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% block titre %}Tableau synoptique — Identité de la structure{% endblock %}
+{% block contenu %}
+{% include "jur_synoptique_onglets.html" %}
+<div class="grille indicateurs">
+  {% if ddemp %}<div class="kpi"><div class="l">Circonscriptions</div><div class="v">{{ d.nb_cs }}</div><div class="d">CS du département</div></div>{% endif %}
+  <div class="kpi"><div class="l">Zones pédagogiques</div><div class="v">{{ d.nb_zones }}</div><div class="d">{{ d.nb_up }} unité(s) pédagogique(s)</div></div>
+  <div class="kpi"><div class="l">Écoles</div><div class="v">{{ d.nb_ecoles }}</div><div class="d">publiques {{ d.nb_ecoles_pub }} · privées {{ d.nb_ecoles_priv }} · EP {{ d.nb_ep }} · EM {{ d.nb_em }} · EE {{ d.nb_ee }}</div></div>
+  <div class="kpi"><div class="l">Enseignants</div><div class="v">{{ d.nb_enseignants }}</div><div class="d">personnel transmis par les écoles</div></div>
+  <div class="kpi"><div class="l">Agents</div><div class="v">{{ d.nb_agents }}</div><div class="d">de la {{ 'DDEMP' if ddemp else 'CS' }} · comités : {{ comites.values()|sum }} membre(s)</div></div>
+</div>
+<div class="grille2" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px">
+  <div class="carte">
+    <h2 style="margin-top:0">Identité de la {{ 'DDEMP' if ddemp else 'circonscription scolaire' }}</h2>
+    <table class="t compact"><tbody>
+      {% for k, lib, typ in champs %}<tr><th style="width:45%">{{ lib }}</th><td>{{ (d.resp_prise_fonction_txt if k == 'resp_prise_fonction' else d[k]) or '—' }}</td></tr>{% endfor %}
+      {% for k, lib in nombres %}<tr><th style="width:45%">{{ lib }}</th><td>{{ d[k] }} <span class="aide">(calculé)</span></td></tr>{% endfor %}
+    </tbody></table>
+    {% if d.maj %}<p class="aide">Dernière mise à jour : {{ d.maj }}</p>{% endif %}
+    <p class="aide">Les nombres sont calculés depuis le référentiel (zones, UP, écoles, personnel transmis) : ils ne se saisissent pas. Anciennetés du personnel au {{ reference.strftime('%d/%m/%Y') }}.</p>
+  </div>
+  {% if ecrire %}
+  <form method="post" action="{{ url_for('jur_synoptique_identite_post') }}" class="carte f">
+    <h2 style="margin-top:0">Modifier</h2>
+    {% for k, lib, typ in champs %}
+      <label for="id-{{ k }}">{{ lib }}</label>
+      {% if typ == 'titre' %}
+        <input id="id-{{ k }}" name="{{ k }}" list="dl-titres" value="{{ d[k] or '' }}" maxlength="120">
+        <datalist id="dl-titres">{% for t in titres %}<option value="{{ t }}">{% endfor %}</datalist>
+      {% elif typ == 'grade' %}
+        <input id="id-{{ k }}" name="{{ k }}" list="dl-grades" value="{{ d[k] or '' }}" maxlength="20" placeholder="ex. A1-5">
+        <datalist id="dl-grades">{% for gr in grades %}<option value="{{ gr }}">{% endfor %}</datalist>
+      {% elif typ == 'annee' %}
+        <input id="id-{{ k }}" name="{{ k }}" value="{{ d[k] or '' }}" maxlength="4" inputmode="numeric" placeholder="aaaa">
+      {% elif typ == 'date' %}
+        <input id="id-{{ k }}" name="{{ k }}" value="{{ d.resp_prise_fonction_txt or '' }}" maxlength="10" placeholder="jj/mm/aaaa">
+      {% else %}
+        <input id="id-{{ k }}" name="{{ k }}" value="{{ d[k] or '' }}" maxlength="200">
+      {% endif %}
+    {% endfor %}
+    <p class="aide">Le titre et le nom du responsable, le téléphone, l'e-mail, l'adresse et la ville sont aussi recopiés dans l'identité de la structure (menu Juridiction){% if not ddemp %} et dans la fiche de la circonscription{% endif %} pour que tous les documents restent cohérents.</p>
+    <p class="actions" style="margin-top:12px"><button class="btn">💾 Enregistrer l'identité</button></p>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

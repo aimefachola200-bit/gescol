@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% block titre %}Tableau synoptique — {{ lib }}{% endblock %}
+{% block contenu %}
+{% include "jur_synoptique_onglets.html" %}
+<nav class="onglets" aria-label="Comités et instances">
+  {% for c, l in COMITES_COURTS.items() %}<a class="{{ 'actif' if c == comite }}" href="{{ url_for('jur_synoptique_comites', comite=c) }}">{{ l }}</a>{% endfor %}
+</nav>
+<div class="entete">
+  <div><h2 style="margin:0">{{ lib }}</h2><p class="sous">{{ lst|length }} membre(s) · année scolaire {{ ANNEE }}</p></div>
+  <div class="actions">
+    {% if ecrire %}<a class="btn" href="{{ url_for('jur_synoptique_membre', comite=comite, mid=0) }}">+ Ajouter un membre</a>{% endif %}
+    <a class="btn sec" href="{{ url_for('jur_synoptique_comite_pdf', comite=comite) }}" target="_blank">📄 PDF du comité</a>
+  </div>
+</div>
+<div class="tw"><table class="t">
+  <thead><tr><th>N°</th>{% if comite == 'autre' %}<th>Instance</th>{% endif %}<th>Nom et prénoms</th><th>Qualité / fonction</th><th>Structure d'origine</th><th>Contact</th><th>Observations</th>{% if ecrire %}<th></th>{% endif %}</tr></thead>
+  <tbody>
+  {% for m in lst %}
+  <tr><td>{{ loop.index }}</td>{% if comite == 'autre' %}<td>{{ m.libelle or '' }}</td>{% endif %}<td><b>{{ m.nom_prenoms }}</b></td><td>{{ m.qualite or '' }}</td><td>{{ m.origine or '' }}</td><td>{{ m.contact or '' }}</td><td>{{ m.observations or '' }}</td>
+    {% if ecrire %}<td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('jur_synoptique_membre', comite=comite, mid=m.id) }}">Modifier</a>
+      <form method="post" action="{{ url_for('jur_synoptique_membre_supprimer', comite=comite, mid=m.id) }}" style="display:inline" onsubmit="return confirm('Supprimer ce membre ?')"><button class="btn danger petit">Supprimer</button></form></td>{% endif %}</tr>
+  {% else %}<tr><td colspan="8" class="aide">Aucun membre enregistré pour cette instance.</td></tr>{% endfor %}
+  </tbody></table></div>
+<p class="aide">Conseil de direction de la {{ 'DDEMP' if ddemp else 'CS' }} (réunion des chefs de division / de service), comité de gestion des cantines scolaires, jury ou commission du CEP, et toute autre instance (comité de suivi, commission ad hoc…) avec son intitulé. Les membres peuvent aussi être importés depuis un classeur Excel (feuille « Comités », onglet Import / export).</p>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block titre %}Tableau synoptique — Divisions / services{% endblock %}
+{% block contenu %}
+{% include "jur_synoptique_onglets.html" %}
+<div class="entete">
+  <div><h2 style="margin:0">Divisions / services et leurs chefs</h2><p class="sous">{{ lst|length }} service(s) actif(s) · article de l'AOF (arrêté portant attributions, organisation et fonctionnement)</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_synoptique_services_pdf') }}" target="_blank">📄 PDF des services</a>
+    {% if ep_existe('jur_divisions') %}<a class="btn sec" href="{{ url_for('jur_divisions') }}">Divisions, modules et attributions</a>{% endif %}
+    {% if ep_existe('jur_organigramme') %}<a class="btn sec" href="{{ url_for('jur_organigramme') }}">Services et attributions</a>{% endif %}</div>
+</div>
+<div class="tw"><table class="t">
+  <thead><tr><th>N°</th><th>Sigle</th><th>Division / service</th><th>Chef (nom et prénoms)</th><th>Titre du chef</th><th>Article AOF</th><th>Rattachement</th><th class="num">Agents</th></tr></thead>
+  <tbody>{% for d in lst %}<tr><td>{{ loop.index }}</td><td><b>{{ d.sigle or '' }}</b></td><td>{% if ep_existe('jur_division') %}<a href="{{ url_for('jur_division', code=d.code) }}">{{ d.nom }}</a>{% else %}{{ d.nom }}{% endif %}</td>
+    <td>{{ d.chef_nom or '—' }}</td><td>{{ d.chef_titre or '' }}</td><td>{{ d.article or '—' }}{% if d.source and not d.article %} <span class="aide">{{ d.source }}</span>{% endif %}</td><td>{{ d.parent_nom or '' }}</td><td class="num">{{ d.nb_agents }}</td></tr>
+  {% else %}<tr><td colspan="8" class="aide">Aucun service actif.</td></tr>{% endfor %}</tbody></table></div>
+<p class="aide">Le chef d'un service est l'agent responsable désigné dans « Services et documents › Services et attributions » ; le nombre d'agents compte les agents de la structure rattachés au service (menu Personnel).</p>
+{% endblock %}

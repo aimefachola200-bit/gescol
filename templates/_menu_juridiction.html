@@ -1,6 +1,7 @@
 {# Menu des applications GESCOL Circonscription (CS) et GESCOL DDEMP — inclus par base.html #}
 {% set CS_ = JUR_NIVEAU == 'cs' %}
 {{ lien('jur_tableau', 'Tableau de bord', ep=='jur_tableau', '⌂') }}
+{{ lien('jur_synoptique', 'Tableau synoptique de la ' ~ ('CS' if CS_ else 'DDEMP'), ep.startswith('jur_synoptique'), '▦') }}
 {% call groupe('jstat', 'Statistiques', ep.startswith('jur_stats') or ep=='jur_classes', '📊') %}
   {{ lien('jur_stats_ecoles', 'Écoles (nombre, classement)', ep=='jur_stats_ecoles') }}
   {{ lien('jur_stats_effectifs', 'Effectifs des apprenants', ep=='jur_stats_effectifs') }}

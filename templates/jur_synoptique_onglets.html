@@ -1,0 +1,18 @@
+{# En-tête et onglets communs du tableau synoptique de la structure (variables : onglet, ident, ecrire, ddemp) #}
+<div class="entete">
+  <div><h1>Tableau synoptique de la {{ 'DDEMP' if ddemp else 'circonscription scolaire' }}</h1>
+    <p class="sous">{{ ident.structure_nom }} — année scolaire {{ ANNEE }} · département {{ ident.departement or '—' }}{% if not ddemp %} · CS {{ ident.cs_nom or '—' }}{% endif %}</p></div>
+  <div class="actions">
+    <a class="btn petit" href="{{ url_for('jur_synoptique_pdf') }}" target="_blank">📄 PDF complet</a>
+    <a class="btn sec petit" href="{{ url_for('jur_synoptique_xlsx') }}">⬇ Excel</a>
+    {% if ecrire %}<a class="btn sec petit" href="{{ url_for('jur_synoptique_import') }}">⬆ Import / export</a>{% endif %}
+  </div>
+</div>
+<nav class="onglets" aria-label="Rubriques du tableau synoptique">
+  <a class="{{ 'actif' if onglet == 'identite' }}" href="{{ url_for('jur_synoptique') }}">Identité</a>
+  <a class="{{ 'actif' if onglet == 'personnel' }}" href="{{ url_for('jur_synoptique_personnel') }}">Personnel</a>
+  <a class="{{ 'actif' if onglet == 'reseau' }}" href="{{ url_for('jur_synoptique_reseau') }}">{{ 'Circonscriptions, zones et écoles' if ddemp else 'Zones, UP et écoles' }}</a>
+  <a class="{{ 'actif' if onglet == 'services' }}" href="{{ url_for('jur_synoptique_services') }}">Divisions / services</a>
+  <a class="{{ 'actif' if onglet == 'comites' }}" href="{{ url_for('jur_synoptique_comites') }}">Comités / instances</a>
+  {% if ecrire %}<a class="{{ 'actif' if onglet == 'import' }}" href="{{ url_for('jur_synoptique_import') }}">Import / export</a>{% endif %}
+</nav>

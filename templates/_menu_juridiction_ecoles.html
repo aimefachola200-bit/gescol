@@ -2,12 +2,21 @@
    Mêmes liens, endpoints et conditions que le menu des écoles (base.html) : les modules fonctionnent sur
    « l'école ouverte » (ECOLE_COURANTE). Les menus de l'école publique (cantine, carrière, dépenses…) ou privée
    (scolarité, paie…) sont choisis selon le statut de l'école ouverte. #}
+{# Sans école ouverte (ECOLE_COURANTE vide), les groupes restent visibles : chaque page de module affiche alors
+   « Choisissez une école à ouvrir » (a_integration : exiger_ecole_ouverte). #}
 {% set PUB_ = ECOLE_COURANTE and (ECOLE_COURANTE.statut or '') == 'Publique' %}
-{% if ECOLE_COURANTE %}
+{% if ep_existe('jur_ecoles_modules') %}
 <div class="sep-ecole" style="padding:10px 14px 4px;font-size:.78rem;opacity:.85;border-top:1px solid rgba(255,255,255,.15);margin-top:8px">
+  {% if ECOLE_COURANTE %}
   École ouverte : <b>{{ ECOLE_COURANTE.nom }}</b>
-  {% if ep_existe('jur_ecoles_modules') %}<br><a href="{{ url_for('jur_ecoles_modules') }}" style="font-size:.75rem">Changer d'école / modules</a>{% endif %}
+  <br><a href="{{ url_for('jur_ecoles_modules') }}" style="font-size:.75rem">Changer d'école / modules</a>
+  <form method="post" action="{{ url_for('jur_ecole_fermer') }}" style="display:inline;margin-left:6px"><input type="hidden" name="suivant" value="{{ url_for('jur_ecoles_modules') }}"><button type="submit" class="btn sec petit" style="font-size:.72rem;padding:1px 7px">Fermer l'école</button></form>
+  {% else %}
+  <b>Aucune école ouverte</b>
+  <br><a href="{{ url_for('jur_ecoles_modules') }}" style="font-size:.75rem">Choisir une école</a>
+  {% endif %}
 </div>
+{% endif %}
 {{ lien('jur_ecole_accueil', "Tableau de bord de l'école", ep=='jur_ecole_accueil', '🏫') }}
 {% if peut('synoptique') and ep_existe('synoptique_accueil') %}{{ lien('synoptique_accueil', "Tableau synoptique de l'école", ep.startswith('synoptique')) }}{% endif %}
 {% if PUB_ and g.user.role in ('fondateur','admin','directeur','responsable','chef_service') %}{{ lien('directeur_tableau', 'Tableau de bord du directeur', ep.startswith('directeur_tableau'), '📊') }}{% endif %}
@@ -100,4 +109,3 @@
   {{ lien('archives', 'Archives', ep=='archives') }}
 {% endcall %}{% endif %}
 {% if peut('ecoles') and not peut('parametres') %}{{ lien('ecoles', 'Mon école (fiche, cachet)', ep.startswith('ecole_') or ep=='ecoles', '🏫') }}{% endif %}
-{% endif %}

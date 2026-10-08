@@ -1,44 +1,24 @@
 {% extends "base.html" %}{% block titre %}Écoles et modules{% endblock %}
 {% block contenu %}
 <div class="entete"><div><h1>Écoles de la {{ 'circonscription' if JUR_NIVEAU == 'cs' else 'DDEMP' }} et modules</h1>
-<p class="sous">Ouvrez une école pour renseigner ses fiches, rapports, évaluations, CEP, cantine, personnel… avec les mêmes modules que GESCOL et GESCOL Public. {{ nb_liees }} école(s) déjà ouverte(s) sur {{ lignes|length }}.</p></div>
+<p class="sous">Ouvrez une école pour renseigner ses fiches, rapports, évaluations, CEP, cantine, personnel… avec les mêmes modules que GESCOL et GESCOL Public. {{ nb_liees }} école(s) déjà ouverte(s) au moins une fois sur {{ lignes|length }}.</p></div>
 <div class="actions">
-  {% if peut('parametres') %}<form method="post" action="{{ url_for('jur_ecoles_tout_ouvrir') }}" onsubmit="return confirm('Créer les écoles locales pour toutes les écoles de la juridiction ?')"><button class="btn sec">Ouvrir toutes les écoles</button></form>
+  {% if ECOLE_COURANTE %}<form method="post" action="{{ url_for('jur_ecole_fermer') }}"><button class="btn sec">Fermer l'école</button></form>{% endif %}
+  {% if peut('parametres') %}<form method="post" action="{{ url_for('jur_ecoles_tout_ouvrir') }}" onsubmit="return confirm('Créer les écoles locales pour toutes les écoles de la juridiction ?')"><button class="btn sec">Créer toutes les écoles locales</button></form>
   <a class="btn sec" href="{{ url_for('ecoles') }}">Écoles (ajout, modification, suppression)</a>{% endif %}
   <a class="btn sec" href="{{ url_for('jur_ecoles') }}">Liste de la juridiction</a>
 </div></div>
 
 {% if ECOLE_COURANTE %}
-<div class="carte"><b>École ouverte : {{ ECOLE_COURANTE.nom }}</b>{% if not ECOLE_COURANTE.jur_ecole_id %} <span class="badge att">école locale non reliée à la juridiction</span>{% endif %}
-  <div class="actions" style="margin-top:8px">{% for ep_, lib in modules %}<a class="btn sec petit" href="{{ url_for(ep_) }}">{{ lib }}</a>{% endfor %}</div>
+<div class="carte" style="border-left:4px solid #2E8B57"><b class="vert">École ouverte : {{ ECOLE_COURANTE.nom }}</b>{% if not ECOLE_COURANTE.jur_ecole_id %} <span class="badge att">école locale non reliée à la juridiction</span>{% endif %}
+  <span class="aide"> — les modules ci-dessous travaillent sur cette école.</span>
+  <div class="actions" style="margin-top:8px">{% for ep_, lib in modules %}<a class="btn sec petit" href="{{ url_for(ep_) }}">{{ lib }}</a>{% endfor %}
+    <form method="post" action="{{ url_for('jur_ecole_fermer') }}"><button class="btn petit danger">Fermer l'école</button></form></div>
 </div>
+{% else %}
+<div class="carte"><b>Aucune école ouverte.</b> <span class="aide">Choisissez une école ci-dessous (« Ouvrir ») : les modules d'école (élèves, classes, évaluations, CEP, cantine, personnel…) travailleront sur elle.</span></div>
 {% endif %}
 
-<form method="get" class="filtres">
-  {% if JUR_NIVEAU=='ddemp' %}<label>Circonscription<br><select name="cs" onchange="this.form.submit()"><option value="">Toutes</option>
-    {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if f.get('cs')|string == c.id|string }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
-  <label>Recherche<br><input name="q" value="{{ f.get('q','') }}" placeholder="Nom, code, directeur…"></label>
-  <button class="btn sec petit">Filtrer</button>
-</form>
-<div class="tw"><table class="t">
-  <tr><th>École</th><th>Type</th><th>Secteur</th>{% if JUR_NIVEAU=='ddemp' %}<th>CS</th>{% endif %}<th>Zone</th><th>Directeur</th><th class="num">Classes</th><th class="num">Élèves</th><th></th></tr>
-  {% for l in lignes %}{% set e = l.j %}
-  <tr{% if l.courante %} class="sel"{% endif %}><td><a href="{{ url_for('jur_ecole_fiche', eid=e.id) }}"><b>{{ e.nom }}</b></a><br><span class="aide">{{ e.code }}{% if l.loc %} · école locale n° {{ l.loc.id }}{% endif %}{% if l.courante %} · <b class="vert">ouverte</b>{% endif %}</span></td>
-    <td>{{ e.type }}</td><td>{{ JUR_SECTEURS[e.secteur] }}</td>{% if JUR_NIVEAU=='ddemp' %}<td>{{ e.cs_nom }}</td>{% endif %}<td>{{ e.zone_nom or '—' }}</td>
-    <td>{{ e.directeur_nom or '' }}</td><td class="num">{{ l.nb_classes }}</td><td class="num">{{ l.nb_eleves }}</td>
-    <td class="num">{% if peut('ecoles') %}<form method="post" action="{{ url_for('jur_ecole_ouvrir', jid=e.id) }}"><button class="btn petit">{{ 'Travailler sur cette école' if l.loc else 'Ouvrir cette école' }}</button></form>{% endif %}</td></tr>
-  {% else %}<tr><td colspan="9" class="gris">Aucune école. Ajoutez-les dans « Juridiction › Écoles » ou importez les fichiers de transmission.</td></tr>{% endfor %}
-</table></div>
-{% if non_liees %}
-<h2>Écoles locales non reliées à la juridiction</h2>
-<div class="tw"><table class="t">
-  <tr><th>École</th><th>Statut</th><th>CS / zone</th><th></th></tr>
-  {% for e in non_liees %}<tr><td><b>{{ e.nom }}</b></td><td>{{ e.statut or '' }}</td><td>{{ e.cs or '' }} {{ e.zone or '' }}</td>
-    <td class="num"><div class="actions" style="justify-content:flex-end">
-      <form method="post" action="{{ url_for('ecole_choisir', eid=e.id) }}"><input type="hidden" name="suivant" value="{{ url_for('jur_ecole_accueil') }}"><button class="btn sec petit">Ouvrir</button></form>
-      {% if peut('parametres') %}<form method="post" action="{{ url_for('jur_ecole_lier', eid=e.id) }}"><button class="btn sec petit">Inscrire dans la juridiction</button></form>{% endif %}
-    </div></td></tr>{% endfor %}
-</table></div>
-{% endif %}
+{% include "_jur_ecoles_choix.html" %}
 <p class="aide">Les comptes « Directeur » et « Enseignant » (Administration › Utilisateurs) sont rattachés à une école par « École et classes » : ils n'ouvrent que leur école. Les responsables, chefs de division / service et conseillers pédagogiques ouvrent n'importe quelle école ; les agents ont les droits d'un secrétaire.</p>
 {% endblock %}

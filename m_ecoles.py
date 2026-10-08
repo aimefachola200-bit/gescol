@@ -32,11 +32,38 @@ def enregistrer(app, H):
     H.ajouter_colonne("ecoles", "griffe_couleur", "TEXT")
 
     # ------------------------------------------------------------ école courante
+    def ecole_exemple_vide():
+        """Applications CS / DDEMP : l'école n° 1 créée par défaut au premier démarrage (« Établissement Scolaire
+        CPFA ») n'est qu'un exemple tant qu'elle n'est ni reliée à la juridiction (jur_ecole_id), ni renommée,
+        ni utilisée (classes, élèves). Elle est alors cachée du sélecteur et des listes d'écoles (sans être
+        supprimée : les paramètres de l'application s'y réfèrent) et sert de première école ouverte
+        (a_integration : ``_ecole1_vierge``). Renvoie la ligne ``ecoles`` ou None."""
+        if not config.juridiction():
+            return None
+        e = q("SELECT * FROM ecoles WHERE id=1", un=True)
+        if not e or e["jur_ecole_id"] or e["nom"] != config.DEFAUTS["ecole_nom"]:
+            return None
+        if q("SELECT 1 FROM classes WHERE ecole_id=1 LIMIT 1", un=True):
+            return None
+        if q("SELECT 1 FROM eleves x JOIN classes c ON c.id=x.classe_id WHERE c.ecole_id=1 LIMIT 1", un=True):
+            return None
+        return e
+
+    H.ecole_exemple_vide = ecole_exemple_vide
+
+    def sans_exemple(liste):
+        """Retire l'école d'exemple n° 1 d'une liste d'écoles (applications CS / DDEMP)."""
+        if config.juridiction() and ecole_exemple_vide():
+            return [e for e in liste if e["id"] != 1]
+        return liste
+
+    H.ecoles_sans_exemple = sans_exemple
+
     def ecoles_accessibles():
         if not g.get("user"):
-            return q("SELECT * FROM ecoles WHERE actif=1 ORDER BY id")
+            return sans_exemple(q("SELECT * FROM ecoles WHERE actif=1 ORDER BY id"))
         if g.user["role"] in ("admin", "fondateur") or not g.user["ecole_id"]:
-            return q("SELECT * FROM ecoles WHERE actif=1 ORDER BY nom")
+            return sans_exemple(q("SELECT * FROM ecoles WHERE actif=1 ORDER BY nom"))
         return q("SELECT * FROM ecoles WHERE id=? AND actif=1", (g.user["ecole_id"],))
 
     def ecole_courante():
@@ -100,16 +127,39 @@ def enregistrer(app, H):
 
     H.appliquer_identite_ecole = appliquer_identite_ecole
 
+    def effacer_identite_ecole():
+        """Applications CS / DDEMP sans école ouverte : config.ECOLE ne garde rien d'une école ouverte lors d'une
+        requête précédente (cachet, griffe, signature, directeur…) ; l'identité affichée (nom, sigle, adresse…)
+        est celle de la structure, posée par m_juridiction (jur_entete)."""
+        config.ECOLE.update({"id": None, "directeur": "", "directeur_titre": "Directeur", "statut": "", "up": "",
+                             "zone": "", "bp": "", "commune": "", "admin_titre": "", "admin_nom": "", "ccs_titre": "",
+                             "ccs_nom": "", "_cachet": None, "_sig_directeur": None, "_griffe": None})
+
     @app.before_request
     def charger_ecole():
+        """École courante (g.ecole). Éditions école : l'école choisie (session), sinon la première accessible.
+        Applications CS / DDEMP : aucune école n'est ouverte tant que l'utilisateur n'en a pas choisi une
+        (session["ecole_id"]) ; un compte directeur / enseignant rattaché à une école (utilisateurs.ecole_id)
+        ouvre d'office son école. Sans école ouverte, g.ecole = None (a_integration affiche la page de choix
+        sur les modules d'école)."""
         liste = ecoles_accessibles()
         choix = session.get("ecole_id")
-        e = next((x for x in liste if x["id"] == choix), None) or (liste[0] if liste else None)
-        if e is None:
-            e = q("SELECT * FROM ecoles ORDER BY id", un=True)
+        e = next((x for x in liste if x["id"] == choix), None)
+        if config.juridiction():
+            if e is None and g.get("user") and g.user["ecole_id"]:
+                e = next((x for x in liste if x["id"] == g.user["ecole_id"]), None)
+            if e is None and choix:
+                session.pop("ecole_id", None)
+        else:
+            e = e or (liste[0] if liste else None)
+            if e is None:
+                e = q("SELECT * FROM ecoles ORDER BY id", un=True)
         g.ecole = e
         g.ecoles = liste
-        appliquer_identite_ecole(e)
+        if e is not None:
+            appliquer_identite_ecole(e)
+        else:
+            effacer_identite_ecole()
 
     @app.context_processor
     def ctx_ecoles():
@@ -142,7 +192,7 @@ def enregistrer(app, H):
                    (SELECT COUNT(*) FROM eleves x JOIN classes c ON c.id=x.classe_id WHERE c.ecole_id=e.id AND x.statut='inscrit') nb_eleves
                    FROM ecoles e WHERE ? OR e.id IN (SELECT id FROM ecoles WHERE id=?) ORDER BY e.actif DESC, e.nom""",
                 (H.peut("parametres"), ecole_id()))
-        return render_template("ecoles.html", lst=lst)
+        return render_template("ecoles.html", lst=sans_exemple(lst))
 
     @app.route("/ecoles/nouvelle", methods=["GET", "POST"])
     @app.route("/ecoles/<int:eid>/modifier", methods=["GET", "POST"])
