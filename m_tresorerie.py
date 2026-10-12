@@ -24,8 +24,11 @@ def enregistrer(app, H):
     q, ex, config = H.q, H.ex, H.config
 
     def publique():
-        """Édition publique avec le module des finances publiques chargé."""
-        return config.publique() and getattr(H, "fp_operations", None) is not None
+        """Édition publique avec le module des finances publiques chargé ; v1.6 : aussi dans GESCOL Circonscription /
+        DDEMP quand l'école ouverte est publique (a_integration : g.publique_ecole) — subventions, cotisations de
+        cantine, frais CEP et dépenses entrent alors dans la trésorerie, le bilan et le budget."""
+        charge = getattr(H, "fp_operations", None) is not None
+        return charge and (config.publique() or (config.juridiction() and bool(g.get("publique_ecole"))))
 
     def categories():
         return H.fp_categories_tresorerie(CATEGORIES) if publique() else CATEGORIES

@@ -9,9 +9,16 @@
   </div>
 </div>
 <div class="tw"><table class="t">
-  <tr><th>Nom</th><th>Identifiant</th><th>Rôle</th><th>État</th><th></th></tr>
+  <tr><th>Nom</th><th>Identifiant</th><th>Rôle</th>{% if divisions %}<th>Division / service</th>{% endif %}<th>État</th><th></th></tr>
   {% for u in users %}
   <tr><td>{{ u.nom }}</td><td>{{ u.identifiant }}</td><td>{{ ROLES[u.role] }}</td>
+    {% if divisions %}<td>{% if u.role in ('chef_service', 'agent') %}
+      <form method="post" class="actions" style="gap:4px"><input type="hidden" name="uid" value="{{ u.id }}"><input type="hidden" name="action" value="service">
+        <select name="service_code" onchange="this.form.requestSubmit()" title="Division / service de rattachement : périmètre d'accès du compte">
+          <option value="">— toute l'application —</option>
+          {% for d in divisions %}<option value="{{ d.code }}" {{ 'selected' if u.service_code == d.code }}>{{ d.sigle or d.code|upper }} – {{ d.nom }}</option>{% endfor %}
+        </select>{% if u.division_origine == 'agent' %}<span class="badge" title="Division de la fiche agent (Agents de la structure)">{{ u.division }}</span>{% endif %}</form>
+      {% else %}<span class="gris">—</span>{% endif %}</td>{% endif %}
     <td>{% if u.actif %}<span class="badge ok">actif</span>{% else %}<span class="badge ko">désactivé</span>{% endif %}
       {% if u.doit_changer_mdp %}<span class="badge att">mot de passe provisoire</span>{% endif %}</td>
     <td class="num"><form method="post" class="actions" style="justify-content:flex-end">
@@ -32,7 +39,11 @@
     <div><label>Identifiant</label><input name="identifiant" required placeholder="ex. secretariat"></div>
     <div><label>Rôle</label><select name="role">{% for k,v in ROLES_EDITION.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
     <div><label>Mot de passe provisoire</label><input name="mdp" required minlength="8"></div>
+    {% if divisions %}<div><label>Division / service (chef de service, agent)</label><select name="service_code">
+      <option value="">— toute l'application —</option>
+      {% for d in divisions %}<option value="{{ d.code }}">{{ d.sigle or d.code|upper }} – {{ d.nom }}</option>{% endfor %}</select></div>{% endif %}
   </div>
+  {% if divisions %}<p class="aide">Un compte <b>chef de service</b> ou <b>agent</b> rattaché à une division n'accède qu'aux modules de cette division (<a href="{{ url_for('jur_divisions') }}">Divisions, modules et attributions</a>) ; sans division, il accède à toute l'application. La division du compte prime sur celle de la fiche agent.</p>{% endif %}
   <p class="aide">Droits : <b>Secrétaire</b> élèves, classes, documents · <b>Comptable</b> paiements · <b>Enseignant</b> notes · <b>Directeur</b> tout sauf l'administration · <b>Administrateur</b> tout.</p>
   <button class="btn">Créer le compte</button>
 </form>

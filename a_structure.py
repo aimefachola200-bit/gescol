@@ -103,6 +103,22 @@ SOURCE_AOF = "AOF – article {n}"
 SOURCE_GESCOL = "Rédigé par GESCOL, à conformer à l'AOF"
 HORS_AOF = ("Service hors AOF : les articles 10 à 13 de l'AOF ne prévoient que quatre divisions pour la CS ; ce service "
             "est conservé parce que la structure y fait référence, en attendant la saisie du texte officiel. ")
+# v1.6 – Service des Ressources Humaines de la CS (ex-CSPAF) : le personnel des écoles (directeurs, enseignants,
+# personnel de soutien) y est suivi avec les agents de la circonscription.
+ATTR_RH_CS = ("Le Service des Ressources Humaines est chargé de :\n"
+              "- tenir à jour le fichier et les dossiers individuels du personnel de la circonscription et des écoles "
+              "(directeurs, enseignants, personnel de soutien) ;\n"
+              "- établir et actualiser les états d'effectifs du personnel des écoles (par catégorie, grade, école et zone "
+              "pédagogique) et évaluer les besoins en enseignants ;\n"
+              "- préparer les actes de gestion courante (prises et reprises de service, attestations, certificats, congés, "
+              "permissions) et les propositions d'avancement ;\n"
+              "- suivre les carrières (avancements, reclassements, évaluations, visites d'aptitude, diplômes), les "
+              "mutations et les départs à la retraite ;\n"
+              "- gérer les comptes GESCOL des directeurs et des enseignants et leurs affectations aux classes ;\n"
+              "- rendre compte au CCS de la situation du personnel.")
+# anciens libellés du service « personnel » (renommés par assurer_services)
+ANCIENS_NOMS_RH = ("Service du Personnel et des Affaires financières",)
+ANCIENS_SIGLES_RH = ("CSPAF", "SPAF")
 
 # (code, nom, sigle, ordre, parent, référence, attributions, note, titre du signataire)
 SERVICES_DEFAUT = {
@@ -120,15 +136,12 @@ SERVICES_DEFAUT = {
          REDIGE, "Le Conseiller Pédagogique"),
         ("secretariat", "Division du Secrétariat", "CDS", 3, "ccs", "Article 10", ART_10, "",
          "Le Chef de la Division du Secrétariat"),
-        ("personnel", "Service du Personnel et des Affaires financières", "CSPAF", 4, "ccs", "", (
-            "Le Service du Personnel et des Affaires financières est chargé de :\n"
-            "- tenir à jour le fichier et les dossiers individuels du personnel de la circonscription ;\n"
-            "- préparer les actes de gestion courante (prises et reprises de service, attestations, congés, "
-            "permissions) ;\n"
-            "- suivre les états de présence, les mutations et les départs à la retraite ;\n"
-            "- préparer et suivre l'exécution des crédits délégués et des ressources de la circonscription ;\n"
-            "- tenir la comptabilité matières et rendre compte au CCS."),
-         HORS_AOF + REDIGE, "Le Chef du Service du Personnel et des Affaires financières"),
+        # v1.6 : « le personnel de l'école au RH de la CS » — l'ancien Service du Personnel et des Affaires
+        # financières (CSPAF) devient le Service des Ressources Humaines (RH) ; les affaires financières relèvent de la
+        # Division de l'Administration et des Finances (CDAF). Code inchangé (« personnel ») : les agents, lignes
+        # d'action et comptes déjà rattachés sont conservés ; assurer_services() renomme le service existant.
+        ("personnel", "Service des Ressources Humaines", "RH", 4, "ccs", "", ATTR_RH_CS, HORS_AOF + REDIGE,
+         "Le Chef du Service des Ressources Humaines"),
         ("animation", "Division de l'Animation Pédagogique", "CDAP", 5, "ccs", "Article 11", ART_11, "",
          "Le Chef de la Division de l'Animation Pédagogique"),
         ("administration", "Division de l'Administration et des Finances", "CDAF", 6, "ccs", "Article 12", ART_12, "",
@@ -282,11 +295,35 @@ def _responsable_auto(code, agents):
     return cands[0]["id"] if cands and code == "cp" else (cands[0]["id"] if len(cands) == 1 else None)
 
 
+def renommer_service_rh():
+    """v1.6 (CS) : le service « personnel » encore nommé « Service du Personnel et des Affaires financières » (CSPAF)
+    devient « Service des Ressources Humaines » (RH) : nom, sigle, titre du signataire ; les attributions ne sont
+    remplacées que si elles n'ont pas été modifiées (texte rédigé d'origine)."""
+    if niveau() != "cs":
+        return
+    r = q("SELECT * FROM jur_services WHERE niveau='cs' AND code='personnel'", un=True)
+    if not r or not ((r["nom"] or "").strip() in ANCIENS_NOMS_RH or (r["sigle"] or "").strip().upper() in ANCIENS_SIGLES_RH):
+        return
+    defaut = next(s for s in SERVICES_DEFAUT["cs"] if s[0] == "personnel")
+    attr = r["attributions"] or ""
+    if attr.startswith("Le Service du Personnel et des Affaires financières") or not attr.strip():
+        attr = defaut[6]
+    cols = {c[1] for c in q("PRAGMA table_info(jur_services)")}
+    sql = "UPDATE jur_services SET nom=?, sigle=?, attributions=?"
+    args = [defaut[1], defaut[2], attr]
+    if "signataire_titre" in cols:
+        sql += ", signataire_titre=?"
+        args.append(defaut[8])
+    ex(sql + " WHERE id=?", args + [r["id"]])
+
+
 def assurer_services():
-    """Crée les services par défaut du niveau s'ils sont absents (jamais d'écrasement des modifications)."""
+    """Crée les services par défaut du niveau s'ils sont absents (jamais d'écrasement des modifications) ;
+    v1.6 : renomme le service CSPAF de la CS en Service des Ressources Humaines (renommer_service_rh)."""
     n = niveau()
     if not n:
         return
+    renommer_service_rh()
     existants = {r["code"] for r in q("SELECT code FROM jur_services WHERE niveau=?", (n,))}
     manquants = [s for s in SERVICES_DEFAUT[n] if s[0] not in existants]
     if not manquants:

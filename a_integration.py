@@ -32,16 +32,47 @@ courante » (table ``ecoles``, ``g.ecole``). Ce module les ouvre à la CS / DDEM
    numéro d'évaluation, les synthèses École / UP / CS enregistrées dans chaque école locale (m_synthese :
    ``calculer_fiche``, ``synthese_niveaux``, ``analyse``) par zone pédagogique et au total ; PDF et Excel.
 
+6. Périmètre d'accès des divisions (« l'accès de chaque division à son périmètre d'action ») : un compte de rôle
+   ``chef_service`` ou ``agent`` est rattaché à une division par ``utilisateurs.service_code`` (champ « Division /
+   service » de la page Utilisateurs, prioritaire) ou, à défaut, par sa fiche agent (``jur_agents.user_id`` →
+   ``service_code``). ``perimetre_utilisateur()`` renvoie None (= toute l'application : responsable, admin, CP,
+   directeur, enseignant, compte sans division ou rattaché à une école) ou le set des PRÉFIXES d'endpoints autorisés :
+   pour chaque module de ``a_divisions.MODULES_PAR_DIVISION[code]``, ``familles_endpoint`` donne la racine
+   (« recensement_accueil » → recensement_*, « jur_fiches » → jur_fiche*, « depenses_accueil » → depense*…, familles
+   particulières dans ``FAMILLES_ENDPOINTS``). Sont toujours autorisés les endpoints communs
+   (``ENDPOINTS_PERIMETRE_COMMUNS`` : accueil, compte, connexion, choix et tableau de bord de l'école ouverte,
+   messages aux directeurs et enseignants, vérification…) et les familles ``PREFIXES_PERIMETRE_COMMUNS`` (tableau
+   synoptique de la structure, pages des divisions) ; les adresses publiques (``PREFIXES_PUBLICS`` : élèves, parents,
+   API, paiements) ne sont pas contrôlées. Le ``before_request`` ``controler_perimetre`` répond 403 (erreur.html
+   « Hors du périmètre de votre division ») ; le menu est filtré côté navigateur : ``_menu_juridiction.html`` reçoit
+   ``PERIMETRE_URLS`` (liste JSON des adresses autorisées, calculée une fois par division) et un petit script retire
+   les liens hors liste puis les groupes vidés — solution choisie parce qu'elle ne touche ni à la macro ``lien`` de
+   base.html ni aux trois gabarits de menu (le contrôle réel reste côté serveur). ``H.perimetre_division(code)``
+   alimente la fiche /juridiction/divisions/<code> (comptes rattachés, préfixes, modules).
+7. Comptes des directeurs et enseignants (/juridiction/comptes, droit ``jur_comptes``) : à la place du groupe
+   « Parents » des éditions école. Liste des comptes directeur / enseignant (utilisateurs.ecole_id → ecoles ↔
+   jur_ecoles), création rapide (école de la juridiction → école locale via ``assurer_ecole_locale``, identifiant
+   proposé « dir-<code école> » ou « prenom.nom », mot de passe provisoire, ``doit_changer_mdp=1``), affectation aux
+   classes (page « affectations »), réinitialisation, désactivation, codes d'accès PDF (mots de passe vérifiés contre
+   l'empreinte, comme les codes des élèves), Excel ; messages WhatsApp / SMS (jur_messages).
+8. Financement des écoles (/juridiction/financement, droit ``jur_financement``, ``H.jur_financement(annee)``) :
+   subventions de l'État, autres recettes, cotisations de cantine, frais CEP, dépenses, solde par école, par zone / CS
+   et total, budget prévu (règles de calcul : docstring de ``financement_ecoles``) ; Excel et PDF.
+
 Tables : ``jur_cep_blanc_sessions`` (id, annee, numero, nom, date, niveau, matieres JSON, seuil, cree_le) et
 ``jur_cep_blanc_resultats`` (id, session_id, ecole_id → jur_ecoles, zone, numero_table, nom, prenoms, sexe,
-notes JSON {matière: note}, total, moyenne, admis 0/1, maj). Colonne ajoutée : ``ecoles.jur_ecole_id``.
+notes JSON {matière: note}, total, moyenne, admis 0/1, maj). Colonnes ajoutées : ``ecoles.jur_ecole_id``,
+``utilisateurs.service_code`` (division / service de rattachement du compte).
 """
 import json
 import re
 from datetime import date
 
 from flask import abort, flash, g, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 
+import a_divisions as D
+import a_structure as S
 import config
 import evaluations_core as EC
 import m_cep as MC
@@ -110,8 +141,10 @@ MODULES_ECOLE = [
     ("docs_enseignant_accueil", "Documents de l'enseignant", "docs_enseignant"),
     ("synoptique_accueil", "Tableau synoptique", "synoptique"),
     ("personnel", "Personnel", "paie"), ("carriere_accueil", "Gestion de carrière", "carriere"),
-    ("depenses_accueil", "Dépenses", "depenses"), ("recettes_accueil", "Subventions et recettes", "depenses"),
+    ("depenses_accueil", "Dépenses", "depenses"), ("recettes_accueil", "Subventions de l'État et recettes", "depenses"),
+    ("cantine_impayes", "Impayés de cantine", "cantine"), ("cep_frais", "Frais de dossier CEP", "depenses"),
     ("paiements", "Paiements de scolarité", "paiements"), ("tresorerie", "Trésorerie", "tresorerie"),
+    ("tresorerie_bilan", "Bilan et budget", "tresorerie"),
     ("donnees_accueil", "Données : import / export", "donnees"), ("educmaster_accueil", "EducMaster", "donnees"),
     ("conversion_pdf", "Conversion PDF → Excel / CSV", "donnees"),
     ("courrier", "Secrétariat : courrier", "secretariat"), ("archives", "Secrétariat : archives", "secretariat"),
@@ -119,6 +152,44 @@ MODULES_ECOLE = [
 ]
 ORDRES_TYPE = {"EP": "Primaire", "EM": "Maternelle", "EE": "Maternelle"}
 MAX_LIGNES_SAISIE = 300
+
+# ---------------------------------------------------------------- périmètre d'accès des divisions (v1.6, § 6)
+# rôles concernés par le périmètre d'une division (les autres accèdent à tout : responsable, admin, cp, directeur, enseignant)
+ROLES_A_PERIMETRE = ("chef_service", "agent")
+# endpoints communs à toute division : accueil, compte, choix et tableau de bord de l'école ouverte, synoptique (lecture),
+# messages aux directeurs et enseignants, pages des divisions (lecture : droit jur_divisions pour écrire), vérification
+ENDPOINTS_PERIMETRE_COMMUNS = ENDPOINTS_COMMUNS | {
+    "jur_tableau", "jur_ecoles_modules", "jur_ecole_ouvrir", "jur_ecole_fermer", "jur_ecole_accueil", "jur_messages",
+    "espace_enseignant", "document", "recu", "ecole_choisir", "ecole_basculer",
+}
+# familles communes : tableau synoptique de la structure (document collectif : lecture pour tous, contributions selon
+# le droit jur_synoptique) et pages des divisions (plan d'action : droit jur_divisions)
+PREFIXES_PERIMETRE_COMMUNS = ("jur_synoptique", "jur_division")
+# adresses hors contrôle (sessions élèves / parents, API, paiements en ligne)
+PREFIXES_PUBLICS = ("/eleve", "/parent", "/api", "/webhooks", "/paiement", "/rejoindre")
+# familles d'endpoints qui ne suivent pas la règle « racine_ » (racine = endpoint sans « _accueil », pluriel → singulier)
+FAMILLES_ENDPOINTS = {
+    "epreuves_accueil": ("epreuve", "grille", "grilles"), "cep_accueil": ("cep", "carte", "liste_cep"),
+    "notes_accueil": ("notes", "bulletin", "bulletins", "resultats", "publier_bulletins"), "eval_accueil": ("eval",),
+    "paiements": ("paiement", "impayes", "recu", "livre_paie"), "courrier": ("courrier", "fichier_secretariat", "archives"),
+    "archives": ("archives", "fichier_secretariat"), "eleves": ("eleve", "insc_photo", "acces_parent", "espace_eleves"),
+    "tresorerie": ("tresorerie",), "synoptique_personnel_liste": ("synoptique_personnel",),
+    "jur_fiches": ("jur_fiche",), "jur_stats_ecoles": ("jur_stats",), "jur_synoptique": ("jur_synoptique",),
+    "jur_organigramme": ("jur_organigramme", "jur_service"), "paie_accueil": ("paie", "bulletin_paie_pdf", "livre_paie"),
+    "docs_enseignant_accueil": ("docs_enseignant",), "conversion_pdf": ("conversion",),
+    "jur_cp": ("jur_cp", "jur_visite", "jur_visites"), "jur_comptes": ("jur_comptes", "affectations"),
+}
+
+
+def familles_endpoint(ep):
+    """Préfixes d'endpoints autorisés par un module : « recensement_accueil » → {recensement} (donc recensement_*),
+    « jur_fiches » → {jur_fiches, jur_fiche}, « depenses_accueil » → {depenses, depense}… + FAMILLES_ENDPOINTS."""
+    r = ep[:-8] if ep.endswith("_accueil") else ep
+    out = {ep, r}
+    if r.endswith("s") and len(r) > 3:
+        out.add(r[:-1])
+    out |= set(FAMILLES_ENDPOINTS.get(ep, ()))
+    return out
 
 
 def sigle_de(nom):
@@ -249,6 +320,116 @@ def enregistrer(app, H):
             u = dict(g.user)
             u["role"] = H.EQUIV_ROLES_JUR[g.role_reel]
             g.user = u
+
+
+    # ================================================================ 6. périmètre d'accès des divisions
+    H.ajouter_colonne("utilisateurs", "service_code", "TEXT")
+    H.jur_services_liste = lambda: S.services()
+    _cache_perimetre = {}       # code de division → set de préfixes d'endpoints autorisés ; URLs du menu : _cache_urls
+    _cache_urls = {}
+
+    def code_division_utilisateur(u):
+        """Division du compte : utilisateurs.service_code (prioritaire), sinon la fiche agent liée (jur_agents.user_id)."""
+        code = (u["service_code"] if "service_code" in u.keys() else None) or ""
+        if not code:
+            a = q("SELECT service_code FROM jur_agents WHERE user_id=? AND actif=1 ORDER BY id LIMIT 1", (u["id"],), un=True)
+            code = (a["service_code"] if a else "") or ""
+        return code.strip() or None
+
+    def prefixes_division(code):
+        """Préfixes d'endpoints autorisés pour une division : racine de chaque endpoint de MODULES_PAR_DIVISION
+        (``xxx_accueil`` → ``xxx``, pluriel → singulier) + familles particulières (FAMILLES_ENDPOINTS)."""
+        if code not in _cache_perimetre:
+            prefixes = set()
+            for lib, ep, droit in D.MODULES_PAR_DIVISION.get(code, D.MODULES_PAR_DIVISION["*"]):
+                prefixes |= familles_endpoint(ep)
+            _cache_perimetre[code] = prefixes
+        return _cache_perimetre[code]
+
+    def perimetre_division(code):
+        """{prefixes, modules} d'une division (fiche /juridiction/divisions/<code>)."""
+        return {"prefixes": sorted(prefixes_division(code)), "modules": D.modules_division(app, code)}
+
+    def perimetre_utilisateur():
+        """Périmètre du compte connecté : None = toute l'application (responsable, admin, CP, directeur, enseignant,
+        chef de service / agent sans division) ; sinon le set des préfixes d'endpoints autorisés de sa division."""
+        u = g.get("user")
+        if not u or not config.juridiction():
+            return None
+        role = g.get("role_reel") or u["role"]
+        if role not in ROLES_A_PERIMETRE:
+            return None
+        if u["ecole_id"]:
+            return None     # compte rattaché à une école : périmètre = son école (m_ecoles), pas une division
+        code = code_division_utilisateur(u)
+        if not code:
+            return None
+        g.division_code = code
+        return prefixes_division(code)
+
+    def dans_perimetre(ep, prefixes):
+        if not ep or ep in ENDPOINTS_PERIMETRE_COMMUNS:
+            return True
+        for p in PREFIXES_PERIMETRE_COMMUNS:
+            if ep.startswith(p):
+                return True
+        for p in prefixes:
+            if ep == p or ep.startswith(p + "_"):
+                return True
+        return False
+
+    def adresse_publique(chemin):
+        for p in PREFIXES_PUBLICS:
+            if chemin == p or chemin.startswith(p + "/"):
+                return True
+        return False
+
+    @app.before_request
+    def controler_perimetre():
+        """Compte chef de service / agent rattaché à une division : tout endpoint hors du périmètre de la division
+        répond 403 « Hors du périmètre de votre division » (page erreur.html)."""
+        if not config.juridiction() or not g.get("user"):
+            return
+        per = perimetre_utilisateur()
+        if per is None:
+            return
+        ep = request.endpoint or ""
+        if not ep or adresse_publique(request.path) or dans_perimetre(ep, per):
+            return
+        d = S.service_par_code(g.get("division_code")) or {}
+        nom = f"{d.get('sigle') or ''} – {d.get('nom') or ''}".strip(" –") or g.get("division_code")
+        return render_template("erreur.html", titre="Hors du périmètre de votre division",
+                               message=f"Cette page ne fait pas partie des modules de votre division ({nom}). "
+                                       "Adressez-vous au responsable de la structure pour élargir votre périmètre."), 403
+
+    def urls_perimetre(code, prefixes):
+        """URLs (sans paramètre) des endpoints du périmètre : pour le filtrage du menu (JSON dans _menu_juridiction)."""
+        if code in _cache_urls:
+            return _cache_urls[code]
+        from werkzeug.routing import BuildError
+        out = []
+        for ep in sorted(app.view_functions):
+            if ep == "static" or not dans_perimetre(ep, prefixes):
+                continue
+            try:
+                out.append(url_for(ep))
+            except (BuildError, TypeError):
+                continue
+        _cache_urls[code] = out
+        return out
+
+    @app.context_processor
+    def ctx_perimetre():
+        if not config.juridiction() or not g.get("user"):
+            return {}
+        per = perimetre_utilisateur()
+        if per is None:
+            return {"PERIMETRE_URLS": None, "PERIMETRE_CODE": None}
+        return {"PERIMETRE_URLS": urls_perimetre(g.get("division_code"), per), "PERIMETRE_CODE": g.get("division_code")}
+
+    H.perimetre_utilisateur = perimetre_utilisateur
+    H.perimetre_division = perimetre_division
+    H.dans_perimetre = dans_perimetre
 
     @app.before_request
     def exiger_ecole_ouverte():
@@ -1215,3 +1396,366 @@ def enregistrer(app, H):
                                cs_liste=J.cs_liste() if ddemp() else [], zones=J.zones(cs_id) if cs_id else J.zones(),
                                ecoles=J.ecoles(cs_id=cs_id, zone_id=zone_id), DDEMP=ddemp(),
                                sans_tel=sum(1 for d in dest if not d["tel"]))
+
+    # ================================================================ 7. comptes des directeurs et enseignants
+    def comptes_ecoles():
+        """Écoles de la juridiction (jur_ecoles) avec leur école locale (ecoles) si elle existe."""
+        locales = locales_par_jur()
+        out = []
+        for je in H.jur_ecoles():
+            loc = locales.get(je["id"])
+            out.append({"j": je, "loc": loc})
+        return out
+
+    def comptes_liste(jid=None, role=None, recherche=None):
+        """Comptes directeur / enseignant : dict utilisateur + école locale, école de la juridiction (zone, CS),
+        nombre de classes affectées."""
+        sql = """SELECT u.*, e.nom ecole_nom, e.jur_ecole_id,
+                        (SELECT COUNT(DISTINCT a.classe_id) FROM affectations a WHERE a.user_id=u.id) nb_classes
+                 FROM utilisateurs u LEFT JOIN ecoles e ON e.id=u.ecole_id WHERE u.role IN ('directeur', 'enseignant')"""
+        args = []
+        if role in ("directeur", "enseignant"):
+            sql += " AND u.role=?"
+            args.append(role)
+        jur = {je["id"]: je for je in H.jur_ecoles(actif=False)}
+        out = []
+        for u in q(sql + " ORDER BY e.nom, u.role, u.nom", args):
+            d = dict(u)
+            je = jur.get(u["jur_ecole_id"]) if u["jur_ecole_id"] else None
+            d["je"] = je
+            d["zone"] = (je["zone_nom"] if je else "") or ""
+            d["cs"] = (je["cs_nom"] if je else "") or ""
+            d["code_ecole"] = (je["code"] if je else "") or ""
+            if jid and (not je or je["id"] != jid):
+                continue
+            if recherche and H.jur_norm(recherche) not in H.jur_norm(f"{d['nom']} {d['identifiant']} {d['ecole_nom'] or ''}"):
+                continue
+            out.append(d)
+        return out
+
+    def slug(t):
+        t = H.jur_norm(t).lower()
+        t = re.sub(r"[^a-z0-9]+", "-", t).strip("-")
+        return t or "compte"
+
+    def identifiant_libre(base):
+        base = base[:40]
+        ident, n = base, 1
+        while q("SELECT 1 FROM utilisateurs WHERE identifiant=?", (ident,), un=True):
+            n += 1
+            ident = f"{base}{n}"
+        return ident
+
+    def proposer_identifiant(role, nom, je):
+        """Directeur : « dir-<code école> » ; enseignant : « prenom.nom » (nom et prénoms saisis), unique."""
+        if role == "directeur":
+            return identifiant_libre("dir-" + slug(je["code"] if je else nom))
+        mots = [m for m in slug(nom).split("-") if m]
+        base = ".".join(mots[:2]) if mots else "enseignant"
+        return identifiant_libre(base)
+
+    def mdp_provisoire():
+        import secrets
+        return secrets.token_urlsafe(6)
+
+    @app.route("/juridiction/comptes", methods=["GET", "POST"])
+    @H.connexion_requise("jur_comptes")
+    def jur_comptes():
+        """Comptes des directeurs et des enseignants des écoles de la juridiction (à la place des comptes parents des
+        éditions école) : liste, création rapide (école de la juridiction → école locale créée si besoin, identifiant
+        proposé, mot de passe provisoire à changer à la première connexion), réinitialisation, désactivation,
+        codes d'accès (PDF), export Excel, affectation aux classes (page « affectations »)."""
+        garde()
+        if request.method == "POST":
+            return jur_comptes_post()
+        f = {k: (request.args.get(k) or "").strip() for k in ("ecole", "role", "q")}
+        jid = int(f["ecole"]) if f["ecole"].isdigit() else None
+        comptes = comptes_liste(jid, f["role"] or None, f["q"] or None)
+        return render_template("jur_comptes.html", comptes=comptes, f=f, ecoles=comptes_ecoles(), DDEMP=ddemp(),
+                               nb_dir=sum(1 for c in comptes if c["role"] == "directeur"),
+                               nb_ens=sum(1 for c in comptes if c["role"] == "enseignant"))
+
+    def jur_comptes_post():
+        f = request.form
+        action = f.get("action")
+        retour = redirect(url_for("jur_comptes"))
+        if action == "creer":
+            role = f.get("role") if f.get("role") in ("directeur", "enseignant") else None
+            jid = f.get("ecole", type=int)
+            je = H.jur_ecole(jid) if jid else None
+            nom = (f.get("nom") or "").strip()[:120]
+            if not role or not je:
+                flash("Choisissez le rôle et l'école de la juridiction.", "danger")
+                return retour
+            if not nom:
+                nom = (je["directeur_nom"] or "").strip() if role == "directeur" else ""
+            if not nom:
+                flash("Indiquez le nom et les prénoms du titulaire du compte.", "danger")
+                return retour
+            ident = (f.get("identifiant") or "").strip().lower()[:40]
+            if ident and q("SELECT 1 FROM utilisateurs WHERE identifiant=?", (ident,), un=True):
+                flash(f"L'identifiant « {ident} » existe déjà : un autre a été proposé.", "warning")
+                ident = ""
+            ident = ident or proposer_identifiant(role, nom, je)
+            mdp = (f.get("mdp") or "").strip()
+            if mdp and len(mdp) < 8:
+                flash("Mot de passe provisoire : 8 caractères au moins (un mot de passe a été généré).", "warning")
+                mdp = ""
+            mdp = mdp or mdp_provisoire()
+            eid = assurer_ecole_locale(je["id"])
+            uid = ex("INSERT INTO utilisateurs (identifiant, nom, role, mdp_hash, doit_changer_mdp, ecole_id) VALUES (?,?,?,?,1,?)",
+                     (ident, nom, role, generate_password_hash(mdp), eid))
+            if role == "directeur" and not (je["directeur_nom"] or "").strip():
+                ex("UPDATE jur_ecoles SET directeur_nom=?, maj=datetime('now','localtime') WHERE id=?", (nom, je["id"]))
+            H.journal("jur_compte_cree", f"{ident} ({role}) – {je['nom']}")
+            flash(f"Compte {role} créé pour {je['nom']} : identifiant « {ident} ». Remettez les codes d'accès au titulaire.", "success")
+            return render_template("jur_comptes_codes.html", lignes=[(dict(q("SELECT * FROM utilisateurs WHERE id=?", (uid,), un=True)), je, mdp)],
+                                   url=request.url_root.rstrip("/"), nouveau=True)
+        uid = f.get("uid", type=int)
+        u = q("SELECT * FROM utilisateurs WHERE id=? AND role IN ('directeur','enseignant')", (uid,), un=True)
+        if not u:
+            abort(404)
+        e = q("SELECT * FROM ecoles WHERE id=?", (u["ecole_id"],), un=True) if u["ecole_id"] else None
+        je = H.jur_ecole(e["jur_ecole_id"]) if e and e["jur_ecole_id"] else None
+        if action == "reinit":
+            mdp = mdp_provisoire()
+            ex("UPDATE utilisateurs SET mdp_hash=?, doit_changer_mdp=1 WHERE id=?", (generate_password_hash(mdp), uid))
+            H.journal("jur_compte_reinit", u["identifiant"])
+            flash(f"Mot de passe de « {u['identifiant']} » réinitialisé.", "success")
+            return render_template("jur_comptes_codes.html", lignes=[(dict(u), je, mdp)], url=request.url_root.rstrip("/"), nouveau=False)
+        if action == "basculer":
+            ex("UPDATE utilisateurs SET actif=1-actif WHERE id=?", (uid,))
+            H.journal("jur_compte_actif", u["identifiant"])
+            flash(f"Compte « {u['identifiant']} » {'désactivé' if u['actif'] else 'réactivé'}.", "success")
+            return retour
+        abort(400)
+
+    def ecole_de_compte(u):
+        """(école locale, école de la juridiction) d'un compte."""
+        e = q("SELECT * FROM ecoles WHERE id=?", (u["ecole_id"],), un=True) if u["ecole_id"] else None
+        je = H.jur_ecole(e["jur_ecole_id"]) if e and e["jur_ecole_id"] else None
+        return e, je
+
+    @app.route("/juridiction/comptes/codes.pdf", methods=["POST"])
+    @H.connexion_requise("jur_comptes")
+    def jur_comptes_codes_pdf():
+        """Codes d'accès imprimables (un bloc par compte) : les mots de passe provisoires viennent de la page qui
+        vient de les créer et sont VÉRIFIÉS contre l'empreinte en base (comme les codes des élèves)."""
+        garde()
+        lignes = []
+        for uid, mdp in zip(request.form.getlist("uid", type=int), request.form.getlist("mdp")):
+            u = q("SELECT * FROM utilisateurs WHERE id=? AND role IN ('directeur','enseignant')", (uid,), un=True)
+            if not u or not u["doit_changer_mdp"] or not check_password_hash(u["mdp_hash"], mdp):
+                continue
+            e, je = ecole_de_compte(u)
+            lignes.append((u, e, je, mdp))
+        if not lignes:
+            flash("Codes expirés ou déjà modifiés par leurs titulaires : réinitialisez les mots de passe pour les imprimer.", "warning")
+            return redirect(url_for("jur_comptes"))
+        P = H.pdfs
+        url = request.url_root.rstrip("/")
+        s = structure_infos()
+        blocs = []
+        for i, (u, e, je, mdp) in enumerate(lignes, 1):
+            ecole = (je["nom"] if je else (e["nom"] if e else "")) or "—"
+            blocs.append(P.paragraphe(f"<b>{i}. {u['nom']}</b> — {H.ROLES.get(u['role'], u['role'])} — {ecole}", 9.5, espace=2))
+            blocs.append(P.mini_tableau([["Adresse de connexion", url + url_for("login")],
+                                         ["Identifiant", u["identifiant"]], ["Mot de passe provisoire", mdp],
+                                         ["Émargement", ""]], None))
+            blocs.append(P.paragraphe(" ", 6, espace=4))
+        pdf = P.document_tableau("CODES D'ACCÈS – DIRECTEURS ET ENSEIGNANTS",
+                                 ["N°", "Nom et prénoms", "Rôle", "École", "Identifiant", "Mot de passe provisoire", "Émargement"],
+                                 [[i, u["nom"], H.ROLES.get(u["role"], u["role"]), (je["nom"] if je else (e["nom"] if e else "")) or "—",
+                                   u["identifiant"], mdp, ""] for i, (u, e, je, mdp) in enumerate(lignes, 1)],
+                                 sous_titre=f"{s.get('nom') or nom_niveau()} — année scolaire {config.ANNEE_ACTIVE}",
+                                 infos=[("Adresse de connexion", url + url_for("login")), ("Comptes", len(lignes))],
+                                 infos_haut=infos_haut(), largeurs=[8, 48, 22, 50, 32, 30, 24], taille=8.5, apres=blocs,
+                                 notes_bas=["À la première connexion, le titulaire choisit son propre mot de passe (8 caractères au moins).",
+                                            "Un bloc par compte : découpez-le pour le remettre à son titulaire. Ne pas afficher cette liste."],
+                                 signatures=signature_responsable())
+        H.journal("jur_comptes_codes_pdf", f"{len(lignes)} code(s)")
+        return H.pdf_reponse(pdf, "codes_acces_directeurs_enseignants.pdf")
+
+    @app.route("/juridiction/comptes.xlsx")
+    @H.connexion_requise("jur_comptes")
+    def jur_comptes_xlsx():
+        garde()
+        f = {k: (request.args.get(k) or "").strip() for k in ("ecole", "role", "q")}
+        jid = int(f["ecole"]) if f["ecole"].isdigit() else None
+        comptes = comptes_liste(jid, f["role"] or None, f["q"] or None)
+        ent = ["Nom et prénoms", "Identifiant", "Rôle", "École", "Code école", "Zone pédagogique", "CS", "Classes affectées",
+               "État", "Mot de passe provisoire", "Créé le"]
+        lignes = [[c["nom"], c["identifiant"], H.ROLES.get(c["role"], c["role"]), c["ecole_nom"] or "", c["code_ecole"], c["zone"], c["cs"],
+                   c["nb_classes"], "actif" if c["actif"] else "désactivé", "oui" if c["doit_changer_mdp"] else "non", c["cree_le"] or ""]
+                  for c in comptes]
+        H.journal("jur_comptes_excel", f"{len(lignes)} compte(s)")
+        return H.xlsx.reponse_xlsx("comptes_directeurs_enseignants.xlsx", ent, lignes, titre="Comptes",
+                                   titre_haut=[config.ECOLE.get("nom", ""), "COMPTES DES DIRECTEURS ET ENSEIGNANTS",
+                                               f"Année scolaire {config.ANNEE_ACTIVE} – {len(lignes)} compte(s)"])
+
+    # ================================================================ 8. financement des écoles
+    ORIGINE_ETAT = "Subvention de l'État"
+
+    def finances_locales(eid, d1, d2, annee):
+        """Montants de l'année d'une école ouverte localement (tables de m_finances_publiques et m_cantine)."""
+        def somme(sql, args):
+            return q(sql, args, un=True)["s"] or 0
+        subv = somme("SELECT SUM(montant) s FROM fp_recettes WHERE ecole_id=? AND annule=0 AND origine=? AND date BETWEEN ? AND ?",
+                     (eid, ORIGINE_ETAT, d1, d2))
+        autres = somme("SELECT SUM(montant) s FROM fp_recettes WHERE ecole_id=? AND annule=0 AND origine<>? AND date BETWEEN ? AND ?",
+                       (eid, ORIGINE_ETAT, d1, d2))
+        cant = q("""SELECT COUNT(DISTINCT p.eleve_id) n, SUM(p.montant) s FROM cantine_paiements p JOIN eleves e ON e.id=p.eleve_id
+                    JOIN classes c ON c.id=e.classe_id WHERE c.ecole_id=? AND p.date BETWEEN ? AND ?""", (eid, d1, d2), un=True)
+        cep = somme("SELECT SUM(montant) s FROM fp_cep_frais WHERE ecole_id=? AND date BETWEEN ? AND ?", (eid, d1, d2))
+        dep = somme("SELECT SUM(montant) s FROM fp_depenses WHERE ecole_id=? AND annule=0 AND date BETWEEN ? AND ?", (eid, d1, d2))
+        p = q("SELECT solde_ouverture FROM fp_parametres WHERE ecole_id=? AND annee=?", (eid, annee), un=True)
+        return {"subventions": subv, "autres": autres, "cantine": cant["s"] or 0, "beneficiaires": cant["n"] or 0, "cep": cep,
+                "depenses": dep, "ouverture": p["solde_ouverture"] if p else 0}
+
+    def financement_ecoles(annee=None):
+        """Financement des écoles de la juridiction pour une année scolaire : par école, par zone (CS) ou par CS (DDEMP)
+        et total. Pour chaque école : subventions de l'État reçues (fp_recettes, origine « Subvention de l'État »),
+        autres recettes (commune, dons, APE…), cotisations de cantine encaissées (cantine_paiements), frais de dossier
+        CEP (fp_cep_frais), dépenses (fp_depenses), solde = solde d'ouverture + recettes − dépenses — lues dans les
+        données de l'école ouverte localement (ecoles.jur_ecole_id) ; pour une école non ouverte, la section
+        « cantine » du paquet transmis (jur_format : {existe, beneficiaires, montant_annee}) fournit les cotisations de
+        cantine de l'année ; subventions et dépenses sont alors inconnues (None). Budget prévu : table ``budget``
+        (m_tresorerie : entrées / sorties par catégorie, UNE prévision par année pour toute la base) — présenté en
+        total, pas par école."""
+        annee = annee or config.ANNEE_ACTIVE
+        d1, d2 = H.bornes_annee(annee)
+        locales = locales_par_jur()
+        paquets = H.jur_sections("cantine", annee)
+        ecoles = []
+        for je in H.jur_ecoles():
+            loc = locales.get(je["id"])
+            d = {"je": je, "nom": je["nom"], "code": je["code"], "secteur": je["secteur"], "cs_id": je["cs_id"],
+                 "cs_nom": je["cs_nom"] or "", "zone_id": je["zone_id"], "zone_nom": je["zone_nom"] or "Sans zone pédagogique",
+                 "source": "", "subventions": None, "autres": None, "cantine": None, "beneficiaires": None, "cep": None,
+                 "depenses": None, "ouverture": 0, "solde": None, "loc": loc}
+            fin = finances_locales(loc["id"], d1, d2, annee) if loc else None
+            if fin and any(fin[k] for k in ("subventions", "autres", "cantine", "cep", "depenses", "ouverture")):
+                d.update(fin, source="locale")
+                d["solde"] = fin["ouverture"] + fin["subventions"] + fin["autres"] + fin["cantine"] + fin["cep"] - fin["depenses"]
+            else:
+                sec = paquets.get(je["id"])
+                if sec and sec.get("existe"):
+                    d.update(cantine=int(sec.get("montant_annee") or 0), beneficiaires=int(sec.get("beneficiaires") or 0),
+                             source="transmission")
+                elif fin:
+                    d.update(fin, source="locale")
+                    d["solde"] = 0
+            ecoles.append(d)
+        cles = ("subventions", "autres", "cantine", "cep", "depenses", "solde")
+
+        def agreg(lst):
+            t = {k: sum(e[k] or 0 for e in lst) for k in cles}
+            t["beneficiaires"] = sum(e["beneficiaires"] or 0 for e in lst)
+            t["nb_ecoles"] = len(lst)
+            t["nb_locales"] = sum(1 for e in lst if e["source"] == "locale")
+            t["nb_transmission"] = sum(1 for e in lst if e["source"] == "transmission")
+            t["recu"] = t["subventions"] + t["autres"] + t["cantine"] + t["cep"]
+            return t
+        rangees, groupes, cs_groupes = [], {}, {}
+        for e in ecoles:
+            groupes.setdefault((e["cs_id"], e["zone_id"]), {"libelle": e["zone_nom"] + (f" – CS {e['cs_nom']}" if ddemp() else ""), "lst": []})["lst"].append(e)
+            cs_groupes.setdefault(e["cs_id"], {"libelle": f"CS {e['cs_nom'] or 'sans circonscription'}", "lst": []})["lst"].append(e)
+        zone_cour = cs_cour = None
+        n = 0
+        for e in ecoles:
+            k = (e["cs_id"], e["zone_id"])
+            if k != zone_cour:
+                if zone_cour is not None:
+                    z = groupes[zone_cour]
+                    rangees.append({"genre": "zone", "libelle": "Sous-total " + z["libelle"], "d": agreg(z["lst"])})
+                if ddemp() and e["cs_id"] != cs_cour and cs_cour is not None:
+                    c = cs_groupes[cs_cour]
+                    rangees.append({"genre": "cs", "libelle": "Total " + c["libelle"], "d": agreg(c["lst"])})
+                cs_cour = e["cs_id"]
+                zone_cour = k
+            n += 1
+            rangees.append({"genre": "ecole", "n": n, "libelle": e["nom"], "d": e})
+        if zone_cour is not None:
+            z = groupes[zone_cour]
+            rangees.append({"genre": "zone", "libelle": "Sous-total " + z["libelle"], "d": agreg(z["lst"])})
+        if ddemp() and cs_cour is not None:
+            c = cs_groupes[cs_cour]
+            rangees.append({"genre": "cs", "libelle": "Total " + c["libelle"], "d": agreg(c["lst"])})
+        total = agreg(ecoles)
+        budget = {"entree": 0, "sortie": 0, "lignes": []}
+        for b in q("SELECT * FROM budget WHERE annee=? ORDER BY type, categorie", (annee,)):
+            budget[b["type"]] = budget.get(b["type"], 0) + (b["montant"] or 0)
+            budget["lignes"].append(dict(b))
+        return {"annee": annee, "ecoles": ecoles, "rangees": rangees, "total": total, "budget": budget,
+                "zones": [{"libelle": g_["libelle"], **agreg(g_["lst"])} for g_ in groupes.values()],
+                "cs": [{"libelle": g_["libelle"], **agreg(g_["lst"])} for g_ in cs_groupes.values()]}
+
+    H.jur_financement = financement_ecoles
+    app.extensions.setdefault("gescol", {})["H"] = H     # accès aux fonctions exposées (tests, scripts)
+
+    def annee_financement():
+        annee = request.args.get("annee") or config.ANNEE_ACTIVE
+        return annee if re.match(r"^\d{4}-\d{4}$", annee) else config.ANNEE_ACTIVE
+
+    @app.route("/juridiction/financement")
+    @H.connexion_requise("jur_financement")
+    def jur_financement():
+        garde()
+        annee = annee_financement()
+        fin = financement_ecoles(annee)
+        export = request.args.get("export")
+        if export in ("pdf", "xlsx"):
+            return exporter_financement(fin, export)
+        annees = sorted(set(H.jur_annees()) | {annee} | {r["annee"] for r in q("SELECT DISTINCT annee FROM fp_parametres")}, reverse=True)
+        return render_template("jur_financement.html", fin=fin, annee=annee, annees=annees, DDEMP=ddemp(), milliers=milliers)
+
+    def milliers(n):
+        if n is None:
+            return "—"
+        return f"{int(n):,}".replace(",", " ")
+
+    def exporter_financement(fin, export):
+        s = structure_infos()
+        titre = f"FINANCEMENT DES ÉCOLES – {nom_niveau()} – {fin['annee']}"
+        cols = ["École", "Secteur", "Source", "Subventions de l'État", "Autres recettes", "Cotisations de cantine", "Bénéficiaires",
+                "Frais CEP", "Dépenses", "Solde"]
+        data, surl = [], {}
+        for r in fin["rangees"]:
+            d = r["d"]
+            if r["genre"] == "ecole":
+                data.append([f"{r['n']}. {r['libelle']}", J.SECTEURS.get(d["secteur"], d["secteur"]),
+                             {"locale": "école ouverte", "transmission": "transmission"}.get(d["source"], "—"),
+                             milliers(d["subventions"]), milliers(d["autres"]), milliers(d["cantine"]), milliers(d["beneficiaires"]),
+                             milliers(d["cep"]), milliers(d["depenses"]), milliers(d["solde"])])
+            else:
+                data.append([r["libelle"], f"{d['nb_ecoles']} école(s)", f"{d['nb_locales']} ouv. / {d['nb_transmission']} transm.",
+                             milliers(d["subventions"]), milliers(d["autres"]), milliers(d["cantine"]), milliers(d["beneficiaires"]),
+                             milliers(d["cep"]), milliers(d["depenses"]), milliers(d["solde"])])
+                surl[len(data) - 1] = "#EEF3FA" if r["genre"] == "zone" else "#D9E4F2"
+        T = fin["total"]
+        total = ["TOTAL GÉNÉRAL", f"{T['nb_ecoles']} école(s)", f"{T['nb_locales']} ouv. / {T['nb_transmission']} transm.",
+                 milliers(T["subventions"]), milliers(T["autres"]), milliers(T["cantine"]), milliers(T["beneficiaires"]),
+                 milliers(T["cep"]), milliers(T["depenses"]), milliers(T["solde"])]
+        B = fin["budget"]
+        note = (f"Recettes reçues : {milliers(T['recu'])} F (subventions de l'État {milliers(T['subventions'])}, cotisations de cantine "
+                f"{milliers(T['cantine'])}) – dépenses : {milliers(T['depenses'])} F – solde : {milliers(T['solde'])} F. "
+                f"Budget prévu de l'année : entrées {milliers(B['entree'])} F, sorties {milliers(B['sortie'])} F.")
+        if export == "xlsx":
+            H.journal("jur_financement_excel", fin["annee"])
+            lig_b = [[b["type"], b["categorie"], b["montant"]] for b in B["lignes"]]
+            return H.xlsx.reponse_classeur(f"financement_ecoles_{fin['annee']}.xlsx", [
+                ("Par école", cols, data + [total], {"titre_haut": [s.get("nom") or "", titre, note]}),
+                ("Budget prévu", ["Type", "Catégorie", "Montant prévu"], lig_b + [["TOTAL", "entrées", B["entree"]], ["TOTAL", "sorties", B["sortie"]]],
+                 {"titre_haut": [s.get("nom") or "", "BUDGET PRÉVU " + fin["annee"]]})])
+        pdf = H.pdfs.document_tableau(titre, cols, data, paysage=True,
+                                      sous_titre="Subventions de l'État, cotisations de cantine, dépenses, solde par école, "
+                                                 + ("par zone pédagogique et par circonscription" if ddemp() else "par zone pédagogique"),
+                                      infos=[("Année scolaire", fin["annee"]), ("Écoles", T["nb_ecoles"]),
+                                             ("Budget prévu (entrées / sorties)", f"{milliers(B['entree'])} / {milliers(B['sortie'])} F")],
+                                      infos_haut=infos_haut(), largeurs=[52, 14, 18, 20, 18, 20, 14, 14, 18, 18], taille=7,
+                                      total=total, surlignes=surl, signatures=signature_responsable(),
+                                      notes_bas=[note, "Source « école ouverte » : données saisies dans les modules de l'école (recettes, "
+                                                       "cantine, dépenses) ; « transmission » : section cantine du paquet transmis par l'école "
+                                                       "(cotisations de l'année), subventions et dépenses inconnues."])
+        H.journal("jur_financement_pdf", fin["annee"])
+        return H.pdf_reponse(pdf, f"financement_ecoles_{fin['annee']}.pdf")

@@ -37,7 +37,7 @@ SEXES = {"M": "Masculin", "F": "Féminin"}
 # services par défaut (si la table jur_services ne contient rien pour le niveau)
 SERVICES_DEFAUT = {
     "cs": [("ccs", "Chef de la Circonscription Scolaire (CCS)"), ("animation", "Animation pédagogique (CP, CDAP)"),
-           ("secretariat", "Division Secrétariat (CDS)"), ("personnel", "Personnel et affaires financières (CSPAF)"),
+           ("secretariat", "Division Secrétariat (CDS)"), ("personnel", "Service des Ressources Humaines (RH)"),
            ("organisation", "Organisation scolaire et prévision (CDOSP)"), ("administration", "Administration et soutien")],
     "ddemp": [("direction", "Direction départementale (DD)"), ("sec", "Service des Examens et Concours (SEC)"),
               ("semp", "Service des Écoles Maternelles et Primaires (SEMP)"),
@@ -49,7 +49,7 @@ SERVICES_DEFAUT = {
 }
 POSTES = {
     "cs": ["Chef de la Circonscription Scolaire (CCS)", "Conseiller pédagogique (CP)", "Chef Division Secrétariat (CDS)",
-           "Chef Service Personnel et Affaires Financières (CSPAF)", "Chef Division Animation Pédagogique (CDAP)",
+           "Chef du Service des Ressources Humaines (RH)", "Chef Division Animation Pédagogique (CDAP)",
            "Chef Division Organisation Scolaire et Prévision (CDOSP)", "Secrétaire", "Agent d'entretien", "Gardien",
            "Chauffeur", "Planton"],
     "ddemp": ["Directeur Départemental (DD)", "Directeur Départemental Adjoint", "Chef du Service des Examens et Concours",

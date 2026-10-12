@@ -2,18 +2,19 @@
 {% set CS_ = JUR_NIVEAU == 'cs' %}
 {{ lien('jur_tableau', 'Tableau de bord', ep=='jur_tableau', '⌂') }}
 {{ lien('jur_synoptique', 'Tableau synoptique de la ' ~ ('CS' if CS_ else 'DDEMP'), ep.startswith('jur_synoptique'), '▦') }}
-{% call groupe('jstat', 'Statistiques', ep.startswith('jur_stats') or ep=='jur_classes', '📊') %}
+{% call groupe('jstat', 'Statistiques', ep.startswith('jur_stats') or ep in ('jur_classes', 'jur_financement'), '📊') %}
   {{ lien('jur_stats_ecoles', 'Écoles (nombre, classement)', ep=='jur_stats_ecoles') }}
   {{ lien('jur_stats_effectifs', 'Effectifs des apprenants', ep=='jur_stats_effectifs') }}
   {{ lien('jur_stats_enseignants', 'Enseignants (besoins, écarts)', ep=='jur_stats_enseignants') }}
   {{ lien('jur_classes', 'Classes par cours et par zone', ep=='jur_classes') }}
+  {% if peut('jur_financement') %}{{ lien('jur_financement', 'Financement des écoles (subventions, cantine, bilan)', ep=='jur_financement') }}{% endif %}
 {% endcall %}
 {% call groupe('jcep', 'Examens (CEP)', ep.startswith('jur_cep'), '🎓') %}
   {{ lien('jur_cep', 'Candidats et résultats', ep=='jur_cep' or ep=='jur_cep_ecole') }}
   {{ lien('jur_cep_prevision', 'Prévision (année suivante)', ep=='jur_cep_prevision') }}
   {{ lien('jur_cep_frais', 'Frais de relevés', ep=='jur_cep_frais') }}
 {% endcall %}
-{% call groupe('jpers', 'Personnel et carrière', ep.startswith('jur_personnel') or ep.startswith('jur_retraite') or ep.startswith('jur_aptitude') or ep.startswith('jur_agent'), '👥') %}
+{% call groupe('jpers', 'Ressources humaines (personnel, carrière)', ep.startswith('jur_personnel') or ep.startswith('jur_retraite') or ep.startswith('jur_aptitude') or ep.startswith('jur_agent'), '👥') %}
   {{ lien('jur_personnel', 'Gestion de carrière (par catégorie)', ep.startswith('jur_personnel')) }}
   {{ lien('jur_aptitude', "Visites d'aptitude et diplômes", ep.startswith('jur_aptitude')) }}
   {{ lien('jur_retraite', 'Départs à la retraite', ep.startswith('jur_retraite')) }}
@@ -50,3 +51,13 @@
 {# v1.6 : modules des écoles ouverts à la CS / DDEMP (Données, Secrétariat, Cantine, Vie, Évaluation, CEP…) #}
 {% include "_menu_juridiction_ecoles.html" ignore missing %}
 {{ lien('verifier', 'Vérifier un document', ep=='verifier', '✔') }}
+{# v1.6 – périmètre d'une division (a_integration.perimetre_utilisateur) : pour un chef de service / agent rattaché à
+   une division, les liens du menu dont l'adresse n'est pas dans la liste des adresses autorisées sont retirés, puis les
+   groupes vidés. Le contrôle réel est fait côté serveur (403 « Hors du périmètre de votre division »). #}
+{% if PERIMETRE_URLS is defined and PERIMETRE_URLS is not none %}
+<script id="perimetre-menu" type="application/json" data-division="{{ PERIMETRE_CODE }}">{{ PERIMETRE_URLS|tojson }}</script>
+<script>(function(){var s=document.getElementById('perimetre-menu');if(!s)return;var ok={};JSON.parse(s.textContent).forEach(function(u){ok[u]=1;});
+var nav=s.closest('nav')||document.getElementById('menu');if(!nav)return;
+nav.querySelectorAll('a[href]').forEach(function(a){var h=a.getAttribute('href')||'';if(h.charAt(0)!=='/')return;h=h.split('?')[0].split('#')[0];if(!ok[h])a.parentNode.removeChild(a);});
+nav.querySelectorAll('details').forEach(function(d){if(!d.querySelector('a[href]'))d.parentNode.removeChild(d);});})();</script>
+{% endif %}

@@ -4,7 +4,7 @@
     GESCOL_EDITION=cs    GESCOL_DATA=dossier python3 demo_juridiction.py      → CS de Pobè (Plateau)
     GESCOL_EDITION=ddemp GESCOL_DATA=dossier python3 demo_juridiction.py      → DDEMP du Plateau (6 CS)
 
-Comptes (mot de passe demo1234) : responsable, cp1, cp2, chef, agent ; admin / admin123.
+Comptes (mot de passe demo1234) : responsable, cp1, cp2, chef (DOSP), rh (Ressources humaines), agent ; admin / admin123.
 Les écoles « envoient » de vrais paquets de transmission (jur_format), importés comme le ferait la CS.
 v1.6 : unités pédagogiques (jur_up, jur_up_activites) et CP de chaque zone pédagogique (jur_zones.cp_nom).
 """
@@ -151,7 +151,7 @@ def agents_cs(rnd, cs_nom):
     postes = [("ccs", "Chef de la Circonscription Scolaire", "ccs"), ("animation", "Conseiller pédagogique", "cp"),
               ("animation", "Conseiller pédagogique", "cp"), ("animation", "Conseiller pédagogique", "cp"),
               ("secretariat", "Chef Division Secrétariat (CDS)", "chef_service"),
-              ("personnel", "Chef Service Personnel et Affaires (CSPAF)", "chef_service"),
+              ("personnel", "Chef du Service des Ressources Humaines (RH)", "chef_service"),
               ("animation", "Chef Division Animation Pédagogique (CDAP)", "chef_service"),
               ("organisation", "Chef Division Organisation Scolaire et Prévision (CDOSP)", "chef_service"),
               ("secretariat", "Secrétaire", "administratif"), ("administration", "Agent d'entretien", "soutien")]
@@ -228,12 +228,22 @@ def inserer_lignes_action(rnd, an):
 
 
 def creer_comptes():
-    for ident, nom, role in (("responsable", "Responsable (démo)", "responsable"), ("cp1", "KOUTON Basile", "cp"),
-                             ("cp2", "OLOU Rosine", "cp"), ("chef", "Chef de division (démo)", "chef_service"),
-                             ("agent", "Agent (démo)", "agent")):
+    """Comptes de démonstration. v1.6 : « chef » est rattaché à la division de l'Organisation Scolaire et de la Prévision
+    (DOSP, code organisation ; DDEMP : Service des Écoles Maternelles et Primaires, semp) et « rh » au Service des
+    Ressources Humaines (code personnel ; DDEMP : srh) : leur périmètre d'accès (a_integration) se limite aux modules
+    de leur division (utilisateurs.service_code)."""
+    for ident, nom, role, svc in (("responsable", "Responsable (démo)", "responsable", None), ("cp1", "KOUTON Basile", "cp", None),
+                                  ("cp2", "OLOU Rosine", "cp", None),
+                                  ("chef", "Chef de division DOSP (démo)", "chef_service", "organisation"),
+                                  ("rh", "Chef du Service des Ressources Humaines (démo)", "chef_service", "personnel"),
+                                  ("agent", "Agent (démo)", "agent", None)):
         if not q("SELECT 1 FROM utilisateurs WHERE identifiant=?", (ident,), un=True):
             ex("INSERT INTO utilisateurs (identifiant, nom, role, mdp_hash, doit_changer_mdp) VALUES (?,?,?,?,0)",
                (ident, nom, role, generate_password_hash("demo1234")))
+        if svc and "service_code" in {c[1] for c in q("PRAGMA table_info(utilisateurs)")}:
+            # DDEMP : le SRH porte le code « srh » et l'organisation scolaire relève du SEMP
+            code = {"personnel": "srh", "organisation": "semp"}.get(svc, svc) if config.EDITION == "ddemp" else svc
+            ex("UPDATE utilisateurs SET service_code=? WHERE identifiant=? AND (service_code IS NULL OR service_code='')", (code, ident))
 
 
 def inserer_agents(liste, cs_id=None):
@@ -340,7 +350,7 @@ def main():
         inserer_examen_blanc(rnd, an)
         inserer_lignes_action(rnd, an)
         inserer_synoptique(niveau, an)
-        print("Comptes : responsable / cp1 / cp2 / chef / agent (mot de passe demo1234) ; admin / admin123.")
+        print("Comptes : responsable / cp1 / cp2 / chef (DOSP) / rh (RH) / agent (mot de passe demo1234) ; admin / admin123.")
 
 
 if __name__ == "__main__":

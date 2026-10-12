@@ -94,6 +94,10 @@ DROITS = {
     "jur_up": {"admin", "responsable", "cp", "chef_service"},     # activités des unités pédagogiques (CS / DDEMP)
     "jur_divisions": {"admin", "responsable", "chef_service"},    # divisions, modules et attributions (CS / DDEMP)
     "jur_synoptique": {"admin", "responsable", "chef_service"},   # tableau synoptique de la CS / DDEMP
+    # v1.6 – comptes des directeurs et enseignants (a_integration : /juridiction/comptes) ; financement des écoles
+    # (subventions, cotisations de cantine, dépenses, bilan et budget : /juridiction/financement)
+    "jur_comptes": {"admin", "responsable", "chef_service"},
+    "jur_financement": {"admin", "responsable", "chef_service", "agent"},
 }
 TYPES_DOCS = {
     "carte": "Carte d'élève",
@@ -1147,9 +1151,21 @@ def create_app(test_config=None):
         return render_template("verifier.html", code=code, doc=doc, eleve=eleve)
 
     # ------------------------------------------------------------ utilisateurs & journal
+    def divisions_comptes():
+        """CS / DDEMP (v1.6) : divisions / services de la structure pour le champ « Division / service » des comptes
+        chef_service / agent (utilisateurs.service_code, colonne créée par a_integration). [] hors juridiction."""
+        if not config.juridiction() or not getattr(H, "jur_services_liste", None):
+            return []
+        return H.jur_services_liste()
+
+    def service_code_saisi(divisions):
+        code = (request.form.get("service_code") or "").strip()
+        return code if code and any(d["code"] == code for d in divisions) else None
+
     @app.route("/utilisateurs", methods=["GET", "POST"])
     @connexion_requise("parametres")
     def utilisateurs():
+        divisions = divisions_comptes()
         if request.method == "POST":
             action = request.form.get("action")
             if action == "creer":
@@ -1162,9 +1178,12 @@ def create_app(test_config=None):
                 elif q("SELECT 1 FROM utilisateurs WHERE identifiant=?", (ident,), un=True):
                     flash("Cet identifiant existe déjà.", "danger")
                 else:
-                    ex("INSERT INTO utilisateurs (identifiant, nom, role, mdp_hash, doit_changer_mdp) VALUES (?,?,?,?,1)",
-                       (ident, nom, role, generate_password_hash(mdp)))
-                    journal("utilisateur_cree", f"{ident} ({role})")
+                    uid = ex("INSERT INTO utilisateurs (identifiant, nom, role, mdp_hash, doit_changer_mdp) VALUES (?,?,?,?,1)",
+                             (ident, nom, role, generate_password_hash(mdp)))
+                    code = service_code_saisi(divisions) if role in ("chef_service", "agent") else None
+                    if code:
+                        ex("UPDATE utilisateurs SET service_code=? WHERE id=?", (code, uid))
+                    journal("utilisateur_cree", f"{ident} ({role}" + (f", division {code}" if code else "") + ")")
                     flash(f"Compte {ident} créé. Mot de passe à changer à la première connexion.", "success")
             else:
                 uid = request.form.get("uid", type=int)
@@ -1180,8 +1199,23 @@ def create_app(test_config=None):
                        (generate_password_hash(nouveau), uid))
                     journal("utilisateur_reinit", u["identifiant"])
                     flash(f"Mot de passe provisoire de {u['identifiant']} : {nouveau}", "info")
+                elif action == "service" and divisions:
+                    # CS / DDEMP : division / service de rattachement (périmètre d'accès, a_integration)
+                    code = service_code_saisi(divisions)
+                    ex("UPDATE utilisateurs SET service_code=? WHERE id=?", (code, uid))
+                    journal("utilisateur_service", f"{u['identifiant']} → {code or '(aucune)'}")
+                    flash(f"Division de {u['identifiant']} : {code or 'aucune (accès à toute l\'application)'}.", "success")
             return redirect(url_for("utilisateurs"))
-        return render_template("utilisateurs.html", users=q("SELECT * FROM utilisateurs ORDER BY nom"))
+        users = [dict(u) for u in q("SELECT * FROM utilisateurs ORDER BY nom")]
+        if divisions:   # division effective : utilisateurs.service_code, sinon celle de la fiche agent (jur_agents)
+            noms = {d["code"]: (d["sigle"] or d["code"].upper()) for d in divisions}
+            agents = {r["user_id"]: r["service_code"] for r in q("SELECT user_id, service_code FROM jur_agents "
+                                                                 "WHERE actif=1 AND user_id IS NOT NULL")}
+            for u in users:
+                code = u.get("service_code") or agents.get(u["id"])
+                u["division"] = noms.get(code, code or "")
+                u["division_origine"] = "compte" if u.get("service_code") else ("agent" if agents.get(u["id"]) else "")
+        return render_template("utilisateurs.html", users=users, divisions=divisions)
 
     @app.route("/journal")
     @connexion_requise("parametres")

@@ -1,0 +1,72 @@
+{% extends "base.html" %}{% block titre %}Comptes des directeurs et enseignants{% endblock %}
+{% block contenu %}
+<style>.deux-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:18px}</style>
+<div class="entete">
+  <div><h1>Comptes des directeurs et enseignants</h1>
+    <p class="sous">Comptes GESCOL des directeurs et des enseignants des écoles de la {{ 'DDEMP' if DDEMP else 'circonscription' }} : chaque compte est
+      rattaché à son école (ouverte d'office à la connexion) ; un enseignant est affecté à ses classes. {{ nb_dir }} directeur(s), {{ nb_ens }} enseignant(s).</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_comptes_xlsx', ecole=f.ecole, role=f.role, q=f.q) }}">Excel</a>
+    {% if ep_existe('jur_messages') %}<a class="btn sec" href="{{ url_for('jur_messages') }}">WhatsApp et SMS</a>{% endif %}
+    {% if peut('parametres') %}<a class="btn sec" href="{{ url_for('utilisateurs') }}">Tous les utilisateurs</a>{% endif %}
+  </div>
+</div>
+
+<div class="deux-col">
+<section class="carte"><h2>Nouveau compte directeur</h2>
+  <form method="post" class="form">
+    <input type="hidden" name="action" value="creer"><input type="hidden" name="role" value="directeur">
+    <div class="grille">
+      <label>École <select name="ecole" required><option value="">— choisir —</option>
+        {% for x in ecoles %}<option value="{{ x.j.id }}">{{ x.j.nom }}{% if x.j.directeur_nom %} – {{ x.j.directeur_nom }}{% endif %}</option>{% endfor %}</select></label>
+      <label>Nom et prénoms <input name="nom" placeholder="vide : directeur de la fiche école"></label>
+      <label>Identifiant <input name="identifiant" placeholder="vide : dir-<code école>"></label>
+      <label>Mot de passe provisoire <input name="mdp" placeholder="vide : généré (8 caractères)"></label>
+    </div>
+    <p><button class="btn">Créer le compte directeur</button> <span class="aide">L'école est ouverte dans les modules si ce n'est pas encore fait ; le mot de passe doit être changé à la première connexion.</span></p>
+  </form>
+</section>
+<section class="carte"><h2>Nouveau compte enseignant</h2>
+  <form method="post" class="form">
+    <input type="hidden" name="action" value="creer"><input type="hidden" name="role" value="enseignant">
+    <div class="grille">
+      <label>École <select name="ecole" required><option value="">— choisir —</option>
+        {% for x in ecoles %}<option value="{{ x.j.id }}">{{ x.j.nom }}</option>{% endfor %}</select></label>
+      <label>Nom et prénoms <input name="nom" required></label>
+      <label>Identifiant <input name="identifiant" placeholder="vide : prenom.nom"></label>
+      <label>Mot de passe provisoire <input name="mdp" placeholder="vide : généré (8 caractères)"></label>
+    </div>
+    <p><button class="btn">Créer le compte enseignant</button> <span class="aide">Après la création, affectez l'enseignant à ses classes (bouton « Classes ») si elles existent dans l'école ouverte.</span></p>
+  </form>
+</section>
+</div>
+
+<form method="get" class="form carte" style="margin-top:12px">
+  <div class="grille">
+    <label>École <select name="ecole"><option value="">Toutes</option>{% for x in ecoles %}<option value="{{ x.j.id }}" {{ 'selected' if f.ecole == x.j.id|string }}>{{ x.j.nom }}</option>{% endfor %}</select></label>
+    <label>Rôle <select name="role"><option value="">Directeurs et enseignants</option><option value="directeur" {{ 'selected' if f.role == 'directeur' }}>Directeurs</option><option value="enseignant" {{ 'selected' if f.role == 'enseignant' }}>Enseignants</option></select></label>
+    <label>Recherche <input name="q" value="{{ f.q }}" placeholder="nom, identifiant, école"></label>
+    <label>&nbsp;<button class="btn sec">Filtrer</button></label>
+  </div>
+</form>
+
+<div class="tw"><table class="t">
+  <thead><tr><th>N°</th><th>Nom et prénoms</th><th>Identifiant</th><th>Rôle</th><th>École</th>{% if DDEMP %}<th>CS</th>{% endif %}<th>Zone</th><th>Classes</th><th>État</th><th></th></tr></thead>
+  <tbody>
+  {% for c in comptes %}
+  <tr><td>{{ loop.index }}</td><td><b>{{ c.nom }}</b></td><td>{{ c.identifiant }}</td><td>{{ ROLES[c.role] }}</td>
+    <td>{{ c.ecole_nom or '—' }}</td>{% if DDEMP %}<td>{{ c.cs }}</td>{% endif %}<td>{{ c.zone }}</td>
+    <td>{{ c.nb_classes if c.role == 'enseignant' else '—' }}</td>
+    <td>{% if c.actif %}<span class="badge ok">actif</span>{% else %}<span class="badge ko">désactivé</span>{% endif %}
+      {% if c.doit_changer_mdp %}<span class="badge att">mot de passe provisoire</span>{% endif %}</td>
+    <td class="num"><form method="post" class="actions" style="justify-content:flex-end">
+      <input type="hidden" name="uid" value="{{ c.id }}">
+      {% if peut('parametres') %}<a class="btn sec petit" href="{{ url_for('affectations', uid=c.id) }}">Classes</a>{% endif %}
+      <button class="btn sec petit" name="action" value="reinit">Réinitialiser le mot de passe</button>
+      {% if c.id != g.user.id %}<button class="btn sec petit" name="action" value="basculer" onclick="return confirm('{{ 'Désactiver' if c.actif else 'Réactiver' }} le compte {{ c.identifiant }} ?')">{{ 'Désactiver' if c.actif else 'Réactiver' }}</button>{% endif %}
+    </form></td></tr>
+  {% else %}<tr><td colspan="{{ 10 if DDEMP else 9 }}" class="aide">Aucun compte directeur ou enseignant : créez-en un ci-dessus.</td></tr>{% endfor %}
+  </tbody></table></div>
+<p class="aide">Les codes d'accès (identifiant et mot de passe provisoire) s'impriment en PDF à la création ou à la réinitialisation d'un compte.
+  Un compte directeur a les droits du directeur sur son école seulement ; un compte enseignant voit ses classes (notes, appel, documents).</p>
+{% endblock %}

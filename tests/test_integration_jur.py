@@ -202,6 +202,13 @@ class TestIntegrationCS(unittest.TestCase):
             cid = q("SELECT id FROM classes WHERE nom='CM2 TEST'", un=True)["id"]
         # chaque compte ouvre l'école pour lui-même (session) : tant qu'il ne l'a pas fait, page de choix
         jid = self.jur[0]["id"]
+        # v1.6 : le compte « chef » de la démo est rattaché à la division DOSP (périmètre limité, tests/test_perimetres) ;
+        # ici on teste les droits du rôle chef_service sans périmètre : le compte est détaché le temps du test
+        def division_chef(code):
+            with app.app_context():
+                ex("UPDATE utilisateurs SET service_code=? WHERE identifiant='chef'", (code,))
+        division_chef(None)
+        self.addCleanup(division_chef, "organisation")
         chef = client("chef")
         self.assertIn("Choisissez une école", txt(chef.get("/eleves")))
         self.assertEqual(chef.post(f"/juridiction/ecoles-modules/{jid}/ouvrir").status_code, 302)

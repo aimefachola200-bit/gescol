@@ -10,8 +10,14 @@ Décisions
   * La liste des divisions de la CS suit l'AOF (a_structure.SERVICES_DEFAUT, articles 9 à 14 : Division du Secrétariat
     art. 10, Division de l'Animation Pédagogique art. 11, Division de l'Administration et des Finances art. 12,
     Division de l'Organisation Scolaire et de la Prévision art. 13). Le « Service du Personnel et des Affaires
-    financières » (CSPAF) est CONSERVÉ parce que le client y fait référence ; il est marqué « hors AOF » tant que le
-    texte officiel n'est pas saisi.
+    financières » (CSPAF), conservé parce que le client y fait référence, devient en v1.6 le « Service des Ressources
+    Humaines » (RH, code inchangé « personnel ») : « le personnel de l'école au RH de la CS » — ses modules sont ceux
+    du personnel de la juridiction ET du personnel de l'école ouverte (comme le SRH de la DDEMP) ; les affaires
+    financières relèvent de la CDAF. Il reste marqué « hors AOF » tant que le texte officiel n'est pas saisi.
+  * Périmètre d'accès (v1.6, a_integration.perimetre_utilisateur) : un compte chef_service / agent rattaché à une
+    division (utilisateurs.service_code, sinon jur_agents.user_id) n'accède qu'aux modules de MODULES_PAR_DIVISION
+    de sa division (et à leurs sous-pages) ; la fiche /juridiction/divisions/<code> montre les comptes rattachés et
+    leur périmètre (H.perimetre_division).
   * DDEMP : le texte de l'AOF n'a pas pu être obtenu ; les attributions des services ont été rédigées par GESCOL et
     sont marquées « Rédigé par GESCOL, à conformer à l'AOF ». Le bouton « Saisir le texte de l'AOF » (numéro d'article +
     attributions collées) remplace le texte rédigé et change la source en « AOF – article N ».
@@ -122,10 +128,23 @@ _PERS = [("Personnel et carrière (par catégorie)", "jur_personnel", "jur_perso
          ("Départs à la retraite", "jur_retraite", "jur_personnel"),
          ("Agents de la structure", "jur_agents", "jur_personnel"),
          ("Attestations et certificats", "jur_documents", "jur_documents")]
+# v1.6 : personnel de l'école ouverte (RH de la CS, SRH de la DDEMP) + comptes des directeurs et enseignants
+_PERS_ECOLE = [("Personnel de l'école ouverte", "personnel", None),
+               ("Gestion de carrière des enseignants (école ouverte)", "carriere_accueil", None),
+               ("Documents de l'enseignant (certificats, fiches d'évaluation)", "docs_enseignant_accueil", None),
+               ("Tableau synoptique du personnel (école ouverte)", "synoptique_personnel_liste", None),
+               ("Comptes des directeurs et enseignants", "jur_comptes", "jur_comptes"),
+               ("Messages WhatsApp / SMS aux directeurs et enseignants", "jur_messages", None)]
 _FIN = [("Frais de relevés (CEP)", "jur_cep_frais", "jur_cep"),
         ("Patrimoine et infrastructures", "patrimoine_accueil", None),
         ("Cantine scolaire", "cantine_accueil", None),
         ("Vivres et stock", "stock_accueil", None)]
+# v1.6 : financement des écoles (subventions de l'État, cotisations de cantine, dépenses, trésorerie, bilan et budget)
+_FIN_ECOLE = [("Financement des écoles (subventions, cantine, dépenses, bilan)", "jur_financement", "jur_financement"),
+              ("Subventions de l'État et recettes (école ouverte)", "recettes_accueil", None),
+              ("Dépenses (école ouverte)", "depenses_accueil", None),
+              ("Trésorerie, bilan et budget (école ouverte)", "tresorerie", None),
+              ("Frais de dossier CEP (école ouverte)", "cep_frais", None)]
 _SECR = [("Courrier (arrivée, départ)", "courrier", None),
          ("Archives", "archives", None),
          ("Attestations et certificats", "jur_documents", "jur_documents"),
@@ -144,9 +163,11 @@ MODULES_PAR_DIVISION = {
     "ccs": _TABLEAU + _STATS + _CEP[:3] + _PEDA[:4] + _PERS[:1] + _SERV + _JUR,
     "cp": _PEDA + [("Fiches des écoles (lecture)", "jur_fiches", "jur_fiches")],
     "secretariat": _SECR + _DONNEES + [("Services et attributions", "jur_organigramme", None)],
-    "personnel": _PERS + _FIN + [("Courrier", "courrier", None), ("Archives", "archives", None)],   # SPAF / CSPAF
+    # v1.6 : Service des Ressources Humaines (RH, ex-CSPAF) : personnel de la juridiction + personnel de l'école
+    # ouverte (comme le SRH de la DDEMP) ; les affaires financières passent à la CDAF
+    "personnel": _PERS + _PERS_ECOLE,                                                                # RH
     "animation": _PEDA + _CEP[3:],                                                                   # CDAP
-    "administration": _PERS + _FIN + _SECR[:2] + _DONNEES,                                          # CDAF
+    "administration": _PERS + _FIN + _FIN_ECOLE + _SECR[:2] + _DONNEES,                             # CDAF
     "organisation": _TABLEAU + _STATS + _FICHES + _CEP + _PEDA[:2] + _JUR +                       # DOSP / CDOSP
                     [("Transmissions : recevoir", "jur_transmissions", "jur_transmission"),
                      ("Suivi des envois des écoles", "jur_transmission_suivi", "jur_transmission"),
@@ -156,13 +177,10 @@ MODULES_PAR_DIVISION = {
     "sec": _CEP + [("Épreuves et grilles", "epreuves_accueil", None)],
     "semp": _TABLEAU + _STATS + _FICHES + _PEDA + _JUR,
     # DDEMP : le personnel enseignant et administratif relève du Service des Ressources Humaines (SRH)
-    "srh": _PERS + [("Personnel de l'école ouverte", "personnel", None),
-                    ("Gestion de carrière des enseignants (école ouverte)", "carriere_accueil", None),
-                    ("Documents de l'enseignant (certificats, fiches d'évaluation)", "docs_enseignant_accueil", None),
-                    ("Tableau synoptique du personnel (école ouverte)", "synoptique_personnel_liste", None),
-                    ("Messages WhatsApp / SMS aux directeurs et enseignants", "jur_messages", None)],
-    "spaf": _FIN + _SECR[:2] + _SECR[3:] + _DONNEES + _STATS[:1],
+    "srh": _PERS + _PERS_ECOLE,
+    "spaf": _FIN + _FIN_ECOLE + _SECR[:2] + _SECR[3:] + _DONNEES + _STATS[:1],
     "cantines": [("Cantine scolaire", "cantine_accueil", None), ("Vivres et stock", "stock_accueil", None),
+                 ("Financement des écoles (cotisations de cantine, subventions)", "jur_financement", "jur_financement"),
                  ("Statistiques des écoles", "jur_stats_ecoles", None)],
     "statistiques": _TABLEAU + _STATS + _FICHES + _CEP[:2] + _DONNEES + [("Fiches consolidées", "jur_fiches_synthese", "jur_fiches")],
     "infrastructures": [("Patrimoine et infrastructures", "patrimoine_accueil", None),
@@ -469,6 +487,23 @@ def enregistrer(app, H):
             out.append(d)
         return out
 
+    def comptes_division(code):
+        """Comptes utilisateurs rattachés à la division : utilisateurs.service_code (prioritaire), sinon la fiche
+        agent (jur_agents.user_id → service_code). Seuls les rôles chef_service / agent ont un périmètre."""
+        cols = {c[1] for c in q("PRAGMA table_info(utilisateurs)")}
+        out, vus = [], set()
+        if "service_code" in cols:
+            for u in q("SELECT * FROM utilisateurs WHERE actif=1 AND service_code=? ORDER BY nom", (code,)):
+                out.append(dict(u, origine="compte", limite=u["role"] in ("chef_service", "agent")))
+                vus.add(u["id"])
+        for u in q("""SELECT u.* FROM jur_agents a JOIN utilisateurs u ON u.id=a.user_id
+                      WHERE a.actif=1 AND a.service_code=? AND u.actif=1 ORDER BY u.nom""", (code,)):
+            if u["id"] in vus or ("service_code" in cols and u["service_code"] and u["service_code"] != code):
+                continue   # division du compte prioritaire sur celle de la fiche agent
+            out.append(dict(u, origine="agent", limite=u["role"] in ("chef_service", "agent")))
+            vus.add(u["id"])
+        return out
+
     def division_ou_404(code, annee=None):
         completer_sources()
         d = S.service_par_code(code)
@@ -477,6 +512,8 @@ def enregistrer(app, H):
         d = rubrique(dict(d))
         d["modules"] = modules_division(app, code)
         d["agents"] = agents_par_service().get(code, [])
+        d["comptes"] = comptes_division(code)
+        d["perimetre"] = H.perimetre_division(code) if getattr(H, "perimetre_division", None) else None
         if annee:
             generer(d, annee)
             d["lignes"] = lignes(code, annee)

@@ -59,26 +59,33 @@
   {{ lien('cantine_config', 'Configuration (montants)', ep=='cantine_config') }}
   {% if peut('stock') and ep_existe('stock_accueil') %}{{ lien('stock_accueil', 'Vivres et stock', ep.startswith('stock')) }}{% endif %}
 {% endcall %}{% endif %}
-{% if peut('paiements') or peut('tresorerie') or peut('paie') or (PUB_ and (peut('carriere') or peut('depenses'))) %}
-{% call groupe('fin', "Finances de l'école", ep.startswith('paiement') or ep=='impayes' or ep.startswith('tresorerie') or ep.startswith('paie') or ep.startswith('depense') or ep.startswith('recette') or ep.startswith('cep_frais'), '💰') %}
-  {% if PUB_ %}
-  {% if peut('depenses') %}{{ lien('depenses_accueil', 'Dépenses (fonds de cantine…)', ep.startswith('depense')) }}
-  {{ lien('recettes_accueil', 'Subventions et recettes', ep.startswith('recette')) }}
+{# v1.6 – « Le financement prend en compte les subventions de l'État et les cotisations des cantines, bilan et budget » :
+   quelle que soit l'édition de l'école ouverte, les subventions, cotisations de cantine, dépenses, trésorerie, bilan et
+   budget sont proposés ; la scolarité et la paie restent réservées à une école privée. #}
+{% if peut('paiements') or peut('tresorerie') or peut('paie') or peut('depenses') or peut('cantine') or peut('stock') %}
+{% call groupe('fin', "Finances de l'école", ep.startswith('paiement') or ep=='impayes' or ep.startswith('tresorerie') or ep.startswith('paie') or ep.startswith('depense') or ep.startswith('recette') or ep.startswith('cep_frais') or ep in ('cantine_impayes','cantine_impayes_pdf'), '💰') %}
+  {% if peut('depenses') %}{{ lien('recettes_accueil', "Subventions de l'État et recettes", ep.startswith('recette')) }}{% endif %}
+  {% if peut('cantine') %}{{ lien('cantine_accueil', 'Cotisations de cantine (paiements)', false) }}
+  {{ lien('cantine_impayes', 'Impayés de cantine', ep=='cantine_impayes') }}{% endif %}
+  {% if peut('depenses') %}{{ lien('depenses_accueil', 'Dépenses', ep.startswith('depense')) }}
   {{ lien('cep_frais', 'Frais de dossier CEP', ep.startswith('cep_frais')) }}{% endif %}
-  {% if peut('paiements') %}{{ lien('paiements_en_ligne', 'Paiements en ligne (facultatif)', ep=='paiements_en_ligne') }}{% endif %}
-  {% else %}
-  {% if peut('paiements') %}{{ lien('paiements', 'Paiements de scolarité', ep in ('paiements','paiement_nouveau')) }}
-  {{ lien('impayes', 'Impayés', ep=='impayes') }}
-  {{ lien('paiements_en_ligne', 'Paiements en ligne', ep=='paiements_en_ligne') }}{% endif %}
-  {% endif %}
   {% if peut('tresorerie') %}{{ lien('tresorerie', 'Trésorerie', ep=='tresorerie') }}
   {{ lien('tresorerie_bilan', 'Bilan et budget', ep in ('tresorerie_bilan','tresorerie_budget')) }}{% endif %}
-  {% if not PUB_ and peut('paie') %}{{ lien('paie_accueil', 'Paie', ep in ('paie_accueil','paie_mois')) }}{% endif %}
+  {% if peut('stock') and ep_existe('stock_accueil') %}{{ lien('stock_accueil', 'Vivres et stock', false) }}{% endif %}
+  {% if not PUB_ %}
+  {% if peut('paiements') %}{{ lien('paiements', 'Paiements de scolarité (école privée)', ep in ('paiements','paiement_nouveau')) }}
+  {{ lien('impayes', 'Impayés de scolarité', ep=='impayes') }}{% endif %}
+  {% if peut('paie') %}{{ lien('paie_accueil', 'Paie (école privée)', ep in ('paie_accueil','paie_mois')) }}{% endif %}
+  {% endif %}
+  {% if peut('paiements') %}{{ lien('paiements_en_ligne', 'Paiements en ligne (facultatif)', ep=='paiements_en_ligne') }}{% endif %}
 {% endcall %}{% endif %}
 {% if peut('carriere') or peut('paie') %}
-{% call groupe('pers', "Personnel de l'école", ep.startswith('personnel') or ep.startswith('carriere'), '🧑‍🏫') %}
+{# v1.6 – « Le personnel de l'école au RH de la CS » #}
+{% call groupe('pers', "Personnel de l'école (RH)", ep.startswith('personnel') or ep.startswith('carriere'), '🧑‍🏫') %}
   {{ lien('personnel', 'Personnel', ep.startswith('personnel')) }}
   {% if peut('carriere') %}{{ lien('carriere_accueil', 'Gestion de carrière des enseignants', ep.startswith('carriere')) }}{% endif %}
+  {% if peut('docs_enseignant') %}{{ lien('docs_enseignant_accueil', "Documents de l'enseignant", false) }}{% endif %}
+  {% if peut('jur_comptes') %}{{ lien('jur_comptes', 'Comptes des directeurs et enseignants', false) }}{% endif %}
 {% endcall %}{% endif %}
 {% call groupe('vie', 'Vie de la ' ~ ('CS' if JUR_NIVEAU == 'cs' else 'DDEMP'), ep.startswith('maitre_semaine') or ep.startswith('visite') or ep.startswith('patrimoine') or ep.startswith('recensement') or ep.startswith('docs_enseignant') or ep.startswith('rapports') or ep.startswith('synoptique'), '🏫') %}
   {% if peut('recensement') %}{{ lien('recensement_accueil', "Carte d'identité (recensement, rapports, certificats)", ep.startswith('recensement')) }}{% endif %}
@@ -90,12 +97,13 @@
   {% if peut('synthese') %}{{ lien('jur_synthese_eval', "Synthèse de l'évaluation (" ~ ('CS' if JUR_NIVEAU == 'cs' else 'DDEMP') ~ ')', ep=='jur_synthese_eval') }}{% endif %}
   {% if peut('synoptique') and ep_existe('synoptique_accueil') %}{{ lien('synoptique_accueil', 'Tableau synoptique', ep.startswith('synoptique')) }}{% endif %}
 {% endcall %}
-{% if peut('communication') or peut('parents') %}
-{% set nb = messages_non_lus() + whatsapp_en_attente() %}
-{% call groupe('par', 'Parents' ~ (' (' ~ nb ~ ')' if nb else ''), ep in ('communication','parents_liste'), '✉') %}
-  {% if peut('communication') %}{{ lien('communication', 'Messages et WhatsApp', ep=='communication') }}{% endif %}
-  {% if peut('parents') %}{{ lien('parents_liste', 'Comptes parents', ep=='parents_liste') }}{% endif %}
-  {% if peut('eleves') %}{{ lien('espace_eleves_acces', 'Comptes élèves', ep=='espace_eleves_acces') }}{% endif %}
+{# v1.6 – « Remplace le compte parent par le compte des directeurs et enseignants dans CS et DDEMP » : le groupe
+   « Parents » des éditions école (messages aux parents, comptes parents, comptes élèves) n'est pas proposé ; les pages
+   restent accessibles par leur adresse (/communication, /parents, /eleves/acces-eleves). #}
+{% if peut('jur_comptes') or ep_existe('jur_messages') %}
+{% call groupe('dir', 'Directeurs et enseignants', ep.startswith('jur_comptes') or ep=='jur_messages' or ep=='affectations', '✉') %}
+  {% if peut('jur_comptes') %}{{ lien('jur_comptes', 'Comptes des directeurs et enseignants', ep.startswith('jur_comptes') or ep=='affectations') }}{% endif %}
+  {{ lien('jur_messages', 'WhatsApp et SMS : directeurs et enseignants', ep=='jur_messages') }}
 {% endcall %}{% endif %}
 {% if peut('donnees') %}
 {% call groupe('don', 'Données', ep.startswith('donnees') or ep.startswith('educmaster') or ep.startswith('conversion'), '⇅') %}

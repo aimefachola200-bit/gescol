@@ -120,4 +120,6 @@ details.aof summary{cursor:pointer;font-weight:600;color:var(--bleu)}
     </table></div>{% else %}<p class="gris">Aucun agent affecté{% if ep_existe('jur_agents') %} : <a href="{{ url_for('jur_agents') }}">Agents de la structure</a> (champ « service »){% endif %}.</p>{% endif %}
   </section>
 </div>
+{# v1.6 : comptes rattachés à la division et périmètre d'accès (a_integration) #}
+{% include "jur_division_perimetre.html" ignore missing %}
 {% endblock %}
