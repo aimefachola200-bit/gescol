@@ -21,7 +21,8 @@ a = Analysis(
                    "m_visites", "m_patrimoine", "m_recensement", "m_docs_enseignant", "m_rapports", "m_transmission",
                    "m_juridiction", "jur_format", "jur_calc", "a_transmission", "a_tableau", "a_cep", "a_personnel",
                    "a_structure", "a_visites", "a_fiches",
-                   "m_synoptique", "m_stock_cantine", "m_epreuves", "a_divisions", "a_up", "a_integration", "waitress", "openpyxl", "pdfplumber"]
+                   "m_synoptique", "m_stock_cantine", "m_epreuves", "m_calendrier_officiel", "m_themes_up", "a_divisions", "a_up",
+                   "a_integration", "a_synoptique", "m_perimetre_enseignant", "waitress", "openpyxl", "pdfplumber"]
     + collect_submodules("reportlab.graphics.barcode")
     + collect_submodules("openpyxl")
     + collect_submodules("pdfplumber")

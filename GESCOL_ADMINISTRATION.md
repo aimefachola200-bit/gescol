@@ -48,6 +48,8 @@ Le fichier contient : les effectifs, le personnel avec sa carrière, les visites
 
 GESCOL Circonscription et GESCOL DDEMP restent **deux applications distinctes** (fichiers d'installation, dossiers de données et ports différents) ; elles ne sont pas installées ensemble.
 
+- **Version 1.6 (suite)** : tableau synoptique de la CS / DDEMP (identité, personnel, réseau, divisions, comités, calendrier scolaire, thèmes d'UP) ; aucune école ouverte d'office (choisir une école pour utiliser ses modules) ; comptes des directeurs et enseignants (à la place des parents), service RH de la CS, financement (subventions de l'État, cotisations de cantine, bilan et budget, page consolidée), accès de chaque division limité à son périmètre ; calendrier scolaire officiel et thèmes d'UP / conférences / formations groupées (planning DIIP 2026-2027).
+
 ## Ce que contiennent les applications
 
 - **Tableau de bord** de la juridiction :

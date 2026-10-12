@@ -1457,7 +1457,7 @@ def enregistrer(app, H):
                 y = self.height - 10
                 titre_t = (idc.get("titulaire_titre") or "Le titulaire").upper()
                 nom_t = d.get("titulaire_visa") or idc.get("titulaire_nom") or ""
-                P.bloc_signature(c, utile * 0.18, y, titre_t, nom_t, P.image_data_url(H.signature(f"classe:{cl['id']}:titulaire")),
+                P.bloc_signature(c, utile * 0.18, y, titre_t, nom_t, P.image_data_url((H.signature_titulaire(cl['id']) if getattr(H, "signature_titulaire", None) else None) or H.signature(f"classe:{cl['id']}:titulaire")),
                                  cachet=False, lieu_date=False, largeur=40 * mm)
                 titre_d = f"{'LA' if (idc.get('directeur_titre') or '').startswith('Directrice') else 'LE'} {(idc.get('directeur_titre') or 'Directeur').upper()}"
                 sig_d = P.image_data_url(H.signature(f"ecole:{H.eco()}:directeur")) or P.signature_directeur()

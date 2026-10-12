@@ -60,6 +60,7 @@
     <h3 id="cour-nom">—</h3><div class="aide" id="cour-mat"></div>
     <div class="actions" style="margin-top:10px">
       <button type="button" class="btn" id="b-cam">Allumer la caméra</button>
+      <button type="button" class="btn sec" id="b-face" title="Caméra avant / arrière">⇄ Basculer la caméra</button>
       <button type="button" class="btn vert" style="color:#fff" id="b-prendre" hidden>Prendre la photo</button>
       <button type="button" class="btn sec" id="b-passer">Passer</button>
       <label class="btn sec">Fichier / appareil photo<input type="file" id="f-photo" accept="image/*" capture="environment" hidden></label>
@@ -110,11 +111,21 @@
         setTimeout(function(){ if(flux) ap.hidden=true; choisir(i+1); }, 700);
       }).catch(function(){ occupe=false; toast('Connexion au serveur impossible : photo non enregistrée.',false); });
   }
+  var face=(function(){try{return localStorage.getItem('gescol-camera-face')||'environment';}catch(e){return 'environment';}})();
+  function ouvrir(f){
+    return navigator.mediaDevices.getUserMedia({video:{facingMode:f,width:{ideal:1280}},audio:false});
+  }
+  document.getElementById('b-face').addEventListener('click',function(){
+    face=(face==='environment')?'user':'environment';
+    try{localStorage.setItem('gescol-camera-face',face);}catch(e){}
+    if(flux){ flux.getTracks().forEach(function(t){t.stop();}); flux=null; bCam.click(); }
+    else { toast('Caméra '+(face==='user'?'avant':'arrière')+' sélectionnée.',true); }
+  });
   bCam.addEventListener('click',function(){
     if(flux){ flux.getTracks().forEach(function(t){t.stop();}); flux=null; vid.hidden=true; guide.hidden=true; bPr.hidden=true; bCam.textContent='Allumer la caméra'; msg.hidden=false; msg.textContent='Caméra éteinte.'; return; }
     if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)||!window.isSecureContext){
       toast('Caméra non disponible ici (connexion non sécurisée) : utilisez « Fichier / appareil photo ».',false); return; }
-    navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280}},audio:false}).then(function(s){
+    ouvrir(face).catch(function(){ return ouvrir(face==='environment'?'user':'environment'); }).then(function(s){
       flux=s; vid.srcObject=s; vid.hidden=false; guide.hidden=false; ap.hidden=true; msg.hidden=true; bPr.hidden=false; bCam.textContent='Éteindre la caméra'; vid.play();
     }).catch(function(){ toast('Caméra inaccessible : autorisez-la dans le navigateur ou utilisez « Fichier / appareil photo ».',false); });
   });
