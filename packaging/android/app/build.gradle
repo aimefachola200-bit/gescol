@@ -27,6 +27,10 @@ android {
             storePassword cleMdp
             keyAlias cleAlias
             keyPassword cleAliasMdp
+            // v1.6 : signatures v1 + v2 + v3 (certains téléphones refusent un APK signé seulement en v2)
+            enableV1Signing true
+            enableV2Signing true
+            enableV3Signing true
         }
     }
 
