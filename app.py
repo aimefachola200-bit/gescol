@@ -1223,7 +1223,8 @@ def create_app(test_config=None):
                     code = service_code_saisi(divisions)
                     ex("UPDATE utilisateurs SET service_code=? WHERE id=?", (code, uid))
                     journal("utilisateur_service", f"{u['identifiant']} → {code or '(aucune)'}")
-                    flash(f"Division de {u['identifiant']} : {code or 'aucune (accès à toute l\'application)'}.", "success")
+                    libelle_div = code or "aucune (accès à toute l’application)"
+                    flash(f"Division de {u['identifiant']} : {libelle_div}.", "success")
             return redirect(url_for("utilisateurs"))
         users = [dict(u) for u in q("SELECT * FROM utilisateurs ORDER BY nom")]
         if divisions:   # division effective : utilisateurs.service_code, sinon celle de la fiche agent (jur_agents)
