@@ -20,11 +20,13 @@
   {{ lien('jur_retraite', 'Départs à la retraite', ep.startswith('jur_retraite')) }}
   {{ lien('jur_agents', 'Agents de la ' ~ ('circonscription' if CS_ else 'DDEMP'), ep.startswith('jur_agent')) }}
 {% endcall %}
-{% call groupe('jpeda', 'Animation pédagogique', ep.startswith('jur_visite') or ep.startswith('jur_bilan') or ep.startswith('jur_up') or ep=='jur_cp', '🔎') %}
+{% call groupe('jpeda', 'Animation pédagogique', ep.startswith('jur_visite') or ep.startswith('jur_bilan') or ep.startswith('jur_up') or ep=='jur_cp' or ep.startswith('themes_up') or ep.startswith('calendrier_officiel'), '🔎') %}
   {{ lien('jur_visites', "Visites d'école et de classe", ep.startswith('jur_visite')) }}
   {{ lien('jur_bilan_activites', 'Bilan des activités des CP et CCS', ep.startswith('jur_bilan')) }}
   {{ lien('jur_cp', 'Conseillers pédagogiques (visites, synthèses)', ep=='jur_cp') }}
   {{ lien('jur_up', 'Unités pédagogiques (UP)', ep.startswith('jur_up')) }}
+  {% if ep_existe('themes_up') %}{{ lien('themes_up', "Thèmes d'UP, conférences et formations", ep.startswith('themes_up')) }}{% endif %}
+  {% if ep_existe('calendrier_officiel') %}{{ lien('calendrier_officiel', 'Calendrier scolaire officiel', ep.startswith('calendrier_officiel')) }}{% endif %}
 {% endcall %}
 {% call groupe('jfiche', 'Fiches des écoles', ep.startswith('jur_fiche'), '📋') %}
   {{ lien('jur_fiches', 'Recensement, rentrée, fin d’année', ep.startswith('jur_fiche') and ep!='jur_fiches_synthese') }}

@@ -48,10 +48,11 @@
       {{ lien('appel_stats', 'Absences (statistiques)', ep=='appel_stats') }}{% endif %}
       {% if peut('registre') %}{{ lien('registre_accueil', 'Registre de présence', ep.startswith('registre')) }}
       {{ lien('releve_mensuel', 'Relevés mensuels de présence', ep.startswith('releve')) }}
-      {{ lien('calendrier_scolaire', 'Calendrier (jours de classe)', ep.startswith('calendrier')) }}{% endif %}
+      {{ lien('calendrier_scolaire', 'Calendrier (jours de classe)', ep.startswith('calendrier_scolaire') or ep.startswith('calendrier_jour')) }}{% endif %}
+      {% if ep_existe('calendrier_officiel') %}{{ lien('calendrier_officiel', 'Calendrier scolaire officiel (MEMP)', ep.startswith('calendrier_officiel')) }}{% endif %}
       {% if peut('affichage') %}{{ lien('affichage_accueil', "Tableau d'affichage", ep.startswith('affichage')) }}{% endif %}
     {% endcall %}
-    {% call groupe('eval', 'Évaluations', ep.startswith('notes') or ep.startswith('eval') or ep.startswith('epreuves') or ep in ('resultats','matieres') or ep.startswith('bilan') or ep.startswith('honneur') or ep.startswith('synthese'), '✎') %}
+    {% call groupe('eval', 'Évaluations', ep.startswith('notes') or ep.startswith('eval') or ep.startswith('epreuves') or ep.startswith('themes_up') or ep in ('resultats','matieres') or ep.startswith('bilan') or ep.startswith('honneur') or ep.startswith('synthese'), '✎') %}
       {% if peut('evaluations') %}{{ lien('eval_accueil', 'Saisie des notes (évaluations)', ep.startswith('eval_') and ep not in ('eval_statistiques','eval_analyse')) }}
       {{ lien('eval_statistiques', 'Statistiques', ep=='eval_statistiques') }}
       {{ lien('eval_analyse', 'Analyse et rapport', ep=='eval_analyse') }}
@@ -60,6 +61,7 @@
       {% if peut('epreuves') and ep_existe('epreuves_accueil') %}{{ lien('epreuves_accueil', "Comité d'évaluation, épreuves et grilles", ep.startswith('epreuves')) }}{% endif %}
       {% if peut('notes') %}{{ lien('notes_accueil', 'Notes par période (bulletins)', ep.startswith('notes') or ep=='resultats') }}{% endif %}
       {% if peut('synthese') %}{{ lien('synthese_accueil', 'Synthèse École / UP / CS', ep.startswith('synthese')) }}{% endif %}
+      {% if ep_existe('themes_up') %}{{ lien('themes_up', "Thèmes d'UP, conférences et formations", ep.startswith('themes_up')) }}{% endif %}
       {{ lien('matieres', 'Matières et domaines', ep=='matieres') }}
     {% endcall %}
     {% if peut('cep') %}

@@ -93,6 +93,8 @@ DROITS = {
     "epreuves": {"admin", "directeur", "enseignant"},             # comité d'évaluation, épreuves et grilles
     "jur_up": {"admin", "responsable", "cp", "chef_service"},     # activités des unités pédagogiques (CS / DDEMP)
     "jur_divisions": {"admin", "responsable", "chef_service"},    # divisions, modules et attributions (CS / DDEMP)
+    "calendrier_officiel": {"admin", "directeur", "secretaire", "responsable", "chef_service"},   # calendrier scolaire (MEMP)
+    "themes_up": {"admin", "directeur", "responsable", "cp", "chef_service"},                     # thèmes d'UP, CP, FG
     "jur_synoptique": {"admin", "responsable", "chef_service"},   # tableau synoptique de la CS / DDEMP
     # v1.6 – comptes des directeurs et enseignants (a_integration : /juridiction/comptes) ; financement des écoles
     # (subventions, cotisations de cantine, dépenses, bilan et budget : /juridiction/financement)
@@ -373,7 +375,7 @@ MODULES = ["m_en_ligne", "m_ecoles", "m_parents", "m_paiement_en_ligne", "m_appe
            "m_juridiction", "a_transmission", "a_tableau", "a_cep", "a_personnel", "a_structure", "a_visites", "a_fiches",
            # v1.6 : tableau synoptique, vivres et stock, comité d'évaluation et épreuves (toutes éditions) ;
            # CS / DDEMP : divisions, unités pédagogiques, modules des écoles ouverts aux applications d'administration
-           "m_synoptique", "m_stock_cantine", "m_epreuves", "a_divisions", "a_up", "a_integration", "a_synoptique"]
+           "m_synoptique", "m_stock_cantine", "m_epreuves", "m_calendrier_officiel", "m_themes_up", "a_divisions", "a_up", "a_integration", "a_synoptique"]
 
 
 def create_app(test_config=None):

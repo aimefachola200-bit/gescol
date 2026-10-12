@@ -15,5 +15,7 @@
   <a class="{{ 'actif' if onglet == 'edt' }}" href="{{ url_for('synoptique_edt') }}">Emplois du temps</a>
   <a class="{{ 'actif' if onglet == 'planification' }}" href="{{ url_for('synoptique_planification') }}">Planification</a>
   <a class="{{ 'actif' if onglet == 'reglement' }}" href="{{ url_for('synoptique_reglement') }}">Règlement intérieur</a>
+  {% if ep_existe('calendrier_officiel') %}<a class="{{ 'actif' if onglet == 'calendrier' }}" href="{{ url_for('calendrier_officiel', retour='synoptique') }}">Calendrier scolaire</a>{% endif %}
+  {% if ep_existe('themes_up') %}<a class="{{ 'actif' if onglet == 'themes' }}" href="{{ url_for('themes_up', retour='synoptique') }}">Thèmes d'UP</a>{% endif %}
   {% if ecrire %}<a class="{{ 'actif' if onglet == 'import' }}" href="{{ url_for('synoptique_import') }}">Import / export</a>{% endif %}
 </nav>

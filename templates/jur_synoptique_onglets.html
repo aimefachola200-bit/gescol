@@ -14,5 +14,7 @@
   <a class="{{ 'actif' if onglet == 'reseau' }}" href="{{ url_for('jur_synoptique_reseau') }}">{{ 'Circonscriptions, zones et écoles' if ddemp else 'Zones, UP et écoles' }}</a>
   <a class="{{ 'actif' if onglet == 'services' }}" href="{{ url_for('jur_synoptique_services') }}">Divisions / services</a>
   <a class="{{ 'actif' if onglet == 'comites' }}" href="{{ url_for('jur_synoptique_comites') }}">Comités / instances</a>
+  {% if ep_existe('calendrier_officiel') %}<a class="{{ 'actif' if onglet == 'calendrier' }}" href="{{ url_for('calendrier_officiel', retour='jur_synoptique') }}">Calendrier scolaire</a>{% endif %}
+  {% if ep_existe('themes_up') %}<a class="{{ 'actif' if onglet == 'themes' }}" href="{{ url_for('themes_up', retour='jur_synoptique') }}">Thèmes d'UP</a>{% endif %}
   {% if ecrire %}<a class="{{ 'actif' if onglet == 'import' }}" href="{{ url_for('jur_synoptique_import') }}">Import / export</a>{% endif %}
 </nav>
