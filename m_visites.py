@@ -433,10 +433,12 @@ def enregistrer(app, H):
         titre_vis = ("LE VISITEUR (CP / CCS)" if vierge else
                      ("LE CONSEILLER PÉDAGOGIQUE" if qual == "CP" else "LE CHEF DE CIRCONSCRIPTION SCOLAIRE"))
         img_vis = P.image_data_url(H.signature(f"ecole:{H.eco()}:ccs")) if qual == "CCS" else None
-        img_ens = None
-        if cl and v.get("enseignant_nom") and cl.get("titulaire_nom") and \
+        # signature digitale de l'enseignant visité : son compte relié à sa fiche du personnel (enseignant:<uid>),
+        # sinon la signature du titulaire de la classe visitée quand c'est bien lui
+        img_ens = P.image_data_url(H.signature_agent(v.get("personnel_id"))) if not vierge else None
+        if img_ens is None and cl and v.get("enseignant_nom") and cl.get("titulaire_nom") and \
                 cl["titulaire_nom"].strip().lower() in v["enseignant_nom"].lower():
-            img_ens = P.image_data_url(H.signature(f"classe:{cl['id']}:titulaire"))
+            img_ens = P.image_data_url(H.signature_titulaire(cl["id"]))
         titre_dir = ide.get("directeur_titre") or "Directeur"
         titre_dir = f"{'LA' if titre_dir.lower().startswith('directrice') else 'LE'} {titre_dir.upper()}"
         sigs = [(titre_vis, "" if vierge else v.get("visiteur_nom") or "", img_vis, False),

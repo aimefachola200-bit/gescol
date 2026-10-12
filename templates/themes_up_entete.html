@@ -1,0 +1,21 @@
+{# En-tête commun des pages « Thèmes d'UP » : onglets du synoptique (si ?retour=…), titre, sélecteur d'année #}
+{% if retour == 'synoptique' %}{% include "synoptique_onglets.html" %}
+{% elif retour == 'jur_synoptique' %}{% include "jur_synoptique_onglets.html" %}{% endif %}
+<div class="entete">
+  <div><h{{ '2' if retour else '1' }} style="margin:0">Thèmes d'UP, de conférence pédagogique et de formation groupée</h{{ '2' if retour else '1' }}>
+    <p class="sous">{{ nom_cible }}{% if structure %} (planning commun de la structure){% endif %} — année scolaire {{ annee }}
+      {% if officiel_connu %}· thèmes officiels DIIP connus{% endif %}</p></div>
+  <div class="actions">
+    <form method="get" action="{{ url_for('themes_up') }}" class="filtres" style="margin:0">
+      {% if retour %}<input type="hidden" name="retour" value="{{ retour }}">{% endif %}
+      {% if portee %}<input type="hidden" name="portee" value="{{ portee }}">{% endif %}
+      {% if cat %}<input type="hidden" name="cat" value="{{ cat }}">{% endif %}
+      <label class="aide" for="tu-annee">Année</label>
+      <select id="tu-annee" name="annee" onchange="this.form.submit()">{% for a in annees %}<option value="{{ a }}" {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select>
+    </form>
+    {% if juridiction and ecole_ouverte and not retour %}
+      {% if structure %}<a class="btn sec petit" href="{{ url_for('themes_up', annee=annee, cat=cat) }}">École ouverte</a>
+      {% else %}<a class="btn sec petit" href="{{ url_for('themes_up', annee=annee, cat=cat, portee='structure') }}">Planning de la structure</a>{% endif %}
+    {% endif %}
+  </div>
+</div>

@@ -208,6 +208,7 @@ def esc(t):
 def enregistrer(app, H):
     q, ex = H.q, H.ex
     H.schema(SCHEMA)
+    H.ajouter_colonne("grilles", "cree_par", "INTEGER")     # auteur de la grille (périmètre de l'enseignant)
 
     # -------------------------------------------------------------- données
     def annee_choisie():
@@ -270,13 +271,20 @@ def enregistrer(app, H):
                     CRITERES=CRITERES, TYPES_GRILLE=TYPES_GRILLE, GRILLES_TYPES=GRILLES_TYPES, num=num,
                     aujourdhui=date.today().isoformat(), **k)
 
-    def signatures(v, auteur=None):
+    def signatures(v, auteur=None, cree_par=None):
+        """Blocs de signature : l'auteur (signature digitale « enseignant:<uid> » du compte enseignant qui a créé
+        l'épreuve, le cas échéant) puis le directeur."""
         P = H.pdfs
         titre_dir = v.get("directeur_titre") or "Directeur"
         titre_dir = f"{'LA' if titre_dir.lower().startswith('directrice') else 'LE'} {titre_dir.upper()}"
         sigs = []
         if auteur:
-            sigs.append(("L'AUTEUR / LE COMITÉ", auteur, None, False))
+            img = None
+            if cree_par and getattr(H, "signature_enseignant", None):
+                u = q("SELECT role FROM utilisateurs WHERE id=?", (cree_par,), un=True)
+                if u and u["role"] == "enseignant":
+                    img = P.image_data_url(H.signature_enseignant(cree_par))
+            sigs.append(("L'AUTEUR / LE COMITÉ", auteur, img, False))
         sigs.append((titre_dir, v.get("directeur_nom") or "", P.image_data_url(H.signature(f"ecole:{H.eco()}:directeur")), True))
         return sigs
 
@@ -470,7 +478,7 @@ def enregistrer(app, H):
             sous_titre=f"{TYPES_EVAL.get(e['type_evaluation'], '')} n° {e['numero'] or 1} — {e['niveau'] or ''} — {e['matiere'] or ''}",
             infos=entete_epreuve(e, v, items, corrige),
             infos_haut=[("DDEMP", v.get("ddemp")), ("CS", v.get("cs")), ("ÉCOLE", v.get("ecole"))],
-            largeurs=largeurs, taille=8.5, avant=avant, signatures=signatures(v, e["auteur"]),
+            largeurs=largeurs, taille=8.5, avant=avant, signatures=signatures(v, e["auteur"], e.get("cree_par")),
             notes_bas=None if corrige else ["Nom et prénoms de l'élève : ………………………………………………………………  Classe : ……………  Note : ……… / " + num(e["bareme_total"] if e["bareme_total"] is not None else total_items(items))])
         H.journal("epreuve_pdf", f"#{eid} {'corrigé' if corrige else 'sujet'}")
         return H.pdf_reponse(pdf, f"epreuve_{eid}{'_corrige' if corrige else ''}.pdf")
@@ -489,7 +497,7 @@ def enregistrer(app, H):
             lignes or [["", "Aucun item", "", "", "", ""]], total=["", "TOTAL", "", "", num(total_items(items)), ""],
             sous_titre=f"{TYPES_EVAL.get(e['type_evaluation'], '')} n° {e['numero'] or 1} — {e['niveau'] or ''} — {e['matiere'] or ''}",
             infos=entete_epreuve(e, v, items), infos_haut=[("DDEMP", v.get("ddemp")), ("CS", v.get("cs")), ("ÉCOLE", v.get("ecole"))],
-            largeurs=[6, 40, 22, 30, 10, 14], taille=8, paysage=True, signatures=signatures(v, e["auteur"]),
+            largeurs=[6, 40, 22, 30, 10, 14], taille=8, paysage=True, signatures=signatures(v, e["auteur"], e.get("cree_par")),
             notes_bas=["Critères APC : pertinence, cohérence, correction de la langue, perfectionnement (ou compréhension, démarche, "
                        "résultat, présentation en mathématiques)."])
         H.journal("epreuve_bareme_pdf", f"#{eid}")
@@ -758,8 +766,8 @@ def enregistrer(app, H):
                 ex(f"UPDATE grilles SET {', '.join(k + '=?' for k in cles)}, maj=? WHERE id=?", [vals[k] for k in cles] + [H.maintenant(), gid])
                 flash(f"Grille « {titre} » mise à jour ({len(lignes)} critère(s)).", "success")
             else:
-                gid = ex(f"INSERT INTO grilles (ecole_id, annee, {', '.join(cles)}, cree_le, maj) VALUES ({', '.join('?' * (len(cles) + 4))})",
-                         [H.eco(), annee] + [vals[k] for k in cles] + [H.maintenant(), H.maintenant()])
+                gid = ex(f"INSERT INTO grilles (ecole_id, annee, {', '.join(cles)}, cree_par, cree_le, maj) VALUES ({', '.join('?' * (len(cles) + 5))})",
+                         [H.eco(), annee] + [vals[k] for k in cles] + [g.user["id"], H.maintenant(), H.maintenant()])
                 flash(f"Grille « {titre} » créée ({len(lignes)} critère(s)).", "success")
             H.journal("grille", f"#{gid} {titre}")
             return redirect(url_for("epreuves_grilles", annee=annee))
@@ -786,9 +794,9 @@ def enregistrer(app, H):
     @H.connexion_requise("epreuves")
     def grille_dupliquer(gid):
         gr = grille_ou_404(gid)
-        nid = ex("INSERT INTO grilles (ecole_id, annee, titre, niveau, matiere_code, matiere, type, contenu, epreuve_id, cree_le, maj) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        nid = ex("INSERT INTO grilles (ecole_id, annee, titre, niveau, matiere_code, matiere, type, contenu, epreuve_id, cree_par, cree_le, maj) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                  (H.eco(), gr["annee"], f"{gr['titre']} (copie)"[:200], gr["niveau"], gr["matiere_code"], gr["matiere"], gr["type"], gr["contenu"],
-                  None, H.maintenant(), H.maintenant()))
+                  None, g.user["id"], H.maintenant(), H.maintenant()))
         H.journal("grille_duplication", f"#{gid} -> #{nid}")
         flash("Grille dupliquée : modifiez la copie.", "success")
         return redirect(url_for("grille_form", gid=nid))

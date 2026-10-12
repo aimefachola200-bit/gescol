@@ -1,0 +1,117 @@
+{% extends "base.html" %}{% block titre %}Thèmes d'UP, CP et FG {{ annee }}{% endblock %}
+{% block contenu %}
+<style>
+.tu-axes{white-space:pre-line;font-size:12.5px;line-height:1.35;color:#344054}
+.tu-theme{font-weight:600}
+.tu-date{white-space:nowrap}
+.tu-ex{color:#067647;font-weight:600}
+.tu-retard{color:var(--rouge);font-weight:600}
+.tu-act{white-space:nowrap}
+.tu-act form{display:inline}
+table.t.tu td{vertical-align:top}
+tr.tu-exec td{background:#F6FEF9}
+tr.tu-passe td{background:#FFFBF5}
+.tu-tri{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:8px}
+.tu-tri .carte{margin:0}
+.tu-tri h4{margin:0 0 6px}
+</style>
+{% include "themes_up_entete.html" %}
+
+<nav class="onglets" aria-label="Catégories de thèmes">
+  {% for c, lib in ONGLETS %}
+    <a class="{{ 'actif' if cat == c }}" href="{{ url_for('themes_up', **dict(params, cat=c)) }}">{{ lib }}{% if c != 'suivi' %} <span class="badge">{{ nb[c] }}</span>{% endif %}</a>
+  {% endfor %}
+</nav>
+
+<div class="actions" style="margin-bottom:12px;flex-wrap:wrap">
+  {% if modifiable %}
+    <a class="btn" href="{{ url_for('themes_up_form', tid=0, **dict(params, cat=(cat if cat != 'suivi' else 'up_primaire'))) }}">+ Ajouter un thème</a>
+    <form method="post" action="{{ url_for('themes_up_recharger', **params) }}" onsubmit="return confirm('Recharger les thèmes officiels {{ annee }} ? Les thèmes officiels modifiés sont remis tels que publiés ; vos ajouts sont conservés.')"><button class="btn sec" {{ 'disabled' if not officiel_connu }}>↻ Recharger l'officiel</button></form>
+    <form method="post" action="{{ url_for('themes_up_reinitialiser', **params) }}" onsubmit="return confirm('Réinitialiser les thèmes {{ annee }} ? TOUT est supprimé pour cette année, puis les thèmes officiels sont remis.')"><button class="btn danger">Réinitialiser</button></form>
+    <form method="post" action="{{ url_for('themes_up_preparer', **params) }}" onsubmit="return confirm('Préparer l\'année {{ annee_suiv }} à partir de {{ annee }} (dates décalées d\'un an, suivi remis à zéro) ?')"><button class="btn sec">Préparer {{ annee_suiv }}</button></form>
+    <a class="btn sec" href="{{ url_for('themes_up_import', **params) }}">⬆ Import (modèle)</a>
+  {% endif %}
+  <a class="btn sec" href="{{ url_for('themes_up_xlsx', **params) }}">⬇ Export Excel</a>
+  <a class="btn sec" href="{{ url_for('themes_up_pdf', **dict(params, partie='up')) }}" target="_blank">📄 PDF thèmes d'UP</a>
+  <a class="btn sec" href="{{ url_for('themes_up_pdf', **dict(params, partie='cp_fg')) }}" target="_blank">📄 PDF CP et FG</a>
+  <a class="btn sec" href="{{ url_for('themes_up_pdf', **dict(params, partie='complet')) }}" target="_blank">📄 PDF complet</a>
+</div>
+
+{% if cat == 'suivi' %}
+  {# ------------------------------------------------------------ suivi de l'exécution #}
+  <div class="grille">
+    {% for c, lib in CATEGORIES %}{% set s = stats[c] %}
+    <div class="kpi"><div class="l">{{ lib }}</div><div class="v">{{ s.executes }} / {{ s.total }}</div>
+      <div class="d">exécutés · taux {{ s.taux ~ ' %' if s.taux is not none else '—' }}{% if s.retard %} · <span class="tu-retard">{{ s.retard }} en retard</span>{% endif %}{% if s.a_venir %} · {{ s.a_venir }} à venir{% endif %}{% if s.sans_date %} · {{ s.sans_date }} sans date{% endif %}</div></div>
+    {% endfor %}
+  </div>
+  {% for c, lib in CATEGORIES %}{% set s = stats[c] %}
+  <div class="carte">
+    <h3 style="margin-top:0">{{ lib }}{% if s.prochain %} <span class="aide">— prochain : n° {{ s.prochain.numero }} « {{ s.prochain.theme }} », {{ date_affichee(s.prochain.date_administration if c in CATEGORIES_UP else s.prochain.date_deroulement) }}</span>{% endif %}</h3>
+    <div class="tw"><table class="t compact">
+      <thead><tr><th>Trimestre</th><th class="num">Programmés</th><th class="num">Exécutés</th><th class="num">Taux</th><th>Thèmes</th></tr></thead>
+      <tbody>{% for tr in s.trimestres %}
+        <tr><td>{{ tr.libelle }} ({{ tr.code }})</td><td class="num">{{ tr.programmes }}</td><td class="num">{{ tr.executes }}</td>
+          <td class="num">{{ tr.taux ~ ' %' if tr.taux is not none else '—' }}</td>
+          <td>{% for t in tr.themes %}<span class="{{ 'tu-ex' if t.execute }}">{{ t.numero }}. {{ t.theme|truncate(60) }}</span>{% if not loop.last %} · {% endif %}{% endfor %}
+            {% if c not in CATEGORIES_UP and tr.programmes == 0 %}<span class="badge att">aucun thème daté : en fixer un (arrêté du 17/02/2026)</span>{% endif %}</td></tr>
+      {% endfor %}</tbody>
+    </table></div>
+    {% if s.liste_retard %}<p class="aide tu-retard" style="margin-bottom:0">En retard : {% for t in s.liste_retard %}n° {{ t.numero }} ({{ date_courte(t.date_administration if c in CATEGORIES_UP else t.date_deroulement) }}){% if not loop.last %}, {% endif %}{% endfor %}.</p>{% endif %}
+  </div>
+  {% endfor %}
+  <p class="aide">{{ NB_ARRETE }} Trimestres : I = septembre → décembre, II = janvier → mars, III = avril → août. Un thème compte dans le trimestre de sa date d'exécution, sinon de sa date d'administration (UP) ou de déroulement (CP / FG) ; « PM » = sans date.</p>
+
+{% else %}
+  {# ------------------------------------------------------------ tableau d'une catégorie #}
+  {% set up = cat in CATEGORIES_UP %}
+  <div class="carte">
+    <h3 style="margin-top:0">{{ CATEGORIES_LIB[cat] }} — {{ 'Planning d\'exécution des thèmes d\'unité pédagogique' if up else 'Planning des thèmes de conférence pédagogique et de formation groupée' }} {{ annee }}</h3>
+    <div class="tw"><table class="t compact tu">
+      <thead>
+        {% if up %}
+        <tr><th rowspan="2">N°</th><th rowspan="2">Thèmes</th><th rowspan="2">Axes de réflexion indicatifs</th><th colspan="3" style="text-align:center">Dates de déroulement</th><th rowspan="2">Observations</th><th rowspan="2">Suivi</th>{% if modifiable %}<th rowspan="2"></th>{% endif %}</tr>
+        <tr><th>Préparation</th><th>Interprétation</th><th>Administration</th></tr>
+        {% else %}
+        <tr><th>N°</th><th>Date de déroulement</th><th>Thèmes</th><th>Contenus indicatifs</th><th>Observations</th><th>Suivi</th>{% if modifiable %}<th></th>{% endif %}</tr>
+        {% endif %}
+      </thead>
+      <tbody>
+      {% for t in lst %}
+        {% set dref = t.date_execution or (t.date_administration if up else t.date_deroulement) %}
+        <tr id="t-{{ t.id }}" class="{{ 'tu-exec' if t.execute else ('tu-passe' if dref and dref|length == 10 and dref < aujourdhui else '') }}">
+          <td>{{ t.numero }}</td>
+          {% if not up %}<td class="tu-date">{{ date_affichee(t.date_deroulement) or '—' }}</td>{% endif %}
+          <td class="tu-theme">{{ t.theme }}{% if not t.officiel %} <span class="badge" title="thème ajouté localement">ajouté</span>{% endif %}</td>
+          <td class="tu-axes">{% for a in (t.axes or '').splitlines() if a.strip() %}{{ '- ' if a.strip() != '-' }}{{ a }}{{ '\n' if not loop.last }}{% endfor %}</td>
+          {% if up %}<td class="tu-date">{{ date_affichee(t.date_preparation) or '—' }}</td><td class="tu-date">{{ date_affichee(t.date_interpretation) or '—' }}</td><td class="tu-date">{{ date_affichee(t.date_administration) or '—' }}</td>{% endif %}
+          <td>{{ t.observations or '' }}</td>
+          <td>{% if t.execute %}<span class="tu-ex">✔ Exécuté{% if t.date_execution %} le {{ date_courte(t.date_execution) }}{% endif %}</span>{% if t.lieu %}<br><span class="aide">{{ t.lieu }}</span>{% endif %}{% if t.participants is not none %}<br><span class="aide">{{ t.participants }} participant(s)</span>{% endif %}
+              {% elif dref and dref|length == 10 and dref < aujourdhui %}<span class="tu-retard">En retard</span>{% else %}<span class="aide">À venir</span>{% endif %}</td>
+          {% if modifiable %}<td class="tu-act">
+            <a class="btn sec petit" href="{{ url_for('themes_up_form', tid=t.id, **params) }}">Modifier</a>
+            <form method="post" action="{{ url_for('themes_up_executer', tid=t.id, **params) }}"><button class="btn {{ 'sec' if t.execute else 'vert' }} petit" title="{{ 'Remettre à exécuter' if t.execute else 'Marquer exécuté' }}">{{ '↩' if t.execute else '✔' }}</button></form>
+            <form method="post" action="{{ url_for('themes_up_supprimer', tid=t.id, **params) }}" onsubmit="return confirm('Supprimer ce thème ?')"><button class="btn danger petit">Supprimer</button></form>
+          </td>{% endif %}
+        </tr>
+      {% else %}
+        <tr><td colspan="10" class="aide">Aucun thème pour {{ annee }} dans cette catégorie.{% if modifiable %} Ajoutez-en, importez un fichier ou, pour une année connue, rechargez l'officiel.{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% if not up %}<p class="aide" style="margin-bottom:0">{{ NB_ARRETE }}</p>{% endif %}
+  </div>
+{% endif %}
+
+<div class="carte">
+  <h3 style="margin-top:0">Référence du texte</h3>
+  {% if modifiable %}
+  <form method="post" action="{{ url_for('themes_up_meta', **params) }}" class="f">
+    <label for="tu-ref">Référence</label><input id="tu-ref" name="reference" value="{{ meta.reference or '' }}" maxlength="500" style="width:100%">
+    <label for="tu-src">Source</label><input id="tu-src" name="source" value="{{ meta.source or '' }}" maxlength="200" style="width:100%">
+    <p class="actions" style="margin-top:8px"><button class="btn sec">Enregistrer la référence</button></p>
+  </form>
+  {% else %}<p>{{ meta.reference or 'Référence du texte : à compléter.' }}{% if meta.source %} — {{ meta.source }}{% endif %}</p>{% endif %}
+  <p class="aide">PM = pour mémoire (date à fixer par l'UP ou la circonscription). Les thèmes officiels sont ceux publiés par la DIIP ; « Recharger l'officiel » les remet tels que publiés en conservant vos ajouts ; « Réinitialiser » efface tout pour l'année.{% if not modifiable %} Consultation seule : la saisie est réservée à la direction, aux conseillers pédagogiques et aux responsables.{% endif %}</p>
+</div>
+{% endblock %}

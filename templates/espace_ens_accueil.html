@@ -7,13 +7,26 @@
 .ens-classe h2{margin:0 0 2px;font-size:19px}
 .ens-classe .liens{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .ens-sig{max-width:460px}
+.ens-moi{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:16px 0}
+.ens-moi .carte h2{margin-top:0;font-size:17px}
+.ens-moi ul{margin:6px 0 0;padding-left:18px}
 </style>
+{% set ENS = g.user.role == 'enseignant' %}
 <div class="entete">
   <div><h1>Mon espace</h1>
     <p class="sous">{{ g.user.nom }} · {{ ROLES[g.user.role] }} · {{ ECOLE.nom }} · {{ ANNEE }}</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('mon_compte') }}">Mon identifiant et mon mot de passe</a>
+    {% if ENS and ep_existe('carriere_moi_fiche') %}<a class="btn sec" href="{{ url_for('carriere_moi_fiche') }}">Ma fiche de carrière</a>{% endif %}
+    {% if ep_existe('docs_enseignant_accueil') and peut('docs_enseignant') %}<a class="btn sec" href="{{ url_for('docs_enseignant_accueil') }}">Mes documents</a>{% endif %}
+  </div>
 </div>
-{% if g.user.role == 'enseignant' and not affecte %}
+{% if ENS and not affecte %}
 <div class="flash info">Aucune classe ne vous est encore affectée : toutes les classes de l'école sont affichées. Demandez à l'administration de vous affecter vos classes (menu Utilisateurs et affectations).</div>
+{% endif %}
+{% if ENS %}
+<p class="aide">Votre périmètre : vos classes (élèves, appel, registre, notes, évaluations, cantine, CEP, messages aux parents…), vos documents,
+  votre fiche de carrière et votre signature digitale. Le tableau de bord, le tableau synoptique, les finances et l'administration relèvent du directeur.</p>
 {% endif %}
 <div class="grille indicateurs">
   <div class="kpi"><div class="l">{{ 'Mes classes' if affecte else 'Classes' }}</div><div class="v">{{ lignes|length }}</div></div>
@@ -45,25 +58,76 @@
     <div class="aide">{{ c.niveau }} · {{ x.n }} élève(s) ({{ x.f }} F, {{ x.m }} G){% if x.matieres %} · {{ x.matieres|join(', ') }}{% endif %}</div>
     {% if c.titulaire_nom %}<div class="aide">{{ c.titulaire_titre or 'Titulaire' }} : {{ c.titulaire_nom }}</div>{% endif %}
     <div class="liens">
-      {% if ep_existe('eval_accueil') and peut('evaluations') %}<a class="btn petit" href="{{ url_for('eval_accueil', classe=c.id) }}">Saisie des notes</a>{% endif %}
-      {% if ep_existe('notes_saisie') and peut('notes') %}<a class="btn sec petit" href="{{ url_for('notes_saisie', cid=c.id, p=1) }}">Notes par période</a>{% endif %}
+      {% if ep_existe('appel_classe') and peut('appel') %}<a class="btn petit" href="{{ url_for('appel_classe', cid=c.id, jour=aujourdhui) }}">Appel du jour</a>{% endif %}
       {% if ep_existe('registre_accueil') and peut('registre') %}<a class="btn sec petit" href="{{ url_for('registre_accueil', classe=c.id) }}">Registre de présence</a>{% endif %}
-      {% if ep_existe('appel_classe') and peut('appel') %}<a class="btn sec petit" href="{{ url_for('appel_classe', cid=c.id, jour=aujourdhui) }}">Appel du jour</a>{% endif %}
+      {% if ep_existe('releve_mensuel') and peut('registre') %}<a class="btn sec petit" href="{{ url_for('releve_mensuel', classe=c.id) }}">Relevé mensuel</a>{% endif %}
+      {% if ep_existe('eval_accueil') and peut('evaluations') %}<a class="btn sec petit" href="{{ url_for('eval_accueil', classe=c.id) }}">Saisie des notes</a>{% endif %}
+      {% if ep_existe('notes_saisie') and peut('notes') %}<a class="btn sec petit" href="{{ url_for('notes_saisie', cid=c.id, p=1) }}">Notes par période</a>{% endif %}
       {% if ep_existe('eval_statistiques') and peut('evaluations') %}<a class="btn sec petit" href="{{ url_for('eval_statistiques', classe=c.id) }}">Statistiques</a>{% endif %}
       {% if ep_existe('bilan_annuel') and peut('evaluations') %}<a class="btn sec petit" href="{{ url_for('bilan_annuel', classe=c.id) }}">Bilan annuel</a>{% endif %}
       {% if ep_existe('affichage_accueil') and peut('affichage') %}<a class="btn sec petit" href="{{ url_for('affichage_accueil', classe=c.id) }}">Tableau d'affichage</a>{% endif %}
+      {% if ep_existe('cantine_classe') and peut('cantine') %}<a class="btn sec petit" href="{{ url_for('cantine_classe', cid=c.id) }}">Cantine</a>{% endif %}
       {% if ep_existe('classe_detail') %}<a class="btn sec petit" href="{{ url_for('classe_detail', cid=c.id) }}">Liste de la classe</a>{% endif %}
+      {% if ep_existe('eleves') %}<a class="btn sec petit" href="{{ url_for('eleves', classe=c.id) }}">Élèves (fiches)</a>{% endif %}
       {% if ep_existe('insc_photo') and peut('eleves') %}<a class="btn sec petit" href="{{ url_for('insc_photo', classe=c.id) }}">Photos</a>{% endif %}
+      {% if c.niveau == 'CM2' and peut('cep') and ep_existe('cep_accueil') %}<a class="btn sec petit" href="{{ url_for('cep_accueil', classe=c.id) }}">CEP (fiches, cartes)</a>{% endif %}
+      {% if ep_existe('communication') and peut('communication') %}<a class="btn sec petit" href="{{ url_for('communication') }}">Messages aux parents</a>{% endif %}
+      {% set nk = niveau_syno[c.id] if niveau_syno is defined else '' %}
+      {% if nk in ['maternelle1','maternelle2','ci','cp','ce1','ce2','cm1','cm2'] and ep_existe('synoptique_edt') %}
+      <a class="btn sec petit" href="{{ url_for('synoptique_edt', niveau=nk) }}">Emploi du temps</a>
+      {% if ep_existe('synoptique_planification') %}<a class="btn sec petit" href="{{ url_for('synoptique_planification', niveau=nk) }}">Planification</a>{% endif %}
+      {% if ep_existe('synoptique_planification_mensuelle') %}<a class="btn sec petit" href="{{ url_for('synoptique_planification_mensuelle', niveau=nk) }}">Planification mensuelle</a>{% endif %}
+      {% endif %}
+      {% if ep_existe('synoptique_comites') %}<a class="btn sec petit" href="{{ url_for('synoptique_comites', comite='classe') }}">Comité de classe</a>{% endif %}
     </div>
-    {% if peut_signer and (g.user.role != 'enseignant' or affecte) %}
-    <details style="margin-top:10px"><summary>Ma signature de titulaire ({{ c.nom }})</summary>
+    {% if peut_signer and (not ENS or affecte) %}
+    <details style="margin-top:10px"><summary>Signature du titulaire ({{ c.nom }})</summary>
       <div class="ens-sig">{{ M.signature('classe:' ~ c.id ~ ':titulaire', 'Signature du titulaire – ' ~ c.nom) }}</div>
-      <p class="aide">Elle est apposée sur les documents de la classe (bulletins, relevés) qui prévoient la signature du titulaire.</p>
+      <p class="aide">Elle est apposée sur les documents de la classe (bulletins, relevés, fiches de cantine, tableau d'affichage) qui prévoient la signature du titulaire.
+        {% if ENS %}À défaut, votre signature personnelle (ci-dessous) est utilisée.{% endif %}</p>
     </details>{% endif %}
   </section>
   {% endfor %}
 </div>
 {% else %}
 <div class="carte gris">Aucune classe n'est créée dans cette école.</div>
+{% endif %}
+
+{% if ENS %}
+<div class="ens-moi">
+  <section class="carte" aria-labelledby="ma-signature">
+    <h2 id="ma-signature">Ma signature digitale</h2>
+    <p class="aide">Signature personnelle de votre compte (clé <code>enseignant:{{ g.user.id }}</code>). Elle est apposée sur les documents que vous émettez :
+      fiches de visite de classe, journal du maître de semaine, bulletins et relevés de vos classes (à défaut de la signature du titulaire), vos documents de l'enseignant (fiches d'agent), vos épreuves.</p>
+    <div class="ens-sig">{{ M.signature('enseignant:' ~ g.user.id, 'Ma signature – ' ~ g.user.nom) }}</div>
+  </section>
+  <section class="carte" aria-labelledby="mon-compte">
+    <h2 id="mon-compte">Mon compte</h2>
+    <p>Identifiant : <b>{{ g.user.identifiant }}</b><br>Rôle : {{ ROLES[g.user.role] }}<br>École : {{ ECOLE.nom }}</p>
+    <div class="actions"><a class="btn sec petit" href="{{ url_for('mon_compte') }}">Changer mon mot de passe</a></div>
+    {% if fiche_perso %}<p class="aide" style="margin-top:8px">Fiche du personnel reliée : {{ fiche_perso.nom }} {{ fiche_perso.prenoms }}{% if fiche_perso.matricule %} ({{ fiche_perso.matricule }}){% endif %}.</p>
+    {% else %}<p class="aide" style="margin-top:8px">Aucune fiche du personnel reliée à ce compte : le directeur peut faire le lien (fiche du personnel → compte utilisateur) pour vos documents et votre carrière.</p>{% endif %}
+  </section>
+  {% if ep_existe('docs_enseignant_accueil') and peut('docs_enseignant') %}
+  <section class="carte" aria-labelledby="mes-docs">
+    <h2 id="mes-docs">Mes documents</h2>
+    {% if mes_docs %}<ul>{% for h in mes_docs %}<li>{{ h.libelle }} <span class="aide">({{ date_fr(h.cree_le[:10]) }})</span>
+      {% if ep_existe('docs_enseignant_reimprimer') %} · <a href="{{ url_for('docs_enseignant_reimprimer', hid=h.id) }}" target="_blank">PDF</a>{% endif %}</li>{% endfor %}</ul>
+    {% else %}<p class="aide">Aucun document émis pour l'instant.</p>{% endif %}
+    <div class="actions" style="margin-top:8px"><a class="btn sec petit" href="{{ url_for('docs_enseignant_accueil') }}">Documents de l'enseignant</a>
+      {% if ep_existe('docs_enseignant_historique') %}<a class="btn sec petit" href="{{ url_for('docs_enseignant_historique') }}">Historique</a>{% endif %}</div>
+  </section>
+  {% endif %}
+  {% if ep_existe('visites_accueil') and peut('visites') %}
+  <section class="carte" aria-labelledby="mes-visites">
+    <h2 id="mes-visites">Mes visites de classe</h2>
+    {% if mes_visites %}<ul>{% for v in mes_visites %}<li>{{ date_fr(v.date) }} — {{ v.visiteur_qualite }} {{ v.visiteur_nom }}
+      {% if ep_existe('visite_fiche_pdf') %} · <a href="{{ url_for('visite_fiche_pdf', vid=v.id) }}" target="_blank">Fiche PDF</a>{% endif %}</li>{% endfor %}</ul>
+    {% else %}<p class="aide">Aucune visite enregistrée{% if not fiche_perso %} (compte non relié à une fiche du personnel){% endif %}.</p>{% endif %}
+    <div class="actions" style="margin-top:8px"><a class="btn sec petit" href="{{ url_for('visites_accueil') }}">Toutes mes visites</a>
+      {% if ep_existe('maitre_semaine_accueil') and peut('maitre_semaine') %}<a class="btn sec petit" href="{{ url_for('maitre_semaine_accueil') }}">Maître de semaine</a>{% endif %}</div>
+  </section>
+  {% endif %}
+</div>
 {% endif %}
 {% endblock %}

@@ -627,7 +627,7 @@ def enregistrer(app, H):
         s_ccs = pdfs.image_data_url(H.signature(f"ecole:{eid}:ccs"))
         sigs = []
         if cid:
-            s_tit = pdfs.image_data_url(H.signature(f"classe:{cid}:titulaire"))
+            s_tit = pdfs.image_data_url(H.signature_titulaire(cid))
             sigs.append((v.get("titulaire_titre") or "Le titulaire", v.get("titulaire_nom") or "", s_tit, False))
         sigs.append((_titre_signataire(v.get("directeur_titre"), "Directeur"), v.get("directeur_nom") or "", s_dir, True))
         sigs.append((v.get("ccs_titre") or "Le CCS", v.get("ccs_nom") or "", s_ccs, False))

@@ -370,6 +370,16 @@ def enregistrer(app, H):
 
     CHAMPS_ACT = ("annee", "date", "theme", "type", "prevue", "executee", "participants", "taux_participation", "observations")
 
+    def themes_officiels(annee):
+        """Thèmes officiels de l'année (m_themes_up : UP maternelle / primaire, CP, FG) proposés dans le formulaire d'activité."""
+        f = getattr(H, "themes_up", None)
+        if not f:
+            return []
+        try:
+            return [t for t in f(annee) if t.get("theme")]
+        except Exception:  # noqa: BLE001 — la saisie d'une activité ne doit jamais dépendre du module des thèmes
+            return []
+
     def act_ou_404(aid):
         a = q("SELECT * FROM jur_up_activites WHERE id=?", (aid,), un=True)
         if not a:
@@ -390,7 +400,8 @@ def enregistrer(app, H):
                 for m in err:
                     flash(m, "danger")
                 return render_template("jur_up_activite_form.html", u=u, a=a, v=dict(request.form.items()), annee=annee,
-                                       TYPES=TYPES_ACTIVITE, aujourdhui=date.today().isoformat()), 400
+                                       TYPES=TYPES_ACTIVITE, aujourdhui=date.today().isoformat(),
+                                       themes_officiels=themes_officiels(annee)), 400
             if a:
                 ex("UPDATE jur_up_activites SET " + ", ".join(f"{k}=?" for k in CHAMPS_ACT) + ", maj=? WHERE id=?",
                    tuple(d[k] for k in CHAMPS_ACT) + (H.maintenant(), aid))
@@ -404,7 +415,7 @@ def enregistrer(app, H):
             return redirect(url_for("jur_up_fiche", uid=u["id"], annee=d["annee"]))
         v = dict(a) if a else {"date": "", "prevue": 1, "executee": 0, "annee": annee, "type": TYPES_ACTIVITE[0]}
         return render_template("jur_up_activite_form.html", u=u, a=a, v=v, annee=annee, TYPES=TYPES_ACTIVITE,
-                               aujourdhui=date.today().isoformat())
+                               aujourdhui=date.today().isoformat(), themes_officiels=themes_officiels(annee))
 
     @app.route("/juridiction/up/activites/<int:aid>/supprimer", methods=["POST"])
     @H.connexion_requise("jur_up")

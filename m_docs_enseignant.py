@@ -837,11 +837,17 @@ def lignes_admin(secondaire=False):
 
 
 def signature_agent(c, v, x, y_titre, y_nom, fam, size, align="r"):
-    """« Signature de l'agent » puis « Prénom (s) et Nom » (remplacé par le nom de l'agent)."""
+    """« Signature de l'agent » puis « Prénom (s) et Nom » (remplacé par le nom de l'agent). La signature digitale
+    de l'enseignant (v["_sig_agent"], compte relié à sa fiche du personnel) est apposée entre les deux lignes."""
     nom = v.get("_prenoms_nom") or ""
     c.setFont(fam["n"], size)
     dessin = c.drawRightString if align == "r" else c.drawString
     dessin(x, y_titre, "Signature de l'agent")
+    img = image_sig(v.get("_sig_agent"))
+    if img is not None:
+        largeur = 110
+        c.drawImage(img, x - largeur if align == "r" else x, y_nom + 6, largeur, y_titre - y_nom - 12,
+                    preserveAspectRatio=True, mask="auto")
     if nom:
         c.setFont(fam["b"], size)
         dessin(x, y_nom, nom)
@@ -894,6 +900,9 @@ def page1_directeur(c, v, opt):
     ligne(c, 190, y, x2, [T("Fait à "), V("fait_a", 1.3), T(", le "), V("fait_le", 1)], v, fam, size)
     c.setFont("Helvetica", size)
     c.drawString(253, y - 26, "Signature de l'agent")
+    img = image_sig(v.get("_sig_agent"))          # signature digitale de l'enseignant (compte relié)
+    if img is not None:
+        c.drawImage(img, 240, y - 66, 115, 36, preserveAspectRatio=True, mask="auto")
     c.drawString(254, y - 70, "Prénom (s) et Nom")
     nom = v.get("_prenoms_nom") or ""
     if nom:
@@ -1793,7 +1802,7 @@ def enregistrer(app, H):
 
     def historiser(doc, cible, cible_id, lib, lots, signe):
         codes = [o.get("code") for _v, o in lots if o.get("code")]
-        donnees = [dict({k: val for k, val in v.items() if k != "_carriere"}, _code=o.get("code") or "")
+        donnees = [dict({k: val for k, val in v.items() if k not in ("_carriere", "_sig_agent")}, _code=o.get("code") or "")
                    for v, o in lots]
         return ex("""INSERT INTO docs_enseignant_historique (ecole_id, type, cible, cible_id, libelle, nombre, codes,
                      donnees, signe, annee, cree_le, cree_par) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
@@ -1802,8 +1811,12 @@ def enregistrer(app, H):
                    H.maintenant(), g.user["id"]))
 
     def lot_pour(doc, v, cible_id, signer):
-        """(valeurs, options) pour un document ; enregistre le code QR des certificats signés."""
+        """(valeurs, options) pour un document ; enregistre le code QR des certificats signés.
+        Fiches d'un agent : sa signature digitale (compte enseignant relié à la fiche du personnel) est apposée
+        dans le bloc « Signature de l'agent »."""
         opt = options(doc, v, signer=signer)
+        if DOCS[doc]["cible"] == "agent" and getattr(H, "signature_agent", None):
+            v["_sig_agent"] = H.signature_agent(cible_id)
         if DOCS[doc]["qr"] and opt["signer"]:
             eleve_id = cible_id if DOCS[doc]["cible"] == "eleve" else None
             opt["code"] = H.enregistrer_document(f"docens_{doc}", eleve_id, libelle(doc, v) + f" ({config.ANNEE_ACTIVE})")
@@ -2012,6 +2025,8 @@ def enregistrer(app, H):
             donnees = json.loads(h["donnees"])
         except ValueError:
             abort(404)
+        if h["cible"] == "agent" and h["cible_id"] and len(donnees) == 1:
+            donnees[0]["_sig_agent"] = H.signature_agent(h["cible_id"])     # signature digitale de l'enseignant
         lots = [(v, dict(vierge=False, code=v.get("_code") or None, signer=bool(h["signe"]),
                          sig_ccs=H.signature(f"ecole:{H.eco()}:ccs"), griffe_ccs=griffe_ccs())) for v in donnees]
         return H.pdf_reponse(construire_pdf(h["type"], lots, h["libelle"]), nom_fichier(h["type"], f"h{hid}"))

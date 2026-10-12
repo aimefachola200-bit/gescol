@@ -3,12 +3,13 @@
 <div class="entete">
   <div><h1>Élèves</h1><p class="sous">{{ eleves|length }} résultat(s)</p></div>
   <div class="actions">
-    {% if peut('eleves') %}<a class="btn" href="{{ url_for('eleve_form') }}">+ Inscrire un élève</a>
+    {# enseignant : périmètre de ses classes (photos), sans inscription, import, export ni suppression #}
+    {% if peut('eleves') and g.user.role != 'enseignant' %}<a class="btn" href="{{ url_for('eleve_form') }}">+ Inscrire un élève</a>
     <a class="btn sec" href="{{ url_for('eleves_export') }}">Exporter (CSV)</a>
     {% if ep_existe('eleves_import') %}<a class="btn sec" href="{{ url_for('eleves_import') }}">Importer (Excel)</a>
     <a class="btn sec" href="{{ url_for('eleves_modele_xlsx') }}">Modèle Excel</a>
-    <a class="btn sec" href="{{ url_for('eleves_export_xlsx', q=rech, classe=cid, statut=statut) }}">Exporter (Excel)</a>
-    <a class="btn sec" href="{{ url_for('insc_photo', classe=cid) }}">📷 Photos à la caméra</a>{% endif %}{% endif %}
+    <a class="btn sec" href="{{ url_for('eleves_export_xlsx', q=rech, classe=cid, statut=statut) }}">Exporter (Excel)</a>{% endif %}{% endif %}
+    {% if peut('eleves') and ep_existe('insc_photo') %}<a class="btn sec" href="{{ url_for('insc_photo', classe=cid) }}">📷 Photos à la caméra</a>{% endif %}
   </div>
 </div>
 <form class="filtres">
@@ -20,7 +21,7 @@
     <option value="{{ v }}" {{ 'selected' if v==statut }}>{{ l }}</option>{% endfor %}</select>
   <button class="btn sec">Filtrer</button>
 </form>
-{% set suppr = peut('eleves') and ep_existe('eleve_supprimer') %}
+{% set suppr = peut('eleves') and g.user.role != 'enseignant' and ep_existe('eleve_supprimer') %}
 {% if suppr %}<form method="post" action="{{ url_for('eleves_supprimer_selection') }}" id="f-selection"
   onsubmit="var n=this.querySelectorAll('input[name=ids]:checked').length;if(!n){alert('Cochez au moins un élève.');return false;}var m=(this._mode||'supprimer');return confirm(m==='retirer'?('Retirer '+n+' élève(s) (statut « sorti ») ?'):('Supprimer définitivement '+n+' élève(s) et toutes leurs données ?'));">
   <input type="hidden" name="mode" value="supprimer" id="sel-mode">{% endif %}

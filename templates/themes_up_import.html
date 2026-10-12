@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% block titre %}Thèmes d'UP — Import{% endblock %}
+{% block contenu %}
+{% include "themes_up_entete.html" %}
+<div class="grille2" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px">
+  <form method="post" enctype="multipart/form-data" class="carte f">
+    <h2 style="margin-top:0">Importer les thèmes {{ annee }} depuis Excel</h2>
+    <p class="aide">Classeur .xlsx : une feuille par catégorie (<b>UP maternelle</b>, <b>UP primaire</b>, <b>Conférences pédagogiques</b>,
+      <b>Formations groupées</b>) ou une seule feuille avec une colonne <b>Catégorie</b>. Colonnes reconnues : {{ entetes|join(', ') }}.
+      Dates au format jj/mm/aaaa (ou « PM » pour mémoire) ; un axe par ligne dans la cellule « Axes ».
+      <b>L'import remplace</b> les thèmes de l'année pour chaque catégorie présente dans le fichier.</p>
+    <label for="imp-f">Fichier Excel</label><input id="imp-f" type="file" name="fichier" accept=".xlsx" required>
+    <label for="imp-ref">Référence du texte (facultatif)</label><input id="imp-ref" name="reference" maxlength="500" value="{{ meta.reference or '' }}">
+    <label for="imp-src">Source (facultatif)</label><input id="imp-src" name="source" maxlength="200" value="{{ meta.source or '' }}">
+    <p class="actions" style="margin-top:12px"><button class="btn">⬆ Importer</button>
+      <a class="btn sec" href="{{ url_for('themes_up_modele_xlsx', **params) }}">Télécharger le modèle Excel</a>
+      <a class="btn sec" href="{{ url_for('themes_up', **params) }}">← Retour</a></p>
+  </form>
+  <div class="carte">
+    <h2 style="margin-top:0">Exporter</h2>
+    <p><a class="btn" href="{{ url_for('themes_up_xlsx', **params) }}">⬇ Classeur Excel {{ annee }}</a> <span class="aide">4 feuilles (une par catégorie), réimportable tel quel</span></p>
+    <p><a class="btn sec" href="{{ url_for('themes_up_pdf', **dict(params, partie='complet')) }}" target="_blank">📄 PDF complet (paysage)</a></p>
+  </div>
+</div>
+{% endblock %}

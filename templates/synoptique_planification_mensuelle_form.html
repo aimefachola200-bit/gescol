@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% block titre %}{{ 'Modifier' if existe else 'Ajouter' }} la planification mensuelle — {{ cl.nom }} — {{ mois_lib }}{% endblock %}
+{% block contenu %}
+{% include "synoptique_onglets.html" %}
+<div class="entete">
+  <div><h2 style="margin:0">Planification (CE-CM) du mois de {{ mois_lib }} — {{ cl.nom }} ({{ cl.niveau }}) : {{ 'modification' if existe else 'création' }}</h2>
+    <p class="sous">Une case par discipline et par semaine ; remplacez les gabarits (« U…SA…S…Étape… ») par les références réelles (ex. « U2 SA3 S1 Étape 2 », « SA2 Séq 3 »). Les cases non concernées peuvent rester vides.</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('synoptique_planification_mensuelle', classe=cl.id, mois=mois) }}">← Annuler</a></div>
+</div>
+<form method="post" class="carte" id="pm-form">
+  <div class="tw"><table class="t plan-m">
+    <thead>
+      <tr><th class="g" colspan="3">CHAMPS DE FORMATION</th>{% for s in SEMAINES %}<th class="g">{{ s }}</th>{% endfor %}</tr>
+      <tr><th></th><th class="g">1ère semaine</th><th class="g">2ème semaine</th>
+        {% for s in d.semaines %}{% set i = loop.index0 %}<th><span class="plan-m-sem">Du <input type="date" name="du_{{ i }}" value="{{ s.du }}"> au <input type="date" name="au_{{ i }}" value="{{ s.au }}"></span></th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+    {% for champ, lignes in GROUPES %}{% for code, ch, l1, l2, gab in lignes %}
+    <tr>{% if loop.first %}<td class="champ" rowspan="{{ lignes|length }}">{{ champ }}</td>{% endif %}
+      {% if l1 is none %}<td class="sous vide" colspan="2"></td>{% elif l2 is none %}<td class="sous" colspan="2" style="text-align:center">{{ l1 }}</td>{% else %}<td class="sous">{{ l1 }}</td><td class="sous">{{ l2 }}</td>{% endif %}
+      {% for v in d.contenu[code] %}<td><textarea name="c_{{ code }}_{{ loop.index0 }}" maxlength="300" rows="2" aria-label="{{ champ }} {{ l1 or '' }} semaine {{ loop.index }}"{% if gab %} placeholder="{{ gab }}"{% endif %}>{{ v }}</textarea></td>{% endfor %}</tr>
+    {% endfor %}{% endfor %}
+    </tbody></table></div>
+  <div class="grille" style="margin-top:12px">
+    <label>Titulaire (nom pour la signature)<input name="titulaire_visa" value="{{ d.titulaire_visa }}" maxlength="120" placeholder="laisser vide = titulaire de la classe"></label>
+    <label>Visa du directeur / de la directrice (mention)<input name="directeur_visa" value="{{ d.directeur_visa }}" maxlength="120" placeholder="ex. Vu et approuvé"></label>
+  </div>
+  <p class="actions" style="margin-top:12px"><button class="btn">💾 Enregistrer</button>
+    <button type="button" class="btn sec" id="pm-vider">Vider les gabarits</button>
+    <span class="aide">« Vider les gabarits » efface uniquement les cases encore égales au gabarit du modèle.</span></p>
+</form>
+<script>
+document.getElementById('pm-vider').addEventListener('click', function () {
+  document.querySelectorAll('#pm-form textarea').forEach(function (t) { if (t.placeholder && t.value.trim() === t.placeholder) t.value = ''; });
+});
+</script>
+{% endblock %}

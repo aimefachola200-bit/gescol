@@ -542,6 +542,14 @@ def enregistrer(app, H):
             sig = request.form.get("signature_maitre") or ""
             if sig and (not sig.startswith("data:image/png;base64,") or len(sig) > 400_000):
                 sig = pl["signature_maitre"] if pl else ""
+            if not sig and pl and pl["personnel_id"] and g.user["role"] == "enseignant":
+                # signature digitale personnelle de l'enseignant connecté quand il est le maître de semaine désigné
+                try:
+                    moi = q("SELECT 1 FROM personnel WHERE id=? AND user_id=?", (pl["personnel_id"], g.user["id"]), un=True)
+                except Exception:  # noqa: BLE001 — colonne user_id absente sans le module carrière
+                    moi = None
+                if moi:
+                    sig = H.signature_enseignant(g.user["id"]) or ""
             if pl:
                 ex("UPDATE ms_planning SET observations=?, signature_maitre=?, maj=? WHERE id=?",
                    (obs, sig or None, H.maintenant(), pl["id"]))
@@ -618,7 +626,8 @@ def enregistrer(app, H):
         if pl and (pl["observations"] or "").strip():
             obs = (pl["observations"] or "").replace("&", "&amp;").replace("<", "&lt;").replace("\n", "<br/>")
             apres += [P.paragraphe("OBSERVATIONS GÉNÉRALES DE LA SEMAINE", 9, True), P.paragraphe(obs, 8.5)]
-        sig_maitre = P.image_data_url(pl["signature_maitre"]) if pl and pl["signature_maitre"] else None
+        # signature saisie pour la semaine, sinon signature digitale du compte enseignant du maître de semaine désigné
+        sig_maitre = P.image_data_url((pl["signature_maitre"] or H.signature_agent(pl["personnel_id"])) if pl else None)
         pdf = P.document_tableau(
             "RAPPORT HEBDOMADAIRE DU MAÎTRE DE SEMAINE",
             ["Jour", "Arrivée / couleurs", "Salut aux couleurs", "Propreté", "Discipline",

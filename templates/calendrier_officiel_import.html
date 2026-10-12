@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% block titre %}Calendrier scolaire {{ annee }} — Import Excel{% endblock %}
+{% block contenu %}
+{% if retour == 'synoptique' %}{% include "synoptique_onglets.html" %}{% elif retour == 'jur_synoptique' %}{% include "jur_synoptique_onglets.html" %}{% endif %}
+<div class="entete">
+  <div><h2 style="margin:0">Importer le calendrier {{ annee }} depuis Excel</h2><p class="sous">{{ nom_cible }}</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('calendrier_officiel', **params) }}">← Retour au calendrier</a></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px">
+  <form method="post" enctype="multipart/form-data" class="carte f">
+    <h3 style="margin-top:0">Fichier à importer</h3>
+    <p class="aide">Classeur .xlsx (ou .csv) avec une ligne d'en-tête contenant les colonnes : {% for e in entetes %}<b>{{ e }}</b>{{ ', ' if not loop.last }}{% endfor %}.
+      Les types reconnus : {% for k, lib in TYPES %}{{ lib }}{{ ', ' if not loop.last }}{% endfor %}. Dates au format jj/mm/aaaa ou aaaa-mm-jj.
+      <b>L'import remplace toutes les lignes de l'année {{ annee }}</b> ; en cas d'erreur dans le fichier, rien n'est modifié.</p>
+    <label for="imp-f">Fichier Excel</label><input id="imp-f" type="file" name="fichier" accept=".xlsx,.csv" required>
+    <label for="imp-ref">Référence du texte (facultatif)</label><input id="imp-ref" name="reference_arrete" maxlength="400" value="{{ meta.reference_arrete or '' }}">
+    <label for="imp-src">Source (facultatif)</label><input id="imp-src" name="source" maxlength="200" value="{{ meta.source or '' }}">
+    <p class="actions" style="margin-top:12px"><button class="btn" onclick="return confirm('Importer et remplacer les lignes de l\'année {{ annee }} ?')">⬆ Importer</button>
+      <a class="btn sec" href="{{ url_for('calendrier_officiel_modele_xlsx', **params) }}">Télécharger le modèle Excel</a></p>
+  </form>
+  <div class="carte">
+    <h3 style="margin-top:0">Exporter</h3>
+    <p><a class="btn" href="{{ url_for('calendrier_officiel_xlsx', **params) }}">⬇ Calendrier {{ annee }} en Excel</a> <span class="aide">feuilles Calendrier et Jours de classe</span></p>
+    <p><a class="btn sec" href="{{ url_for('calendrier_officiel_pdf', **params) }}" target="_blank">📄 PDF</a></p>
+    <p class="aide">Le classeur exporté peut être corrigé puis réimporté (feuille Calendrier) : c'est le moyen le plus simple de saisir le calendrier d'une nouvelle année scolaire dès la parution de l'arrêté.</p>
+  </div>
+</div>
+{% endblock %}

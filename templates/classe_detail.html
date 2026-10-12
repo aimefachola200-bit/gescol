@@ -3,7 +3,7 @@
 <div class="entete">
   <div><h1>{{ cl.nom }}</h1><p class="sous">{{ cl.niveau }} · {{ cl.cycle|capitalize }} · {{ eleves|length }} élève(s) · scolarité {{ fcfa(cl.frais_scolarite) }}</p></div>
   <div class="actions">
-    {% if peut('eleves') %}<a class="btn" href="{{ url_for('eleve_form', classe=cl.id) }}">+ Inscrire dans cette classe</a>{% endif %}
+    {% if peut('eleves') and g.user.role != 'enseignant' %}<a class="btn" href="{{ url_for('eleve_form', classe=cl.id) }}">+ Inscrire dans cette classe</a>{% endif %}
     {% for p in PERIODES %}<a class="btn sec" href="{{ url_for('resultats', cid=cl.id, p=loop.index) }}">Résultats {{ p }}</a>{% endfor %}
     {% if cl.niveau == 'CM2' and peut('documents') %}<a class="btn sec" href="{{ url_for('liste_cep', cid=cl.id) }}">Liste CEP (CSV)</a>{% endif %}
   </div>

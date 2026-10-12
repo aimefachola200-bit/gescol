@@ -28,6 +28,17 @@ par le MEMP et les directions départementales :
   planification annuelle officielle (Trimestres, Mois, Français, Maths, Éducation sociale (Morale, Civisme,
   Histoire, Géographie), EST, EPS, Éducation artistique (Chant, Poésie, Conte, Dessin, Couture)), préremplie
   pour le CI → CM2 avec la planification de référence (DDEMP Donga, CS Djougou II, 2023-2024).
+* **Planification mensuelle (CE-CM)** (table `synoptique_planification_mensuelle`, une par classe et par mois
+  « AAAA-MM ») : reproduction du modèle officiel « PLANIFICATION (CE-CM) DU MOIS DE … » (1 page paysage) :
+  champs de formation (Français avec ses séquences de 1re / 2e semaine, Dictée, Mathématiques, Éducation sociale,
+  EST, Éducation artistique, EPS) × 5 semaines (« Du … au … »). Les semaines sont proposées automatiquement
+  (lundi → vendredi, 5 au plus, un mois commençant le week-end démarre au lundi suivant) et la grille est
+  préremplie avec les gabarits du modèle (« U…SA…S…Étape… », « U..SA..S..E..Texte n°.. », « SA…Séq… »…).
+  Classes CE1 → CM2 (CI et CP acceptés avec la même grille) ; un enseignant n'accède qu'à ses classes affectées
+  (`H.classes_autorisees()`) et peut y écrire sans le droit `synoptique`. Ajouter / modifier / supprimer un mois,
+  dupliquer le mois précédent, réinitialiser (gabarits), PDF au modèle officiel (signatures du titulaire
+  `classe:<id>:titulaire` et du directeur avec cachet / griffe), Excel, import Excel (modèle).
+  Les autres modules lisent `H.planification_mensuelle(ecole_id, annee, classe_id)`.
 * **Règlement intérieur** (table `synoptique_reglement`) prérempli avec le règlement intérieur des écoles
   primaires révisé (MEMP, N°0548/MEMP/DC/SGM/DEP/SP, Porto-Novo, 26 mars 2018) : préambule, titres, articles.
 * Import / export Excel (classeur multi-feuilles, modèle à télécharger) et PDF complet (paysage).
@@ -69,6 +80,46 @@ COLS_PLAN = [("trimestre", "Trimestre", ""), ("mois", "Mois", ""), ("francais", 
              ("ea_conte", "Conte", "Éducation artistique"), ("ea_dessin", "Dessin", "Éducation artistique"),
              ("ea_couture", "Couture", "Éducation artistique"), ("observations", "Observations", "")]
 CLES_PLAN = [c for c, _l, _g in COLS_PLAN]
+
+# ---- planification mensuelle (CE-CM) : modèle officiel docs_reference/planification_mensuelle_CE1_CM2.pdf
+# Une ligne par discipline ; pour le français, deux libellés (séquence de la 1re semaine / de la 2e semaine).
+# (code, champ de formation, libellé 1re semaine, libellé 2e semaine, gabarit de la case)
+GAB_ETAPE = "U…SA…S…Étape…"
+GAB_TEXTE = "U..SA..S..E..Texte n°.."
+GAB_SEQ = "SA…Séq…"
+LIGNES_PM = [
+    ("fr_1", "FRANÇAIS", "1-C.O/Voc thémat", "1-Communication orale", GAB_ETAPE),
+    ("fr_2", "FRANÇAIS", "2-Lecture", "2-Lecture", GAB_TEXTE),
+    ("fr_3", "FRANÇAIS", "3-Exp écrite imprég", "3-Vocab systématique", GAB_ETAPE),
+    ("fr_4", "FRANÇAIS", "4-Exp écrite 1er jet", "4-Grammaire", GAB_ETAPE),
+    ("fr_5", "FRANÇAIS", "5-Vocab fonct", "5-Conjugaison", GAB_ETAPE),
+    ("fr_6", "FRANÇAIS", "6-Grammaire", "6-Orthographe (Dictée)", GAB_ETAPE),
+    ("fr_7", "FRANÇAIS", "7-Conjugaison", "7-Exp écrite amélioration", GAB_ETAPE),
+    ("fr_8", "FRANÇAIS", "8-Orthographe", "8-Écriture", GAB_ETAPE),
+    ("fr_9", "FRANÇAIS", "9-Écriture", "9-Lecture", GAB_TEXTE),
+    ("fr_10", "FRANÇAIS", "10-Lecture", "10-Exp écrite n° 4 / Écriture", GAB_ETAPE),
+    ("fr_11", "FRANÇAIS", "11-Écriture", "11-Lecture renforcement", GAB_TEXTE),
+    ("fr_12", "FRANÇAIS", "", "12-Exp écrite compte rendu", GAB_ETAPE),
+    ("fr_dictee", "FRANÇAIS", "Dictée", None, ""),
+    ("maths", "MATHÉMATIQUES", None, None, "D…SA…SÉANCES N°s…"),
+    ("es_langue", "ÉDUCATION SOCIALE", "LANGUE", None, ""),
+    ("es_morale", "ÉDUCATION SOCIALE", "MORALE", None, GAB_SEQ),
+    ("es_civisme", "ÉDUCATION SOCIALE", "CIVISME", None, GAB_SEQ),
+    ("es_histoire", "ÉDUCATION SOCIALE", "HISTOIRE", None, GAB_SEQ),
+    ("es_geographie", "ÉDUCATION SOCIALE", "GÉOGRAPHIE", None, GAB_SEQ),
+    ("est", "ÉDUCATION SCIENTIFIQUE ET TECHNOLOGIQUE", None, None, GAB_SEQ),
+    ("ea_chant", "ÉDUCATION ARTISTIQUE", "CHANT", None, "SA…Titre…"),
+    ("ea_poesie", "ÉDUCATION ARTISTIQUE", "POÉSIE", None, GAB_SEQ),
+    ("ea_dessin", "ÉDUCATION ARTISTIQUE", "DESSIN", None, GAB_SEQ),
+    ("ea_contes", "ÉDUCATION ARTISTIQUE", "CONTES", None, GAB_SEQ),
+    ("ea_couture", "ÉDUCATION ARTISTIQUE", "COUTURE", None, GAB_SEQ),
+    ("eps", "ÉDUCATION PHYSIQUE ET SPORTIVE", None, None, GAB_SEQ),
+]
+CODES_PM = [l[0] for l in LIGNES_PM]
+NB_SEMAINES_PM = 5
+SEMAINES_PM = ["1ère Semaine", "2ème Semaine", "3ème Semaine", "4ème Semaine", "5ème Semaine"]
+NIVEAUX_PM = ["CI", "CP", "CE1", "CE2", "CM1", "CM2"]            # CE1-CM2 (modèle) ; CI-CP acceptés avec la même grille
+MOIS_LIB = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
 TYPES_REGLEMENT = {"preambule": "Préambule", "titre": "Titre", "article": "Article"}
 
 # champs de l'identité : (clé, libellé, valeur par défaut depuis la fiche école ou constante)
@@ -121,6 +172,19 @@ CREATE TABLE IF NOT EXISTS synoptique_planification (
     contenu TEXT NOT NULL,                -- JSON [{trimestre, mois, francais, maths, …, observations}]
     maj TEXT, maj_par INTEGER,
     UNIQUE (ecole_id, niveau)
+);
+CREATE TABLE IF NOT EXISTS synoptique_planification_mensuelle (
+    id INTEGER PRIMARY KEY,
+    ecole_id INTEGER NOT NULL,
+    annee TEXT,
+    classe_id INTEGER NOT NULL,
+    mois TEXT NOT NULL,                   -- « 2026-10 » (année-mois)
+    semaines TEXT NOT NULL,               -- JSON [{du, au}] (dates ISO, 5 semaines au plus)
+    contenu TEXT NOT NULL,                -- JSON {code_ligne: [case semaine 1 … case semaine 5]}
+    titulaire_visa TEXT,
+    directeur_visa TEXT,
+    maj TEXT, maj_par INTEGER,
+    UNIQUE (ecole_id, classe_id, mois)
 );
 CREATE TABLE IF NOT EXISTS synoptique_reglement (
     id INTEGER PRIMARY KEY,
@@ -516,6 +580,105 @@ def edt_defaut(niveau):
     return json.loads(json.dumps(EDT_OFFICIELS[GROUPE_EDT[niveau]]))
 
 
+# ---------------------------------------------------------------- planification mensuelle : outils purs
+def mois_valide(mois):
+    """« 2026-10 » -> (2026, 10) ; None si le format est invalide."""
+    m = re.fullmatch(r"(\d{4})-(\d{2})", mois or "")
+    if not m or not 1 <= int(m.group(2)) <= 12:
+        return None
+    return int(m.group(1)), int(m.group(2))
+
+
+def mois_libelle(mois, majuscule=True):
+    v = mois_valide(mois)
+    if not v:
+        return mois or ""
+    lib = MOIS_LIB[v[1] - 1]
+    return f"{lib.capitalize() if majuscule else lib} {v[0]}"
+
+
+def mois_annee_scolaire(annee):
+    """Mois de l'année scolaire « 2026-2027 » : septembre 2026 → juillet 2027, [(« 2026-09 », « Septembre 2026 »), …]."""
+    m = re.match(r"(\d{4})", annee or "")
+    a = int(m.group(1)) if m else date.today().year
+    out = [(f"{a}-{n:02d}", mois_libelle(f"{a}-{n:02d}")) for n in range(9, 13)]
+    out += [(f"{a + 1}-{n:02d}", mois_libelle(f"{a + 1}-{n:02d}")) for n in range(1, 8)]
+    return out
+
+
+def mois_precedent(mois):
+    a, n = mois_valide(mois)
+    return f"{a - 1}-12" if n == 1 else f"{a}-{n - 1:02d}"
+
+
+def semaines_du_mois(mois):
+    """Semaines de classe (lundi → vendredi) du mois, 5 au plus : [{du, au}] en dates ISO.
+    Un mois qui commence un samedi ou un dimanche démarre au lundi suivant ; la dernière semaine s'arrête
+    au dernier jour ouvré du mois."""
+    from datetime import timedelta
+    a, n = mois_valide(mois)
+    d = date(a, n, 1)
+    fin = date(a + (n == 12), (n % 12) + 1, 1) - timedelta(days=1)
+    if d.weekday() >= 5:
+        d += timedelta(days=7 - d.weekday())
+    out = []
+    while d <= fin and len(out) < NB_SEMAINES_PM:
+        vendredi = d + timedelta(days=4 - d.weekday())
+        out.append({"du": d.isoformat(), "au": min(vendredi, fin).isoformat()})
+        d += timedelta(days=7 - d.weekday())
+    while len(out) < NB_SEMAINES_PM:
+        out.append({"du": "", "au": ""})
+    return out
+
+
+def contenu_pm_defaut():
+    """Grille préremplie avec les gabarits du modèle officiel (« U…SA…S…Étape… », « SA…Séq… »…)."""
+    return {code: [gab] * NB_SEMAINES_PM for code, _ch, _l1, _l2, gab in LIGNES_PM}
+
+
+def normaliser_contenu_pm(contenu):
+    """Toute ligne connue est présente avec exactement 5 cases (chaînes)."""
+    out = {}
+    for code in CODES_PM:
+        cases = contenu.get(code) if isinstance(contenu, dict) else None
+        cases = [str(c or "")[:300] for c in (cases or [])][:NB_SEMAINES_PM] if isinstance(cases, list) else []
+        out[code] = cases + [""] * (NB_SEMAINES_PM - len(cases))
+    return out
+
+
+def fmt_jma(iso):
+    """« 2026-10-05 » -> « 05/10/2026 » (chaîne inchangée si ce n'est pas une date ISO)."""
+    try:
+        return date.fromisoformat(iso).strftime("%d/%m/%Y")
+    except (TypeError, ValueError):
+        return iso or ""
+
+
+def lire_date_iso(texte):
+    """« 05/10/2026 », « 2026-10-05 » ou objet date -> ISO ; chaîne vide sinon."""
+    if hasattr(texte, "strftime"):
+        return texte.strftime("%Y-%m-%d")
+    t = (texte or "").strip()
+    m = re.fullmatch(r"(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})", t)
+    if m:
+        t = f"{m.group(3)}-{int(m.group(2)):02d}-{int(m.group(1)):02d}"
+    try:
+        return date.fromisoformat(t).isoformat()
+    except ValueError:
+        return ""
+
+
+def groupes_pm():
+    """Lignes regroupées par champ de formation : [(champ, [lignes])], dans l'ordre du modèle."""
+    out = []
+    for l in LIGNES_PM:
+        if out and out[-1][0] == l[1]:
+            out[-1][1].append(l)
+        else:
+            out.append((l[1], [l]))
+    return out
+
+
 # ================================================================ module Flask
 _H = None
 
@@ -766,6 +929,104 @@ def enregistrer(app, H):
         if v["type"] != "titre" and not v["texte"]:
             err.append("Le texte est obligatoire.")
         return v, err
+
+    # ------------------------------------------------------------ données : planification mensuelle (CE-CM)
+    def classes_pm(ecole_id=None):
+        """Classes du primaire (CI → CM2) de l'école ; un enseignant ne voit que ses classes affectées."""
+        if ecole_id in (None, H.eco()) and g.get("user") and g.user["role"] == "enseignant":
+            cls = [dict(c) for c in H.classes_autorisees()]
+        else:
+            cls = classes_ecole(ecole_id)
+        return [c for c in cls if (c.get("niveau") or "").upper() in NIVEAUX_PM]
+
+    def classe_pm_ou_404(cid):
+        c = next((c for c in classes_pm() if c["id"] == cid), None)
+        if not c:
+            abort(404)
+        return c
+
+    def peut_ecrire_pm(cl):
+        """Droit `synoptique`, ou enseignant titulaire (classe affectée)."""
+        if H.peut("synoptique"):
+            return True
+        return bool(cl and g.get("user") and g.user["role"] == "enseignant"
+                    and cl["id"] in {c["id"] for c in H.classes_autorisees()})
+
+    def ecriture_pm(cl):
+        if not peut_ecrire_pm(cl):
+            abort(403)
+
+    def mois_pm_ou_404(mois):
+        if not mois_valide(mois):
+            abort(404)
+        return mois
+
+    def pm_dict(r):
+        d = dict(r)
+        try:
+            sem = json.loads(d.get("semaines") or "[]")
+        except ValueError:
+            sem = []
+        sem = [{"du": s.get("du") or "", "au": s.get("au") or ""} for s in sem if isinstance(s, dict)][:NB_SEMAINES_PM]
+        d["semaines"] = sem + [{"du": "", "au": ""}] * (NB_SEMAINES_PM - len(sem))
+        try:
+            d["contenu"] = normaliser_contenu_pm(json.loads(d.get("contenu") or "{}"))
+        except ValueError:
+            d["contenu"] = normaliser_contenu_pm({})
+        d["mois_lib"] = mois_libelle(d["mois"])
+        d["titulaire_visa"] = d.get("titulaire_visa") or ""
+        d["directeur_visa"] = d.get("directeur_visa") or ""
+        return d
+
+    def pm_row(cid, mois, ecole_id=None):
+        r = q("SELECT * FROM synoptique_planification_mensuelle WHERE ecole_id=? AND classe_id=? AND mois=?",
+              (ecole_id or H.eco(), cid, mois), un=True)
+        return pm_dict(r) if r else None
+
+    def pm_vierge(mois):
+        return {"id": None, "mois": mois, "mois_lib": mois_libelle(mois), "semaines": semaines_du_mois(mois),
+                "contenu": contenu_pm_defaut(), "titulaire_visa": "", "directeur_visa": "", "maj": None}
+
+    def enregistrer_pm(cl, mois, d, detail="planification mensuelle modifiée"):
+        ex("INSERT INTO synoptique_planification_mensuelle (ecole_id, annee, classe_id, mois, semaines, contenu, titulaire_visa, "
+           "directeur_visa, maj, maj_par) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(ecole_id, classe_id, mois) DO UPDATE SET "
+           "annee=excluded.annee, semaines=excluded.semaines, contenu=excluded.contenu, titulaire_visa=excluded.titulaire_visa, "
+           "directeur_visa=excluded.directeur_visa, maj=excluded.maj, maj_par=excluded.maj_par",
+           (H.eco(), config.ANNEE_ACTIVE, cl["id"], mois, json.dumps(d["semaines"], ensure_ascii=False),
+            json.dumps(normaliser_contenu_pm(d["contenu"]), ensure_ascii=False), (d.get("titulaire_visa") or "")[:120],
+            (d.get("directeur_visa") or "")[:120], H.maintenant(), uid()))
+        H.journal("synoptique", f"{detail} ({cl['nom']}, {mois_libelle(mois)})")
+
+    def lire_pm(form):
+        """Formulaire de la grille -> (données, erreurs)."""
+        err = []
+        semaines = []
+        for i in range(NB_SEMAINES_PM):
+            du, au = lire_date_iso(form.get(f"du_{i}")), lire_date_iso(form.get(f"au_{i}"))
+            if (form.get(f"du_{i}") or "").strip() and not du:
+                err.append(f"Semaine {i + 1} : date de début invalide.")
+            if (form.get(f"au_{i}") or "").strip() and not au:
+                err.append(f"Semaine {i + 1} : date de fin invalide.")
+            if du and au and au < du:
+                err.append(f"Semaine {i + 1} : la fin précède le début.")
+            semaines.append({"du": du, "au": au})
+        contenu = {code: [(form.get(f"c_{code}_{i}") or "").strip()[:300] for i in range(NB_SEMAINES_PM)] for code in CODES_PM}
+        d = {"semaines": semaines, "contenu": contenu, "titulaire_visa": (form.get("titulaire_visa") or "").strip()[:120],
+             "directeur_visa": (form.get("directeur_visa") or "").strip()[:120]}
+        return d, err
+
+    def mois_courant():
+        """Mois du jour s'il appartient à l'année scolaire active, sinon son premier mois."""
+        lst = [m for m, _l in mois_annee_scolaire(config.ANNEE_ACTIVE)]
+        auj = date.today().strftime("%Y-%m")
+        return auj if auj in lst else lst[0]
+
+    def planification_mensuelle(ecole_id, annee, classe_id):
+        """Planifications mensuelles d'une classe pour une année scolaire (liste de dicts, par mois croissant)."""
+        return [pm_dict(r) for r in q("SELECT * FROM synoptique_planification_mensuelle WHERE ecole_id=? AND annee=? AND classe_id=? ORDER BY mois",
+                                      (ecole_id, annee, classe_id))]
+
+    H.planification_mensuelle = planification_mensuelle
 
     # ---- interface pour les autres modules (transmission à la CS…)
     def synoptique_identite(ecole_id):
@@ -1033,6 +1294,286 @@ def enregistrer(app, H):
         enregistrer_planification(niveau, out, "planification importée")
         flash(f"Planification {lib} importée : {len(out)} ligne(s).", "success")
         return redirect(url_for("synoptique_planification", niveau=niveau))
+
+    # ============================================================ planification mensuelle (CE-CM)
+    PM = "/synoptique/planification-mensuelle"
+
+    def retour_pm(cl, mois):
+        return redirect(url_for("synoptique_planification_mensuelle", classe=cl["id"] if cl else None, mois=mois))
+
+    def ctx_pm(cl, mois, **extra):
+        return ctx("planification_mensuelle", cl=cl, cls=classes_pm(), mois=mois, mois_lib=mois_libelle(mois),
+                   MOIS=mois_annee_scolaire(config.ANNEE_ACTIVE), GROUPES=groupes_pm(), SEMAINES=SEMAINES_PM, NB=NB_SEMAINES_PM,
+                   fmt_jma=fmt_jma, ecrire_pm=peut_ecrire_pm(cl), **extra)
+
+    @app.route(PM)
+    @H.connexion_requise()
+    def synoptique_planification_mensuelle():
+        cls = classes_pm()
+        mois = mois_pm_ou_404(request.args.get("mois") or mois_courant())
+        cid = request.args.get("classe", type=int)
+        cl = next((c for c in cls if c["id"] == cid), None) or (cls[0] if cls else None)
+        d = pm_row(cl["id"], mois) if cl else None
+        existe = d is not None
+        if cl and not d:
+            d = pm_vierge(mois)
+        precedent = pm_row(cl["id"], mois_precedent(mois)) if cl else None
+        faits = {r["mois"] for r in q("SELECT mois FROM synoptique_planification_mensuelle WHERE ecole_id=? AND classe_id=?",
+                                      (H.eco(), cl["id"] if cl else 0))}
+        return render_template("synoptique_planification_mensuelle.html",
+                               **ctx_pm(cl, mois, d=d, existe=existe, precedent=precedent, faits=faits))
+
+    @app.route(PM + "/<int:cid>/<mois>/modifier", methods=["GET", "POST"])
+    @H.connexion_requise()
+    def synoptique_planification_mensuelle_form(cid, mois):
+        cl = classe_pm_ou_404(cid)
+        mois_pm_ou_404(mois)
+        ecriture_pm(cl)
+        existant = pm_row(cid, mois)
+        if request.method == "POST":
+            d, err = lire_pm(request.form)
+            if err:
+                for e_ in err:
+                    flash(e_, "danger")
+                d.update(id=existant["id"] if existant else None, mois=mois, mois_lib=mois_libelle(mois), maj=None)
+                return render_template("synoptique_planification_mensuelle_form.html", **ctx_pm(cl, mois, d=d, existe=existant is not None)), 400
+            enregistrer_pm(cl, mois, d, "planification mensuelle modifiée" if existant else "planification mensuelle créée")
+            flash(f"Planification mensuelle {cl['nom']} — {mois_libelle(mois)} enregistrée.", "success")
+            return retour_pm(cl, mois)
+        d = existant or pm_vierge(mois)
+        return render_template("synoptique_planification_mensuelle_form.html", **ctx_pm(cl, mois, d=d, existe=existant is not None))
+
+    @app.route(PM + "/<int:cid>/<mois>/supprimer", methods=["POST"])
+    @H.connexion_requise()
+    def synoptique_planification_mensuelle_supprimer(cid, mois):
+        cl = classe_pm_ou_404(cid)
+        mois_pm_ou_404(mois)
+        ecriture_pm(cl)
+        ex("DELETE FROM synoptique_planification_mensuelle WHERE ecole_id=? AND classe_id=? AND mois=?", (H.eco(), cid, mois))
+        H.journal("synoptique", f"planification mensuelle supprimée ({cl['nom']}, {mois_libelle(mois)})")
+        flash(f"Planification mensuelle {cl['nom']} — {mois_libelle(mois)} supprimée.", "success")
+        return retour_pm(cl, mois)
+
+    @app.route(PM + "/<int:cid>/<mois>/dupliquer", methods=["POST"])
+    @H.connexion_requise()
+    def synoptique_planification_mensuelle_dupliquer(cid, mois):
+        """Copie la grille du mois précédent (cases et visas) ; les semaines sont celles du mois cible."""
+        cl = classe_pm_ou_404(cid)
+        mois_pm_ou_404(mois)
+        ecriture_pm(cl)
+        prec = pm_row(cid, mois_precedent(mois))
+        if not prec:
+            flash(f"Aucune planification enregistrée pour {mois_libelle(mois_precedent(mois))} ({cl['nom']}).", "danger")
+            return retour_pm(cl, mois)
+        d = {"semaines": semaines_du_mois(mois), "contenu": prec["contenu"], "titulaire_visa": prec["titulaire_visa"],
+             "directeur_visa": prec["directeur_visa"]}
+        enregistrer_pm(cl, mois, d, f"planification mensuelle dupliquée depuis {mois_libelle(mois_precedent(mois))}")
+        flash(f"Planification de {mois_libelle(mois_precedent(mois))} copiée vers {mois_libelle(mois)} : adaptez les cases.", "success")
+        return redirect(url_for("synoptique_planification_mensuelle_form", cid=cid, mois=mois))
+
+    @app.route(PM + "/<int:cid>/<mois>/reinitialiser", methods=["POST"])
+    @H.connexion_requise()
+    def synoptique_planification_mensuelle_reinit(cid, mois):
+        cl = classe_pm_ou_404(cid)
+        mois_pm_ou_404(mois)
+        ecriture_pm(cl)
+        enregistrer_pm(cl, mois, pm_vierge(mois), "planification mensuelle réinitialisée (gabarits)")
+        flash(f"Grille {cl['nom']} — {mois_libelle(mois)} réinitialisée avec les gabarits du modèle officiel.", "success")
+        return retour_pm(cl, mois)
+
+    # ---- PDF (modèle officiel, 1 page paysage)
+    def pdf_pm(cl, d):
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.lib.units import mm
+        from reportlab.platypus import Flowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+        W, Hh = landscape(A4)
+        marge = 10 * mm
+        utile = W - 2 * marge
+        ident = identite()
+        idc = H.identification(cl)
+        st = ParagraphStyle("pm", fontName="Helvetica", fontSize=7, leading=8.4)
+        st_g = ParagraphStyle("pmg", parent=st, fontName="Helvetica-Bold")
+        st_c = ParagraphStyle("pmc", parent=st_g, alignment=1)
+        st_t = ParagraphStyle("pmt", fontName="Helvetica-Bold", fontSize=9, leading=12)
+        st_gab = ParagraphStyle("pmv", parent=st, textColor=colors.HexColor("#667085"))
+        gabarits = {gab for _c, _ch, _l1, _l2, gab in LIGNES_PM if gab}
+
+        def esc(v):
+            return ("" if v is None else str(v)).replace("&", "&amp;").replace("<", "&lt;").replace("\n", "<br/>")
+
+        def cell(v, s=st):
+            return Paragraph(esc(v), s)
+
+        def pts(t):
+            return t if t else "…………………"
+
+        tete = Table([[cell(f"CIRCONSCRIPTION SCOLAIRE DE {pts(ident['cs'])}", st_t),
+                       cell(f"PLANIFICATION (CE-CM) DU MOIS DE : {d['mois_lib'].upper()}", st_t)],
+                      [cell(f"ÉCOLE PRIMAIRE {pts(ident['epp'])}", st_t), cell(f"COURS : {cl['niveau']} — {cl['nom']}", st_t)]],
+                     colWidths=[utile * 0.6, utile * 0.4])
+        tete.setStyle(TableStyle([("LEFTPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 1)]))
+        largeurs = [22 * mm, 33 * mm, 40 * mm] + [(utile - 95 * mm) / NB_SEMAINES_PM] * NB_SEMAINES_PM
+        data = [[cell("CHAMPS DE FORMATION", st_c), "", ""] + [cell(s, st_c) for s in SEMAINES_PM],
+                ["", cell("1ère semaine", st_c), cell("2ème semaine", st_c)]
+                + [cell(f"Du {fmt_jma(s['du']) or '………'} au {fmt_jma(s['au']) or '………'}", st_g) for s in d["semaines"]]]
+        style = [("GRID", (0, 0), (-1, -1), 0.5, colors.black), ("BOX", (0, 0), (-1, -1), 0.9, colors.black),
+                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("TOPPADDING", (0, 0), (-1, -1), 1.4), ("BOTTOMPADDING", (0, 0), (-1, -1), 1.4),
+                 ("LEFTPADDING", (0, 0), (-1, -1), 2.5), ("RIGHTPADDING", (0, 0), (-1, -1), 2.5),
+                 ("SPAN", (0, 0), (2, 0)), ("SPAN", (0, 1), (0, 1))]
+        r = 2
+        for champ, lignes in groupes_pm():
+            debut = r
+            for code, _ch, l1, l2, _gab in lignes:
+                cases = d["contenu"].get(code, [""] * NB_SEMAINES_PM)
+                ligne = [cell(champ, st_c) if r == debut else ""]
+                if l1 is None:                       # champ sur une seule ligne (maths, EST, EPS)
+                    ligne += ["", ""]
+                    style.append(("SPAN", (0, r), (2, r)))
+                elif l2 is None:                     # sous-discipline sur les deux colonnes
+                    ligne += [cell(l1, st_c), ""]
+                    style.append(("SPAN", (1, r), (2, r)))
+                else:
+                    ligne += [cell(l1), cell(l2)]
+                ligne += [cell(v, st_gab if v in gabarits else st) for v in cases]
+                data.append(ligne)
+                r += 1
+            if r - debut > 1:
+                style.append(("SPAN", (0, debut), (0, r - 1)))
+        grille = Table(data, colWidths=largeurs, repeatRows=2)
+        grille.setStyle(TableStyle(style))
+
+        class Signatures(Flowable):
+            def __init__(self):
+                super().__init__()
+                self.height = 34 * mm
+
+            def wrap(self, *_):
+                return utile, self.height
+
+            def draw(self):
+                c = self.canv
+                y = self.height - 10
+                titre_t = (idc.get("titulaire_titre") or "Le titulaire").upper()
+                nom_t = d.get("titulaire_visa") or idc.get("titulaire_nom") or ""
+                P.bloc_signature(c, utile * 0.18, y, titre_t, nom_t, P.image_data_url(H.signature(f"classe:{cl['id']}:titulaire")),
+                                 cachet=False, lieu_date=False, largeur=40 * mm)
+                titre_d = f"{'LA' if (idc.get('directeur_titre') or '').startswith('Directrice') else 'LE'} {(idc.get('directeur_titre') or 'Directeur').upper()}"
+                sig_d = P.image_data_url(H.signature(f"ecole:{H.eco()}:directeur")) or P.signature_directeur()
+                P.bloc_signature(c, utile * 0.52, y, titre_d, idc.get("directeur_nom") or "", sig_d, cachet=True, lieu_date=False, largeur=40 * mm)
+                if d.get("directeur_visa"):
+                    c.setFont("Helvetica-Oblique", 7.5)
+                    c.drawCentredString(utile * 0.52, y - 10, d["directeur_visa"][:60])
+                c.setFont("Helvetica-Bold", 9)
+                ville = config.ECOLE.get("ville") or ""
+                c.drawCentredString(utile * 0.86, y, f"{ville + ', le ' if ville else 'Le '}{date.today().strftime('%d/%m/%Y')}")
+
+        def deco(c, doc):
+            c.setFont("Helvetica", 6.5)
+            c.setFillColor(colors.grey)
+            c.drawString(marge, 6 * mm, f"GESCOL · {ident['epp'] or config.ECOLE.get('nom', '')} · {config.ANNEE_ACTIVE} · planification mensuelle {cl['nom']}")
+            c.drawRightString(W - marge, 6 * mm, f"Page {doc.page} · imprimé le {date.today().strftime('%d/%m/%Y')}")
+            c.setFillColor(colors.black)
+
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=landscape(A4), leftMargin=marge, rightMargin=marge, topMargin=marge, bottomMargin=9 * mm,
+                                title=f"Planification mensuelle {cl['nom']} — {d['mois_lib']}", author="GESCOL")
+        doc.build([tete, Spacer(1, 4), grille, Spacer(1, 3), Signatures()], onFirstPage=deco, onLaterPages=deco, canvasmaker=P.GCanvas)
+        return buf.getvalue()
+
+    @app.route(PM + "/<int:cid>/<mois>.pdf")
+    @H.connexion_requise()
+    def synoptique_planification_mensuelle_pdf(cid, mois):
+        cl = classe_pm_ou_404(cid)
+        mois_pm_ou_404(mois)
+        d = pm_row(cid, mois) or pm_vierge(mois)
+        return H.pdf_reponse(pdf_pm(cl, d), f"planification_mensuelle_{cl['nom'].replace(' ', '_')}_{mois}.pdf")
+
+    # ---- Excel : export (sert de modèle d'import), modèle vierge, import
+    ENT_PM_FIXES = ["Code", "Champ de formation", "Discipline (1re sem.)", "Discipline (2e sem.)"]
+
+    def entetes_pm(semaines):
+        return ENT_PM_FIXES + [f"Semaine {i + 1} (du {fmt_jma(s['du'])} au {fmt_jma(s['au'])})" for i, s in enumerate(semaines)]
+
+    def lignes_pm_xlsx(d):
+        return [[code, champ, l1 or "", l2 or ""] + list(d["contenu"].get(code, [""] * NB_SEMAINES_PM))
+                for code, champ, l1, l2, _gab in LIGNES_PM]
+
+    def xlsx_pm(nom, cl, d, titre):
+        th = [titre, f"École {identite()['epp']} · année scolaire {config.ANNEE_ACTIVE}",
+              "Modifiez les cases des colonnes Semaine 1 à 5 (et les dates dans leur en-tête) puis importez ce fichier ; "
+              "ne changez pas la colonne Code."]
+        return H.xlsx.reponse_xlsx(nom, entetes_pm(d["semaines"]), lignes_pm_xlsx(d), titre="Planification mensuelle", titre_haut=th)
+
+    @app.route(PM + "/<int:cid>/<mois>.xlsx")
+    @H.connexion_requise()
+    def synoptique_planification_mensuelle_xlsx(cid, mois):
+        cl = classe_pm_ou_404(cid)
+        mois_pm_ou_404(mois)
+        d = pm_row(cid, mois) or pm_vierge(mois)
+        return xlsx_pm(f"planification_mensuelle_{cl['nom'].replace(' ', '_')}_{mois}.xlsx", cl, d,
+                       f"Planification mensuelle (CE-CM) — {cl['nom']} ({cl['niveau']}) — {mois_libelle(mois)}")
+
+    @app.route(PM + "/modele.xlsx")
+    @H.connexion_requise()
+    def synoptique_planification_mensuelle_modele():
+        mois = request.args.get("mois") or mois_courant()
+        if not mois_valide(mois):
+            mois = mois_courant()
+        return xlsx_pm("modele_planification_mensuelle.xlsx", None, pm_vierge(mois), f"Modèle de planification mensuelle (CE-CM) — {mois_libelle(mois)}")
+
+    @app.route(PM + "/<int:cid>/<mois>/import", methods=["POST"])
+    @H.connexion_requise()
+    def synoptique_planification_mensuelle_import(cid, mois):
+        cl = classe_pm_ou_404(cid)
+        mois_pm_ou_404(mois)
+        ecriture_pm(cl)
+        fichier = request.files.get("fichier")
+        if not fichier or not fichier.filename:
+            flash("Choisissez un fichier Excel.", "danger")
+            return retour_pm(cl, mois)
+        try:
+            entetes, lignes = H.xlsx.lire_tableau(fichier, mots_entete=("champ de formation",))
+        except (ValueError, H.xlsx.ExcelIndisponible) as e_:
+            flash(str(e_), "danger")
+            return retour_pm(cl, mois)
+        i_code = H.xlsx.colonne(entetes, "Code")
+        i_l1 = H.xlsx.colonne(entetes, "Discipline (1re sem.)", "discipline 1re sem", "1re semaine")
+        i_l2 = H.xlsx.colonne(entetes, "Discipline (2e sem.)", "discipline 2e sem", "2e semaine")
+        i_champ = H.xlsx.colonne(entetes, "Champ de formation", "champ")
+        i_sem = [H.xlsx.colonne(entetes, f"Semaine {i + 1}") for i in range(NB_SEMAINES_PM)]
+        if all(i is None for i in i_sem):
+            flash("Colonnes « Semaine 1 » à « Semaine 5 » introuvables dans le fichier (téléchargez le modèle).", "danger")
+            return retour_pm(cl, mois)
+        actuel = pm_row(cid, mois) or pm_vierge(mois)
+        semaines = [dict(s) for s in actuel["semaines"]]
+        for i, ic in enumerate(i_sem):           # dates des semaines lues dans l'en-tête « Semaine n (du … au …) »
+            if ic is not None:
+                dates = re.findall(r"\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}", entetes[ic])
+                if len(dates) >= 2 and lire_date_iso(dates[0]) and lire_date_iso(dates[1]):
+                    semaines[i] = {"du": lire_date_iso(dates[0]), "au": lire_date_iso(dates[1])}
+        par_lib = {}
+        for code, champ, l1, l2, _gab in LIGNES_PM:
+            par_lib[(H.xlsx.normaliser(champ), H.xlsx.normaliser(l1 or ""), H.xlsx.normaliser(l2 or ""))] = code
+        contenu = dict(actuel["contenu"])
+        n = 0
+        for l in lignes:
+            code = H.xlsx.valeur(l, i_code).lower() if i_code is not None else ""
+            if code not in contenu:
+                cle = (H.xlsx.normaliser(H.xlsx.valeur(l, i_champ)), H.xlsx.normaliser(H.xlsx.valeur(l, i_l1)), H.xlsx.normaliser(H.xlsx.valeur(l, i_l2)))
+                code = par_lib.get(cle, "")
+            if code not in contenu:
+                continue
+            contenu[code] = [H.xlsx.valeur(l, ic)[:300] if ic is not None else contenu[code][i] for i, ic in enumerate(i_sem)]
+            n += 1
+        if not n:
+            flash("Aucune ligne reconnue : conservez la colonne « Code » du modèle.", "danger")
+            return retour_pm(cl, mois)
+        enregistrer_pm(cl, mois, {"semaines": semaines, "contenu": contenu, "titulaire_visa": actuel["titulaire_visa"],
+                                  "directeur_visa": actuel["directeur_visa"]}, "planification mensuelle importée")
+        flash(f"Planification mensuelle {cl['nom']} — {mois_libelle(mois)} importée : {n} ligne(s).", "success")
+        return retour_pm(cl, mois)
 
     # ============================================================ règlement intérieur
     @app.route("/synoptique/reglement")

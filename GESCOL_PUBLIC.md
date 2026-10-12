@@ -33,6 +33,7 @@ Elles se téléchargent sur la même page : https://aimefachola200-bit.github.io
   - les anciennetés sont calculées au 31 décembre ;
   - la date de retraite est calculée à 60 ans pour le grade A, 58 ans pour le B et 55 ans pour le C ;
   - fiche individuelle en PDF ; l'enseignant voit sa carrière dans « Mon espace ».
+- **Périmètre de l'enseignant** (éditions privée et publique) : avec son identifiant et son mot de passe, chaque enseignant accède à ses classes (affectations) — élèves, appel, registre, relevés, affichage, évaluations, notes, synthèse, CEP (CM2), cantine, messages aux parents, comptes élèves, épreuves, visites, documents de l'enseignant, sa fiche de carrière — et à sa signature digitale (« Mon espace ») apposée sur les documents qu'il émet ; le domaine du directeur (tableau de bord, tableau synoptique, finances, administration, recensement, données, secrétariat, suppression d'élèves) lui est refusé.
 - **Vie de l'école :**
   - **Carte d'identité de l'école :** fiches de recensement primaire et maternelle, rapports de rentrée et de fin d'année EP et EM. Elles sont remplies automatiquement, se corrigent, s'impriment au format officiel (PDF rempli ou vierge), s'exportent en Excel et acceptent le téléversement du scan signé.
   - **Maître de semaine :** planning, journal du jour, visa du directeur, rapport hebdomadaire PDF.

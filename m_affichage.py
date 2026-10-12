@@ -359,7 +359,7 @@ def enregistrer(app, H):
                  Spacer(1, 3), KeepTogether([recap])]
         titre_dir = f"{'La' if (v.get('directeur_titre') or '').startswith('Directrice') else 'Le'} {v.get('directeur_titre') or 'Directeur'}"
         sigs = [((v.get("titulaire_titre") or "Le titulaire").upper(), v.get("titulaire_nom", ""),
-                 P.image_data_url(H.signature(f"classe:{cl['id']}:titulaire")), False),
+                 P.image_data_url(H.signature_titulaire(cl["id"])), False),
                 (titre_dir.upper(), v.get("directeur_nom", ""),
                  P.image_data_url(H.signature(f"ecole:{H.eco()}:directeur")), True)]
         pdf = P.pour_cycle(dict(cl).get("cycle"))(

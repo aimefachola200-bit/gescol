@@ -927,8 +927,11 @@ def enregistrer(app, H):
         return wb, infos
 
     @app.route("/educmaster/modeles/notes-primaire/<int:cid>.xlsx")
-    @H.connexion_requise("donnees")
+    @H.connexion_requise()
     def educmaster_modele_notes_rempli(cid):
+        # droit « donnees », ou enseignant pour une de ses classes (périmètre de l'enseignant : ses notes vers EducMaster)
+        if not H.peut("donnees") and g.user["role"] != "enseignant":
+            abort(403)
         H.verifier_classe(cid)
         cl = H.classe_ou_404(cid)
         if cl["cycle"] != "primaire":

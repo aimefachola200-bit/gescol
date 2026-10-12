@@ -204,3 +204,16 @@ form.f label.choix,label.choix{display:inline-flex!important;align-items:center;
 .mdp-cadre input{width:100%;padding-right:2.6em;box-sizing:border-box}
 .mdp-oeil{position:absolute;right:.3em;top:50%;transform:translateY(-50%);border:0;background:transparent;cursor:pointer;font-size:1.15em;line-height:1;padding:.2em .35em;color:#6B7A90;border-radius:6px}
 .mdp-oeil.actif,.mdp-oeil:hover{color:#1F4E79;background:#E8EEF5}
+/* v1.6 : capture photo — caméra avant / arrière et choix de l'appareil */
+.pc-cams{font-size:12px;padding:3px 6px;max-width:220px}
+/* v1.6 : planification mensuelle (CE-CM) */
+table.t.plan-m th,table.t.plan-m td{font-size:12px;padding:3px 5px;vertical-align:top;border:1px solid #D0D5DD}
+table.t.plan-m th.g{background:#E4ECF5;text-align:center}
+table.t.plan-m td.champ{font-weight:600;background:#F9FAFB;text-align:center;vertical-align:middle}
+table.t.plan-m td.sous{background:#FCFCFD;white-space:nowrap}
+table.t.plan-m td.sous.vide,table.t.plan-m td.case.vide{background:#F2F4F7}
+table.t.plan-m td.case{white-space:pre-line;min-width:120px}
+table.t.plan-m td.case.gabarit{color:#98A2B3;font-style:italic}
+table.t.plan-m textarea{width:100%;min-width:120px;min-height:34px;font-size:12px;padding:2px 4px;resize:vertical;box-sizing:border-box}
+table.t.plan-m input[type=date]{font-size:11px;padding:2px 3px;width:118px}
+.plan-m-sem{display:flex;gap:4px;align-items:center;flex-wrap:wrap;font-weight:400;font-size:11px}

@@ -49,14 +49,17 @@ EQUIV_ROLES_JUR = {"responsable": "admin", "chef_service": "directeur", "cp": "d
 FINANCES_HORS_CP = {"paiements", "paie", "tresorerie", "depenses", "cantine", "stock"}
 # module -> rôles autorisés en écriture
 DROITS = {
-    "eleves": {"admin", "directeur", "secretaire"},
+    # v1.6 : l'enseignant a accès à son périmètre (ses classes : élèves, cantine, CEP, synthèse, messages aux parents…) ;
+    # ce qui reste du domaine du directeur (création / suppression d'élèves, configuration, finances, administration…)
+    # lui est refusé par m_perimetre_enseignant (INTERDITS), qui filtre aussi par classe.
+    "eleves": {"admin", "directeur", "secretaire", "enseignant"},
     "classes": {"admin", "directeur", "secretaire"},
     "notes": {"admin", "directeur", "enseignant"},
     "paiements": {"admin", "directeur", "comptable"},
     "documents": {"admin", "directeur", "secretaire"},
     "parametres": {"admin"},
     "parents": {"admin", "directeur", "secretaire"},
-    "communication": {"admin", "directeur", "secretaire"},
+    "communication": {"admin", "directeur", "secretaire", "enseignant"},
     "appel": {"admin", "directeur", "secretaire", "enseignant"},
     "paie": {"admin", "directeur", "comptable"},
     "tresorerie": {"admin", "directeur", "comptable"},
@@ -65,9 +68,9 @@ DROITS = {
     "evaluations": {"admin", "directeur", "enseignant"},
     "registre": {"admin", "directeur", "secretaire", "enseignant"},
     "affichage": {"admin", "directeur", "secretaire", "enseignant"},
-    "cep": {"admin", "directeur", "secretaire"},
-    "synthese": {"admin", "directeur"},
-    "cantine": {"admin", "directeur", "comptable", "secretaire"},
+    "cep": {"admin", "directeur", "secretaire", "enseignant"},
+    "synthese": {"admin", "directeur", "enseignant"},
+    "cantine": {"admin", "directeur", "comptable", "secretaire", "enseignant"},
     "donnees": {"admin", "directeur", "secretaire"},
     "ecoles": {"admin", "directeur"},
     # applications Circonscription scolaire / DDEMP
@@ -84,7 +87,7 @@ DROITS = {
     "depenses": {"admin", "directeur", "comptable"},
     "maitre_semaine": {"admin", "directeur", "secretaire", "enseignant"},
     "visites": {"admin", "directeur", "enseignant"},
-    "patrimoine": {"admin", "directeur", "secretaire"},
+    "patrimoine": {"admin", "directeur", "secretaire", "enseignant"},   # enseignant : lecture seule (m_perimetre_enseignant)
     "recensement": {"admin", "directeur", "secretaire"},
     "docs_enseignant": {"admin", "directeur", "secretaire", "enseignant"},
     # v1.6
@@ -375,7 +378,9 @@ MODULES = ["m_en_ligne", "m_ecoles", "m_parents", "m_paiement_en_ligne", "m_appe
            "m_juridiction", "a_transmission", "a_tableau", "a_cep", "a_personnel", "a_structure", "a_visites", "a_fiches",
            # v1.6 : tableau synoptique, vivres et stock, comité d'évaluation et épreuves (toutes éditions) ;
            # CS / DDEMP : divisions, unités pédagogiques, modules des écoles ouverts aux applications d'administration
-           "m_synoptique", "m_stock_cantine", "m_epreuves", "m_calendrier_officiel", "m_themes_up", "a_divisions", "a_up", "a_integration", "a_synoptique"]
+           "m_synoptique", "m_stock_cantine", "m_epreuves", "m_calendrier_officiel", "m_themes_up", "a_divisions", "a_up", "a_integration", "a_synoptique",
+           # v1.6 : périmètre de l'enseignant (ses classes), en dernier : son before_request contrôle les routes de tous les modules
+           "m_perimetre_enseignant"]
 
 
 def create_app(test_config=None):
@@ -422,8 +427,9 @@ def create_app(test_config=None):
 
     @app.errorhandler(403)
     def interdit(_e):
+        # m_perimetre_enseignant pose g.message_403 (« Hors de votre périmètre d'enseignant »)
         return render_template("erreur.html", titre="Accès refusé",
-                               message="Votre rôle ne permet pas d'accéder à cette page."), 403
+                               message=g.get("message_403") or "Votre rôle ne permet pas d'accéder à cette page."), 403
 
     @app.errorhandler(404)
     def introuvable(_e):
@@ -531,6 +537,9 @@ def create_app(test_config=None):
         lst = q("""SELECT c.*, COUNT(e.id) effectif FROM classes c
                    LEFT JOIN eleves e ON e.classe_id=c.id AND e.statut='inscrit'
                    WHERE c.ecole_id=? GROUP BY c.id ORDER BY c.nom""", (eco(),))
+        if g.user["role"] == "enseignant":   # périmètre de l'enseignant : ses classes
+            mes = {c["id"] for c in H.classes_autorisees()}
+            lst = [c for c in lst if c["id"] in mes]
         return render_template("classes.html", classes=lst)
 
     @app.route("/classes/nouvelle", methods=["GET", "POST"])
@@ -604,8 +613,13 @@ def create_app(test_config=None):
         if cid:
             sql += " AND e.classe_id=?"
             args.append(cid)
+        autorisees = H.classes_autorisees()
+        if g.user["role"] == "enseignant":   # périmètre de l'enseignant : les élèves de ses classes seulement
+            ids = [c["id"] for c in autorisees] or [0]
+            sql += f" AND e.classe_id IN ({','.join('?' * len(ids))})"
+            args += ids
         lst = q(sql + " ORDER BY e.nom, e.prenoms LIMIT 500", args)
-        return render_template("eleves.html", eleves=lst, classes=H.classes_autorisees(),
+        return render_template("eleves.html", eleves=lst, classes=autorisees,
                                rech=rech, cid=cid, statut=statut)
 
     @app.route("/eleves/export.csv")
@@ -636,6 +650,9 @@ def create_app(test_config=None):
                 "nom", "prenoms", "sexe", "date_naissance", "lieu_naissance", "classe_id", "parent_nom",
                 "parent_telephone", "parent_whatsapp", "adresse", "statut", "nationalite") + CHAMPS_CARTE}
             f["nom"] = f["nom"].upper()
+            if e and g.user["role"] == "enseignant":
+                # périmètre de l'enseignant : renseignements courants seulement (ni changement de classe ni de statut)
+                f["classe_id"], f["statut"] = str(e["classe_id"] or ""), e["statut"]
             erreurs = []
             if not f["nom"] or not f["prenoms"]:
                 erreurs.append("Nom et prénoms sont obligatoires.")

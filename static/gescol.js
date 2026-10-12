@@ -79,7 +79,10 @@
 
   /* ---------------------------------------------------------------- photo : fichier ou caméra
      <div class="photo-capture" data-champ="photo_data" data-src="/url/photo.jpg"></div>
-     Le formulaire reçoit une image JPEG en data URL dans le champ caché. */
+     Le formulaire reçoit une image JPEG en data URL dans le champ caché.
+     Caméra : bouton « Basculer » (avant ↔ arrière, facingMode user / environment), liste des caméras disponibles
+     (enumerateDevices) quand il y en a plusieurs, dernier choix mémorisé (localStorage gescol-camera-face / -id),
+     repli automatique sur la caméra existante quand la face demandée manque (PC sans caméra arrière). */
   function initPhoto(box) {
     if (box.dataset.pret) return; box.dataset.pret = 1;
     var champ = box.dataset.champ || 'photo_data';
@@ -91,9 +94,34 @@
       '<label class="btn sec petit">Fichier<input type="file" accept="image/*" hidden></label>' +
       '<button type="button" class="btn sec petit" data-a="camera">Caméra</button>' +
       '<button type="button" class="btn petit" data-a="prendre" hidden>Prendre</button>' +
+      '<button type="button" class="btn sec petit" data-a="basculer" hidden title="Caméra avant / arrière">⇄ Basculer</button>' +
       '<label class="btn sec petit pc-mobile" hidden>Appareil photo<input type="file" accept="image/*" capture="environment" hidden></label>' +
-      '</div><input type="hidden" name="' + champ + '">';
+      '</div><select class="pc-cams" hidden aria-label="Choix de la caméra"></select>' +
+      '<input type="hidden" name="' + champ + '">';
     var img = $('img', box), vid = $('video', box), vide = $('.pc-vide', box), sortie = $('input[name="' + champ + '"]', box), flux = null;
+    /* Caméra avant ('user') ou arrière ('environment') + choix d'un appareil précis ; dernier choix mémorisé. */
+    var basculer = $('[data-a=basculer]', box), selCams = $('.pc-cams', box), cameras = [];
+    var face = 'user', appareil = '';
+    try { face = localStorage.getItem('gescol-camera-face') || 'user'; appareil = localStorage.getItem('gescol-camera-id') || ''; } catch (_) {}
+    function memoriser() { try { localStorage.setItem('gescol-camera-face', face); localStorage.setItem('gescol-camera-id', appareil); } catch (_) {} }
+    function listerCameras() {
+      if (!navigator.mediaDevices.enumerateDevices) return Promise.resolve([]);
+      return navigator.mediaDevices.enumerateDevices().then(function (l) {
+        cameras = l.filter(function (d) { return d.kind === 'videoinput'; });
+        selCams.innerHTML = cameras.map(function (d, i) {
+          return '<option value="' + d.deviceId + '">' + (d.label || ('Caméra ' + (i + 1))).replace(/</g, '&lt;') + '</option>';
+        }).join('');
+        selCams.hidden = !(flux && cameras.length > 1);
+        return cameras;
+      }).catch(function () { return []; });
+    }
+    function contraintes(mode) {
+      // mode 1 : appareil mémorisé ; 2 : face demandée ; 3 : face opposée ; 4 : n'importe quelle caméra
+      if (mode === 1) return { deviceId: { exact: appareil }, width: { ideal: 1280 } };
+      if (mode === 2) return { facingMode: face, width: { ideal: 1280 } };
+      if (mode === 3) return { facingMode: face === 'user' ? 'environment' : 'user', width: { ideal: 1280 } };
+      return true;
+    }
     function poser(url) {
       var i = new Image();
       i.onload = function () {
@@ -114,13 +142,51 @@
     if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) || !window.isSecureContext) {
       cam.hidden = true; $('.pc-mobile', box).hidden = false;  // http sur le réseau local : appareil photo natif
     }
-    function arreter() { if (flux) { flux.getTracks().forEach(function (t) { t.stop(); }); flux = null; } vid.hidden = true; prendre.hidden = true; cam.textContent = 'Caméra'; }
+    function couper() { if (flux) { flux.getTracks().forEach(function (t) { t.stop(); }); flux = null; } }
+    function arreter() {
+      couper(); vid.hidden = true; prendre.hidden = true; basculer.hidden = true; selCams.hidden = true; cam.textContent = 'Caméra';
+      if (!sortie.value && !box.dataset.src) { vide.hidden = false; } else { img.hidden = false; }
+    }
+    function demarrer(mode) {
+      mode = mode || (appareil ? 1 : 2);
+      couper();   // l'ancien flux est arrêté avant d'en demander un autre (une seule caméra à la fois)
+      return navigator.mediaDevices.getUserMedia({ video: contraintes(mode), audio: false }).then(function (s) {
+        flux = s; vid.srcObject = s; vid.hidden = false; img.hidden = true; vide.hidden = true; prendre.hidden = false; cam.textContent = 'Annuler'; vid.play();
+        var piste = s.getVideoTracks()[0], reg = piste && piste.getSettings ? piste.getSettings() : {};
+        if (reg.facingMode === 'user' || reg.facingMode === 'environment') face = reg.facingMode;
+        if (mode === 3) { toast('Caméra ' + (face === 'user' ? 'arrière' : 'avant') + ' introuvable : caméra ' + (face === 'user' ? 'avant' : 'arrière') + ' utilisée.'); }
+        if (mode === 4) { face = 'user'; }
+        if (reg.deviceId) appareil = reg.deviceId;
+        memoriser();
+        return listerCameras().then(function (l) {
+          basculer.hidden = l.length === 1;   // une seule caméra (PC) : rien à basculer
+          if (reg.deviceId) selCams.value = reg.deviceId;
+        });
+      }).catch(function (e) {
+        var refus = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
+        if (mode === 1 && !refus) return demarrer(2);          // l'appareil mémorisé n'existe plus
+        if (mode === 2 && !refus) return demarrer(3);   // la face demandée n'existe pas (PC sans caméra arrière)
+        if (mode === 3 && !refus) return demarrer(4);
+        arreter();
+        toast(refus ? 'Caméra refusée : autorisez-la dans le navigateur ou utilisez « Fichier ».'
+          : 'Caméra inaccessible : autorisez-la dans le navigateur ou utilisez « Fichier ».', false);
+        $('.pc-mobile', box).hidden = false;
+      });
+    }
     cam.addEventListener('click', function () {
       if (flux) { arreter(); return; }
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 720 }, audio: false }).then(function (s) {
-        flux = s; vid.srcObject = s; vid.hidden = false; img.hidden = true; vide.hidden = true; prendre.hidden = false; cam.textContent = 'Annuler'; vid.play();
-      }).catch(function () { toast('Caméra inaccessible : autorisez-la dans le navigateur ou utilisez « Fichier ».', false); $('.pc-mobile', box).hidden = false; });
+      demarrer();
     });
+    basculer.addEventListener('click', function () {
+      if (!flux) return;
+      face = face === 'user' ? 'environment' : 'user';
+      // avec plusieurs appareils connus mais sans facingMode (PC à deux webcams) : passer à l'appareil suivant
+      var actuel = cameras.map(function (d) { return d.deviceId; }).indexOf(appareil);
+      var piste = flux.getVideoTracks()[0], reg = piste && piste.getSettings ? piste.getSettings() : {};
+      if (cameras.length > 1 && !reg.facingMode && actuel >= 0) { appareil = cameras[(actuel + 1) % cameras.length].deviceId; demarrer(1); return; }
+      appareil = ''; demarrer(2);
+    });
+    selCams.addEventListener('change', function () { appareil = selCams.value; if (flux) demarrer(1); });
     prendre.addEventListener('click', function () {
       var c = document.createElement('canvas'); c.width = vid.videoWidth; c.height = vid.videoHeight;
       c.getContext('2d').drawImage(vid, 0, 0); arreter(); poser(c.toDataURL('image/jpeg', 0.9));

@@ -56,7 +56,7 @@
 </div>
 <div class="actions"><button class="btn">Enregistrer</button><a class="btn sec" href="{{ url_for('eleves') }}">Annuler</a></div>
 </form>
-{% if edition and ep_existe('eleve_supprimer') %}
+{% if edition and ep_existe('eleve_supprimer') and g.user.role != 'enseignant' %}{# suppression : domaine du directeur #}
 <div class="carte" style="border-color:#FDA29B">
   <h2 style="margin-top:0">Supprimer ou retirer cet élève</h2>
   <p class="aide"><b>Supprimer</b> efface définitivement la fiche et toutes ses données (notes, présences, cartes, accès à l'espace élève).

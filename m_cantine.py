@@ -193,7 +193,7 @@ def enregistrer(app, H):
         sigs = []
         if titulaire and cl:
             sigs.append(((v.get("titulaire_titre") or "Le titulaire").upper(), v.get("titulaire_nom", ""),
-                         P.image_data_url(H.signature(f"classe:{cl['id']}:titulaire")), False))
+                         P.image_data_url(H.signature_titulaire(cl["id"])), False))
         sigs.append((titre_dir.upper(), v.get("directeur_nom", ""),
                      P.image_data_url(H.signature(f"ecole:{H.eco()}:directeur")), True))
         return sigs

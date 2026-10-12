@@ -874,7 +874,7 @@ def enregistrer(app, H):
                                       cle=f"eval|{e['id']}|{ev['id']}|{ev['annee']}")
         pdfs._qr(c, code, m_, base)
         eid = H.eco()
-        tit = pdfs.image_data_url(H.signature(f"classe:{cl['id']}:titulaire"))
+        tit = pdfs.image_data_url(H.signature_titulaire(cl["id"]))
         s_adm = pdfs.image_data_url(H.signature(f"ecole:{eid}:admin"))
         s_dir = pdfs.image_data_url(H.signature(f"ecole:{eid}:directeur")) or pdfs.signature_directeur()
         blocs = [("Le Parent", "", None, False),

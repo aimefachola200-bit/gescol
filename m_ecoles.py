@@ -19,6 +19,7 @@ CHAMPS_ECOLE = ["nom", "sigle", "statut", "ordre", "departement", "cs", "up", "z
 ORDRES = ["Maternelle", "Primaire", "Maternelle et primaire", "Secondaire (collège)", "Secondaire (collège et lycée)",
           "Complexe (maternelle, primaire, secondaire)", "Enseignement technique"]
 RE_CLE_SIGNATURE = re.compile(r"^(ecole:\d+:(directeur|admin|ccs)|classe:\d+:titulaire|eleve:\d+|cep:\d+:chef"
+                              r"|enseignant:\d+"      # v1.6 : signature personnelle d'un compte enseignant (utilisateurs.id)
                               r"|jur:(service|agent|cs):\d+|jur:structure:responsable)$")
 
 
@@ -80,6 +81,39 @@ def enregistrer(app, H):
         return r["image"] if r else None
 
     H.signature = signature
+
+    def signature_enseignant(user_id):
+        """Signature digitale personnelle d'un compte enseignant (clé « enseignant:<user_id> »), ou None."""
+        return signature(f"enseignant:{int(user_id)}") if user_id else None
+
+    def signature_titulaire(cid):
+        """Signature du titulaire d'une classe pour les documents de la classe (bulletins, relevés, fiches…) :
+        la signature « classe:<id>:titulaire » si elle existe ; sinon la signature personnelle de l'enseignant
+        connecté s'il est affecté à la classe ; sinon celle du seul enseignant affecté à la classe."""
+        img = signature(f"classe:{int(cid)}:titulaire")
+        if img:
+            return img
+        u = g.get("user")
+        if u and u["role"] == "enseignant" and q("SELECT 1 FROM affectations WHERE user_id=? AND classe_id=?",
+                                                 (u["id"], cid), un=True):
+            return signature_enseignant(u["id"])
+        ens = q("""SELECT DISTINCT a.user_id FROM affectations a JOIN utilisateurs u ON u.id=a.user_id
+                   WHERE a.classe_id=? AND u.role='enseignant' AND u.actif=1""", (cid,))
+        return signature_enseignant(ens[0]["user_id"]) if len(ens) == 1 else None
+
+    def signature_agent(personnel_id):
+        """Signature personnelle de l'enseignant dont la fiche du personnel (personnel.user_id) est reliée à son compte."""
+        if not personnel_id:
+            return None
+        try:
+            r = q("SELECT user_id FROM personnel WHERE id=?", (personnel_id,), un=True)
+        except Exception:  # noqa: BLE001 — colonne absente tant que le module carrière n'est pas installé
+            return None
+        return signature_enseignant(r["user_id"]) if r and r["user_id"] else None
+
+    H.signature_enseignant = signature_enseignant
+    H.signature_titulaire = signature_titulaire
+    H.signature_agent = signature_agent
 
     def griffe_de(e, ligne3=None, couleur=None, titre=None, nom=None):
         """(lignes, couleur) de la griffe d'une école (ligne de la table ecoles) : « LE DIRECTEUR / LA DIRECTRICE »,
@@ -351,6 +385,11 @@ def enregistrer(app, H):
             abort(403)
         if cle.startswith("jur:") and g.user["role"] not in ("admin", "fondateur", "responsable", "chef_service", "cp"):
             abort(403)
+        if cle.startswith("enseignant:") and g.user["role"] == "enseignant" and cle != f"enseignant:{g.user['id']}":
+            abort(403)                      # un enseignant ne signe que pour lui-même
+        if g.user["role"] == "enseignant" and (cle.startswith(("eleve:", "cep:")) or (
+                cle.startswith("classe:") and int(cle.split(":")[1]) not in {c["id"] for c in classes_autorisees()})):
+            abort(403)                      # … et pour les classes qui lui sont affectées
         data = request.get_json(silent=True) or {}
         img = data.get("image")
         if data.get("effacer"):

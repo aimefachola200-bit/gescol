@@ -433,7 +433,7 @@ def enregistrer(app, H):
         return [("DDEMP", v.get("ddemp")), ("CS", v.get("cs")), ("ÉCOLE", v.get("ecole"))]
 
     def img_titulaire(cl):
-        return H.pdfs.image_data_url(H.signature(f"classe:{cl['id']}:titulaire"))
+        return H.pdfs.image_data_url(H.signature_titulaire(cl["id"]))
 
     def img_directeur():
         return H.pdfs.image_data_url(H.signature(f"ecole:{H.eco()}:directeur")) or H.pdfs.signature_directeur()

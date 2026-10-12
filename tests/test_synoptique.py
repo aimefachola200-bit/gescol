@@ -436,7 +436,8 @@ class TestSynoptique(unittest.TestCase):
         self.assertGreater(len(self.c.get("/synoptique/synoptique.pdf").data), 30000)
 
     def test_10_droits_et_interfaces(self):
-        """Un enseignant lit le synoptique mais ne peut pas écrire ; H.synoptique_* est exposé aux autres modules."""
+        """Un enseignant lit le règlement et le comité de classe mais n'écrit pas ; le tableau synoptique et le personnel
+        relèvent du directeur (m_perimetre_enseignant) ; H.synoptique_* est exposé aux autres modules."""
         from werkzeug.security import generate_password_hash
         with app.app_context():
             from app import ex, q
@@ -445,9 +446,12 @@ class TestSynoptique(unittest.TestCase):
                    ("ens_syno", "Enseignant test", "enseignant", generate_password_hash("secret123")))
         c2 = app.test_client()
         self.assertEqual(c2.post("/login", data={"identifiant": "ens_syno", "mdp": "secret123"}).status_code, 302)
-        self.assertEqual(c2.get("/synoptique").status_code, 200)
-        self.assertEqual(c2.get("/synoptique/personnel").status_code, 200)
+        # v1.6 (m_perimetre_enseignant) : le tableau synoptique et le personnel relèvent du directeur ; l'enseignant
+        # lit le règlement intérieur, les emplois du temps / planifications de SES niveaux et le comité de classe
+        self.assertEqual(c2.get("/synoptique").status_code, 403)
+        self.assertEqual(c2.get("/synoptique/personnel").status_code, 403)
         self.assertEqual(c2.get("/synoptique/reglement").status_code, 200)
+        self.assertEqual(c2.get("/synoptique/comites/classe").status_code, 200)
         self.assertEqual(c2.post("/synoptique/identite", data={"memp": "x"}).status_code, 403)
         self.assertEqual(c2.get("/synoptique/personnel/0").status_code, 403)
         self.assertEqual(c2.post("/synoptique/reglement/retablir").status_code, 403)

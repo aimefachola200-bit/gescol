@@ -1,0 +1,50 @@
+{% extends "base.html" %}{% block titre %}Thème — {{ 'modifier' if t else 'ajouter' }}{% endblock %}
+{% block contenu %}
+{% include "themes_up_entete.html" %}
+<div class="entete">
+  <div><h2 style="margin:0">{{ 'Modifier un thème' if t else 'Nouveau thème' }} — {{ annee }}</h2>
+    {% if t and t.officiel %}<p class="sous">Thème officiel de la DIIP : « Recharger l'officiel » le remettra tel que publié.</p>{% endif %}</div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('themes_up', **params) }}">← Retour aux thèmes</a></div>
+</div>
+<form method="post" class="carte f" id="f-theme">
+  <div class="ligne">
+    <div><label for="t-cat">Catégorie</label>
+      <select id="t-cat" name="categorie" onchange="tuCategorie()">{% for c, lib in CATEGORIES %}<option value="{{ c }}" {{ 'selected' if v.categorie == c }}>{{ lib }}</option>{% endfor %}</select></div>
+    <div><label for="t-num">N° (ordre dans le planning)</label><input id="t-num" name="numero" inputmode="numeric" maxlength="3" value="{{ v.numero if v.numero else '' }}" placeholder="automatique"></div>
+  </div>
+  <label for="t-theme">Thème</label>
+  <input id="t-theme" name="theme" maxlength="400" required value="{{ v.theme or '' }}" placeholder="ex. La dictée préparée : importance et démarche de mise en œuvre">
+  <label for="t-axes"><span class="lib-up">Axes de réflexion indicatifs</span><span class="lib-cp">Contenus indicatifs</span> (un par ligne)</label>
+  <textarea id="t-axes" name="axes" rows="6" maxlength="3000" placeholder="Clarification conceptuelle&#10;Démarche de mise en œuvre&#10;Implications pédagogiques">{{ v.axes or '' }}</textarea>
+  <div class="ligne bloc-up">
+    <div><label for="t-prep">Date de préparation</label><input id="t-prep" name="date_preparation" value="{{ date_courte(v.date_preparation) }}" maxlength="40" placeholder="PM ou jj/mm/aaaa"></div>
+    <div><label for="t-interp">Date d'interprétation</label><input id="t-interp" name="date_interpretation" value="{{ date_courte(v.date_interpretation) }}" maxlength="40" placeholder="PM ou jj/mm/aaaa"></div>
+    <div><label for="t-admin">Date d'administration (date de l'UP)</label><input id="t-admin" name="date_administration" value="{{ date_courte(v.date_administration) }}" maxlength="40" placeholder="jj/mm/aaaa"></div>
+  </div>
+  <div class="ligne bloc-cp">
+    <div><label for="t-der">Date de déroulement</label><input id="t-der" name="date_deroulement" value="{{ date_courte(v.date_deroulement) }}" maxlength="40" placeholder="PM ou jj/mm/aaaa"></div>
+  </div>
+  <label for="t-obs">Observations <span class="aide">(UP : animation libre / mixte)</span></label>
+  <input id="t-obs" name="observations" maxlength="1000" value="{{ v.observations or '' }}" list="dl-obs">
+  <datalist id="dl-obs"><option value="Animation libre"><option value="Animation mixte"></datalist>
+
+  <h3 style="margin:16px 0 4px">Suivi de l'exécution</h3>
+  <label class="choix"><input type="checkbox" name="execute" value="1" {{ 'checked' if v.execute|int }}> Thème exécuté (UP / conférence / formation tenue)</label>
+  <div class="ligne">
+    <div><label for="t-dex">Date d'exécution</label><input id="t-dex" name="date_execution" value="{{ date_courte(v.date_execution) }}" maxlength="12" placeholder="jj/mm/aaaa"></div>
+    <div><label for="t-lieu">Lieu</label><input id="t-lieu" name="lieu" maxlength="200" value="{{ v.lieu or '' }}" placeholder="école siège, salle…"></div>
+    <div><label for="t-part">Participants</label><input id="t-part" name="participants" inputmode="numeric" maxlength="5" value="{{ v.participants if v.participants is not none else '' }}"></div>
+  </div>
+  <label for="t-cr">Compte rendu</label>
+  <textarea id="t-cr" name="compte_rendu" rows="4" maxlength="4000">{{ v.compte_rendu or '' }}</textarea>
+  <p class="actions" style="margin-top:12px"><button class="btn">💾 Enregistrer</button> <a class="btn sec" href="{{ url_for('themes_up', **params) }}">Annuler</a></p>
+</form>
+<script>
+function tuCategorie() {
+  var up = document.getElementById('t-cat').value.indexOf('up_') === 0;
+  document.querySelectorAll('.bloc-up, .lib-up').forEach(function (e) { e.style.display = up ? '' : 'none'; });
+  document.querySelectorAll('.bloc-cp, .lib-cp').forEach(function (e) { e.style.display = up ? 'none' : ''; });
+}
+tuCategorie();
+</script>
+{% endblock %}

@@ -225,18 +225,29 @@ def enregistrer(app, H):
         return redirect(url_for("resultats", cid=cid, p=p))
 
     # ------------------------------------------------------------ communication
+    def filtre_enseignant():
+        """Périmètre de l'enseignant : (clause SQL, paramètres) limitant aux élèves de ses classes (parents de ses élèves)."""
+        if g.user["role"] != "enseignant":
+            return "", []
+        ids = [c["id"] for c in H.classes_autorisees()] or [0]
+        marque = ",".join("?" * len(ids))
+        return (f" AND (e.classe_id IN ({marque}) OR (e.id IS NULL AND p.id IN "
+                f"(SELECT parent_id FROM eleves WHERE classe_id IN ({marque}) AND parent_id IS NOT NULL)))"), ids + ids
+
     @app.route("/communication")
     @H.connexion_requise("communication")
     def communication():
-        recus = q("""SELECT m.*, p.nom parent_nom, p.telephone, e.prenoms, e.nom eleve_nom FROM messages m
-                     LEFT JOIN parents p ON p.id=m.parent_id LEFT JOIN eleves e ON e.id=m.eleve_id
-                     WHERE m.sens='parent' ORDER BY m.lu, m.id DESC LIMIT 100""")
-        wa = q("""SELECT n.*, p.nom parent_nom, e.prenoms, e.nom eleve_nom FROM notifications n
-                  LEFT JOIN parents p ON p.id=n.parent_id LEFT JOIN eleves e ON e.id=n.eleve_id
-                  WHERE n.canal='whatsapp' AND n.statut='a_envoyer' ORDER BY n.id LIMIT 300""")
-        histo = q("""SELECT n.*, e.prenoms, e.nom eleve_nom FROM notifications n LEFT JOIN eleves e ON e.id=n.eleve_id
-                     WHERE n.statut!='a_envoyer' ORDER BY n.id DESC LIMIT 100""")
-        classes = q("SELECT * FROM classes ORDER BY nom")
+        cl_sql, cl_args = filtre_enseignant()
+        recus = q(f"""SELECT m.*, p.nom parent_nom, p.telephone, e.prenoms, e.nom eleve_nom FROM messages m
+                      LEFT JOIN parents p ON p.id=m.parent_id LEFT JOIN eleves e ON e.id=m.eleve_id
+                      WHERE m.sens='parent'{cl_sql} ORDER BY m.lu, m.id DESC LIMIT 100""", cl_args)
+        wa = q(f"""SELECT n.*, p.nom parent_nom, e.prenoms, e.nom eleve_nom FROM notifications n
+                   LEFT JOIN parents p ON p.id=n.parent_id LEFT JOIN eleves e ON e.id=n.eleve_id
+                   WHERE n.canal='whatsapp' AND n.statut='a_envoyer'{cl_sql} ORDER BY n.id LIMIT 300""", cl_args)
+        histo = q(f"""SELECT n.*, e.prenoms, e.nom eleve_nom FROM notifications n LEFT JOIN eleves e ON e.id=n.eleve_id
+                      LEFT JOIN parents p ON p.id=n.parent_id
+                      WHERE n.statut!='a_envoyer'{cl_sql} ORDER BY n.id DESC LIMIT 100""", cl_args)
+        classes = H.classes_autorisees() if g.user["role"] == "enseignant" else q("SELECT * FROM classes ORDER BY nom")
         return render_template("communication.html", recus=recus, wa=wa, histo=histo, classes=classes,
                                p=notif.params(), onglet=request.args.get("onglet", "ecrire"))
 
@@ -251,7 +262,12 @@ def enregistrer(app, H):
             flash("Indiquez un sujet, un message et au moins un canal.", "danger")
             return redirect(url_for("communication"))
         if cible.startswith("classe:"):
+            if g.user["role"] == "enseignant":
+                H.verifier_classe(int(cible[7:] or 0))     # périmètre : une de ses classes
             eleves = q("SELECT * FROM eleves WHERE statut='inscrit' AND classe_id=?", (int(cible[7:] or 0),))
+        elif g.user["role"] == "enseignant":
+            flash("Choisissez une de vos classes : la diffusion à toute l'école relève de la direction.", "danger")
+            return redirect(url_for("communication"))
         else:
             eleves = q("SELECT * FROM eleves WHERE statut='inscrit'")
         vus, n = set(), 0
@@ -287,6 +303,10 @@ def enregistrer(app, H):
     @app.route("/communication/whatsapp/<int:nid>", methods=["POST"])
     @H.connexion_requise("communication")
     def whatsapp_envoye(nid):
+        cl_sql, cl_args = filtre_enseignant()
+        if cl_sql and not q(f"""SELECT 1 FROM notifications n LEFT JOIN parents p ON p.id=n.parent_id
+                                LEFT JOIN eleves e ON e.id=n.eleve_id WHERE n.id=?{cl_sql}""", [nid] + cl_args, un=True):
+            abort(403)                                  # périmètre de l'enseignant : parents de ses élèves
         statut = "envoye" if request.form.get("action") != "ignorer" else "echec"
         ex("UPDATE notifications SET statut=?, envoye_le=?, erreur=? WHERE id=? AND canal='whatsapp'",
            (statut, H.maintenant(), None if statut == "envoye" else "ignoré", nid))
@@ -300,6 +320,10 @@ def enregistrer(app, H):
         m = q("SELECT * FROM messages WHERE id=? AND sens='parent'", (mid,), un=True)
         if not m:
             abort(404)
+        cl_sql, cl_args = filtre_enseignant()
+        if cl_sql and not q(f"""SELECT 1 FROM messages m LEFT JOIN parents p ON p.id=m.parent_id
+                                LEFT JOIN eleves e ON e.id=m.eleve_id WHERE m.id=?{cl_sql}""", [mid] + cl_args, un=True):
+            abort(403)                                  # périmètre de l'enseignant : parents de ses élèves
         ex("UPDATE messages SET lu=1 WHERE id=?", (mid,))
         rep = request.form.get("reponse", "").strip()[:1000]
         if rep:

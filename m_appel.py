@@ -41,7 +41,10 @@ def enregistrer(app, H):
                         (SELECT COUNT(*) FROM presences p JOIN eleves x ON x.id=p.eleve_id
                           WHERE x.classe_id=c.id AND p.date=? AND p.statut='retard') retards
                        FROM classes c LEFT JOIN eleves e ON e.classe_id=c.id AND e.statut='inscrit'
-                       GROUP BY c.id ORDER BY c.nom""", (jour, jour, jour))
+                       WHERE c.ecole_id=? GROUP BY c.id ORDER BY c.nom""", (jour, jour, jour, H.eco()))
+        if g.user["role"] == "enseignant":   # périmètre de l'enseignant : ses classes
+            mes = {c["id"] for c in H.classes_autorisees()}
+            classes = [c for c in classes if c["id"] in mes]
         d = datetime.strptime(jour, "%Y-%m-%d").date()
         return render_template("appel_accueil.html", jour=jour, classes=classes,
                                veille=(d - timedelta(days=1)).isoformat(), lendemain=(d + timedelta(days=1)).isoformat())
@@ -53,6 +56,7 @@ def enregistrer(app, H):
         if jour > date.today().isoformat():
             flash("On ne peut pas faire l'appel d'un jour futur.", "warning")
             return redirect(url_for("appel_accueil"))
+        H.verifier_classe(cid)
         cl = H.classe_ou_404(cid)
         eleves = q("SELECT * FROM eleves WHERE classe_id=? AND statut='inscrit' ORDER BY nom, prenoms", (cid,))
         avant = {p["eleve_id"]: p for p in q(
@@ -107,18 +111,25 @@ def enregistrer(app, H):
                  LEFT JOIN presences p ON p.eleve_id=e.id AND p.date BETWEEN ? AND ?
                  WHERE e.statut='inscrit'"""
         args = [d1, d2]
+        classes = H.classes_autorisees()          # école courante ; enseignant : ses classes
         if cid:
+            H.verifier_classe(cid)
             sql += " AND e.classe_id=?"
             args.append(cid)
+        else:
+            ids = [c["id"] for c in classes] or [0]
+            sql += f" AND e.classe_id IN ({','.join('?' * len(ids))})"
+            args += ids
         lst = q(sql + " GROUP BY e.id HAVING absences > 0 OR retards > 0 ORDER BY absences DESC, retards DESC, e.nom", args)
         jours_appel = q("SELECT COUNT(DISTINCT date) n FROM appels WHERE date BETWEEN ? AND ?", (d1, d2), un=True)["n"]
-        return render_template("appel_stats.html", lst=lst, classes=q("SELECT * FROM classes ORDER BY nom"),
-                               cid=cid, jours_appel=jours_appel)
+        return render_template("appel_stats.html", lst=lst, classes=classes, cid=cid, jours_appel=jours_appel)
 
     @app.route("/eleves/<int:eid>/absences", methods=["GET", "POST"])
     @H.connexion_requise("appel")
     def absences_eleve_page(eid):
         e = H.eleve_ou_404(eid)
+        if e["classe_id"]:
+            H.verifier_classe(e["classe_id"])
         if request.method == "POST":
             pid = request.form.get("id", type=int)
             ex("UPDATE presences SET justifie=?, motif=? WHERE id=? AND eleve_id=?",

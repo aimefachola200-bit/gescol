@@ -1,0 +1,48 @@
+{% extends "base.html" %}{% block titre %}Planification mensuelle{% if cl %} — {{ cl.nom }} — {{ mois_lib }}{% endif %}{% endblock %}
+{% block contenu %}
+{% include "synoptique_onglets.html" %}
+<form method="get" class="filtres" style="margin:10px 0" aria-label="Choix de la classe et du mois">
+  <label>Classe <select name="classe" onchange="this.form.submit()">{% for c in cls %}<option value="{{ c.id }}" {{ 'selected' if cl and c.id == cl.id }}>{{ c.nom }} ({{ c.niveau }})</option>{% endfor %}</select></label>
+  <label>Mois <select name="mois" onchange="this.form.submit()">{% for m, l in MOIS %}<option value="{{ m }}" {{ 'selected' if m == mois }}>{{ l }}{% if m in faits %} ✓{% endif %}</option>{% endfor %}</select></label>
+  <noscript><button class="btn sec petit">Afficher</button></noscript>
+</form>
+{% if not cl %}
+<div class="carte"><p class="aide">Aucune classe du primaire (CI → CM2) {% if g.user.role == 'enseignant' %}ne vous est affectée{% else %}n'est enregistrée dans cette école{% endif %} : la planification mensuelle se fait par classe.</p></div>
+{% else %}
+<div class="entete">
+  <div><h2 style="margin:0">Planification (CE-CM) du mois de {{ mois_lib }} — {{ cl.nom }} ({{ cl.niveau }})</h2>
+    <p class="sous">{% if existe %}Enregistrée · modifiée le {{ d.maj }}{% else %}Pas encore enregistrée pour ce mois : la grille ci-dessous est le modèle officiel prérempli{% endif %}
+      · semaines : {% for s in d.semaines %}{% if s.du %}{{ loop.index }} : {{ fmt_jma(s.du) }} → {{ fmt_jma(s.au) }}{% if not loop.last %} · {% endif %}{% endif %}{% endfor %}</p></div>
+  <div class="actions">
+    {% if ecrire_pm %}
+    <a class="btn" href="{{ url_for('synoptique_planification_mensuelle_form', cid=cl.id, mois=mois) }}">{% if existe %}✎ Modifier{% else %}+ Ajouter{% endif %}</a>
+    {% if precedent %}<form method="post" action="{{ url_for('synoptique_planification_mensuelle_dupliquer', cid=cl.id, mois=mois) }}" style="display:inline" onsubmit="return confirm('Copier la planification de {{ precedent.mois_lib }} vers {{ mois_lib }}{% if existe %} (la grille actuelle sera remplacée){% endif %} ?')"><button class="btn sec">⧉ Dupliquer {{ precedent.mois_lib }}</button></form>{% endif %}
+    {% if existe %}
+    <form method="post" action="{{ url_for('synoptique_planification_mensuelle_reinit', cid=cl.id, mois=mois) }}" style="display:inline" onsubmit="return confirm('Remettre les gabarits du modèle officiel dans toutes les cases de {{ mois_lib }} ?')"><button class="btn sec">Réinitialiser</button></form>
+    <form method="post" action="{{ url_for('synoptique_planification_mensuelle_supprimer', cid=cl.id, mois=mois) }}" style="display:inline" onsubmit="return confirm('Supprimer la planification de {{ mois_lib }} pour {{ cl.nom }} ?')"><button class="btn danger">Supprimer</button></form>
+    {% endif %}{% endif %}
+    <a class="btn sec" href="{{ url_for('synoptique_planification_mensuelle_pdf', cid=cl.id, mois=mois) }}" target="_blank">PDF</a>
+    <a class="btn sec" href="{{ url_for('synoptique_planification_mensuelle_xlsx', cid=cl.id, mois=mois) }}">Excel</a>
+  </div>
+</div>
+<div class="tw"><table class="t plan-m">
+  <thead>
+    <tr><th class="g" colspan="3">CHAMPS DE FORMATION</th>{% for s in SEMAINES %}<th class="g">{{ s }}</th>{% endfor %}</tr>
+    <tr><th></th><th class="g">1ère semaine</th><th class="g">2ème semaine</th>{% for s in d.semaines %}<th>Du {{ fmt_jma(s.du) or '…' }} au {{ fmt_jma(s.au) or '…' }}</th>{% endfor %}</tr>
+  </thead>
+  <tbody>
+  {% for champ, lignes in GROUPES %}{% for code, ch, l1, l2, gab in lignes %}
+  <tr>{% if loop.first %}<td class="champ" rowspan="{{ lignes|length }}">{{ champ }}</td>{% endif %}
+    {% if l1 is none %}<td class="sous vide" colspan="2"></td>{% elif l2 is none %}<td class="sous" colspan="2" style="text-align:center">{{ l1 }}</td>{% else %}<td class="sous">{{ l1 }}</td><td class="sous">{{ l2 }}</td>{% endif %}
+    {% for v in d.contenu[code] %}<td class="case{{ ' gabarit' if gab and v == gab }}{{ ' vide' if not gab and not v }}">{{ v }}</td>{% endfor %}</tr>
+  {% endfor %}{% endfor %}
+  </tbody></table></div>
+{% if ecrire_pm %}
+<form method="post" action="{{ url_for('synoptique_planification_mensuelle_import', cid=cl.id, mois=mois) }}" enctype="multipart/form-data" class="carte" style="margin-top:14px">
+  <b>Importer la grille de {{ mois_lib }} depuis Excel</b> <span class="aide">(téléchargez l'<a href="{{ url_for('synoptique_planification_mensuelle_xlsx', cid=cl.id, mois=mois) }}">Excel de ce mois</a> ou le <a href="{{ url_for('synoptique_planification_mensuelle_modele', mois=mois) }}">modèle vierge</a>, remplissez les colonnes Semaine 1 à 5 sans toucher à la colonne Code, puis importez)</span>
+  <div class="filtres" style="margin-top:8px"><input type="file" name="fichier" accept=".xlsx,.csv" required><button class="btn sec">Importer</button></div>
+</form>
+{% endif %}
+<p class="aide">Modèle officiel de planification mensuelle (CE-CM) : une case par discipline et par semaine. U = unité, SA = situation d'apprentissage, S = séquence, E = étape, D = domaine. Les cases en gris italique contiennent encore le gabarit du modèle. Le PDF reprend la mise en page officielle (1 page paysage) avec les signatures du titulaire et du directeur.</p>
+{% endif %}
+{% endblock %}

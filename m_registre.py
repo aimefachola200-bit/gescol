@@ -602,7 +602,7 @@ def enregistrer(app, H):
         return H.pdfs.paragraphe(str(v), taille, gras, 1, 0)
 
     def signatures_pdf(cl, v):
-        img_t = H.pdfs.image_data_url(H.signature(f"classe:{cl['id']}:titulaire"))
+        img_t = H.pdfs.image_data_url(H.signature_titulaire(cl["id"]))
         img_d = H.pdfs.image_data_url(H.signature(f"ecole:{H.eco()}:directeur"))
         return [(f"{v.get('titulaire_titre') or 'Le titulaire'}".upper(), v.get("titulaire_nom", ""), img_t, False),
                 (f"{'La' if (v.get('directeur_titre') or '').startswith('Directrice') else 'Le'} "

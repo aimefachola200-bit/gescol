@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% block titre %}Calendrier scolaire {{ annee }} — {{ 'modifier' if l else 'ajouter' }} une période{% endblock %}
+{% block contenu %}
+{% if retour == 'synoptique' %}{% include "synoptique_onglets.html" %}{% elif retour == 'jur_synoptique' %}{% include "jur_synoptique_onglets.html" %}{% endif %}
+<div class="entete">
+  <div><h2 style="margin:0">Calendrier {{ annee }} : {{ 'modification de « ' ~ l.libelle ~ ' »' if l else 'nouvelle période' }}</h2>
+    <p class="sous">{{ nom_cible }}{% if l and l.officiel %} · ligne du calendrier officiel (elle reviendra à sa valeur d'origine après « Recharger »){% endif %}</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('calendrier_officiel', **params) }}">← Retour au calendrier</a></div>
+</div>
+<form method="post" class="carte f">
+  <div class="ligne">
+    <div><label for="c-type">Type</label><select id="c-type" name="type">{% for k, lib in TYPES %}<option value="{{ k }}" {{ 'selected' if (v.get('type') or 'ferie') == k }}>{{ lib }}</option>{% endfor %}</select>
+      <span class="aide">Congés, jours fériés et grandes vacances sont des périodes sans classe ; les trimestres délimitent les jours de classe.</span></div>
+    <div><label for="c-lib">Libellé</label><input id="c-lib" name="libelle" value="{{ v.get('libelle') or '' }}" maxlength="200" required placeholder="ex. Fête du 1er août, Tabaski, Journée pédagogique…"></div>
+  </div>
+  <div class="ligne">
+    <div><label for="c-d1">Date de début</label><input id="c-d1" type="date" name="date_debut" value="{{ v.get('date_debut') or '' }}" required></div>
+    <div><label for="c-d2">Date de fin (incluse ; vide = un seul jour)</label><input id="c-d2" type="date" name="date_fin" value="{{ v.get('date_fin') or '' }}"></div>
+    <div><label for="c-ordre">Ordre (facultatif)</label><input id="c-ordre" name="ordre" inputmode="numeric" value="{{ v.get('ordre') or '' }}" maxlength="5"></div>
+  </div>
+  <div class="ligne">
+    <div><label for="c-prec">Précision</label><input id="c-prec" name="precision" value="{{ v.get('precision') or '' }}" maxlength="200" placeholder="ex. après les cours ; dimanche inclus">
+      <span class="aide">Pour un congé, « après les cours » signifie que le jour de début reste un jour de classe.</span></div>
+    <div><label for="c-duree">Durée (texte officiel)</label><input id="c-duree" name="duree" value="{{ v.get('duree') or '' }}" maxlength="80" placeholder="ex. 2 semaines, 1 jour"></div>
+  </div>
+  <label for="c-obs">Observations</label><textarea id="c-obs" name="observations" rows="3" maxlength="500">{{ v.get('observations') or '' }}</textarea>
+  <p class="actions" style="margin-top:12px"><button class="btn">💾 Enregistrer</button> <a class="btn sec" href="{{ url_for('calendrier_officiel', **params) }}">Annuler</a></p>
+</form>
+{% endblock %}

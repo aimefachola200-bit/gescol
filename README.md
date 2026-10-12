@@ -109,7 +109,7 @@ Tests : `python -m unittest discover tests`
 | Directeur | Tout sauf l'administration ; peut annuler un reçu |
 | Secrétaire | Élèves, classes, documents officiels |
 | Comptable | Paiements, reçus, impayés |
-| Enseignant | Saisie des notes, résultats, bulletins |
+| Enseignant | Son périmètre = ses classes (affectations) : élèves (fiches, photos), appel, registre, relevés, affichage, évaluations, notes et bulletins, synthèse, CEP (CM2), cantine, messages aux parents, comptes élèves, épreuves, visites, documents de l'enseignant, sa carrière, sa signature digitale (« Mon espace », `/mon-espace`) ; le domaine du directeur (tableau de bord, synoptique, finances, administration, données, secrétariat, suppression d'élèves) lui est refusé (403) — module `m_perimetre_enseignant` |
 
 ## Documents et vérification
 
@@ -139,7 +139,7 @@ En mode développement les données sont dans `instance/` ; dans la version inst
 - WhatsApp : message pré-rempli, envoyé en 1 clic par le secrétariat (l'envoi 100 % automatique exige
   l'API WhatsApp Business de Meta, non incluse). SMS automatiques : via la passerelle HTTP de votre fournisseur.
 - Paie : taux CNSS / ITS / VPS par défaut du Bénin, à faire confirmer par votre comptable (réglables).
-- Pas encore de moyenne annuelle ; un enseignant peut saisir les notes de toutes les classes.
+- Pas encore de moyenne annuelle ; un enseignant sans aucune affectation voit toutes les classes (affectez-le à ses classes).
 
 ---
 

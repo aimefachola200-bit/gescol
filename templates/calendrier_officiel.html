@@ -1,0 +1,120 @@
+{% extends "base.html" %}{% block titre %}Calendrier scolaire {{ annee }}{% endblock %}
+{% block contenu %}
+<style>
+.calo-t td,.calo-t th{font-size:12.5px;padding:5px 7px;vertical-align:top}
+.calo-t td.date{white-space:nowrap}
+.calo-t tr.sans td{background:#FFF7F7}
+.calo-t tr.pre td{background:#FFFBEB}
+.calo-type{display:inline-block;padding:1px 8px;border-radius:12px;font-size:11.5px;font-weight:600;color:#1F2937}
+.calo-legende{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--gris);margin:6px 0 10px}
+.calo-legende i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:middle;margin-right:4px;border:1px solid #D0D5DD}
+.calo-mois{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.calo-m{background:#fff;border:1px solid var(--bord);border-radius:10px;padding:8px 10px}
+.calo-m h3{margin:0 0 4px;font-size:14px;color:var(--bleu);display:flex;justify-content:space-between}
+.calo-m h3 small{color:var(--gris);font-weight:400;font-size:11.5px}
+.calo-m table{width:100%;border-collapse:collapse;table-layout:fixed}
+.calo-m th{font-size:10.5px;color:var(--gris);font-weight:600;padding:2px 0}
+.calo-m td{text-align:center;font-size:11.5px;padding:0;height:24px}
+.calo-m td span{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:5px}
+.calo-m td.hors span{opacity:.25}
+.calo-ref{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end}
+.calo-ref > div{flex:1;min-width:260px}
+.calo-annee{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+</style>
+{% if retour == 'synoptique' %}{% include "synoptique_onglets.html" %}{% elif retour == 'jur_synoptique' %}{% include "jur_synoptique_onglets.html" %}{% endif %}
+
+<div class="entete">
+  <div><h{{ 2 if retour else 1 }} style="margin:0">Calendrier de l'année scolaire {{ annee }}</h{{ 2 if retour else 1 }}>
+    <p class="sous">{{ nom_cible }}{% if structure %} · calendrier commun de la structure{% endif %} · {{ lst|length }} période(s)
+      {% if officiel_connu %}· calendrier officiel {{ annee }} connu de GESCOL{% else %}· année sans calendrier officiel préenregistré{% endif %}</p></div>
+  <div class="actions">
+    <a class="btn {{ 'sec' if vue == 'liste' }} petit" href="{{ url_for('calendrier_officiel', vue='calendrier', **params) }}">📅 Vue calendrier</a>
+    <a class="btn {{ 'sec' if vue == 'calendrier' }} petit" href="{{ url_for('calendrier_officiel', **params) }}">☰ Vue liste</a>
+    <a class="btn sec petit" href="{{ url_for('calendrier_officiel_pdf', **params) }}" target="_blank">📄 PDF</a>
+    <a class="btn sec petit" href="{{ url_for('calendrier_officiel_xlsx', **params) }}">⬇ Excel</a>
+    {% if modifiable %}<a class="btn sec petit" href="{{ url_for('calendrier_officiel_import', **params) }}">⬆ Import Excel</a>{% endif %}
+    {% if juridiction and ecole_ouverte %}
+      {% if structure %}<a class="btn sec petit" href="{{ url_for('calendrier_officiel', annee=annee, retour=retour or None) }}">École ouverte</a>
+      {% else %}<a class="btn sec petit" href="{{ url_for('calendrier_officiel', annee=annee, portee='structure', retour=retour or None) }}">Calendrier de la structure</a>{% endif %}
+    {% endif %}
+  </div>
+</div>
+
+<div class="carte">
+  <form method="get" class="calo-annee" action="{{ url_for('calendrier_officiel') }}">
+    {% if retour %}<input type="hidden" name="retour" value="{{ retour }}">{% endif %}
+    {% if portee %}<input type="hidden" name="portee" value="{{ portee }}">{% endif %}
+    {% if vue == 'calendrier' %}<input type="hidden" name="vue" value="calendrier">{% endif %}
+    <label for="calo-a"><b>Année scolaire</b></label>
+    <select id="calo-a" name="annee" onchange="this.form.submit()">{% for a in annees %}<option value="{{ a }}" {{ 'selected' if a == annee }}>{{ a }}{{ ' (active)' if a == ANNEE }}</option>{% endfor %}</select>
+    <noscript><button class="btn sec petit">Afficher</button></noscript>
+  </form>
+  {% if modifiable %}
+  <div class="actions" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn" href="{{ url_for('calendrier_officiel_form', lid=0, **params) }}">+ Ajouter une période</a>
+    <form method="post" action="{{ url_for('calendrier_officiel_recharger', **params) }}" style="display:inline" onsubmit="return confirm('Recharger le calendrier officiel {{ annee }} ? Les lignes officielles sont remises à leur valeur d\'origine ; vos ajouts sont conservés.')"><button class="btn sec" {{ 'disabled title="Calendrier officiel inconnu pour cette année"' if not officiel_connu }}>↻ Recharger</button></form>
+    <form method="post" action="{{ url_for('calendrier_officiel_reinitialiser', **params) }}" style="display:inline" onsubmit="return confirm('Réinitialiser le calendrier {{ annee }} ? TOUTES les lignes de l\'année (y compris vos ajouts) seront supprimées, puis le calendrier officiel sera remis s\'il est connu.')"><button class="btn danger">Réinitialiser (officiel)</button></form>
+    <form method="post" action="{{ url_for('calendrier_officiel_preparer', **params) }}" style="display:inline" onsubmit="return confirm('Préparer l\'année {{ annee_suiv }} à partir de {{ annee }} (dates décalées d\'un an, à corriger ensuite) ?')"><button class="btn sec">Préparer l'année {{ annee_suiv }}</button></form>
+    {% if ecole_ouverte and not structure and ep_existe('calendrier_scolaire') %}
+    <form method="post" action="{{ url_for('calendrier_officiel_registre', **params) }}" style="display:inline" onsubmit="return confirm('Appliquer ce calendrier au calendrier des jours de classe du registre (rentrée, fin des cours, jours sans classe) ?')"><button class="btn sec">→ Appliquer au registre</button></form>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="grille indicateurs">
+  {% for s in stats %}<div class="kpi"><div class="l">{{ s.libelle }}</div><div class="v">{{ s.semaines }}</div>
+    <div class="d">{{ s.jours }} jour(s) de classe · du {{ date_courte(s.du) }} au {{ date_courte(s.au) }}{% if s.duree_officielle %} · texte officiel : {{ s.duree_officielle }}{% endif %}</div></div>{% endfor %}
+  <div class="kpi"><div class="l">Année scolaire</div><div class="v">{{ total }}</div><div class="d">jour(s) de classe ({{ total_txt }}) : lundi–vendredi hors congés et fériés</div></div>
+</div>
+
+{% if vue == 'calendrier' %}
+<div class="carte">
+  <div class="calo-legende" aria-hidden="true">
+    <span><i style="background:{{ COULEURS.classe }}"></i>jour de classe</span><span><i style="background:{{ COULEURS.pre_rentree }}"></i>pré-rentrée</span>
+    <span><i style="background:{{ COULEURS.conges }}"></i>congés</span><span><i style="background:{{ COULEURS.ferie }}"></i>jour férié</span>
+    <span><i style="background:{{ COULEURS.vacances }}"></i>grandes vacances</span><span><i style="background:{{ COULEURS.evenement }}"></i>événement</span>
+    <span><i style="background:{{ COULEURS.weekend }}"></i>week-end</span>
+  </div>
+  <div class="calo-mois">
+  {% for m in mois %}
+    <div class="calo-m"><h3>{{ m.titre }} <small>{{ m.classe }} j. de classe</small></h3>
+      <table><thead><tr>{% for j in ['Lu','Ma','Me','Je','Ve','Sa','Di'] %}<th>{{ j }}</th>{% endfor %}</tr></thead><tbody>
+      {% for s in m.semaines %}<tr>{% for d in s %}<td class="{{ '' if d.dans else 'hors' }}"><span style="{% if d.css %}background:{{ COULEURS.get(d.css, '') }}{% endif %}" title="{{ d.iso }}{% if d.titre %} — {{ d.titre }}{% endif %}">{{ d.num }}</span></td>{% endfor %}</tr>{% endfor %}
+      </tbody></table></div>
+  {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="tw"><table class="t calo-t">
+  <thead><tr><th>N°</th><th>Type</th><th>Période</th><th>Du</th><th>Au</th><th>Précision</th><th>Durée</th><th>Observations</th>{% if modifiable %}<th></th>{% endif %}</tr></thead>
+  <tbody>
+  {% for l in lst %}
+  <tr id="per-{{ l.id }}" class="{{ 'sans' if l.type in ('conges', 'ferie', 'vacances') else ('pre' if l.type == 'pre_rentree') }}">
+    <td>{{ loop.index }}</td>
+    <td><span class="calo-type" style="background:{{ COULEURS.get(l.type, '#E5E7EB') }}">{{ TYPES_LIB.get(l.type, l.type) }}</span></td>
+    <td><b>{{ l.libelle }}</b>{% if l.officiel %} <span class="badge ok" title="Ligne du calendrier officiel">officiel</span>{% endif %}</td>
+    <td class="date">{{ date_longue(l.date_debut) }}</td>
+    <td class="date">{{ date_longue(l.date_fin) if l.date_fin != l.date_debut else '—' }}</td>
+    <td>{{ l.precision or '' }}</td>
+    <td>{{ l.duree or '' }}</td>
+    <td>{{ l.observations or '' }}</td>
+    {% if modifiable %}<td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('calendrier_officiel_form', lid=l.id, **params) }}">Modifier</a>
+      <form method="post" action="{{ url_for('calendrier_officiel_supprimer', lid=l.id, **params) }}" style="display:inline" onsubmit="return confirm('Supprimer la période « {{ l.libelle|replace("'", " ") }} » ?')"><button class="btn danger petit">Supprimer</button></form></td>{% endif %}
+  </tr>
+  {% else %}<tr><td colspan="9" class="aide">Aucune période pour {{ annee }}.{% if modifiable %} <a href="{{ url_for('calendrier_officiel_form', lid=0, **params) }}">Ajouter une période</a>, <a href="{{ url_for('calendrier_officiel_import', **params) }}">importer un fichier Excel</a>{% if officiel_connu %} ou cliquer sur « Recharger »{% endif %}.{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>
+{% endif %}
+
+<div class="carte">
+  <h3 style="margin-top:0">Référence du texte officiel</h3>
+  {% if modifiable %}
+  <form method="post" action="{{ url_for('calendrier_officiel_meta', **params) }}" class="f calo-ref">
+    <div><label for="calo-ref">Arrêté / référence</label><input id="calo-ref" name="reference_arrete" value="{{ meta.reference_arrete or '' }}" maxlength="400" placeholder="Arrêté interministériel n° … fixant le calendrier de l'année scolaire {{ annee }}"></div>
+    <div><label for="calo-src">Source (ministère, lieu, date)</label><input id="calo-src" name="source" value="{{ meta.source or '' }}" maxlength="200"></div>
+    <div style="flex:0"><button class="btn sec">Enregistrer</button></div>
+  </form>
+  {% else %}<p>{{ meta.reference_arrete or 'Référence du texte : à compléter.' }}{% if meta.source %} — {{ meta.source }}{% endif %}</p>{% endif %}
+  <p class="aide">Les lignes « officiel » viennent du calendrier publié par le MEMP ; les autres jours fériés (déclarés par le Ministre chargé de la Fonction publique : fêtes religieuses mobiles, 1er janvier, 1er mai, 1er août, 15 août, 1er novembre, 25 décembre…) sont à ajouter avec « + Ajouter une période ». Un congé « après les cours » commence le lendemain du jour indiqué (ce jour reste un jour de classe) ; la date de fin est incluse. Les semaines de classe sont calculées à partir des jours lundi–vendredi des trimestres, hors congés et jours fériés saisis.{% if not modifiable %} Seule la direction peut modifier le calendrier.{% endif %}</p>
+</div>
+{% endblock %}

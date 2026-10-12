@@ -12,6 +12,18 @@
     <div><label for="participants">Participants (enseignants présents)</label><input id="participants" name="participants" type="number" min="0" max="500" value="{{ v.get('participants') if v.get('participants') is not none else '' }}"></div>
     <div><label for="taux">Taux de participation (%)</label><input id="taux" name="taux_participation" value="{{ v.get('taux_participation') if v.get('taux_participation') is not none else '' }}" placeholder="ex. 85"></div>
   </div>
+  {% if themes_officiels %}
+  <label for="theme-officiel">Thème officiel (planning DIIP {{ annee }})</label>
+  <select id="theme-officiel" style="width:100%" onchange="if(this.value){document.getElementById('theme').value=this.value;}">
+    <option value="">— Choisir un thème officiel pour remplir le champ « Thème » —</option>
+    {% for c, lib in [('up_maternelle', 'UP maternelle'), ('up_primaire', 'UP primaire'), ('conference', 'Conférences pédagogiques'), ('formation_groupee', 'Formations groupées')] %}
+      {% set ts = themes_officiels|selectattr('categorie', 'equalto', c)|list %}
+      {% if ts %}<optgroup label="{{ lib }}">
+        {% for t in ts %}<option value="{{ t.theme }}" {{ 'selected' if v.theme == t.theme }}>{{ t.numero }}. {{ t.theme|truncate(110) }}{% if t.date_administration and t.date_administration|length == 10 %} ({{ date_fr(t.date_administration) }}){% endif %}</option>{% endfor %}
+      </optgroup>{% endif %}
+    {% endfor %}
+  </select>
+  {% endif %}
   <label for="theme">Thème</label>
   <input id="theme" name="theme" maxlength="300" style="width:100%" value="{{ v.theme or '' }}" placeholder="ex. Planification des situations d'apprentissage en mathématiques">
   <p><label><input type="checkbox" name="prevue" value="1" {{ 'checked' if (v.get('prevue') or 0)|int }}> Activité prévue (programmée au calendrier de l'UP)</label>

@@ -845,8 +845,23 @@ def enregistrer(app, H):
                       (c["id"], config.ANNEE_ACTIVE), un=True)["n"]
             lignes.append({"c": c, "n": eff["n"] or 0, "f": eff["f"] or 0, "m": eff["m"] or 0, "nb_ev": nb_ev,
                            "matieres": sorted(mats.get(c["id"], []))})
+        # v1.6 : portail de l'enseignant — ses documents, ses visites, sa fiche du personnel, niveaux du synoptique
+        mes_docs, mes_visites, fiche_perso = [], [], None
+        if u["role"] == "enseignant":
+            if "docs_enseignant_historique" in app.view_functions:
+                mes_docs = q("""SELECT * FROM docs_enseignant_historique WHERE cree_par=? AND ecole_id=?
+                                ORDER BY id DESC LIMIT 8""", (u["id"], H.eco()))
+            try:
+                fiche_perso = q("SELECT * FROM personnel WHERE user_id=? AND actif=1", (u["id"],), un=True)
+            except Exception:  # noqa: BLE001 — colonne user_id absente sans le module carrière
+                fiche_perso = None
+            if fiche_perso and "visites_accueil" in app.view_functions:
+                mes_visites = q("SELECT * FROM visites WHERE personnel_id=? ORDER BY date DESC, id DESC LIMIT 6",
+                                (fiche_perso["id"],))
+        niveau_syno = {c["id"]: (c["niveau"] or "").lower().replace(" ", "") for c in classes_ecole()}
         return render_template("espace_ens_accueil.html", lignes=lignes, affecte=bool(affect),
-                               aujourdhui=date.today().isoformat(),
+                               aujourdhui=date.today().isoformat(), mes_docs=mes_docs, mes_visites=mes_visites,
+                               fiche_perso=fiche_perso, niveau_syno=niveau_syno,
                                peut_signer=u["role"] != "comptable")
 
     # ============================================================ tableau de bord du fondateur
