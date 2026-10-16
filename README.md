@@ -8,6 +8,17 @@ Application web Python (Flask + SQLite) utilisable sur le réseau de l'école.
 Modules : élèves et inscriptions, classes, saisie des notes et bulletins,
 paiements et reçus, documents officiels avec QR code de vérification.
 
+## Nouveautés de la version 1.8
+
+| Menu | Contenu |
+|---|---|
+| **Accueil par rôle** | Grandes tuiles des actions principales du rôle connecté (directeur, secrétariat, comptabilité, fondateur ; CCS, CP, chefs de service dans GESCOL Circonscription et DDEMP) et état des sauvegardes |
+| **Ma classe** (enseignant) | Ouvert à la connexion : appel du jour, absences de la semaine, dernière évaluation (réussite, notes manquantes), prochaines évaluations, élèves à suivre ; « Faire l'appel », « Saisir les notes », « Groupes de remédiation » |
+| **Appel rapide et saisies hors ligne** | Un toucher sur le nom : présent → absent → retard, compteurs en direct, « Tous présents » ; appel et notes enregistrés sans réseau gardés sur l'appareil et envoyés au retour de la connexion |
+| **Mise à jour depuis l'application** | Bandeau signalant la nouvelle version publiée et lien de téléchargement de l'installateur ou de l'APK de la bonne édition |
+| **Groupes de remédiation** | Après chaque évaluation : groupes par matière (soutien intensif < 7, consolidation 7 à < 10, maîtrise 10 à < 15, approfondissement / tuteurs ≥ 15 ; maternelle NA / ECA / A), activités proposées, élèves en non-maîtrise ; PDF et Excel |
+| **Alertes de pilotage** (Circonscription et DDEMP) | Écoles sans transmission (ou depuis 30 jours), manque d'enseignants, classes pléthoriques, écoles non visitées ce trimestre, retard des CP / CCS sur la programmation, séances d'UP non tenues |
+
 ## Nouveautés de la version 1.7
 
 | Menu | Contenu |
