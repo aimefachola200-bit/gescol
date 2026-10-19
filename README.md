@@ -8,6 +8,15 @@ Application web Python (Flask + SQLite) utilisable sur le réseau de l'école.
 Modules : élèves et inscriptions, classes, saisie des notes et bulletins,
 paiements et reçus, documents officiels avec QR code de vérification.
 
+## Nouveautés de la version 1.9
+
+| Menu | Contenu |
+|---|---|
+| **Groupes WhatsApp** (école) | Groupe des enseignants, groupe de tout le personnel : numéros du personnel au format +229 01, fichier de contacts (.vcf), invitations suivies, messages prêts à l'emploi |
+| **Groupes WhatsApp** (Circonscription et DDEMP) | Directeurs, enseignants (toute la juridiction, une CS ou une zone), conseillers pédagogiques, chefs de circonscription (DDEMP) ; mêmes outils, et alerte de pilotage « directeurs sans numéro valide » |
+
+WhatsApp n'autorise aucune application à créer le groupe à la place de son administrateur : la page guide les trois gestes à faire dans WhatsApp (importer les contacts, « Nouveau groupe », lien d'invitation).
+
 ## Nouveautés de la version 1.8
 
 | Menu | Contenu |
