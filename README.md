@@ -12,7 +12,7 @@ paiements et reçus, documents officiels avec QR code de vérification.
 
 | Menu | Contenu |
 |---|---|
-| **Garde-fou des notes** | Saisie des évaluations et notes par période : note principale + note de performance (case « P », sur 2) ; case rouge si la note principale atteint 20 (20/20 seulement avec la performance), si la performance dépasse 2 ou si la somme dépasse 20 ; valeurs refusées à l'enregistrement |
+| **Garde-fou des notes** | Saisie des évaluations et notes par période : note principale + note de performance (case « P », sur 2), accordée seulement à partir de 10 (19 → 1 au plus) ; case rouge si la note principale atteint 20 (20/20 seulement avec la performance), si une performance accompagne une note inférieure à 10, si la performance dépasse 2 ou si la somme dépasse 20 ; valeurs refusées à l'enregistrement |
 | **Code d'accès personnel** | Chaque compte saisit une fois le code délivré par le concepteur (lié au compte et à l'installation, sans expiration) ; demande en un toucher par WhatsApp ; « Codes d'accès » pour l'administrateur / le directeur ; délai de 15 jours puis blocage |
 
 ## Nouveautés de la version 1.9
