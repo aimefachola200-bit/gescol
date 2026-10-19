@@ -13,7 +13,7 @@ paiements et reçus, documents officiels avec QR code de vérification.
 | Menu | Contenu |
 |---|---|
 | **Tableau de bord** (CS, DDEMP) | Programmation et bilan des activités pédagogiques du trimestre : les CCS d'abord, les CP ensuite (réalisé / programmé, taux) |
-| **Statistiques › Effectifs** | Apprenants EP / EM, enseignants, directeurs, catégories FE / ACDPE / ACDPCTD (AME) / Éducateur, CAP et CEAP (EP, EM), diplômes académiques et universitaires, par sexe (secteur public) ; secteur privé à part : écoles, apprenants, enseignants, directeurs, CAP / CEAP (v1.10.2) ; par CS, par zone ou par école ; courbes ; Excel |
+| **Statistiques › Effectifs** | Apprenants EP / EM, enseignants, directeurs, catégories FE / ACDPE / ACDPCTD (AME) / Éducateur, CAP et CEAP (EP, EM), diplômes académiques et universitaires, par sexe (secteur public) ; secteur privé à part : écoles, apprenants, enseignants, directeurs, CAP / CEAP (v1.10.2) ; catégories d’âge des apprenants du primaire (moins de 5 ans à 16 ans et plus) par sexe et par cours, avec pourcentages, âge moyen et écart type (v1.10.3) ; par CS, par zone ou par école ; courbes ; Excel |
 | **Fiches des écoles › Tableaux globaux** | Recensement, rentrée et fin d'année (EP, EM) : chaque rubrique chiffrée (infrastructures, mobilier, équipements…) par CS (DDEMP) ou par zone (CS), avec le total ; Excel |
 
 ## Nouveautés de la version 1.9.2
