@@ -11,7 +11,7 @@ on:
     tags: ["v*"]
 
 env:
-  VERSION: "1.12.0"
+  VERSION: "1.14.0"
 
 jobs:
   tests:
@@ -62,7 +62,7 @@ jobs:
           if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
           & $iscc "/DVersion=${env:VERSION}" packaging\windows\gescol.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup a échoué (GESCOL)" }
-          foreach ($ed in @("publique", "cs", "ddemp")) {
+          foreach ($ed in @("publique", "cs", "ddemp", "enseignant")) {
             & $iscc "/DVersion=${env:VERSION}" "/DEdition=$ed" packaging\windows\gescol.iss
             if ($LASTEXITCODE -ne 0) { throw "Inno Setup a échoué ($ed)" }
           }
@@ -136,6 +136,10 @@ jobs:
             id: bj.gescol.ddemp
             nom: GESCOL DDEMP
             fichier: GESCOL-DDEMP
+          - edition: enseignant
+            id: bj.gescol.enseignant
+            nom: GESCOL Enseignant
+            fichier: GESCOL-Enseignant
     steps:
       - uses: actions/checkout@v4
       - name: Décompresser le code source (gescol_source.zip)
@@ -212,6 +216,8 @@ jobs:
           cp GESCOL-DDEMP-[0-9]*.apk GESCOL-DDEMP.apk
           cp GESCOL-Circonscription-Installation-*.exe GESCOL-Circonscription-Installation.exe
           cp GESCOL-DDEMP-Installation-*.exe GESCOL-DDEMP-Installation.exe
+          cp GESCOL-Enseignant-[0-9]*.apk GESCOL-Enseignant.apk
+          cp GESCOL-Enseignant-Installation-*.exe GESCOL-Enseignant-Installation.exe
           ls -l
       - uses: softprops/action-gh-release@v2
         with:
@@ -224,6 +230,7 @@ jobs:
             **GESCOL Public (écoles publiques)** : GESCOL-Public.apk (Android) et GESCOL-Public-Installation.exe (Windows).
             **GESCOL Circonscription (CS)** : GESCOL-Circonscription.apk et GESCOL-Circonscription-Installation.exe.
             **GESCOL DDEMP** : GESCOL-DDEMP.apk et GESCOL-DDEMP-Installation.exe.
+            **GESCOL Enseignant** (application personnelle de l'enseignant) : GESCOL-Enseignant.apk et GESCOL-Enseignant-Installation.exe.
             **Android connecté** : GESCOL.apk se connecte au serveur de l'école ou à la version en ligne.
             **Windows** : GESCOL-Installation.exe installe GESCOL sur un PC.
 
