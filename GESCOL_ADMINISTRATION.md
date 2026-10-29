@@ -82,4 +82,4 @@ Partout, on peut ajouter, importer et exporter (Excel, PDF) comme dans les autre
 
 ---
 
-*GESCOL — Conception : Maître Aimé FACHE*
+*GESCOL — Conception : Maître Aimé FACHOLA*

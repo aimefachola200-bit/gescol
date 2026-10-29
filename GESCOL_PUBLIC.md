@@ -50,4 +50,4 @@ Elles se téléchargent sur la même page : https://aimefachola200-bit.github.io
 
 ---
 
-*GESCOL — Conception : Maître Aimé FACHE*
+*GESCOL — Conception : Maître Aimé FACHOLA*
