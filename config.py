@@ -5,7 +5,7 @@ là-bas remplacent celles-ci."""
 import os
 import sys
 
-VERSION = "2.4.7"
+VERSION = "2.4.8"
 # v1.8 : vérification des nouvelles versions (page « Releases » du dépôt GitHub) et fichiers à proposer par édition
 DEPOT_MAJ = os.environ.get("GESCOL_DEPOT_MAJ", "aimefachola200-bit/gescol")
 FICHIERS_MAJ = {"privee": ("GESCOL-Installation.exe", "GESCOL-Autonome.apk"),
@@ -43,7 +43,7 @@ def _edition_fichier():
 
 
 EDITION_IMPOSEE = (os.environ.get("GESCOL_EDITION") or _edition_fichier() or "").lower()
-# v2.4.7 : applications jumelles du secondaire (collèges, lycées, ETP) : éditions « sec_privee » et « sec_publique ».
+# v2.4.8 : applications jumelles du secondaire (collèges, lycées, ETP) : éditions « sec_privee » et « sec_publique ».
 # Le secteur (privé / public) reste « privee » / « publique » pour tout le code existant ; SECONDAIRE ajoute le périmètre.
 _SEC_ALIAS = {"sec_privee": "privee", "sec_publique": "publique", "sec_cs": "cs", "sec_ddestfp": "ddemp"}
 SECONDAIRE = EDITION_IMPOSEE in _SEC_ALIAS

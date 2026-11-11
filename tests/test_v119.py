@@ -47,6 +47,10 @@ with app.app_context():
     ex("INSERT INTO synoptique_planification_mensuelle (ecole_id, annee, classe_id, mois, semaines, contenu) VALUES (1,?,?,?,?,?)",
        (config.ANNEE_ACTIVE, cm1, f"{AUJ.year}-{AUJ.month:02d}", json.dumps(sem), json.dumps(cont)))
 import m_preparation as MP
+# v2.4.8 : « Cette semaine » choisit l'unité / la SA selon le jour du mois (semaines 1 à 4) : le test était donc vrai
+# seulement les jours 1-7 et 22-31. On le rend indépendant de la date en le plaçant toujours en première semaine du mois.
+_refs_origine = MP.refs_de_la_semaine
+MP.refs_de_la_semaine = lambda refs, matiere, jour: _refs_origine(refs, matiere, jour.replace(day=1))
 C = MP.corpus()
 inv = [f for f in C["fiches"] if f["id"].startswith("cm1i-")]
 assert len(inv) >= 230, len(inv)
