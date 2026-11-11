@@ -19,9 +19,9 @@ import m_classe as MC  # noqa: E402
 
 def lancer(script, edition):
     env = dict(os.environ)
-    env.pop("SCOLARIS_EDITION", None)
-    env.pop("SCOLARIS_DATA", None)
-    env["SCOLARIS_EDITION_SCRIPT"] = edition
+    env.pop("GESCOL_EDITION", None)
+    env.pop("GESCOL_DATA", None)
+    env["GESCOL_EDITION_SCRIPT"] = edition
     r = subprocess.run([sys.executable, "-c", script], cwd=RACINE, env=env, capture_output=True, text=True, timeout=900)
     return r
 
@@ -98,9 +98,9 @@ class TestAlertesRegles(unittest.TestCase):
 
 SCRIPT_ECOLE = r'''
 import html, io, os, re, sys, tempfile, subprocess, json
-ED = os.environ["SCOLARIS_EDITION_SCRIPT"]
+ED = os.environ["GESCOL_EDITION_SCRIPT"]
 D = tempfile.mkdtemp()
-os.environ["SCOLARIS_EDITION"] = ED; os.environ["SCOLARIS_DATA"] = D
+os.environ["GESCOL_EDITION"] = ED; os.environ["GESCOL_DATA"] = D
 sys.path.insert(0, os.getcwd())
 subprocess.run([sys.executable, "demo.py"], check=True, env=dict(os.environ), stdout=subprocess.DEVNULL)
 import config
@@ -175,7 +175,7 @@ print("ECOLE-OK")
 
 SCRIPT_CS = r'''
 import html, os, sys, tempfile
-os.environ["SCOLARIS_EDITION"] = os.environ["SCOLARIS_EDITION_SCRIPT"]; os.environ["SCOLARIS_DATA"] = tempfile.mkdtemp()
+os.environ["GESCOL_EDITION"] = os.environ["GESCOL_EDITION_SCRIPT"]; os.environ["GESCOL_DATA"] = tempfile.mkdtemp()
 sys.path.insert(0, os.getcwd())
 import config, demo_juridiction
 from app import app, q, ex
@@ -222,9 +222,9 @@ class TestAlertesJuridiction(unittest.TestCase):
 
 class TestScripts(unittest.TestCase):
     def test_js_file_et_maj(self):
-        with open(os.path.join(RACINE, "static", "scolaris.js"), encoding="utf-8") as f:
+        with open(os.path.join(RACINE, "static", "gescol.js"), encoding="utf-8") as f:
             js = f.read()
-        for k in ("scolaris-file-attente", "function viderFile", "function initMaj", "releases/latest", "data-hors-ligne"):
+        for k in ("gescol-file-attente", "function viderFile", "function initMaj", "releases/latest", "data-hors-ligne"):
             self.assertIn(k, js)
 
 

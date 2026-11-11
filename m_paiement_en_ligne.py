@@ -34,7 +34,7 @@ class ErreurFournisseur(Exception):
 def _http(methode, url, entetes=None, corps=None, timeout=25):
     """Appel HTTP JSON. Isolé pour pouvoir être simulé dans les tests."""
     data = json.dumps(corps).encode("utf-8") if corps is not None else None
-    h = {"Accept": "application/json", "User-Agent": "SCOLARIS"}
+    h = {"Accept": "application/json", "User-Agent": "GESCOL"}
     if data is not None:
         h["Content-Type"] = "application/json"
     h.update(entetes or {})
@@ -204,7 +204,7 @@ def enregistrer(app, H):
                 corps = {
                     "description": description, "amount": montant, "currency": {"iso": "XOF"},
                     "callback_url": f"{base_publique()}{url_for('retour_fedapay')}?ref={ref}",
-                    "custom_metadata": {"reference_scolaris": ref, "matricule": e["matricule"]},
+                    "custom_metadata": {"reference_gescol": ref, "matricule": e["matricule"]},
                     "customer": {"firstname": nom[-1] if len(nom) > 1 else nom[0], "lastname": nom[0],
                                  "phone_number": {"number": numero_local, "country": "bj"}},
                 }

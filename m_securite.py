@@ -24,7 +24,7 @@ import config
 FAIBLES = {
     "admin", "admin123", "admin1234", "administrateur", "password", "password1", "motdepasse", "azerty",
     "azerty123", "azertyuiop", "qwerty", "qwerty123", "123456", "1234567", "12345678", "123456789", "1234567890",
-    "00000000", "11111111", "demo", "demo1234", "scolaris", "scolaris1", "gescol", "gescol1", "ecole123", "ecole1234",
+    "00000000", "11111111", "demo", "demo1234", "gescol", "gescol1", "gescol", "gescol1", "ecole123", "ecole1234",
     "bonjour1", "benin123", "benin2026", "abc12345", "abcd1234", "directeur", "directeur1", "enseignant", "enseignant1",
 }
 ECHECS_MAX, FENETRE_S = 5, 15 * 60

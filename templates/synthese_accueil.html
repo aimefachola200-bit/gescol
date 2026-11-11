@@ -42,7 +42,7 @@ table.sy .rf{color:var(--rouge);font-weight:700}
   <div class="kpi"><div class="l">Taux de réussite</div><div class="v">{{ pc(T.taux.t) if T else '—' }}</div><div class="d">G {{ pc(T.taux.g) if T else '—' }} · F {{ pc(T.taux.f) if T else '—' }}</div></div>
 </div>
 
-{% if neuf %}<div class="flash info">Première ouverture : les fiches ont été pré-remplies à partir des notes de SCOLARIS. Vérifiez-les, complétez-les puis cliquez sur « Sauvegarder ».</div>
+{% if neuf %}<div class="flash info">Première ouverture : les fiches ont été pré-remplies à partir des notes de GESCOL. Vérifiez-les, complétez-les puis cliquez sur « Sauvegarder ».</div>
 {% elif doc.maj %}<p class="aide">Dernière sauvegarde : {{ doc.maj }}{% if doc.maj_par %} par {{ doc.maj_par }}{% endif %}.</p>{% endif %}
 
 <form method="post" id="f-synth" novalidate>
@@ -51,7 +51,7 @@ table.sy .rf{color:var(--rouge);font-weight:700}
   <div class="barre-doc">
     <button class="btn petit" name="action" value="sauver">{{ icone('enregistrer') }} Sauvegarder</button>
     <a class="btn sec petit" href="{{ url_for('synthese_accueil', type=type_, numero=numero, classe=cid) }}" title="Recharger la synthèse enregistrée (les modifications non sauvegardées sont perdues)">{{ icone('dossier') }} Charger</a>
-    <button class="btn sec petit" name="action" value="prefill" data-confirmer="Recalculer les fiches des classes de SCOLARIS à partir des notes ? Les chiffres modifiés à la main pour ces classes seront remplacés (les fiches des autres écoles sont conservées).">⟳ Pré-remplir depuis SCOLARIS</button>
+    <button class="btn sec petit" name="action" value="prefill" data-confirmer="Recalculer les fiches des classes de GESCOL à partir des notes ? Les chiffres modifiés à la main pour ces classes seront remplacés (les fiches des autres écoles sont conservées).">⟳ Pré-remplir depuis GESCOL</button>
     {% if not cid %}<button class="btn sec petit" name="action" value="ajouter">＋ Fiche d'une autre école</button>{% endif %}
     <span class="sep"></span>
     <button class="btn sec petit" name="action" value="excel" title="Sauvegarde puis télécharge le classeur Excel">{{ icone('telecharger') }} Excel</button>
@@ -66,14 +66,14 @@ table.sy .rf{color:var(--rouge);font-weight:700}
   </div>
 
   {% if not fiches %}
-  <div class="carte">Aucune fiche : {% if classes %}cliquez sur « Pré-remplir depuis SCOLARIS » ou ajoutez la fiche d'une autre école.{% else %}aucune classe du primaire ou du secondaire n'est accessible ; ajoutez la fiche d'une autre école.{% endif %}</div>
+  <div class="carte">Aucune fiche : {% if classes %}cliquez sur « Pré-remplir depuis GESCOL » ou ajoutez la fiche d'une autre école.{% else %}aucune classe du primaire ou du secondaire n'est accessible ; ajoutez la fiche d'une autre école.{% endif %}</div>
   {% endif %}
 
   {% for c in r.calculs %}{% set f = c.fiche %}{% set i = loop.index0 %}{% set p = 'f' ~ i ~ '_' %}
   <div class="carte" id="fiche-{{ f.id }}" data-fiche>
     <input type="hidden" name="{{ p }}id" value="{{ f.id }}">
     <div class="entete" style="margin-bottom:6px"><h2 style="margin:0">Fiche de saisie : {{ f.classe or 'nouvelle classe' }}</h2>
-      <div>{% if f.source == 'scolaris' %}{% if f.evaluation %}<span class="badge ok">Pré-remplie depuis les notes SCOLARIS</span>{% else %}<span class="badge att">Aucune « {{ titre_ev }} » pour cette classe dans SCOLARIS : saisie manuelle</span>{% endif %}
+      <div>{% if f.source == 'gescol' %}{% if f.evaluation %}<span class="badge ok">Pré-remplie depuis les notes GESCOL</span>{% else %}<span class="badge att">Aucune « {{ titre_ev }} » pour cette classe dans GESCOL : saisie manuelle</span>{% endif %}
       {% else %}<span class="badge">Autre école (saisie libre)</span>
         <label style="margin-left:8px"><input type="checkbox" name="{{ p }}suppr" value="1"> supprimer cette fiche</label>{% endif %}</div></div>
     <div class="sy-fiche-tete">

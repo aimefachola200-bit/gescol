@@ -8,8 +8,8 @@
 .de-notes td,.de-notes th{vertical-align:middle}
 .de-notes input[type=number]{width:84px}
 .de-notes .tot{font-weight:700;font-size:18px;text-align:center;white-space:nowrap}
-.de-scolaris{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 16px;margin:0}
-.de-scolaris dt{font-size:12px;color:var(--gris);margin-top:4px}.de-scolaris dd{margin:0;font-weight:600}
+.de-gescol{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 16px;margin:0}
+.de-gescol dt{font-size:12px;color:var(--gris);margin-top:4px}.de-gescol dd{margin:0;font-weight:600}
 .de-barre{position:sticky;bottom:0;background:var(--fond,#f7f8fa);padding:10px 0;border-top:1px solid var(--bord);z-index:5}
 .de-liste{max-height:300px;overflow:auto;border:1px solid var(--bord);border-radius:8px;padding:6px 10px;background:#fff}
 .de-liste label{display:block;padding:3px 0;font-weight:normal}
@@ -57,12 +57,12 @@
   </form>
   {% endif %}
 {% endif %}
-{% if personne and scolaris %}
-  <h3 style="margin:10px 0 4px">Données connues de SCOLARIS</h3>
-  <dl class="de-scolaris">{% for lib, val in scolaris %}<div><dt>{{ lib }}</dt><dd>{{ val }}</dd></div>{% endfor %}</dl>
+{% if personne and gescol %}
+  <h3 style="margin:10px 0 4px">Données connues de GESCOL</h3>
+  <dl class="de-gescol">{% for lib, val in gescol %}<div><dt>{{ lib }}</dt><dd>{{ val }}</dd></div>{% endfor %}</dl>
   {% if infos_car %}
   <details style="margin-top:8px"><summary>Dossier de carrière ({{ infos_car|length }} renseignement{{ 's' if infos_car|length > 1 }})</summary>
-    <dl class="de-scolaris">{% for lib, val in infos_car %}<div><dt>{{ lib }}</dt><dd>{{ val }}</dd></div>{% endfor %}</dl></details>
+    <dl class="de-gescol">{% for lib, val in infos_car %}<div><dt>{{ lib }}</dt><dd>{{ val }}</dd></div>{% endfor %}</dl></details>
   {% elif d.cible == 'agent' %}
   <p class="aide">{% if carriere_table %}Le dossier de carrière de cet agent n'est pas encore rempli{% else %}Le module « Gestion de carrière » n'est pas encore installé{% endif %} :
   complétez ci-dessous grade, catégorie, échelle, NIP… — votre saisie est mémorisée pour les prochains documents.</p>
@@ -118,11 +118,11 @@
     {% else %}<span class="aide">Document imprimé sans cachet ni signature (à faire signer).</span>{% endif %}
     <button class="btn" name="action" value="pdf" formtarget="_blank">{{ icone('document') }} Générer le PDF</button>
     <button class="btn vert" name="action" value="sauver">{{ icone('enregistrer') }} Enregistrer la saisie</button>
-    <a class="btn sec" href="{{ url_for('docs_enseignant_form', doc=doc, p=pid, classe=classe.id if classe else None, reinit=1) }}" data-confirmer="Revenir aux données de SCOLARIS (la saisie non enregistrée sera perdue) ?">↺ Revenir aux données SCOLARIS</a>
+    <a class="btn sec" href="{{ url_for('docs_enseignant_form', doc=doc, p=pid, classe=classe.id if classe else None, reinit=1) }}" data-confirmer="Revenir aux données de GESCOL (la saisie non enregistrée sera perdue) ?">↺ Revenir aux données GESCOL</a>
   </div>
 </form>
 {% elif personnes %}
-<p class="aide">Choisissez {{ "l'élève" if d.cible == 'eleve' else "l'agent" }} : son identité et tout ce que SCOLARIS connaît seront pré-remplis ; le reste se saisit avant l'impression.</p>
+<p class="aide">Choisissez {{ "l'élève" if d.cible == 'eleve' else "l'agent" }} : son identité et tout ce que GESCOL connaît seront pré-remplis ; le reste se saisit avant l'impression.</p>
 {% endif %}
 
 {# ------------------------------------------------ génération groupée #}
@@ -130,7 +130,7 @@
 <div class="carte">
   <h2 style="margin-top:0">Génération groupée</h2>
   <p class="aide">Un seul PDF pour {{ 'les élèves cochés de la classe ' ~ classe.nom if d.cible == 'eleve' else 'les agents cochés' }},
-  avec les données SCOLARIS et les saisies déjà enregistrées pour chacun.</p>
+  avec les données GESCOL et les saisies déjà enregistrées pour chacun.</p>
   <form method="post" action="{{ url_for('docs_enseignant_groupe', doc=doc) }}" target="_blank" data-coches>
     {% if classe %}<input type="hidden" name="classe" value="{{ classe.id }}">{% endif %}
     <div class="actions" style="margin-bottom:6px">

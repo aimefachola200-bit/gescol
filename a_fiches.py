@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Fiches officielles des écoles dans les applications « SCOLARIS Circonscription » (CS) et « SCOLARIS DDEMP ».
+"""Fiches officielles des écoles dans les applications « GESCOL Circonscription » (CS) et « GESCOL DDEMP ».
 
 Source : sections « recensement » et « rapports » des paquets de transmission des écoles (jur_sections) :
     recensement = {"primaire" | "maternelle": {"annee", "valeurs": {clé: valeur}}}

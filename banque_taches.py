@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.21 — Banque d'épreuves : situations d'EXPRESSION ÉCRITE, d'ÉDUCATION ARTISTIQUE et d'EPS (rédaction originale SCOLARIS ;
+"""v1.21 — Banque d'épreuves : situations d'EXPRESSION ÉCRITE, d'ÉDUCATION ARTISTIQUE et d'EPS (rédaction originale GESCOL ;
 trimestres et fin d'année du CE1 au CM2 : reformulations des situations des épreuves standardisées de l'INFRE).
 Expression écrite : (contexte, tâche, consignes, genre) ; le genre choisit les indicateurs de la grille de correction."""
 
@@ -133,7 +133,7 @@ _e("CM2", "T2", "lettre", "Les ordures envahissent le marché de ta localité et
    "Tu es invité à écrire au maire pour lui exposer le problème et proposer des solutions.", "Respecte la forme d'une lettre administrative.",
    "Expose clairement le problème.", "Propose au moins deux solutions.", infre="2014")
 _e("CM2", "T3", "affiche", "La rentrée prochaine, de nombreux enfants ne seront pas inscrits à l'école dans ta commune.",
-   "Tu es invité à réaliser une affiche pour encourager les parents à scolariser tous leurs enfants.", "Trouve un titre accrocheur.",
+   "Tu es invité à réaliser une affiche pour encourager les parents à gescoler tous leurs enfants.", "Trouve un titre accrocheur.",
    "Écris un message court et convaincant.", "Respecte les caractéristiques de l'affiche.", infre="2014")
 _e("CM2", "FA", "recit", "Tu vas quitter l'école primaire. Tu veux laisser un souvenir écrit à tes cadets.",
    "Tu es invité à raconter le meilleur souvenir de ta scolarité au primaire.", "Respecte l'ordre chronologique.", "Exprime tes sentiments.",

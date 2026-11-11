@@ -258,11 +258,7 @@ def enregistrer(app, H):
         sujet = request.form.get("sujet", "").strip()[:150]
         texte = request.form.get("texte", "").strip()[:1000]
         if cible == "enseignants" and getattr(H, "publier_annonce_personnel", None) and g.user["role"] != "enseignant":
-            aid = H.publier_annonce_personnel(sujet, texte, "enseignants")
-            if aid:
-                if aid is not True and {c for c in request.form.getlist("canaux") if c in ("whatsapp", "sms")}:
-                    flash("Annonce publiée. Envoyez-la maintenant aux enseignants par WhatsApp ou SMS.", "success")
-                    return redirect(url_for("annonces_diffuser", aid=aid))
+            if H.publier_annonce_personnel(sujet, texte, "enseignants"):
                 flash("Annonce publiée pour les enseignants (page « Annonces »).", "success")
                 return redirect(url_for("annonces_accueil"))
             flash("Indiquez un sujet et un message.", "danger")
@@ -356,7 +352,7 @@ def enregistrer(app, H):
             db.commit()
             H.journal("reglages_messages")
             if request.form.get("tester"):
-                ok, msg = notif.envoyer_sms(request.form.get("tel_test"), "Test SCOLARIS : la passerelle SMS fonctionne.")
+                ok, msg = notif.envoyer_sms(request.form.get("tel_test"), "Test GESCOL : la passerelle SMS fonctionne.")
                 flash(("SMS de test envoyé. Réponse : " if ok else "Échec du SMS de test : ") + msg, "success" if ok else "danger")
             else:
                 flash("Réglages enregistrés.", "success")

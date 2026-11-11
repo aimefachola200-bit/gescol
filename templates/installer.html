@@ -1,14 +1,14 @@
 {% extends "base.html" %}{% block titre %}Installer l'application{% endblock %}
 {% block contenu %}
 <div style="max-width:760px">
-<h1>Installer SCOLARIS sur cet appareil</h1>
-<p class="sous">SCOLARIS s'ouvre alors comme une application : icône sur l'écran d'accueil ou le bureau, plein écran, sans barre d'adresse.</p>
+<h1>Installer GESCOL sur cet appareil</h1>
+<p class="sous">GESCOL s'ouvre alors comme une application : icône sur l'écran d'accueil ou le bureau, plein écran, sans barre d'adresse.</p>
 
 <div class="carte" id="install-direct" hidden>
-  <p style="margin-top:0"><b>Cet appareil peut installer SCOLARIS directement.</b></p>
-  <button class="btn" type="button" onclick="if(window.scolarisInvite){window.scolarisInvite.prompt()}">Installer maintenant</button>
+  <p style="margin-top:0"><b>Cet appareil peut installer GESCOL directement.</b></p>
+  <button class="btn" type="button" onclick="if(window.gescolInvite){window.gescolInvite.prompt()}">Installer maintenant</button>
 </div>
-<div class="carte" id="deja" hidden><b>SCOLARIS est déjà ouvert comme application sur cet appareil.</b></div>
+<div class="carte" id="deja" hidden><b>GESCOL est déjà ouvert comme application sur cet appareil.</b></div>
 
 <div class="carte">
   <h2 style="margin-top:0">Android (téléphone ou tablette)</h2>
@@ -17,7 +17,7 @@
     <li>Touchez le menu <b>⋮</b> en haut à droite.</li>
     <li>Choisissez <b>« Installer l'application »</b> (ou « Ajouter à l'écran d'accueil »).</li>
   </ol>
-  <p class="aide">Vous pouvez aussi installer le fichier <b>SCOLARIS.apk</b> fourni par votre établissement.</p>
+  <p class="aide">Vous pouvez aussi installer le fichier <b>GESCOL.apk</b> fourni par votre établissement.</p>
 </div>
 <div class="carte">
   <h2 style="margin-top:0">iPhone / iPad</h2>
@@ -25,15 +25,15 @@
 </div>
 <div class="carte">
   <h2 style="margin-top:0">Ordinateur (Windows, Mac)</h2>
-  <p style="margin:0">Dans <b>Chrome</b> ou <b>Edge</b>, cliquez sur l'icône d'installation à droite de la barre d'adresse, ou menu <b>⋮ → Installer SCOLARIS</b>.</p>
+  <p style="margin:0">Dans <b>Chrome</b> ou <b>Edge</b>, cliquez sur l'icône d'installation à droite de la barre d'adresse, ou menu <b>⋮ → Installer GESCOL</b>.</p>
 </div>
-<p class="aide" id="note-http" hidden>Sur le réseau de l'école (adresse en <code>http://</code>), certains navigateurs proposent seulement « Ajouter à l'écran d'accueil » : le raccourci fonctionne de la même façon. Pour une installation complète, utilisez l'application Android SCOLARIS.apk ou la version en ligne (https).</p>
+<p class="aide" id="note-http" hidden>Sur le réseau de l'école (adresse en <code>http://</code>), certains navigateurs proposent seulement « Ajouter à l'écran d'accueil » : le raccourci fonctionne de la même façon. Pour une installation complète, utilisez l'application Android GESCOL.apk ou la version en ligne (https).</p>
 </div>
 <script>
 (function(){
   if(window.matchMedia('(display-mode: standalone)').matches){document.getElementById('deja').hidden=false}
   function montrer(){document.getElementById('install-direct').hidden=false}
-  if(window.scolarisInvite)montrer(); document.addEventListener('scolaris-installable',montrer);
+  if(window.gescolInvite)montrer(); document.addEventListener('gescol-installable',montrer);
   if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')document.getElementById('note-http').hidden=false;
 })();
 </script>

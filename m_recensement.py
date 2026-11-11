@@ -7,10 +7,10 @@ Principe
   reprend 100 % des rubriques, champs, tableaux, numérotations et libellés du modèle du Ministère (fichiers
   recensement_primaire.pdf, 8 pages + guide de 5 pages, et recensement_maternelle.pdf, 5 pages).
 * Le même schéma pilote : le formulaire web (onglets par rubrique), le stockage, le calcul automatique depuis
-  SCOLARIS, les contrôles de cohérence, le PDF (qui redessine la fiche dans sa forme d'origine), le PDF vierge et
+  GESCOL, les contrôles de cohérence, le PDF (qui redessine la fiche dans sa forme d'origine), le PDF vierge et
   l'export / import Excel.
 * Stockage : H.doc_ecrire(f"e{école}:recensement:{type}:{année}") → {clé_champ: valeur saisie}. Une valeur
-  vide = valeur CALCULÉE par SCOLARIS (si disponible) ; une valeur non vide = valeur SAISIE (correction).
+  vide = valeur CALCULÉE par GESCOL (si disponible) ; une valeur non vide = valeur SAISIE (correction).
   La barre « Sauvegarder / Charger / Réinitialiser » (M.barre_doc) travaille sur la même clé.
 * Téléversement : la fiche officielle scannée / remplie (PDF ou image) est archivée par année
   (table recensement_depots, fichiers dans <données>/recensement/).
@@ -1123,7 +1123,7 @@ def nb_lignes_dyn(schema, saisies, auto):
 
 def evaluer(schema, saisies, auto, dyn):
     """Valeurs effectives. Retourne (eff, calc, orig, alertes).
-    eff : valeur retenue ; calc : valeur calculée (SCOLARIS ou total) ; orig : 'saisie' | 'calculée' | ''."""
+    eff : valeur retenue ; calc : valeur calculée (GESCOL ou total) ; orig : 'saisie' | 'calculée' | ''."""
     eff, calc, orig, alertes = {}, {}, {}, []
 
     def saisie(k):
@@ -1235,7 +1235,7 @@ def controles(typ, eff, alertes_somme):
     return list(dict.fromkeys(out))
 
 
-# ============================================================================ remplissage automatique (SCOLARIS)
+# ============================================================================ remplissage automatique (GESCOL)
 STATUTS = {"publique": "Public", "public": "Public", "privée": "Privé Laïc", "privee": "Privé Laïc",
            "confessionnelle": "Privé Confessionnel", "communautaire": "Communautaire"}
 RE_ENS = re.compile(r"enseign|instit|direct|ma[iî]tre|adjoint|[ée]ducat|titulaire|professeur", re.I)
@@ -1323,7 +1323,7 @@ def _vrai(v):
 
 
 def calculs(H, typ, annee):
-    """Valeurs calculées depuis SCOLARIS : ({clé: valeur}, [messages d'information])."""
+    """Valeurs calculées depuis GESCOL : ({clé: valeur}, [messages d'information])."""
     auto, infos = {}, []
     e = g.get("ecole")
     if e:
@@ -1380,7 +1380,7 @@ def calculs(H, typ, annee):
                 auto["cantine_org"] = ["i. Gouvernement"] if config_publique(H) else []
     except Exception:  # noqa: BLE001 - module Cantine absent
         pass
-    # --- élèves (année active seulement : SCOLARIS ne garde pas les effectifs par classe des années passées)
+    # --- élèves (année active seulement : GESCOL ne garde pas les effectifs par classe des années passées)
     if annee == H.config.ANNEE_ACTIVE:
         ref = date_reference(annee)
         ids = [c["id"] for c in mes_classes]
@@ -1584,7 +1584,7 @@ _IMAGES_MEMP = {}
 
 
 def image_memp(nom):
-    """Image officielle fournie avec SCOLARIS (static/docs_enseignant_memp.png = armoiries + « MINISTÈRE DES
+    """Image officielle fournie avec GESCOL (static/docs_enseignant_memp.png = armoiries + « MINISTÈRE DES
     ENSEIGNEMENTS MATERNEL ET PRIMAIRE / RÉPUBLIQUE DU BÉNIN », static/docs_enseignant_armoiries.png), en cache."""
     if nom not in _IMAGES_MEMP:
         import config
@@ -1689,7 +1689,7 @@ class RenduFiche:
         self.synth = bool(self.ent.get("synthese"))   # fiche consolidée (CS / DDEMP) : comptes au lieu de cases
         self.c.setTitle((self.ent.get("titre") + " – " if self.ent.get("titre") else "")
                         + f"{schema['titre_court']} – {annee}")
-        self.c.setAuthor("SCOLARIS")
+        self.c.setAuthor("GESCOL")
         self.s, self.v, self.dyn, self.annee, self.sig, self.total = schema, eff, dyn, annee, sig, total
         self.page, self.pages_fiche, self.cadre, self.mode = 0, 0, None, "fiche"
         self.primaire = schema["type"] == "primaire"
@@ -2823,7 +2823,7 @@ def enregistrer(app, H):
                 "n_rempli": n_rempli, "n_total": len(eff)}
 
     def recensement_valeurs(typ, annee=None):
-        """Valeurs COMPLÈTES de la fiche (calculées par SCOLARIS + saisies / corrigées) pour l'école courante :
+        """Valeurs COMPLÈTES de la fiche (calculées par GESCOL + saisies / corrigées) pour l'école courante :
         {clé: valeur} (toutes les cases, vides comprises). typ ∈ primaire | maternelle."""
         if typ not in SCHEMAS:
             raise ValueError(f"Type de fiche inconnu : {typ}")
@@ -2996,7 +2996,7 @@ def enregistrer(app, H):
             return retour
         ws = next((w for w in wb.worksheets if w.title.lower().startswith("données")), None)
         if ws is None:
-            flash("Feuille « Données (import) » introuvable : utilisez un fichier exporté par SCOLARIS.", "danger")
+            flash("Feuille « Données (import) » introuvable : utilisez un fichier exporté par GESCOL.", "danger")
             return retour
         brut, entete = {}, False
         for row in ws.iter_rows(values_only=True):

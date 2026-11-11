@@ -409,7 +409,7 @@ def enregistrer(app, H):
         code = R.code_document("cep2027_centres", f"Centres et salles du CEP — {session_de(annee)} — {struct}"[:250],
                                f"cep2027:{annee}:{vue}:{n}")
         sig = R.signature_autorite("Le Directeur Départemental" if cfg.EDITION == "ddemp" else "Le Chef de la Circonscription Scolaire")
-        return R.pdf_document("TABLEAU DE SYNTHESE DES STATISTIQUES", corps, [sig], code, paysage=True, nom_auteur="SCOLARIS")
+        return R.pdf_document("TABLEAU DE SYNTHESE DES STATISTIQUES", corps, [sig], code, paysage=True, nom_auteur="GESCOL")
 
     @app.route("/examens/cep2027.pdf")
     @H.connexion_requise("examens_pvs")

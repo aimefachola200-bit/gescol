@@ -208,7 +208,7 @@ def enregistrer(app, H):
         return lundi_de(lire_date(request.values.get("semaine")) or date.today())
 
     def suggestions(d):
-        """Données déjà connues dans SCOLARIS pour un jour : absences/retards d'élèves (registre d'appel) et visites."""
+        """Données déjà connues dans GESCOL pour un jour : absences/retards d'élèves (registre d'appel) et visites."""
         iso = d.isoformat()
         s = {"abs_g": 0, "abs_f": 0, "ret_g": 0, "ret_f": 0, "visites": ""}
         abs_ids = {}
@@ -456,7 +456,7 @@ def enregistrer(app, H):
         return render_template("maitre_semaine_journal.html", **contexte_journal(d, lun, j, pl, pers, None))
 
     def contexte_journal(d, lun, j, pl, pers, form):
-        """Valeurs du formulaire : saisie en cours (form), sinon journal enregistré, sinon suggestions SCOLARIS."""
+        """Valeurs du formulaire : saisie en cours (form), sinon journal enregistré, sinon suggestions GESCOL."""
         sug = suggestions(d)
         if form is not None:
             v = {k: form.get(k, "") for k in form}

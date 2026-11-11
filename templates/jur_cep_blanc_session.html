@@ -116,7 +116,7 @@
 {% elif vue == 'import' %}
 <div class="carte">
   <h2 style="margin-top:0">Importer le canevas Excel d'une école</h2>
-  <p class="aide">Même format que le canevas de l'examen blanc de l'école (SCOLARIS / SCOLARIS Public › Examens › Examen blanc CEP › Canevas Excel) : colonnes « N° table », « Nom », « Prénoms », « Sexe (M/F) », « École de provenance », puis une colonne par matière ({{ s.mats|join(', ') }}). Un candidat déjà présent (même école, nom et prénoms) est mis à jour.</p>
+  <p class="aide">Même format que le canevas de l'examen blanc de l'école (GESCOL / GESCOL Public › Examens › Examen blanc CEP › Canevas Excel) : colonnes « N° table », « Nom », « Prénoms », « Sexe (M/F) », « École de provenance », puis une colonne par matière ({{ s.mats|join(', ') }}). Un candidat déjà présent (même école, nom et prénoms) est mis à jour.</p>
   <form method="post" action="{{ url_for('jur_cep_blanc_importer', sid=s.id) }}" enctype="multipart/form-data" class="f">
     <div class="ligne">
       <div><label>École (vide = d'après la colonne « École de provenance »)</label><select name="ecole"><option value="">— d'après le fichier —</option>{% for e in ecoles %}<option value="{{ e.id }}">{{ e.nom }}</option>{% endfor %}</select></div>

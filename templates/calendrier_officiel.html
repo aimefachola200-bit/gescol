@@ -26,7 +26,7 @@
 <div class="entete">
   <div><h{{ 2 if retour else 1 }} style="margin:0">Calendrier de l'année scolaire {{ annee }}</h{{ 2 if retour else 1 }}>
     <p class="sous">{{ nom_cible }}{% if structure %} · calendrier commun de la structure{% endif %} · {{ lst|length }} période(s)
-      {% if officiel_connu %}· calendrier officiel {{ annee }} connu de SCOLARIS{% else %}· année sans calendrier officiel préenregistré{% endif %}</p></div>
+      {% if officiel_connu %}· calendrier officiel {{ annee }} connu de GESCOL{% else %}· année sans calendrier officiel préenregistré{% endif %}</p></div>
   <div class="actions">
     <a class="btn {{ 'sec' if vue == 'liste' }} petit" href="{{ url_for('calendrier_officiel', vue='calendrier', **params) }}">{{ icone('calendrier') }} Vue calendrier</a>
     <a class="btn {{ 'sec' if vue == 'calendrier' }} petit" href="{{ url_for('calendrier_officiel', **params) }}">{{ icone('menu') }} Vue liste</a>

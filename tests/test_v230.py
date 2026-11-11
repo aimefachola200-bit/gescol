@@ -14,7 +14,7 @@ import sys
 import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "SCOLARIS"
+PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "GESCOL"
 
 ECOLE = r'''
 import io, os, sys, tempfile
@@ -228,7 +228,7 @@ print("OK-230-" + ED)
 def lancer(script, *args):
     env = dict(os.environ, PREFIXE_SCRIPT=PREFIXE)
     for k in list(env):
-        if k.endswith(("_EDITION", "_DATA")) and k.startswith(("SCOLARIS", "GESCOL")):
+        if k.endswith(("_EDITION", "_DATA")) and k.startswith(("GESCOL", "GESCOL")):
             env.pop(k)
     return subprocess.run([sys.executable, "-c", script] + list(args), cwd=RACINE, env=env, capture_output=True, text=True, timeout=1200)
 

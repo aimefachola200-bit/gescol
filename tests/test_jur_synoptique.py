@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Tests v1.6 du tableau synoptique de la structure (a_synoptique) : CS puis DDEMP.
-Lancer : python3 -m unittest tests.test_jur_synoptique   (depuis /home/claude/scolaris)
+Lancer : python3 -m unittest tests.test_jur_synoptique   (depuis /home/claude/gescol)
 
-L'édition testée est choisie par SCOLARIS_EDITION_TEST (cs par défaut) ; la suite est rejouée dans un second processus
+L'édition testée est choisie par GESCOL_EDITION_TEST (cs par défaut) ; la suite est rejouée dans un second processus
 pour l'édition « ddemp » (TestEditionsSeparees), comme tests/test_jur_v16.py. Données : demo_juridiction.main() dans
 un dossier temporaire ; connexion « responsable » / demo1234."""
 import html as html_mod
@@ -15,10 +15,10 @@ import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-EDITION = os.environ.get("SCOLARIS_EDITION_TEST", "cs")
-DOSSIER = tempfile.mkdtemp(prefix=f"scolaris_syno_{EDITION}_")
-os.environ["SCOLARIS_EDITION"] = EDITION
-os.environ["SCOLARIS_DATA"] = DOSSIER
+EDITION = os.environ.get("GESCOL_EDITION_TEST", "cs")
+DOSSIER = tempfile.mkdtemp(prefix=f"gescol_syno_{EDITION}_")
+os.environ["GESCOL_EDITION"] = EDITION
+os.environ["GESCOL_DATA"] = DOSSIER
 
 from app import app  # noqa: E402
 import config  # noqa: E402
@@ -44,9 +44,9 @@ EN_PLACE = config.EDITION == EDITION
 
 
 def _rejouer(edition):
-    env = dict(os.environ, SCOLARIS_EDITION_TEST=edition)
-    env.pop("SCOLARIS_EDITION", None)
-    env.pop("SCOLARIS_DATA", None)
+    env = dict(os.environ, GESCOL_EDITION_TEST=edition)
+    env.pop("GESCOL_EDITION", None)
+    env.pop("GESCOL_DATA", None)
     return subprocess.run([sys.executable, "-m", "unittest", "tests.test_jur_synoptique.TestJurSynoptique"], cwd=RACINE, env=env,
                           capture_output=True, text=True, timeout=900)
 

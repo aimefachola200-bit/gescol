@@ -1,4 +1,4 @@
-# Inventaire du lot du 29/10/2026 — SCOLARIS / GESCOL 2.1.0
+# Inventaire du lot du 29/10/2026 — GESCOL / GESCOL 2.1.0
 
 Sources fournies par l'utilisateur et traitement appliqué. Les documents eux-mêmes ne sont pas publiés.
 

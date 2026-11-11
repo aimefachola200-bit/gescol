@@ -304,7 +304,7 @@ def enregistrer(app, H):
         else:
             d["maj"] = None
         d["niveau"] = niveau()
-        d["structure_nom"] = s.get("nom") or config.NOMS_APPLI.get(config.EDITION, "SCOLARIS")
+        d["structure_nom"] = s.get("nom") or config.NOMS_APPLI.get(config.EDITION, "GESCOL")
         d["sigle"] = s.get("sigle") or ""
         d["resp_prise_fonction_txt"] = MC.fmt_date(AP.iso(d["resp_prise_fonction"])) if d["resp_prise_fonction"] else ""
         if avec_nombres:
@@ -842,12 +842,12 @@ def enregistrer(app, H):
             P._entete_primaire(c, W, Hh, marge, infos_haut())
             c.setFont("Helvetica", 6.5)
             c.setFillColor(colors.grey)
-            c.drawString(marge, 7 * mm, f"SCOLARIS · {s.get('nom') or ''} · {config.ANNEE_ACTIVE} · tableau synoptique")
+            c.drawString(marge, 7 * mm, f"GESCOL · {s.get('nom') or ''} · {config.ANNEE_ACTIVE} · tableau synoptique")
             c.drawRightString(W - marge, 7 * mm, f"Page {doc.page} · imprimé le {date.today().strftime('%d/%m/%Y')}")
             c.setFillColor(colors.black)
 
         doc = SimpleDocTemplate(buf, pagesize=taille_page, leftMargin=marge, rightMargin=marge, topMargin=marge + 30 * mm,
-                                bottomMargin=13 * mm, title=titre, author="SCOLARIS")
+                                bottomMargin=13 * mm, title=titre, author="GESCOL")
         doc.build(histoire, onFirstPage=deco, onLaterPages=deco, canvasmaker=P.GCanvas)
         return buf.getvalue()
 

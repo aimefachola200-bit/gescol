@@ -24,7 +24,7 @@ def enregistrer(app, H):
     q, ex, config = H.q, H.ex, H.config
 
     def publique():
-        """Édition publique avec le module des finances publiques chargé ; v1.6 : aussi dans SCOLARIS Circonscription /
+        """Édition publique avec le module des finances publiques chargé ; v1.6 : aussi dans GESCOL Circonscription /
         DDEMP quand l'école ouverte est publique (a_integration : g.publique_ecole) — subventions, cotisations de
         cantine, frais CEP et dépenses entrent alors dans la trésorerie, le bilan et le budget."""
         charge = getattr(H, "fp_operations", None) is not None

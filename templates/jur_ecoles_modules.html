@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% block titre %}Écoles et modules{% endblock %}
 {% block contenu %}
 <div class="entete"><div><h1>Écoles de la {{ 'circonscription' if JUR_NIVEAU == 'cs' else 'DDEMP' }} et modules</h1>
-<p class="sous">Ouvrez une école pour renseigner ses fiches, rapports, évaluations, CEP, cantine, personnel… avec les mêmes modules que SCOLARIS et SCOLARIS Public. {{ nb_liees }} école(s) déjà ouverte(s) au moins une fois sur {{ lignes|length }}.</p></div>
+<p class="sous">Ouvrez une école pour renseigner ses fiches, rapports, évaluations, CEP, cantine, personnel… avec les mêmes modules que GESCOL et GESCOL Public. {{ nb_liees }} école(s) déjà ouverte(s) au moins une fois sur {{ lignes|length }}.</p></div>
 <div class="actions">
   {% if ECOLE_COURANTE %}<form method="post" action="{{ url_for('jur_ecole_fermer') }}"><button class="btn sec">Fermer l'école</button></form>{% endif %}
   {% if peut('parametres') %}<form method="post" action="{{ url_for('jur_ecoles_tout_ouvrir') }}" onsubmit="return confirm('Créer les écoles locales pour toutes les écoles de la juridiction ?')"><button class="btn sec">Créer toutes les écoles locales</button></form>

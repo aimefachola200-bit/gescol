@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Périmètre de l'enseignant (SCOLARIS / SCOLARIS Public, v1.6).
+"""Périmètre de l'enseignant (GESCOL / GESCOL Public, v1.6).
 
 Demande du client : « chaque enseignant accède à son périmètre avec tout ce qui est sur l'application sauf ce qui
 appartient au domaine du directeur (tableau de bord, synoptique, budget…) ; tout le reste par classe, avec sa signature
 digitale, son identifiant et son mot de passe ».
 
 Mise en œuvre CENTRALE, sans refonte des modules : un ``before_request`` actif seulement pour un compte de rôle
-« enseignant » (éditions privée et publique ; dans SCOLARIS Circonscription / DDEMP, les comptes enseignant d'une école
+« enseignant » (éditions privée et publique ; dans GESCOL Circonscription / DDEMP, les comptes enseignant d'une école
 créés par a_integration gardent le même périmètre sur les modules d'école, sans la redirection de « / »). Il s'exécute
 après ceux d'app.py (g.user) et de m_ecoles (g.ecole) car le module est chargé en dernier (fin de MODULES).
 
@@ -127,7 +127,7 @@ def enregistrer(app, H):
 
     def actif():
         """La requête courante est-elle soumise au périmètre de l'enseignant ? Comptes de rôle « enseignant » des
-        éditions école ; dans SCOLARIS Circonscription / DDEMP, les comptes enseignant d'une école (a_integration)
+        éditions école ; dans GESCOL Circonscription / DDEMP, les comptes enseignant d'une école (a_integration)
         gardent le même périmètre sur les modules d'école (seule la redirection de « / » leur est épargnée)."""
         u = g.get("user")
         return bool(u) and u["role"] == "enseignant"

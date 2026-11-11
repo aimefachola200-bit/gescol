@@ -24,7 +24,7 @@
   <div class="kpi"><div class="l">Visite d'aptitude</div><div class="v">{{ f.apt_o or '—' }}</div><div class="d">{% if f.note_apt is not none %}note {{ f.note_apt }}/20{% endif %}</div></div>
   <div class="kpi"><div class="l">Note d'évaluation</div><div class="v">{{ f.note_eval if f.note_eval is not none else '—' }}</div><div class="d">sur 20</div></div>
 </div>
-{% if f.source == 'ecole' %}<p class="flash info">Données transmises par l'école ({{ f.ecole_nom }}) : les corrections se font dans SCOLARIS de l'école, puis l'école renvoie son fichier de transmission.</p>
+{% if f.source == 'ecole' %}<p class="flash info">Données transmises par l'école ({{ f.ecole_nom }}) : les corrections se font dans GESCOL de l'école, puis l'école renvoie son fichier de transmission.</p>
 {% elif f.source == 'agent_cs' %}<p class="flash info">Agent de la circonscription {{ f.cs_nom }} (données reçues avec le paquet de la CS, en lecture seule).</p>{% endif %}
 <div class="fc-grille">
   {% for titre, champs in sections %}

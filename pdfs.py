@@ -57,7 +57,7 @@ def mention_pedagogique(c, largeur=None):
 
 
 class GCanvas(canvas.Canvas):
-    """Canvas SCOLARIS : ajoute la mention (discrète) du concepteur sur chaque page."""
+    """Canvas GESCOL : ajoute la mention (discrète) du concepteur sur chaque page."""
     mention = staticmethod(mention_concepteur)
 
     def showPage(self):
@@ -379,9 +379,9 @@ def url_verif(code):
             from flask import request
             base = request.host_url
         except RuntimeError:
-            base = "http://localhost:5100"
+            base = "http://localhost:5000"
     if _adresse_locale(base):     # v2.2 : jamais « http://localhost/… » sur un document (adresse inutilisable ailleurs)
-        return f"{getattr(config, 'NOMS_APPLI', {}).get(getattr(config, 'EDITION', ''), 'SCOLARIS') if hasattr(config, 'NOMS_APPLI') else 'SCOLARIS'} — code de vérification {code} — Vérifier dans l'application (menu Vérifier un document)"
+        return f"{getattr(config, 'NOMS_APPLI', {}).get(getattr(config, 'EDITION', ''), 'GESCOL') if hasattr(config, 'NOMS_APPLI') else 'GESCOL'} — code de vérification {code} — Vérifier dans l'application (menu Vérifier un document)"
     return f"{base.rstrip('/')}/verifier/{code}"
 
 
@@ -1253,14 +1253,14 @@ def document_tableau(titre, colonnes, lignes, sous_titre=None, infos=None, large
         haut_entete[0] = Hh - y
         c.setFont("Helvetica", 6.5)
         c.setFillColor(colors.grey)
-        c.drawString(marge, 7 * mm, f"SCOLARIS · {config.ECOLE.get('nom', '')} · {config.ANNEE_ACTIVE}")
+        c.drawString(marge, 7 * mm, f"GESCOL · {config.ECOLE.get('nom', '')} · {config.ANNEE_ACTIVE}")
         c.drawRightString(W - marge, 7 * mm, f"Page {doc.page} · imprimé le {date.today().strftime('%d/%m/%Y')}")
         if code:
             c.drawCentredString(W / 2, 7 * mm, f"Document vérifiable · code {code}")
         c.setFillColor(colors.black)
 
     doc = SimpleDocTemplate(buf, pagesize=taille_page, leftMargin=marge, rightMargin=marge,
-                            topMargin=marge + 30 * mm, bottomMargin=13 * mm, title=titre, author="SCOLARIS")
+                            topMargin=marge + 30 * mm, bottomMargin=13 * mm, title=titre, author="GESCOL")
     doc.build(histoire, onFirstPage=deco, onLaterPages=deco, canvasmaker=GCanvasPeda if pedagogique else GCanvas)
     return buf.getvalue()
 

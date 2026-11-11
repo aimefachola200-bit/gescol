@@ -1,6 +1,6 @@
-# Mettre SCOLARIS en ligne (accessible partout, sans le Wi-Fi de l'école)
+# Mettre GESCOL en ligne (accessible partout, sans le Wi-Fi de l'école)
 
-Une fois en ligne, SCOLARIS s'ouvre avec une adresse Internet sécurisée, par exemple `https://scolaris-cpfa.pythonanywhere.com`.
+Une fois en ligne, GESCOL s'ouvre avec une adresse Internet sécurisée, par exemple `https://gescol-cpfa.pythonanywhere.com`.
 Directeurs, enseignants, parents et élèves l'utilisent depuis n'importe où : école, maison, téléphone. Il suffit d'avoir Internet.
 
 Le PC de l'école peut rester en **secours**, sans Internet. Voir « Garder le PC de l'école en secours » plus bas.
@@ -11,12 +11,12 @@ Le PC de l'école peut rester en **secours**, sans Internet. Voir « Garder le P
 |---|---|---|---|
 | Difficulté | 1 — facile | 2 — moyenne | 3 — technique |
 | Coût indicatif | gratuit pour essayer, puis environ 5 $/mois | environ 7 $/mois + disque (carte bancaire) | environ 5 à 10 $/mois |
-| Adresse | `nom.pythonanywhere.com` (votre domaine en payant) | `nom.onrender.com` ou votre domaine | votre domaine (`scolaris.mon-ecole.bj`) |
+| Adresse | `nom.pythonanywhere.com` (votre domaine en payant) | `nom.onrender.com` ou votre domaine | votre domaine (`gescol.mon-ecole.bj`) |
 | Mise à jour | envoyer les fichiers + « Reload » | automatique à chaque envoi sur GitHub | recopier + relancer le script |
 | Conseillé pour | démarrer, une ou deux écoles | plusieurs écoles, mises à jour fréquentes | réseau d'écoles, meilleures performances |
 
 > Les tarifs changent : vérifiez-les sur le site de l'hébergeur avant de payer.
-> Le paiement en ligne des parents (FedaPay, KkiaPay) fonctionne seulement quand SCOLARIS est en ligne en https.
+> Le paiement en ligne des parents (FedaPay, KkiaPay) fonctionne seulement quand GESCOL est en ligne en https.
 
 ---
 
@@ -24,38 +24,38 @@ Le PC de l'école peut rester en **secours**, sans Internet. Voir « Garder le P
 
 1. Créez un compte sur **pythonanywhere.com**. L'offre gratuite « Beginner » suffit pour essayer.
    Le nom d'utilisateur choisi donne l'adresse : `https://NOM.pythonanywhere.com`.
-2. Onglet **Files** : cliquez sur **Upload a file** et envoyez `scolaris.zip`.
+2. Onglet **Files** : cliquez sur **Upload a file** et envoyez `gescol.zip`.
 3. Onglet **Consoles**, puis **Bash**, et tapez :
    ```
-   unzip -o scolaris.zip
-   mkdir -p ~/scolaris-donnees
-   pip3.12 install --user -r scolaris/requirements.txt
+   unzip -o gescol.zip
+   mkdir -p ~/gescol-donnees
+   pip3.12 install --user -r gescol/requirements.txt
    ```
 4. Onglet **Web**, puis **Add a new web app**, **Manual configuration** et **Python 3.12**.
 5. Sur la page Web :
-   - *Source code* : `/home/NOM/scolaris`
+   - *Source code* : `/home/NOM/gescol`
    - Cliquez sur le lien *WSGI configuration file*. Remplacez tout son contenu par celui de
      `deploiement/pythonanywhere/wsgi_pythonanywhere.py`, en remplaçant **NOM** par votre nom d'utilisateur.
-   - *Static files* : URL `/static/`, dossier `/home/NOM/scolaris/static/`
+   - *Static files* : URL `/static/`, dossier `/home/NOM/gescol/static/`
    - Activez **Force HTTPS**, puis cliquez sur **Reload**.
 6. Ouvrez `https://NOM.pythonanywhere.com`, connectez-vous avec **admin / admin123** et choisissez tout de suite un nouveau mot de passe.
 
 Avec l'offre gratuite, cliquez tous les 3 mois sur « Run until 3 months from today » dans l'onglet Web, sinon le site s'arrête.
 
-**Mettre à jour :** envoyez le nouveau `scolaris.zip`, puis tapez `unzip -o scolaris.zip` dans la console Bash, puis cliquez sur **Reload**.
-Les données sont dans `scolaris-donnees` et sont conservées.
+**Mettre à jour :** envoyez le nouveau `gescol.zip`, puis tapez `unzip -o gescol.zip` dans la console Bash, puis cliquez sur **Reload**.
+Les données sont dans `gescol-donnees` et sont conservées.
 
 ---
 
 ## Option 2 : Render (mise à jour automatique depuis GitHub)
 
-1. Mettez le dossier `scolaris` dans un dépôt GitHub **privé** (voir INSTALLATION.md, étape 1).
+1. Mettez le dossier `gescol` dans un dépôt GitHub **privé** (voir INSTALLATION.md, étape 1).
 2. Sur **render.com**, cliquez sur **New +**, puis **Blueprint**, puis choisissez le dépôt.
    Le fichier `render.yaml` règle tout : un disque de 1 Go pour les données, le https et le contrôle `/sante`.
 3. Validez l'offre proposée. Il faut une offre payante : un disque est obligatoire pour garder les données.
-4. Récupérez le mot de passe initial du compte **admin** : service **scolaris**, onglet **Environment**,
-   variable `SCOLARIS_ADMIN_MDP`. Connectez-vous avec **admin** et ce mot de passe, puis changez-le.
-5. Adresse : `https://scolaris-xxxx.onrender.com`. Vous pouvez y relier votre domaine dans **Settings**, rubrique **Custom Domains**.
+4. Récupérez le mot de passe initial du compte **admin** : service **gescol**, onglet **Environment**,
+   variable `GESCOL_ADMIN_MDP`. Connectez-vous avec **admin** et ce mot de passe, puis changez-le.
+5. Adresse : `https://gescol-xxxx.onrender.com`. Vous pouvez y relier votre domaine dans **Settings**, rubrique **Custom Domains**.
 
 **Mettre à jour :** envoyez les nouveaux fichiers sur GitHub. Render redéploie tout seul et les données restent sur le disque.
 
@@ -64,22 +64,22 @@ Les données sont dans `scolaris-donnees` et sont conservées.
 ## Option 3 : Serveur VPS (votre domaine, le plus puissant)
 
 1. Louez un VPS **Ubuntu 22.04 ou 24.04** avec 1 Go de mémoire au minimum (Contabo, Hostinger, OVH, DigitalOcean…).
-2. Chez votre fournisseur de domaine, créez un enregistrement **A** : `scolaris.mon-ecole.bj` vers l'adresse IP du VPS.
-3. Envoyez `scolaris.zip` sur le serveur (WinSCP ou `scp`). Connectez-vous en SSH, puis tapez :
+2. Chez votre fournisseur de domaine, créez un enregistrement **A** : `gescol.mon-ecole.bj` vers l'adresse IP du VPS.
+3. Envoyez `gescol.zip` sur le serveur (WinSCP ou `scp`). Connectez-vous en SSH, puis tapez :
    ```
-   unzip scolaris.zip && cd scolaris
-   sudo bash deploiement/vps/installer_vps.sh scolaris.mon-ecole.bj
+   unzip gescol.zip && cd gescol
+   sudo bash deploiement/vps/installer_vps.sh gescol.mon-ecole.bj
    ```
    Le script installe tout :
    - Python ;
-   - le service SCOLARIS, qui redémarre tout seul ;
+   - le service GESCOL, qui redémarre tout seul ;
    - Caddy, pour le **https automatique et gratuit** ;
    - le pare-feu.
-4. Ouvrez `https://scolaris.mon-ecole.bj`, connectez-vous avec **admin / admin123** et changez le mot de passe.
+4. Ouvrez `https://gescol.mon-ecole.bj`, connectez-vous avec **admin / admin123** et changez le mot de passe.
 
-Les données sont dans `/var/lib/scolaris`, avec une sauvegarde automatique chaque jour dans `/var/lib/scolaris/sauvegardes`.
+Les données sont dans `/var/lib/gescol`, avec une sauvegarde automatique chaque jour dans `/var/lib/gescol/sauvegardes`.
 
-**Mettre à jour :** envoyez le nouveau `scolaris.zip`, décompressez-le, puis relancez la même commande. Les données sont conservées.
+**Mettre à jour :** envoyez le nouveau `gescol.zip`, décompressez-le, puis relancez la même commande. Les données sont conservées.
 
 > Autre possibilité : avec Docker, le `Dockerfile` fourni fonctionne chez tout hébergeur qui accepte Docker.
 > Montez un volume sur `/data`.
@@ -118,7 +118,7 @@ Ses données sont **séparées** : ce qui est saisi sur le PC n'apparaît pas en
 
 ---
 
-*SCOLARIS — Conception : Maître Aimé FACHOLA*
+*GESCOL — Conception : Maître Aimé FACHOLA*
 
 ## Synchronisation entre niveaux (v2.0) : l'application de la CS ou de la DDEMP en https
 
@@ -130,7 +130,7 @@ de l'école (ou par fichier).
 
 1. Mettez l'application de la CS / DDEMP en ligne avec l'une des options ci-dessus : PythonAnywhere et Render donnent
    une adresse https d'office.
-2. Sur un serveur VPS, placez SCOLARIS derrière **Caddy** (certificat automatique) ou **nginx + Certbot** :
+2. Sur un serveur VPS, placez GESCOL derrière **Caddy** (certificat automatique) ou **nginx + Certbot** :
    ```
    # Caddyfile
    cs-pobe.exemple.bj {
@@ -143,8 +143,8 @@ de l'école (ou par fichier).
                 proxy_set_header X-Forwarded-For $remote_addr; proxy_set_header X-Forwarded-Proto https;
                 client_max_body_size 16m; }
    ```
-   Lancez SCOLARIS avec `SCOLARIS_EN_LIGNE=1` (adresses et cookies en https) ; avec Docker :
-   `docker run -e SCOLARIS_EDITION=cs -e SCOLARIS_EN_LIGNE=1 -p 127.0.0.1:8000:8000 -v scolaris-data:/data scolaris`.
+   Lancez GESCOL avec `GESCOL_EN_LIGNE=1` (adresses et cookies en https) ; avec Docker :
+   `docker run -e GESCOL_EDITION=cs -e GESCOL_EN_LIGNE=1 -p 127.0.0.1:8000:8000 -v gescol-data:/data gescol`.
 3. Vérifiez : `https://<votre adresse>/sync/info` doit répondre `{"ok": true, …, "niveau": "CS"}`.
 4. Dans « Synchronisation › Entités inscrites », chaque école a son code QR : il contient l'adresse https et le
    code d'accès de l'école.

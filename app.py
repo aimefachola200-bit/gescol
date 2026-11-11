@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-SCOLARIS – Gestion d'établissement scolaire (CPFA, Bénin)
-Lancement : python app.py   puis ouvrir http://localhost:5100
+GESCOL – Gestion d'établissement scolaire (CPFA, Bénin)
+Lancement : python app.py   puis ouvrir http://localhost:5000
 Compte initial : admin / admin123 (changement demandé à la première connexion)
 """
 import csv
@@ -43,9 +43,9 @@ ROLES = {
 ROLES_ECOLE = ("fondateur", "admin", "directeur", "secretaire", "comptable", "enseignant")
 ROLES_JURIDICTION = ("admin", "responsable", "cp", "chef_service", "agent",
                      # v1.6 : comptes directeur / enseignant d'une école de la juridiction (école via
-                     # utilisateurs.ecole_id, classes via affectations) – mêmes droits que dans SCOLARIS
+                     # utilisateurs.ecole_id, classes via affectations) – mêmes droits que dans GESCOL
                      "directeur", "enseignant", "observateur")
-# v1.6 : dans SCOLARIS Circonscription / DDEMP, les modules des écoles sont ouverts aux rôles de la juridiction.
+# v1.6 : dans GESCOL Circonscription / DDEMP, les modules des écoles sont ouverts aux rôles de la juridiction.
 # Un rôle de juridiction non autorisé par DROITS[module] hérite des droits « école » du rôle équivalent :
 EQUIV_ROLES_JUR = {"responsable": "admin", "chef_service": "directeur", "cp": "directeur", "agent": "secretaire"}
 # le conseiller pédagogique (lecture / écriture pédagogique) n'a pas les droits financiers des écoles
@@ -111,7 +111,7 @@ DROITS = {
     # v1.22 : bureaux de l'UASCEP (écriture contrôlée par m_uascep selon l'édition et le rôle ; enseignant : lecture)
     "uascep": {"admin", "directeur", "secretaire", "enseignant", "responsable", "chef_service", "cp", "agent"},
 }
-# v1.14 : droits supplémentaires de l'enseignant dans SON application personnelle (SCOLARIS Enseignant)
+# v1.14 : droits supplémentaires de l'enseignant dans SON application personnelle (GESCOL Enseignant)
 DROITS_ENSEIGNANT_AUTONOME = {"synoptique"}
 TYPES_DOCS = {
     "carte": "Carte d'élève",
@@ -301,8 +301,8 @@ def pdf_reponse(contenu, nom):
     """v2.2 : « ?telecharger=1 » (boutons « Télécharger PDF ») ou applications Android : fichier à enregistrer, pas à afficher
     (le navigateur intégré d'Android n'affiche pas les PDF)."""
     try:
-        telecharger = bool(request.args.get("telecharger")) or "ScolarisAutonome" in (request.headers.get("User-Agent") or "") \
-            or "ScolarisAndroid" in (request.headers.get("User-Agent") or "")
+        telecharger = bool(request.args.get("telecharger")) or "GescolAutonome" in (request.headers.get("User-Agent") or "") \
+            or "GescolAndroid" in (request.headers.get("User-Agent") or "")
     except RuntimeError:
         telecharger = False
     return send_file(io.BytesIO(contenu), mimetype="application/pdf", download_name=nom, as_attachment=telecharger)
@@ -416,13 +416,13 @@ MODULES = ["m_performance",  # v1.33 : compression gzip (en premier : passe en d
            # édition publique (chargés dans les deux éditions ; menus affichés en édition publique)
            "m_finances_publiques", "m_carriere", "m_maitre_semaine", "m_visites", "m_patrimoine", "m_recensement",
            "m_docs_enseignant", "m_rapports",
-           # transmission école → CS (dans SCOLARIS / SCOLARIS Public)
+           # transmission école → CS (dans GESCOL / GESCOL Public)
            "m_transmission",
            # applications Circonscription scolaire et DDEMP (chargés dans toutes les éditions, menus seulement là)
            "m_juridiction", "a_transmission", "a_tableau", "a_cep", "a_personnel", "a_structure", "a_visites", "a_fiches",
            # v1.6 : tableau synoptique, vivres et stock, comité d'évaluation et épreuves (toutes éditions) ;
            # CS / DDEMP : divisions, unités pédagogiques, modules des écoles ouverts aux applications d'administration
-           "m_synoptique", "m_orientation", "m_annonces_personnel", "m_sec_supervision", "m_graphiques_accueil", "m_partage", "m_preparation", "m_prep_classes", "m_maternelle", "m_evalprep", "guide_utilisation", "m_export", "m_uascep", "m_stock_cantine", "m_magasins_cantine", "m_epreuves", "m_calendrier_officiel", "m_themes_up", "a_divisions", "a_up", "a_integration", "a_synoptique",
+           "m_synoptique", "m_partage", "m_preparation", "m_prep_classes", "m_maternelle", "m_evalprep", "guide_utilisation", "m_export", "m_uascep", "m_stock_cantine", "m_magasins_cantine", "m_graphiques_accueil", "m_orientation", "m_annonces_personnel", "m_epreuves", "m_calendrier_officiel", "m_themes_up", "a_divisions", "a_up", "a_integration", "a_synoptique",
            # v1.7 : conseillers pédagogiques — programmation, journal des activités, bilans trimestriel et annuel
            "a_cp",
            # v1.8 : Ma classe, accueil par rôle, groupes de remédiation ; alertes de pilotage (CS / DDEMP)
@@ -435,7 +435,7 @@ MODULES = ["m_performance",  # v1.33 : compression gzip (en premier : passe en d
            "m_motdepasse",
            # v1.13 : modifier / supprimer / réinitialiser (paiements, caisse, contribution de cantine)
            "m_corrections",
-           # v1.14 : SCOLARIS Enseignant — application personnelle de l'enseignant et portail /enseignant des écoles
+           # v1.14 : GESCOL Enseignant — application personnelle de l'enseignant et portail /enseignant des écoles
            "m_enseignant",
            # v1.25 : sport scolaire (licences, compétitions, classements, records, palmarès, diplômes), tableau de bord du pilotage
            "m_sport", "m_pilotage",
@@ -472,8 +472,6 @@ def create_app(test_config=None):
         app.config["SECRET_KEY"] = f.read().strip()
     app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-    # cookie propre à SCOLARIS et à chaque édition : ne gêne ni GESCOL ni les applications jumelles
-    app.config["SESSION_COOKIE_NAME"] = "scolaris_" + (config.EDITION_IMPOSEE or "privee")
     if test_config:
         app.config.update(test_config)
     app.teardown_appcontext(fermer_db)
@@ -497,7 +495,7 @@ def create_app(test_config=None):
                     ROLES=ROLES, peut=peut, fcfa=fcfa, date_fr=pdfs.date_fr,
                     MODES_PAIEMENT=config.MODES_PAIEMENT, TYPES_DOCS=TYPES_DOCS, VERSION=config.VERSION, AUTONOME=config.AUTONOME,
                     EDITION=config.EDITION, PUBLIQUE=config.publique(), SECONDAIRE=config.secondaire(), EDITIONS=config.EDITIONS_PARAMETRES if config.EDITION_IMPOSEE not in config.EDITIONS else config.EDITIONS,
-                    JURIDICTION=config.juridiction(), NOM_APPLI=config.NOMS_APPLI.get(config.EDITION, "SCOLARIS"),
+                    JURIDICTION=config.juridiction(), NOM_APPLI=config.NOMS_APPLI.get(config.EDITION, "GESCOL"),
                     ROLES_EDITION={k: ROLES[k] for k in (ROLES_JURIDICTION if config.juridiction() else ROLES_ECOLE)},
                     EDITION_IMPOSEE=config.EDITION_IMPOSEE in config.EDITIONS, CONCEPTEUR=config.CONCEPTEUR,
                     ep_existe=lambda e: e in app.view_functions, MAJ=infos_maj())
@@ -543,7 +541,7 @@ def create_app(test_config=None):
         local = (request.remote_addr or "") in ("127.0.0.1", "::1")
         if not local and not g.get("user"):
             return redirect(url_for("login", suivant=request.path))
-        lignes = [f"Application : {config.NOMS_APPLI.get(config.EDITION, 'SCOLARIS')} {config.VERSION}",
+        lignes = [f"Application : {config.NOMS_APPLI.get(config.EDITION, 'GESCOL')} {config.VERSION}",
                   f"Édition : {config.EDITION}{' (autonome)' if config.AUTONOME else ''}",
                   f"Dossier des données : {config.INSTANCE_DIR}"]
         try:
@@ -590,7 +588,7 @@ def create_app(test_config=None):
     @app.route("/logout")
     def logout():
         session.pop("uid", None)
-        # v1.14 : portail « SCOLARIS Enseignant » (et application de l'enseignant) : retour à sa page de connexion
+        # v1.14 : portail « GESCOL Enseignant » (et application de l'enseignant) : retour à sa page de connexion
         if (session.pop("portail", None) == "enseignant" or config.EDITION == "enseignant") and "ens_portail" in app.view_functions:
             return redirect(url_for("ens_portail"))
         return redirect(url_for("login"))
@@ -1557,29 +1555,29 @@ def create_app(test_config=None):
             get_db().backup(dest)
             dest.close()
             with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-                z.write(tmp, "scolaris.db")
+                z.write(tmp, "gescol.db")
                 for sous in ("photos", "ecole", "archives"):
                     dossier = os.path.join(config.INSTANCE_DIR, sous)
                     if os.path.isdir(dossier):
                         for nom in os.listdir(dossier):
                             z.write(os.path.join(dossier, nom), f"{sous}/{nom}")
                 z.writestr("LISEZ-MOI.txt",
-                           f"Sauvegarde SCOLARIS du {maintenant()}.\r\n"
-                           "Pour restaurer : arretez SCOLARIS, copiez ces fichiers dans le dossier de donnees\r\n"
-                           f"{config.INSTANCE_DIR}\r\n(en remplacant les fichiers existants), puis relancez SCOLARIS.\r\n")
+                           f"Sauvegarde GESCOL du {maintenant()}.\r\n"
+                           "Pour restaurer : arretez GESCOL, copiez ces fichiers dans le dossier de donnees\r\n"
+                           f"{config.INSTANCE_DIR}\r\n(en remplacant les fichiers existants), puis relancez GESCOL.\r\n")
         finally:
             os.remove(tmp)
         journal("sauvegarde")
         buf.seek(0)
         return send_file(buf, mimetype="application/zip", as_attachment=True,
-                         download_name=f"sauvegarde_scolaris_{date.today().isoformat()}.zip")
+                         download_name=f"sauvegarde_gescol_{date.today().isoformat()}.zip")
 
     # ------------------------------------------------------------ application installable (PWA)
     @app.route("/manifest.webmanifest")
     def manifeste():
         import json
         m = {
-            "name": f"SCOLARIS – {config.ECOLE['nom']}", "short_name": "SCOLARIS",
+            "name": f"GESCOL – {config.ECOLE['nom']}", "short_name": "GESCOL",
             "description": "Gestion d'établissement scolaire : élèves, notes, bulletins, paiements.",
             "lang": "fr", "id": "/", "start_url": "/?source=app", "scope": "/", "display": "standalone",
             "orientation": "any", "background_color": "#F4F6F9", "theme_color": "#1F4E79",
@@ -1677,7 +1675,7 @@ def rapport_erreur(orig, chemin=""):
     try:
         pile = _tb.extract_tb(orig.__traceback__) if getattr(orig, "__traceback__", None) else []
         lieux = [f"{os.path.basename(f.filename)}:{f.lineno} {f.name}" for f in pile[-5:]]
-        resume = (f"{config.NOMS_APPLI.get(config.EDITION, 'SCOLARIS')} {config.VERSION} ({config.EDITION}"
+        resume = (f"{config.NOMS_APPLI.get(config.EDITION, 'GESCOL')} {config.VERSION} ({config.EDITION}"
                   f"{', autonome' if config.AUTONOME else ''}) – page {chemin} – {type(orig).__name__} : {str(orig)[:300]}"
                   + ("\n" + "\n".join(lieux) if lieux else ""))
     except Exception as err:  # noqa: BLE001
@@ -1739,7 +1737,7 @@ app = create_app()
 app.wsgi_app = FiletErreurs(app.wsgi_app)
 
 
-def servir(host="0.0.0.0", port=5100):
+def servir(host="0.0.0.0", port=5000):
     """Serveur de production (waitress) si disponible, sinon serveur Flask intégré."""
     try:
         from waitress import serve
@@ -1749,8 +1747,8 @@ def servir(host="0.0.0.0", port=5100):
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5100))
-    print(f"\n  SCOLARIS démarré : http://localhost:{port}\n  (Ctrl+C pour arrêter)\n")
+    port = int(os.environ.get("PORT", 5000))
+    print(f"\n  GESCOL démarré : http://localhost:{port}\n  (Ctrl+C pour arrêter)\n")
     if "--debug" in sys.argv:
         app.run(host="0.0.0.0", port=port, debug=True)
     else:

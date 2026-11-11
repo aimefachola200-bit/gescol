@@ -6,14 +6,14 @@
 .zone-depot input[type=file]{max-width:100%}
 </style>
 <div class="entete"><div><h1>Recevoir les transmissions</h1>
-  <p class="sous">{{ 'Fichiers .scolaris envoyés par les écoles de la circonscription' if JUR_NIVEAU=='cs' else 'Fichiers .scolaris envoyés par les circonscriptions du département' }}</p></div>
+  <p class="sous">{{ 'Fichiers .gescol envoyés par les écoles de la circonscription' if JUR_NIVEAU=='cs' else 'Fichiers .gescol envoyés par les circonscriptions du département' }}</p></div>
   <div class="actions"><a class="btn sec" href="{{ url_for('jur_transmission_suivi') }}">Suivi des envois</a></div></div>
 
 {% if peut('jur_transmission') %}
 <div class="carte"><h2>Importer des fichiers de transmission</h2>
   <form method="post" enctype="multipart/form-data">
-    <label class="zone-depot">Choisissez un ou plusieurs fichiers « .scolaris » (15 Mo au maximum chacun, 16 Mo en tout par envoi)<br>
-      <input type="file" name="fichiers" accept=".scolaris,.json,application/gzip" multiple required></label>
+    <label class="zone-depot">Choisissez un ou plusieurs fichiers « .gescol » (15 Mo au maximum chacun, 16 Mo en tout par envoi)<br>
+      <input type="file" name="fichiers" accept=".gescol,.json,application/gzip" multiple required></label>
     <div class="actions"><button class="btn">⇪ Importer</button></div>
   </form>
   <p class="aide">Les écoles peuvent aussi envoyer leurs données en ligne : donnez-leur l'adresse de cette application et leur

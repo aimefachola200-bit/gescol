@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Saisie manuelle dans les applications « SCOLARIS Circonscription » (CS) et « SCOLARIS DDEMP » (v1.11).
+"""Saisie manuelle dans les applications « GESCOL Circonscription » (CS) et « GESCOL DDEMP » (v1.11).
 
 Demande du client : « il manque l'onglet où l'on peut manuellement remplir les différents renseignements si l'on ne
 veut pas importer les fichiers Excel, selon les différentes fiches, et le remplissage des noms des personnels,

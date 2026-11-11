@@ -17,7 +17,7 @@
     <div><label for="etat">État</label><select id="etat" name="etat">{% for e in ETATS %}<option {{ 'selected' if e == (v.etat or 'prévue') }}>{{ e }}</option>{% endfor %}</select></div>
     <div><label for="taux">Taux de réalisation (%)</label><input id="taux" name="taux" type="number" min="0" max="100" value="{{ v.taux if v.taux is not none else 0 }}"></div>
   </div>
-  <label style="margin-top:8px">Modules SCOLARIS liés</label>
+  <label style="margin-top:8px">Modules GESCOL liés</label>
   {% if modules %}<div class="grille-id">{% for m in modules %}<label style="font-weight:normal"><input type="checkbox" name="modules" value="{{ m.endpoint }}" {{ 'checked' if m.endpoint in modules_choisis }}> {{ m.libelle }}</label>{% endfor %}</div>
   {% else %}<p class="aide">Aucun module installé pour cette division.</p>{% endif %}
   <label for="obs">Observations</label>

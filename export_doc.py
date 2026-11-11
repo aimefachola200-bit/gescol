@@ -223,7 +223,7 @@ def titre_page(page_html):
     m = re.search(r"<title>(.*?)</title>", page_html or "", re.S | re.I)
     if m:
         t = propre(m.group(1)).split(" – ")[0].strip()
-        if t and t.upper() not in ("SCOLARIS", "GESCOL"):
+        if t and t.upper() not in ("GESCOL", "GESCOL"):
             return t
     m = re.search(r"<h1\b[^>]*>(.*?)</h1>", page_html or "", re.S | re.I)
     return propre(m.group(1)) if m else "Document"

@@ -45,7 +45,7 @@ table.rc-t input.rc-saisi{background:#FFF6D6;font-weight:700}
 
 <div class="entete">
   <div><h1>{{ schema.titre_court }}</h1>
-  <p class="sous">Année scolaire {{ annee }} — même forme que la fiche officielle du Ministère (rubriques, numérotation, tableaux). Les valeurs calculées par SCOLARIS sont proposées ; tout reste modifiable.</p></div>
+  <p class="sous">Année scolaire {{ annee }} — même forme que la fiche officielle du Ministère (rubriques, numérotation, tableaux). Les valeurs calculées par GESCOL sont proposées ; tout reste modifiable.</p></div>
   <div class="actions">
     {% if J %}<a class="btn sec petit" href="{{ J.retour }}">← Saisie manuelle</a>{% else %}<a class="btn sec petit" href="{{ url_for('recensement_accueil', annee=annee) }}">← Carte d'identité</a>{% endif %}
     <form method="get" class="filtres" style="margin:0"><label for="rc-annee" class="sr">Année</label>
@@ -55,7 +55,7 @@ table.rc-t input.rc-saisi{background:#FFF6D6;font-weight:700}
 </div>
 
 <div class="grille indicateurs">
-  <div class="kpi"><div class="l">Champs calculés</div><div class="v">{{ n_calcules }}</div><div class="d">remplis par SCOLARIS</div></div>
+  <div class="kpi"><div class="l">Champs calculés</div><div class="v">{{ n_calcules }}</div><div class="d">remplis par GESCOL</div></div>
   <div class="kpi"><div class="l">Champs saisis</div><div class="v">{{ n_saisis }}</div><div class="d">{% if maj %}enregistré le {{ maj[:16] }}{% if par %} par {{ par }}{% endif %}{% else %}rien d'enregistré{% endif %}</div></div>
   <div class="kpi"><div class="l">Remplissage</div><div class="v">{{ (100 * n_rempli / (n_total or 1))|round|int }} %</div><div class="d">{{ n_rempli }} / {{ n_total }} cases</div></div>
   <div class="kpi"><div class="l">Contrôles</div><div class="v">{{ ctrl|length }}</div><div class="d">{{ 'incohérence(s)' if ctrl else 'tout est cohérent' }}</div></div>
@@ -86,7 +86,7 @@ table.rc-t input.rc-saisi{background:#FFF6D6;font-weight:700}
     {% if ch.t in ('nb','mt') %}inputmode="decimal"{% endif %}{% if ch.somme %} data-somme="{{ ch.somme|join('|') }}"{% endif %}>
   {% if ch.unite %}<span>{{ ch.unite }}</span>{% endif %}{% if ch.t == 'mt' %}<span>FCFA</span>{% endif %}
 {% endif %}
-{% if o %}<span class="rc-badge o-{{ o }}" title="{{ 'Valeur calculée par SCOLARIS : laissez vide pour la garder, tapez une autre valeur pour la corriger' if o == 'calculée' else 'Valeur saisie (correction) — videz le champ pour revenir à la valeur calculée' }}{% if o == 'saisie' and c and ch.t not in ('ch','case') %} (calculée : {{ c }}){% endif %}">{{ o }}</span>{% endif %}
+{% if o %}<span class="rc-badge o-{{ o }}" title="{{ 'Valeur calculée par GESCOL : laissez vide pour la garder, tapez une autre valeur pour la corriger' if o == 'calculée' else 'Valeur saisie (correction) — videz le champ pour revenir à la valeur calculée' }}{% if o == 'saisie' and c and ch.t not in ('ch','case') %} (calculée : {{ c }}){% endif %}">{{ o }}</span>{% endif %}
 {% endmacro %}
 
 {# ------------------------------------------------------------ tableaux #}
@@ -122,7 +122,7 @@ table.rc-t input.rc-saisi{background:#FFF6D6;font-weight:700}
   {% elif it.i == 'G' %}<div class="rc-g">{% for ch in it.champs %}<label>{{ ch.lib }} <input type="text" name="{{ ch.k }}" value="{{ saisies.get(ch.k, '') }}" placeholder="{{ calc.get(ch.k, '') }}" inputmode="numeric" class="{{ 'rc-saisi' if orig.get(ch.k)=='saisie' else ('rc-calc' if calc.get(ch.k)) }}"></label>{% endfor %}</div>
   {% elif it.i == 'T' %}{{ tableau(tables[it.k]) }}
   {% elif it.i == 'C2' %}{{ items(it.g) }}{{ items(it.d) }}
-  {% elif it.i == 'SIG' %}<p class="aide">Signatures et visas : {{ 'Directeur, RUP, Conseiller Pédagogique, Chef de la Circonscription Scolaire' if it.kind == 'primaire' else 'Responsable d’Unité Pédagogique, Conseiller Pédagogique, chef de la Circonscription scolaire' }} (sur le document imprimé). La signature digitale du directeur enregistrée dans SCOLARIS est reproduite sur le PDF.</p>
+  {% elif it.i == 'SIG' %}<p class="aide">Signatures et visas : {{ 'Directeur, RUP, Conseiller Pédagogique, Chef de la Circonscription Scolaire' if it.kind == 'primaire' else 'Responsable d’Unité Pédagogique, Conseiller Pédagogique, chef de la Circonscription scolaire' }} (sur le document imprimé). La signature digitale du directeur enregistrée dans GESCOL est reproduite sur le PDF.</p>
   {% endif %}
 {% endfor %}
 {% endmacro %}
@@ -136,7 +136,7 @@ table.rc-t input.rc-saisi{background:#FFF6D6;font-weight:700}
     <a class="btn sec petit" href="{{ url_for('recensement_excel', typ=typ, annee=annee) }}">{{ icone('graphique') }} Télécharger la fiche remplie (Excel)</a>{% endif %}
   {% endcall %}
   <div class="rc-legende" aria-label="Légende">
-    <span><span class="rc-badge o-calculée">calculée</span> valeur proposée par SCOLARIS (laisser vide pour la garder)</span>
+    <span><span class="rc-badge o-calculée">calculée</span> valeur proposée par GESCOL (laisser vide pour la garder)</span>
     <span><span class="rc-badge o-saisie">saisie</span> valeur tapée ou corrigée</span>
     <span>Totaux (T, ENSEMBLE, TOTAL) recalculés automatiquement</span>
   </div>
@@ -233,9 +233,9 @@ table.rc-t input.rc-saisi{background:#FFF6D6;font-weight:700}
         body: JSON.stringify({ annee: form.dataset.annee, valeurs: collecter() }) })
         .then(function (r) { return r.json(); })
         .then(function (r) {
-          if (r.ok) { SCOLARIS.toast('Fiche enregistrée (' + r.n + ' valeur(s) saisie(s)).', true); setTimeout(function () { location.reload(); }, 700); }
-          else SCOLARIS.toast((r.erreurs || ['Erreur']).slice(0, 3).join(' — '), false);
-        }).catch(function () { SCOLARIS.toast('Enregistrement impossible (connexion ?).', false); });
+          if (r.ok) { GESCOL.toast('Fiche enregistrée (' + r.n + ' valeur(s) saisie(s)).', true); setTimeout(function () { location.reload(); }, 700); }
+          else GESCOL.toast((r.erreurs || ['Erreur']).slice(0, 3).join(' — '), false);
+        }).catch(function () { GESCOL.toast('Enregistrement impossible (connexion ?).', false); });
     } else if (a === 'charger') {
       location.reload();
     } else if (a === 'reinit') {

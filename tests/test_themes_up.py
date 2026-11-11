@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests des thèmes d'UP, de conférence pédagogique et de formation groupée (m_themes_up) — v1.6.
-Lancer : python3 -m unittest tests.test_themes_up   (depuis /home/claude/scolaris)
+Lancer : python3 -m unittest tests.test_themes_up   (depuis /home/claude/gescol)
 
 Édition « privee » (données demo.py, connexion directeur / demo1234) : préremplissage officiel 2026-2027
 (12 + 12 + 5 + 5), dates, CRUD, recharger, réinitialiser, année suivante, Excel, import, PDF, ?retour=synoptique,
@@ -17,10 +17,10 @@ from datetime import date
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-EDITION = os.environ.get("SCOLARIS_EDITION_TEST", "privee")
-DOSSIER = tempfile.mkdtemp(prefix=f"scolaris_themes_{EDITION}_")
-os.environ["SCOLARIS_EDITION"] = EDITION
-os.environ["SCOLARIS_DATA"] = DOSSIER
+EDITION = os.environ.get("GESCOL_EDITION_TEST", "privee")
+DOSSIER = tempfile.mkdtemp(prefix=f"gescol_themes_{EDITION}_")
+os.environ["GESCOL_EDITION"] = EDITION
+os.environ["GESCOL_DATA"] = DOSSIER
 
 from app import app  # noqa: E402
 import config  # noqa: E402
@@ -402,9 +402,9 @@ class TestEditionCS(unittest.TestCase):
     def test_sous_processus(self):
         if EDITION != "privee":
             raise unittest.SkipTest("rejoué seulement depuis l'édition privée")
-        env = dict(os.environ, SCOLARIS_EDITION_TEST="cs")
-        env.pop("SCOLARIS_EDITION", None)
-        env.pop("SCOLARIS_DATA", None)
+        env = dict(os.environ, GESCOL_EDITION_TEST="cs")
+        env.pop("GESCOL_EDITION", None)
+        env.pop("GESCOL_DATA", None)
         r = subprocess.run([sys.executable, "-m", "unittest", "tests.test_themes_up.TestThemesCS"], cwd=RACINE, env=env,
                            capture_output=True, text=True, timeout=900)
         self.assertEqual(r.returncode, 0, r.stderr[-4000:])

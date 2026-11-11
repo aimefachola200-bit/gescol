@@ -1,4 +1,4 @@
-# Inventaire des lots de documents du 28/10/2026 (lots c et d) — SCOLARIS 1.32.0
+# Inventaire des lots de documents du 28/10/2026 (lots c et d) — GESCOL 1.32.0
 
 Documents reçus de la circonscription le 28/10/2026 (deux envois). Règles appliquées : les documents officiels (MEMP, DIIP, INFRE) servent de source et sont cités ; les documents d'auteurs, commerciaux ou portant une marque (adresse électronique incrustée, mention « reproduction interdite ») ne servent que de référence : rien n'en est repris et aucun filigrane n'est retiré. Chaque fichier a été comparé aux envois précédents (empreinte md5 puis contenu : titre, nombre de pages, premières pages).
 

@@ -16,7 +16,7 @@ import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "SCOLARIS"
+PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "GESCOL"
 
 COMMUN = r'''
 import html, io, json, os, re, sys, tempfile, time, zipfile
@@ -123,7 +123,7 @@ adm = client("admin", "admin123")
 r = ok(adm.get("/administration/sauvegardes/telecharger-maintenant"))
 z = zipfile.ZipFile(io.BytesIO(r.data))
 m = json.loads(z.read("manifeste.json"))
-assert "scolaris.db" in m["fichiers"] and m["version"] == config.VERSION
+assert "gescol.db" in m["fichiers"] and m["version"] == config.VERSION
 okv, msgs, infos = EL.verifier_archive(r.data)
 assert okv and infos["utilisateurs"] >= 1, msgs
 # archive altérée : base modifiée après coup
@@ -131,7 +131,7 @@ buf = io.BytesIO()
 with zipfile.ZipFile(buf, "w") as z2:
     for i in z.infolist():
         d = z.read(i.filename)
-        if i.filename == "scolaris.db":
+        if i.filename == "gescol.db":
             d = d[:-10] + b"0123456789"
         z2.writestr(i.filename, d)
 okv2, msgs2, _ = EL.verifier_archive(buf.getvalue())

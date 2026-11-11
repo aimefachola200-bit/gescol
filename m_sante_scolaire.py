@@ -5,7 +5,7 @@
   nom et prénoms sans accents ni casse), certificat d'aptitude et fiche de visite signés (QR) ;
 * infirmerie et incidents ; cantine : journal des repas (servis G / F) et stocks (soldes par denrée, alerte si épuisé) —
   la caisse de la cantine (paiements) et le suivi détaillé des vivres restent dans le module Cantine ;
-* élèves à besoins spécifiques (fiche de suivi), scolarisation des filles (indice de parité), absences et décrochage :
+* élèves à besoins spécifiques (fiche de suivi), gescolation des filles (indice de parité), absences et décrochage :
   absences des 30 derniers jours tirées de l'appel (demi-journées), seuil d'alerte modifiable, « Créer la fiche ».
 
 Adresses propres : /sante-scolaire/… (l'adresse /sante est le contrôle de santé du serveur).
@@ -63,7 +63,7 @@ def enregistrer(app, H):
     G = R.Groupe(app, H, "sante", "Santé, cantine et inclusion", "sante_scolaire", ico="sante",
                  ecriture_roles={"admin", "fondateur", "directeur", "secretaire", "responsable", "chef_service", "cp"},
                  sous_titre="Visites médicales et aptitude sportive, infirmerie et incidents, cantine (repas, stocks), élèves à besoins "
-                            "spécifiques, scolarisation des filles, absences et décrochage",
+                            "spécifiques, gescolation des filles, absences et décrochage",
                  listes=LISTES)
 
     def ent_ecole():
@@ -161,12 +161,12 @@ def enregistrer(app, H):
         except (TypeError, ZeroDivisionError):
             return {"Indice de parité (F/G)": ""}
 
-    G.registre("filles", "Scolarisation des filles", [
+    G.registre("filles", "Gescolation des filles", [
         ("inscrites", "Filles inscrites", "entier"), ("garcons", "Garçons inscrits", "entier"), ("nouvellesCI", "Nouvelles inscrites au CI", "entier"),
         ("abandons", "Abandons de filles", "entier"), ("fillesCM2", "Filles au CM2", "entier"), ("admisesCEP", "Filles admises au CEP", "entier"),
         ("mentorat", "Mentorat / marrainage", "oui_non"), ("club", "Club des filles", "oui_non"), ("actions", "Actions menées", "long"),
-        ("obstacles", "Obstacles relevés", "long")], unite="bilan", oblig="inscrites", ordre="id DESC", portee="ecole", feuille="Scolarisation des filles",
-        entite=True, niveaux=["ECOLE"], calcul=indice, defauts=lambda: dict(ent_ecole(), **effectifs_gf()), doc="Scolarisation des filles",
+        ("obstacles", "Obstacles relevés", "long")], unite="bilan", oblig="inscrites", ordre="id DESC", portee="ecole", feuille="Gescolation des filles",
+        entite=True, niveaux=["ECOLE"], calcul=indice, defauts=lambda: dict(ent_ecole(), **effectifs_gf()), doc="Gescolation des filles",
         aide="Effectifs proposés d'après les élèves inscrits de l'école.")
 
     def doc_decrochage(x):

@@ -328,8 +328,8 @@ table.ev-grille tr.ok td.nom{box-shadow:inset 3px 0 0 #1B7F3B}
       var ent = d.entete || {};
       $$('input[name],select[name]', form).forEach(function(el){ if (el.name in ent && !el.classList.contains('cell')) el.value = ent[el.name]; });
       modifie = false; recalculer();
-      SCOLARIS.toast(d.maj ? 'Données chargées (dernière saisie le ' + d.maj + ').' : 'Aucune note enregistrée pour cette évaluation.', !!d.maj);
-    }).catch(function(){ SCOLARIS.toast('Chargement impossible (connexion ?).', false); });
+      GESCOL.toast(d.maj ? 'Données chargées (dernière saisie le ' + d.maj + ').' : 'Aucune note enregistrée pour cette évaluation.', !!d.maj);
+    }).catch(function(){ GESCOL.toast('Chargement impossible (connexion ?).', false); });
   });
 
   // Réinitialiser : vide la grille à l'écran seulement
@@ -338,7 +338,7 @@ table.ev-grille tr.ok td.nom{box-shadow:inset 3px 0 0 #1B7F3B}
     if (!window.confirm('Vider la grille à l\'écran ?\nLes notes enregistrées ne sont pas supprimées tant que vous ne cliquez pas sur « Sauvegarder ». « Charger » les fait revenir.')) return;
     $$('.cell:not([disabled]), .perf:not([disabled])', grille).forEach(function(el){ el.value = ''; });
     modifie = true; recalculer();
-    SCOLARIS.toast('Grille vidée à l\'écran (rien n\'est encore supprimé en base).');
+    GESCOL.toast('Grille vidée à l\'écran (rien n\'est encore supprimé en base).');
   });
 
   document.getElementById('b-tableau').addEventListener('click', function(){ recalculer(); generer(true); });

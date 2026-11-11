@@ -7,12 +7,12 @@ import sys
 import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "SCOLARIS"
+PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "GESCOL"
 
 
 def lancer(script, edition):
     env = dict(os.environ)
-    for k in ("SCOLARIS_EDITION", "SCOLARIS_DATA", "GESCOL_EDITION", "GESCOL_DATA"):
+    for k in ("GESCOL_EDITION", "GESCOL_DATA", "GESCOL_EDITION", "GESCOL_DATA"):
         env.pop(k, None)
     env["EDITION_SCRIPT"] = edition
     env["PREFIXE_SCRIPT"] = PREFIXE

@@ -1353,7 +1353,7 @@ def enregistrer(app, H):
             cv.restoreState()
         buf = io.BytesIO()
         SimpleDocTemplate(buf, pagesize=(W, Hh), leftMargin=marge, rightMargin=marge, topMargin=16 * mm, bottomMargin=16 * mm,
-                          title="Diplômes", author="SCOLARIS").build(h, onFirstPage=deco, onLaterPages=deco)
+                          title="Diplômes", author="GESCOL").build(h, onFirstPage=deco, onLaterPages=deco)
         return buf.getvalue()
 
     # ---- Excel commun (spécification outils/lots/spec.md) : une feuille par rubrique, colonnes Niveau · Entité · Saison + champs

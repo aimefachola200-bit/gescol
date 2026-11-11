@@ -1,33 +1,29 @@
 # Fabrique automatiquement l'installateur Windows (.exe) et l'application Android (.apk).
-# Onglet « Actions » du dépôt GitHub > « Fabriquer SCOLARIS » > « Run workflow ».
+# Onglet « Actions » du dépôt GitHub > « Fabriquer GESCOL » > « Run workflow ».
 # Les fichiers apparaissent en bas de la page de l'exécution, rubrique « Artifacts ».
 # Pour une version publiée (page « Releases ») : créer une étiquette v1.1.0.
-name: Fabriquer SCOLARIS
+name: Fabriquer GESCOL
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
     tags: ["v*"]
-    # l'Application CP du MEMP a son propre flux (memp-cp.yml) : inutile de refabriquer SCOLARIS pour elle
-    paths-ignore:
-      - "packaging/memp_cp/**"
-      - ".github/workflows/applications-web.yml"
 
 env:
-  VERSION: "2.4.7"
+  VERSION: "2.4.6"
 
 jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Décompresser le code source (scolaris_source.zip)
+      - name: Décompresser le code source (gescol_source.zip)
         shell: python
         run: |
           import os, zipfile
-          if os.path.exists("scolaris_source.zip"):
-              zipfile.ZipFile("scolaris_source.zip").extractall(".")
+          if os.path.exists("gescol_source.zip"):
+              zipfile.ZipFile("gescol_source.zip").extractall(".")
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -40,52 +36,52 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Décompresser le code source (scolaris_source.zip)
+      - name: Décompresser le code source (gescol_source.zip)
         shell: python
         run: |
           import os, zipfile
-          if os.path.exists("scolaris_source.zip"):
-              zipfile.ZipFile("scolaris_source.zip").extractall(".")
+          if os.path.exists("gescol_source.zip"):
+              zipfile.ZipFile("gescol_source.zip").extractall(".")
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Dépendances
         run: pip install -r requirements.txt pyinstaller
       - name: Exécutable (PyInstaller)
-        run: pyinstaller packaging/windows/scolaris.spec --noconfirm --distpath dist --workpath build
+        run: pyinstaller packaging/windows/gescol.spec --noconfirm --distpath dist --workpath build
       - name: Contrôle de l'exécutable
         shell: pwsh
         run: |
-          if (-not (Test-Path dist/SCOLARIS/SCOLARIS.exe)) { throw "SCOLARIS.exe absent" }
-          if (-not (Test-Path dist/SCOLARIS/_internal/templates/base.html)) { throw "templates absents" }
-      - name: Installateurs (Inno Setup) – SCOLARIS (écoles privées) et SCOLARIS Public (écoles publiques)
+          if (-not (Test-Path dist/GESCOL/GESCOL.exe)) { throw "GESCOL.exe absent" }
+          if (-not (Test-Path dist/GESCOL/_internal/templates/base.html)) { throw "templates absents" }
+      - name: Installateurs (Inno Setup) – GESCOL (écoles privées) et GESCOL Public (écoles publiques)
         shell: pwsh
         run: |
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
           if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
-          & $iscc "/DVersion=${env:VERSION}" packaging\windows\scolaris.iss
-          if ($LASTEXITCODE -ne 0) { throw "Inno Setup a échoué (SCOLARIS)" }
-          foreach ($ed in @("publique", "cs", "ddemp", "enseignant", "sec_privee", "sec_publique", "sec_cs", "sec_ddestfp")) {
-            & $iscc "/DVersion=${env:VERSION}" "/DEdition=$ed" packaging\windows\scolaris.iss
+          & $iscc "/DVersion=${env:VERSION}" packaging\windows\gescol.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup a échoué (GESCOL)" }
+          foreach ($ed in @("publique", "cs", "ddemp", "enseignant", "sec_privee", "sec_publique")) {
+            & $iscc "/DVersion=${env:VERSION}" "/DEdition=$ed" packaging\windows\gescol.iss
             if ($LASTEXITCODE -ne 0) { throw "Inno Setup a échoué ($ed)" }
           }
       - uses: actions/upload-artifact@v4
         with:
-          name: SCOLARIS-Windows
-          path: dist/SCOLARIS-*Installation-*.exe
+          name: GESCOL-Windows
+          path: dist/GESCOL-*Installation-*.exe
 
   android:
     needs: tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Décompresser le code source (scolaris_source.zip)
+      - name: Décompresser le code source (gescol_source.zip)
         shell: python
         run: |
           import os, zipfile
-          if os.path.exists("scolaris_source.zip"):
-              zipfile.ZipFile("scolaris_source.zip").extractall(".")
+          if os.path.exists("gescol_source.zip"):
+              zipfile.ZipFile("gescol_source.zip").extractall(".")
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -93,38 +89,31 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: Clé de signature (secret ANDROID_KEYSTORE_PASSWORD)
+      - name: Clé de signature personnelle (facultatif, secret ANDROID_KEYSTORE_B64)
         env:
           KS: ${{ secrets.ANDROID_KEYSTORE_B64 }}
-          KS_MDP: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          # La clé scolaris-signature.keystore est dans le dépôt, protégée par un mot de passe fort qui,
-          # lui, n'existe que dans les secrets GitHub. ANDROID_KEYSTORE_B64 (facultatif) permet d'en utiliser une autre.
-          if [ -z "$KS_MDP" ]; then
-            echo "::error::Secret ANDROID_KEYSTORE_PASSWORD absent : Settings > Secrets and variables > Actions (voir INSTALLATION.md)."
-            exit 1
-          fi
           if [ -n "$KS" ]; then
             echo "$KS" | base64 -d > "$RUNNER_TEMP/cle.keystore"
-            echo "SCOLARIS_KEYSTORE=$RUNNER_TEMP/cle.keystore" >> "$GITHUB_ENV"
+            echo "GESCOL_KEYSTORE=$RUNNER_TEMP/cle.keystore" >> "$GITHUB_ENV"
           fi
       - name: APK
         env:
-          SCOLARIS_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          SCOLARIS_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          SCOLARIS_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          GESCOL_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          GESCOL_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          GESCOL_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           gradle -p packaging/android assembleRelease --no-daemon --stacktrace
           mkdir -p sortie
-          cp packaging/android/app/build/outputs/apk/release/app-release.apk "sortie/SCOLARIS-${VERSION}.apk"
+          cp packaging/android/app/build/outputs/apk/release/app-release.apk "sortie/GESCOL-${VERSION}.apk"
       - uses: actions/upload-artifact@v4
         with:
-          name: SCOLARIS-Android
+          name: GESCOL-Android
           path: sortie/*.apk
 
   android_autonome:
-    # Application Android AUTONOME : SCOLARIS complet sur le téléphone ou la tablette, sans PC ni Internet.
-    # Deux applications jumelles : SCOLARIS Autonome (écoles privées) et SCOLARIS Public (écoles publiques).
+    # Application Android AUTONOME : GESCOL complet sur le téléphone ou la tablette, sans PC ni Internet.
+    # Deux applications jumelles : GESCOL Autonome (écoles privées) et GESCOL Public (écoles publiques).
     needs: tests
     runs-on: ubuntu-latest
     strategy:
@@ -132,49 +121,41 @@ jobs:
       matrix:
         include:
           - edition: privee
-            id: bj.scolaris.autonome
-            nom: SCOLARIS Autonome
-            fichier: SCOLARIS-Autonome
+            id: bj.gescol.autonome
+            nom: GESCOL Autonome
+            fichier: GESCOL-Autonome
           - edition: publique
-            id: bj.scolaris.publique
-            nom: SCOLARIS Public
-            fichier: SCOLARIS-Public
+            id: bj.gescol.publique
+            nom: GESCOL Public
+            fichier: GESCOL-Public
           - edition: cs
-            id: bj.scolaris.circonscription
-            nom: SCOLARIS Circonscription
-            fichier: SCOLARIS-Circonscription
+            id: bj.gescol.circonscription
+            nom: GESCOL Circonscription
+            fichier: GESCOL-Circonscription
           - edition: ddemp
-            id: bj.scolaris.ddemp
-            nom: SCOLARIS DDEMP
-            fichier: SCOLARIS-DDEMP
+            id: bj.gescol.ddemp
+            nom: GESCOL DDEMP
+            fichier: GESCOL-DDEMP
           - edition: enseignant
-            id: bj.scolaris.enseignant
-            nom: SCOLARIS Enseignant
-            fichier: SCOLARIS-Enseignant
+            id: bj.gescol.enseignant
+            nom: GESCOL Enseignant
+            fichier: GESCOL-Enseignant
           - edition: sec_privee
-            id: bj.scolaris.secondaire
-            nom: SCOLARIS Secondaire
-            fichier: SCOLARIS-Secondaire
+            id: bj.gescol.secondaire
+            nom: GESCOL Secondaire
+            fichier: GESCOL-Secondaire
           - edition: sec_publique
-            id: bj.scolaris.secondaire.public
-            nom: SCOLARIS Secondaire Public
-            fichier: SCOLARIS-Secondaire-Public
-          - edition: sec_cs
-            id: bj.scolaris.inspection.secondaire
-            nom: SCOLARIS Inspection Secondaire
-            fichier: SCOLARIS-Inspection-Secondaire
-          - edition: sec_ddestfp
-            id: bj.scolaris.ddestfp
-            nom: SCOLARIS DDESTFP
-            fichier: SCOLARIS-DDESTFP
+            id: bj.gescol.secondaire.public
+            nom: GESCOL Secondaire Public
+            fichier: GESCOL-Secondaire-Public
     steps:
       - uses: actions/checkout@v4
-      - name: Décompresser le code source (scolaris_source.zip)
+      - name: Décompresser le code source (gescol_source.zip)
         shell: python
         run: |
           import os, zipfile
-          if os.path.exists("scolaris_source.zip"):
-              zipfile.ZipFile("scolaris_source.zip").extractall(".")
+          if os.path.exists("gescol_source.zip"):
+              zipfile.ZipFile("gescol_source.zip").extractall(".")
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -185,7 +166,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: Préparer le code Python (SCOLARIS + bibliothèques)
+      - name: Préparer le code Python (GESCOL + bibliothèques)
         run: |
           pip install pillow
           if [ "${{ matrix.edition }}" != "privee" ]; then
@@ -193,41 +174,34 @@ jobs:
           else
             python packaging/android_autonome/preparer.py
           fi
-      - name: Clé de signature (secret ANDROID_KEYSTORE_PASSWORD)
+      - name: Clé de signature personnelle (facultatif, secret ANDROID_KEYSTORE_B64)
         env:
           KS: ${{ secrets.ANDROID_KEYSTORE_B64 }}
-          KS_MDP: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          # La clé scolaris-signature.keystore est dans le dépôt, protégée par un mot de passe fort qui,
-          # lui, n'existe que dans les secrets GitHub. ANDROID_KEYSTORE_B64 (facultatif) permet d'en utiliser une autre.
-          if [ -z "$KS_MDP" ]; then
-            echo "::error::Secret ANDROID_KEYSTORE_PASSWORD absent : Settings > Secrets and variables > Actions (voir INSTALLATION.md)."
-            exit 1
-          fi
           if [ -n "$KS" ]; then
             echo "$KS" | base64 -d > "$RUNNER_TEMP/cle.keystore"
-            echo "SCOLARIS_KEYSTORE=$RUNNER_TEMP/cle.keystore" >> "$GITHUB_ENV"
+            echo "GESCOL_KEYSTORE=$RUNNER_TEMP/cle.keystore" >> "$GITHUB_ENV"
           fi
       - name: APK autonome
         env:
-          SCOLARIS_BUILD_PYTHON: python3.11
-          SCOLARIS_APP_ID: ${{ matrix.id }}
-          SCOLARIS_APP_NOM: ${{ matrix.nom }}
-          SCOLARIS_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          SCOLARIS_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          SCOLARIS_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          GESCOL_BUILD_PYTHON: python3.11
+          GESCOL_APP_ID: ${{ matrix.id }}
+          GESCOL_APP_NOM: ${{ matrix.nom }}
+          GESCOL_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          GESCOL_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          GESCOL_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           gradle -p packaging/android_autonome assembleRelease --no-daemon --stacktrace
           mkdir -p sortie
           cp packaging/android_autonome/app/build/outputs/apk/release/app-release.apk "sortie/${{ matrix.fichier }}-${VERSION}.apk"
       - uses: actions/upload-artifact@v4
         with:
-          name: SCOLARIS-Android-${{ matrix.fichier }}
+          name: GESCOL-Android-${{ matrix.fichier }}
           path: sortie/*.apk
 
   publier:
     # Publie les fichiers sur la page « Releases » avec des noms fixes : les liens de téléchargement ne changent jamais
-    #   https://github.com/<compte>/<depot>/releases/latest/download/SCOLARIS-Autonome.apk
+    #   https://github.com/<compte>/<depot>/releases/latest/download/GESCOL-Autonome.apk
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     needs: [windows, android, android_autonome]
     runs-on: ubuntu-latest
@@ -241,44 +215,38 @@ jobs:
       - name: Noms fixes pour les liens
         run: |
           cd fichiers
-          cp SCOLARIS-Autonome-*.apk SCOLARIS-Autonome.apk
-          cp SCOLARIS-Public-[0-9]*.apk SCOLARIS-Public.apk
-          cp SCOLARIS-${VERSION}.apk SCOLARIS.apk
-          cp SCOLARIS-Installation-*.exe SCOLARIS-Installation.exe
-          cp SCOLARIS-Public-Installation-*.exe SCOLARIS-Public-Installation.exe
-          cp SCOLARIS-Circonscription-[0-9]*.apk SCOLARIS-Circonscription.apk
-          cp SCOLARIS-DDEMP-[0-9]*.apk SCOLARIS-DDEMP.apk
-          cp SCOLARIS-Circonscription-Installation-*.exe SCOLARIS-Circonscription-Installation.exe
-          cp SCOLARIS-DDEMP-Installation-*.exe SCOLARIS-DDEMP-Installation.exe
-          cp SCOLARIS-Enseignant-[0-9]*.apk SCOLARIS-Enseignant.apk
-          cp SCOLARIS-Enseignant-Installation-*.exe SCOLARIS-Enseignant-Installation.exe
-          cp SCOLARIS-Secondaire-[0-9]*.apk SCOLARIS-Secondaire.apk
-          cp SCOLARIS-Secondaire-Public-[0-9]*.apk SCOLARIS-Secondaire-Public.apk
-          cp SCOLARIS-Secondaire-Installation-*.exe SCOLARIS-Secondaire-Installation.exe
-          cp SCOLARIS-Secondaire-Public-Installation-*.exe SCOLARIS-Secondaire-Public-Installation.exe
-          cp SCOLARIS-Inspection-Secondaire-[0-9]*.apk SCOLARIS-Inspection-Secondaire.apk
-          cp SCOLARIS-DDESTFP-[0-9]*.apk SCOLARIS-DDESTFP.apk
-          cp SCOLARIS-Inspection-Secondaire-Installation-*.exe SCOLARIS-Inspection-Secondaire-Installation.exe
-          cp SCOLARIS-DDESTFP-Installation-*.exe SCOLARIS-DDESTFP-Installation.exe
+          cp GESCOL-Autonome-*.apk GESCOL-Autonome.apk
+          cp GESCOL-Public-[0-9]*.apk GESCOL-Public.apk
+          cp GESCOL-${VERSION}.apk GESCOL.apk
+          cp GESCOL-Installation-*.exe GESCOL-Installation.exe
+          cp GESCOL-Public-Installation-*.exe GESCOL-Public-Installation.exe
+          cp GESCOL-Circonscription-[0-9]*.apk GESCOL-Circonscription.apk
+          cp GESCOL-DDEMP-[0-9]*.apk GESCOL-DDEMP.apk
+          cp GESCOL-Circonscription-Installation-*.exe GESCOL-Circonscription-Installation.exe
+          cp GESCOL-DDEMP-Installation-*.exe GESCOL-DDEMP-Installation.exe
+          cp GESCOL-Enseignant-[0-9]*.apk GESCOL-Enseignant.apk
+          cp GESCOL-Enseignant-Installation-*.exe GESCOL-Enseignant-Installation.exe
+          cp GESCOL-Secondaire-[0-9]*.apk GESCOL-Secondaire.apk
+          cp GESCOL-Secondaire-Public-[0-9]*.apk GESCOL-Secondaire-Public.apk
+          cp GESCOL-Secondaire-Installation-*.exe GESCOL-Secondaire-Installation.exe
+          cp GESCOL-Secondaire-Public-Installation-*.exe GESCOL-Secondaire-Public-Installation.exe
           ls -l
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.VERSION }}
-          name: SCOLARIS ${{ env.VERSION }}
+          name: GESCOL ${{ env.VERSION }}
           make_latest: "true"
           files: fichiers/*
           body: |
-            **Android autonome** : SCOLARIS-Autonome.apk fonctionne seul sur le téléphone ou la tablette, sans PC ni Internet.
-            **SCOLARIS Public (écoles publiques)** : SCOLARIS-Public.apk (Android) et SCOLARIS-Public-Installation.exe (Windows).
-            **SCOLARIS Circonscription (CS)** : SCOLARIS-Circonscription.apk et SCOLARIS-Circonscription-Installation.exe.
-            **SCOLARIS DDEMP** : SCOLARIS-DDEMP.apk et SCOLARIS-DDEMP-Installation.exe.
-            **SCOLARIS Enseignant** (application personnelle de l'enseignant) : SCOLARIS-Enseignant.apk et SCOLARIS-Enseignant-Installation.exe.
-            **SCOLARIS Secondaire** (collèges, lycées privés) : SCOLARIS-Secondaire.apk et SCOLARIS-Secondaire-Installation.exe.
-            **SCOLARIS Secondaire Public** (collèges, lycées publics) : SCOLARIS-Secondaire-Public.apk et SCOLARIS-Secondaire-Public-Installation.exe.
-            **SCOLARIS Inspection Secondaire** (supervision des collèges et lycées) : SCOLARIS-Inspection-Secondaire.apk et SCOLARIS-Inspection-Secondaire-Installation.exe.
-            **SCOLARIS DDESTFP** (direction départementale du secondaire) : SCOLARIS-DDESTFP.apk et SCOLARIS-DDESTFP-Installation.exe.
-            **Android connecté** : SCOLARIS.apk se connecte au serveur de l'école ou à la version en ligne.
-            **Windows** : SCOLARIS-Installation.exe installe SCOLARIS sur un PC.
+            **Android autonome** : GESCOL-Autonome.apk fonctionne seul sur le téléphone ou la tablette, sans PC ni Internet.
+            **GESCOL Public (écoles publiques)** : GESCOL-Public.apk (Android) et GESCOL-Public-Installation.exe (Windows).
+            **GESCOL Circonscription (CS)** : GESCOL-Circonscription.apk et GESCOL-Circonscription-Installation.exe.
+            **GESCOL DDEMP** : GESCOL-DDEMP.apk et GESCOL-DDEMP-Installation.exe.
+            **GESCOL Enseignant** (application personnelle de l'enseignant) : GESCOL-Enseignant.apk et GESCOL-Enseignant-Installation.exe.
+            **GESCOL Secondaire** (collèges, lycées privés) : GESCOL-Secondaire.apk et GESCOL-Secondaire-Installation.exe.
+            **GESCOL Secondaire Public** (collèges, lycées publics) : GESCOL-Secondaire-Public.apk et GESCOL-Secondaire-Public-Installation.exe.
+            **Android connecté** : GESCOL.apk se connecte au serveur de l'école ou à la version en ligne.
+            **Windows** : GESCOL-Installation.exe installe GESCOL sur un PC.
 
   page:
     # Page de téléchargement : https://<compte>.github.io/<depot>/ (Settings > Pages > Source : GitHub Actions)
@@ -292,12 +260,12 @@ jobs:
       url: ${{ steps.deploiement.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Décompresser le code source (scolaris_source.zip)
+      - name: Décompresser le code source (gescol_source.zip)
         shell: python
         run: |
           import os, zipfile
-          if os.path.exists("scolaris_source.zip"):
-              zipfile.ZipFile("scolaris_source.zip").extractall(".")
+          if os.path.exists("gescol_source.zip"):
+              zipfile.ZipFile("gescol_source.zip").extractall(".")
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"

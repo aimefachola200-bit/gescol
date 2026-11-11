@@ -30,7 +30,7 @@
         {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if c.id==cid }}>{{ c.nom }}</option>{% endfor %}</select></div>
   </div>
   <p class="actions" style="margin-top:14px"><button class="btn">Analyser le fichier</button></p>
-  <p class="aide">Rien n'est enregistré à cette étape : SCOLARIS affiche d'abord un aperçu ligne par ligne (création, mise à jour ou erreur) que vous validez ensuite.</p>
+  <p class="aide">Rien n'est enregistré à cette étape : GESCOL affiche d'abord un aperçu ligne par ligne (création, mise à jour ou erreur) que vous validez ensuite.</p>
 </form>
 <div class="carte" style="margin-top:14px">
   <h3 style="margin-top:0">Comment préparer le fichier</h3>
@@ -64,7 +64,7 @@
   <div class="kpi"><div class="l">Lignes en erreur</div><div class="v {{ 'rouge' if nb_e }}">{{ nb_e }}</div><div class="d">seront ignorées</div></div>
 </div>
 <details class="carte" style="margin-bottom:12px"><summary><b>Colonnes reconnues ({{ d.colonnes|length }})</b>{% if defaut %} · classe par défaut : {{ defaut.nom }}{% endif %}</summary>
-  <div class="tw"><table class="t compact" style="margin-top:8px"><tr><th>Donnée SCOLARIS</th><th>Colonne du fichier</th></tr>
+  <div class="tw"><table class="t compact" style="margin-top:8px"><tr><th>Donnée GESCOL</th><th>Colonne du fichier</th></tr>
     {% for k, h in d.colonnes.items() %}<tr><td>{{ LIBELLES.get(k, 'Nom et prénoms') }}</td><td>{{ h }}</td></tr>{% endfor %}
   </table></div>
   {% set absentes = LIBELLES.keys()|reject('in', d.colonnes.keys())|list %}

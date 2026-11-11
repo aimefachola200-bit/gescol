@@ -15,7 +15,7 @@
     </queries>
 
     <application
-        android:label="SCOLARIS"
+        android:label="GESCOL"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"

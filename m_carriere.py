@@ -724,7 +724,7 @@ def enregistrer(app, H):
         return [
             ("1. Identification", [
                 ("Nom et prénoms", f["nom_complet"]), ("Sexe", {"M": "Masculin", "F": "Féminin"}.get(f.get("sexe") or "", "")),
-                ("NIP", f.get("nip") or ""), ("Matricule SCOLARIS", f.get("matricule") or ""),
+                ("NIP", f.get("nip") or ""), ("Matricule GESCOL", f.get("matricule") or ""),
                 ("Catégorie", f["categorie_lib"]), ("Date de naissance", f["naissance_txt"]),
                 ("Téléphone", f.get("telephone") or ""), ("E-mail", f.get("email") or "")]),
             ("2. Situation administrative", [

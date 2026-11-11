@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tableaux de bord et statistiques des applications « SCOLARIS Circonscription » (CS) et « SCOLARIS DDEMP ».
+"""Tableaux de bord et statistiques des applications « GESCOL Circonscription » (CS) et « GESCOL DDEMP ».
 
 Pages (lecture : tout utilisateur connecté ; uniquement en édition cs / ddemp) :
     jur_tableau             /juridiction/tableau-de-bord
@@ -778,7 +778,7 @@ def _infos_haut(flt):
 
 def _titre_haut(flt, titre):
     s = J.structure() or {}
-    return [s.get("nom") or config.NOMS_APPLI.get(config.EDITION, "SCOLARIS"), f"{titre} – année scolaire {flt['annee']}",
+    return [s.get("nom") or config.NOMS_APPLI.get(config.EDITION, "GESCOL"), f"{titre} – année scolaire {flt['annee']}",
             _libelle_filtres(flt)]
 
 

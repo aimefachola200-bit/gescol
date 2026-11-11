@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Documents de l'enseignant (édition « École publique »).
 
-Documents officiels remplis automatiquement avec les données de SCOLARIS (école, personnel, carrière, élèves,
+Documents officiels remplis automatiquement avec les données de GESCOL (école, personnel, carrière, élèves,
 classes, registre d'appel, notes), complétés dans un formulaire web puis imprimés en PDF à l'identique
 des modèles fournis par le client :
 
@@ -1388,7 +1388,7 @@ def construire_pdf(doc, lots, titre):
     buf = io.BytesIO()
     c = GCanvas(buf, pagesize=A4)
     c.setTitle(titre)
-    c.setAuthor("SCOLARIS")
+    c.setAuthor("GESCOL")
     for v, opt in lots:
         v = preparer(doc, v)
         fam = DOCS[doc]["famille"]
@@ -1525,7 +1525,7 @@ def enregistrer(app, H):
         return noms
 
     def agent_auto(a):
-        """Toutes les valeurs connues de SCOLARIS pour un agent (personnel + carrière)."""
+        """Toutes les valeurs connues de GESCOL pour un agent (personnel + carrière)."""
         a = dict(a)
         car = carriere(a["id"])
 
@@ -1696,7 +1696,7 @@ def enregistrer(app, H):
             observations="", fait_a=ea["ville"], fait_le=aujourdhui(), directeur_nom=ea["directeur_nom"])
 
     def defauts(doc, cible_id):
-        """Valeurs pré-remplies : données SCOLARIS + valeurs propres au document."""
+        """Valeurs pré-remplies : données GESCOL + valeurs propres au document."""
         ea = ecole_auto()
         if DOCS[doc]["cible"] == "eleve":
             return eleve_auto(eleve_autorise(cible_id))
@@ -1745,7 +1745,7 @@ def enregistrer(app, H):
         return f"e{H.eco()}:docs_enseignant:{doc}:{cible_id}"
 
     def valeurs(doc, cible_id, reinit=False):
-        """Pré-remplissage SCOLARIS, puis compléments saisis précédemment (sauf « revenir aux données SCOLARIS »)."""
+        """Pré-remplissage GESCOL, puis compléments saisis précédemment (sauf « revenir aux données GESCOL »)."""
         v = defauts(doc, cible_id)
         if not reinit:
             for k, val in (H.doc_lire(cle_saisie(doc, cible_id), {}) or {}).items():
@@ -1789,7 +1789,7 @@ def enregistrer(app, H):
         return v, erreurs
 
     def completer(doc, v, auto):
-        """Classe de performance calculée si non saisie ; valeurs internes (_…) reprises des données SCOLARIS."""
+        """Classe de performance calculée si non saisie ; valeurs internes (_…) reprises des données GESCOL."""
         for k, val in auto.items():
             if k.startswith("_") and k not in ("_carriere",):
                 v.setdefault(k, val)
@@ -1898,7 +1898,7 @@ def enregistrer(app, H):
                     flash(e, "danger")
                 return render_template("docs_enseignant_form.html", **contexte_form(
                     doc, d, classes, classe, personnes, personne, pid, v, auto)), 400
-            # compléments mémorisés : seulement les valeurs saisies qui diffèrent des données SCOLARIS
+            # compléments mémorisés : seulement les valeurs saisies qui diffèrent des données GESCOL
             memo = {k: val for k, val in v.items() if val and str(val) != str(auto.get(k, ""))}
             H.doc_ecrire(cle_saisie(doc, pid), memo)
             if request.form.get("action") == "sauver":
@@ -1923,15 +1923,15 @@ def enregistrer(app, H):
         infos_car = [(k.replace("_", " ").capitalize(), date_fr(val) if re.match(r"^\d{4}-\d{2}-\d{2}", str(val))
                       else val) for k, val in car.items()
                      if val not in (None, "") and k not in ("personnel_id", "id", "maj", "cree_le")]
-        scolaris = []
+        gescol = []
         if personne is not None and d["cible"] == "agent":
-            scolaris = [("Matricule SCOLARIS", personne["matricule"]), ("Fonction", personne["fonction"]),
+            gescol = [("Matricule GESCOL", personne["matricule"]), ("Fonction", personne["fonction"]),
                       ("Téléphone", personne["telephone"]), ("Contrat", personne["type_contrat"]),
                       ("Date d'embauche", date_fr(personne["date_embauche"])),
                       ("Classe(s) tenue(s)", auto.get("_classes"))]
         elif personne is not None:
             cl = H.classe_de(personne)
-            scolaris = [("Matricule", personne["matricule"]), ("N° EducMaster", personne["matricule_educmaster"]),
+            gescol = [("Matricule", personne["matricule"]), ("N° EducMaster", personne["matricule_educmaster"]),
                       ("Classe", cl["nom"] if cl else ""), ("Statut", personne["statut"]),
                       ("Inscription", date_fr(personne["date_inscription"])),
                       ("Année(s) de scolarité", personne["annees_scolarite"])]
@@ -1939,7 +1939,7 @@ def enregistrer(app, H):
         return dict(doc=doc, d=d, classes=classes, classe=classe, personnes=personnes, personne=personne, pid=pid,
                     v=v or {}, sections=SECTIONS[doc], CHAMPS=CHAMPS,
                     criteres=criteres_de(doc) if d["famille"] == "eval" else [], TABLES_NOTES=TABLES_NOTES,
-                    CLASSES_PERF=CLASSES_PERF, scolaris=[x for x in scolaris if x[1] not in (None, "")],
+                    CLASSES_PERF=CLASSES_PERF, gescol=[x for x in gescol if x[1] not in (None, "")],
                     infos_car=infos_car, carriere=bool(car), peut_signer=peut_signer(),
                     totaux=tt, fmt_note=fmt_note, classe_perf=classe_perf,
                     carriere_table=table_existe("personnel_carriere"))

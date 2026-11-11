@@ -28,7 +28,7 @@ ROLES_GESTION = ("admin", "fondateur", "directeur", "responsable")
 
 
 def nom_appli():
-    return (config.NOMS_APPLI.get(config.EDITION) or "SCOLARIS").split()[0].upper()
+    return (config.NOMS_APPLI.get(config.EDITION) or "GESCOL").split()[0].upper()
 
 
 def enregistrer(app, H):

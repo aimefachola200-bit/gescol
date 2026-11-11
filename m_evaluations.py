@@ -927,7 +927,7 @@ def enregistrer(app, H):
         buf = io.BytesIO()
         c = GCanvas(buf, pagesize=A4)
         c.setTitle(f"Bulletins – {ev['titre']} – {cl['nom']}")
-        c.setAuthor("SCOLARIS")
+        c.setAuthor("GESCOL")
         for l in lignes:
             if ids is not None and l["eleve"]["id"] not in ids:
                 continue

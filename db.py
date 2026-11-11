@@ -448,7 +448,7 @@ CREATE TABLE IF NOT EXISTS journal (
 );
 """
 
-# Référentiel repris de scolaris_complet.py
+# Référentiel repris de gescol_complet.py
 MATIERES_PRIMAIRE = [
     ("COM.OR", "Communication orale", 1, "standard"),
     ("DIC", "Dictée", 1, "standard"),
@@ -491,7 +491,7 @@ MATIERES_SECONDAIRE = [
 
 
 def chemin_db():
-    return os.path.join(current_app.instance_path, "scolaris.db")
+    return os.path.join(current_app.instance_path, "gescol.db")
 
 
 def get_db():
@@ -527,7 +527,7 @@ def initialiser():
     if not q("SELECT 1 FROM utilisateurs LIMIT 1"):
         db.execute("INSERT INTO utilisateurs (identifiant, nom, role, mdp_hash, doit_changer_mdp) "
                    "VALUES (?,?,?,?,1)",
-                   ("admin", "Administrateur", "admin", generate_password_hash(os.environ.get("SCOLARIS_ADMIN_MDP") or "admin123")))
+                   ("admin", "Administrateur", "admin", generate_password_hash(os.environ.get("GESCOL_ADMIN_MDP") or "admin123")))
     for cycle, liste in (("primaire", MATIERES_PRIMAIRE), ("secondaire", MATIERES_SECONDAIRE),
                          ("maternelle", MATIERES_MATERNELLE)):
         if not q("SELECT 1 FROM matieres WHERE cycle=? LIMIT 1", (cycle,)):

@@ -253,7 +253,7 @@ def generer(cours, per, e, prog):
     d = {"cle": f"{cours}-{per}-{e['code']}", "cours": cours, "type": typ, "type_lib": TYPES[typ], "periode": per, "periode_lib": libp,
          "code": e["code"], "discipline": e["discipline"], "matiere_code": e["matiere_code"], "matiere": e["matiere"],
          "duree": e["duree"], "bareme": 20, "ordre": e["ordre"], "support_titre": "", "support": "", "progression": [], "infre": None,
-         "mention": MENTION, "source": "Création SCOLARIS d'après la progression de la planification annuelle 2026-2027"}
+         "mention": MENTION, "source": "Création GESCOL d'après la progression de la planification annuelle 2026-2027"}
     c = e["code"]
     if c == "comp":
         t = BX.T.get((cours, per)) or BX.T.get((cours, {"C1": "M4", "C2": "M5", "C3": "M6"}.get(per, per)))

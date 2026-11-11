@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Examens (CEP) des applications « SCOLARIS Circonscription » (CS) et « SCOLARIS DDEMP ».
+"""Examens (CEP) des applications « GESCOL Circonscription » (CS) et « GESCOL DDEMP ».
 
 Source des chiffres : la section « cep » des paquets de transmission des écoles (jur_sections), lue avec
 jur_calc.cep pour que tous les écrans donnent les mêmes résultats. La CS (ou la DDEMP) peut CORRIGER les
@@ -542,7 +542,7 @@ def enregistrer(app, H):
 
     def titre_haut(titre, fl):
         s = J.structure() or {}
-        return [s.get("nom") or config.NOMS_APPLI.get(config.EDITION, "SCOLARIS"), titre] + \
+        return [s.get("nom") or config.NOMS_APPLI.get(config.EDITION, "GESCOL"), titre] + \
             [" · ".join(f"{a} : {b}" for a, b in libelle_filtres(fl))]
 
     from reportlab.lib.pagesizes import A4, landscape

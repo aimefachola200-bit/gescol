@@ -20,7 +20,7 @@
 </style>
 <div class="entete">
   <div><h1>Photos des élèves à la caméra</h1>
-    <p class="sous">Photographiez toute une classe à la suite : chaque photo est enregistrée sur la fiche de l'élève puis SCOLARIS passe au suivant.</p></div>
+    <p class="sous">Photographiez toute une classe à la suite : chaque photo est enregistrée sur la fiche de l'élève puis GESCOL passe au suivant.</p></div>
   <div class="actions"><a class="btn sec" href="{{ url_for('eleves', classe=cl.id if cl else None) }}">← Élèves</a></div>
 </div>
 {% call M.choix_classe(classes, cl.id if cl else None) %}
@@ -74,7 +74,7 @@
   var items=[].slice.call(document.querySelectorAll('#liste li')), i=-1, flux=null, occupe=false;
   var vid=document.getElementById('video'), ap=document.getElementById('apercu'), msg=document.getElementById('msg'), guide=document.getElementById('guide');
   var bCam=document.getElementById('b-cam'), bPr=document.getElementById('b-prendre'), bPass=document.getElementById('b-passer'), fic=document.getElementById('f-photo');
-  function toast(m,ok){ if(window.SCOLARIS&&SCOLARIS.toast){SCOLARIS.toast(m,ok);} else if(!ok){alert(m);} }
+  function toast(m,ok){ if(window.GESCOL&&GESCOL.toast){GESCOL.toast(m,ok);} else if(!ok){alert(m);} }
   function choisir(k){
     if(k<0||k>=items.length){ msg.textContent='Fin de la liste : toutes les photos de la série sont faites.'; msg.hidden=false; i=items.length; majCourant(); return; }
     i=k; majCourant(); items[i].scrollIntoView({block:'nearest'});
@@ -111,7 +111,7 @@
         setTimeout(function(){ if(flux) ap.hidden=true; choisir(i+1); }, 700);
       }).catch(function(){ occupe=false; toast('Connexion au serveur impossible : photo non enregistrée.',false); });
   }
-  var face=(function(){try{return localStorage.getItem('scolaris-camera-face')||'environment';}catch(e){return 'environment';}})();
+  var face=(function(){try{return localStorage.getItem('gescol-camera-face')||'environment';}catch(e){return 'environment';}})();
   var appareil='';
   function ouvrir(f){
     // v1.10.10 : appareil précis (avant / arrière d'après son nom) quand il est connu, sinon face imposée puis préférée
@@ -123,11 +123,11 @@
   }
   document.getElementById('b-face').addEventListener('click',function(){
     face=(face==='environment')?'user':'environment';
-    try{localStorage.setItem('scolaris-camera-face',face);}catch(e){}
+    try{localStorage.setItem('gescol-camera-face',face);}catch(e){}
     var suite=function(){ if(flux){ flux.getTracks().forEach(function(t){t.stop();}); flux=null; bCam.click(); } };
-    if(flux && navigator.mediaDevices.enumerateDevices && window.SCOLARIS_choisirCamera){
+    if(flux && navigator.mediaDevices.enumerateDevices && window.GESCOL_choisirCamera){
       navigator.mediaDevices.enumerateDevices().then(function(l){
-        appareil=window.SCOLARIS_choisirCamera(l.filter(function(d){return d.kind==='videoinput';}),face,appareil)||''; suite();
+        appareil=window.GESCOL_choisirCamera(l.filter(function(d){return d.kind==='videoinput';}),face,appareil)||''; suite();
       }).catch(function(){ appareil=''; suite(); });
       return;
     }

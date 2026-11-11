@@ -151,7 +151,7 @@ def enregistrer(app, H):
         """v2.2 — formulaire envoyé par JavaScript (applications Android) : la redirection est renvoyée en JSON, pour que la
         page suivante (et son message) s'ouvre normalement au lieu d'être lue par le script."""
         try:
-            if request.headers.get("X-Scolaris-Fetch") == "1" and r.status_code in (301, 302, 303, 307, 308) and r.location:
+            if request.headers.get("X-Gescol-Fetch") == "1" and r.status_code in (301, 302, 303, 307, 308) and r.location:
                 from flask import jsonify
                 j = jsonify(redirection=r.location)
                 for k, v in r.headers.items():
@@ -172,7 +172,7 @@ def enregistrer(app, H):
         titre = E.titre_page(html)
         b = E.blocs(E.contenu_principal(html))
         ecole = (config.ECOLE.get("nom") or "").strip() if isinstance(getattr(config, "ECOLE", None), dict) else ""
-        pied = f"{ecole + ' · ' if ecole else ''}{getattr(config, 'NOMS_APPLI', {}).get(config.EDITION, 'SCOLARIS') if hasattr(config, 'NOMS_APPLI') else 'SCOLARIS'} {config.VERSION} · Conception : {config.CONCEPTEUR} — +229 01 96 51 03 33"
+        pied = f"{ecole + ' · ' if ecole else ''}{getattr(config, 'NOMS_APPLI', {}).get(config.EDITION, 'GESCOL') if hasattr(config, 'NOMS_APPLI') else 'GESCOL'} {config.VERSION} · Conception : {config.CONCEPTEUR} — +229 01 96 51 03 33"
         H.journal("export_" + fmt, page[:200])
         if fmt == "pdf":
             return reponse_fichier(E.pdf(b, titre, pied), nom_fichier(titre, "pdf"), "application/pdf")

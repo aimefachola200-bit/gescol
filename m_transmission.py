@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Transmission des données de l'école à sa Circonscription scolaire (CS) — SCOLARIS / SCOLARIS Public.
+"""Transmission des données de l'école à sa Circonscription scolaire (CS) — GESCOL / GESCOL Public.
 
 L'école produit un « paquet de transmission » (format défini dans jur_format.py) :
 * identité de l'école (code unique, type EP/EM/EE, secteur, département, CS, zone…) ;
 * rubriques : effectifs (classes, âges au 31/12, redoublants, titulaires), personnel (+ carrière),
   visites des CP/CCS, CEP (candidats, résultats officiels saisis ici, liste nominative), fiches de
   recensement, rapports de rentrée / fin d'année, patrimoine, cantine.
-Le paquet est soit téléchargé (fichier « .scolaris » à remettre à la CS sur clé USB, WhatsApp, e-mail…),
-soit envoyé EN LIGNE à l'application de la CS (POST <adresse>/api/transmission, en-tête X-Scolaris-Code).
+Le paquet est soit téléchargé (fichier « .gescol » à remettre à la CS sur clé USB, WhatsApp, e-mail…),
+soit envoyé EN LIGNE à l'application de la CS (POST <adresse>/api/transmission, en-tête X-Gescol-Code).
 
 Routes (pages actives seulement dans les éditions école : privee / publique) :
 * /transmission                       transmission_accueil    aperçu, identité, CEP, réglages, historique
 * /transmission/identite        POST  transmission_identite   code (admin), type, secteur
 * /transmission/cep             POST  transmission_cep        résultats officiels du CEP (admis G / F)
-* /transmission/fichier               transmission_fichier    téléchargement du fichier .scolaris
+* /transmission/fichier               transmission_fichier    téléchargement du fichier .gescol
 * /transmission/reglages        POST  transmission_reglages   adresse Internet de la CS + code d'accès
 * /transmission/envoyer         POST  transmission_envoyer    envoi en ligne à la CS
 
@@ -62,8 +62,7 @@ CREATE INDEX IF NOT EXISTS ix_trans_envois ON trans_envois(ecole_id, annee);
 NOMS_RUBRIQUES = {"effectifs": "Effectifs des élèves", "personnel": "Personnel", "visites": "Visites de classe (CP / CCS)",
                   "cep": "CEP (candidats et résultats)", "recensement": "Fiches de recensement",
                   "rapports": "Rapports de rentrée / fin d'année", "patrimoine": "Patrimoine et infrastructures",
-                  "cantine": "Cantine scolaire", "pilotage": "Pilotage (évaluations, abandons, sport, santé)",
-                  "secondaire": "Secondaire (classes, séries, examens)"}
+                  "cantine": "Cantine scolaire", "pilotage": "Pilotage (évaluations, abandons, sport, santé)"}
 RE_CODE = re.compile(r"^[A-Z0-9][A-Z0-9-]{3,30}$")
 TIMEOUT = 20
 LIMITE_DECOMPRESSION = 60 * 1024 * 1024
@@ -77,7 +76,7 @@ def norm_code(t):
 
 
 def decompresser(octets, limite=LIMITE_DECOMPRESSION):
-    """Décompresse un .scolaris (gzip) sans risque de « bombe » : au-delà de `limite`, PaquetInvalide."""
+    """Décompresse un .gescol (gzip) sans risque de « bombe » : au-delà de `limite`, PaquetInvalide."""
     if octets[:2] != b"\x1f\x8b":
         return octets
     try:
@@ -122,7 +121,7 @@ def normaliser_adresse(adresse):
 
 
 def envoyer_en_ligne(adresse, code, octets):
-    """POST du paquet (fichier .scolaris = JSON compressé gzip) vers <adresse>/api/transmission.
+    """POST du paquet (fichier .gescol = JSON compressé gzip) vers <adresse>/api/transmission.
     Renvoie (ok: bool, message: str, reponse: dict). Messages d'erreur en français, compréhensibles."""
     url = normaliser_adresse(adresse)
     if not url:
@@ -130,15 +129,15 @@ def envoyer_en_ligne(adresse, code, octets):
     if not (code or "").strip():
         return False, "Indiquez d'abord le code d'accès fourni par le destinataire.", {}
     req = urllib.request.Request(url + "/api/transmission", data=octets, method="POST", headers={
-        "Content-Type": "application/gzip", "X-Scolaris-Code": code.strip(),
-        "User-Agent": f"SCOLARIS/{config.VERSION}", "Accept": "application/json"})
+        "Content-Type": "application/gzip", "X-Gescol-Code": code.strip(),
+        "User-Agent": f"GESCOL/{config.VERSION}", "Accept": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT, context=ssl.create_default_context()) as r:
             corps = r.read(1_000_000)
             try:
                 rep = json.loads(corps.decode("utf-8"))
             except ValueError:
-                return False, ("L'adresse répond, mais ce n'est pas une application SCOLARIS de circonscription "
+                return False, ("L'adresse répond, mais ce n'est pas une application GESCOL de circonscription "
                                "ou de DDEMP. Vérifiez l'adresse."), {}
             if not rep.get("ok"):
                 return False, rep.get("message") or "Envoi refusé par le destinataire.", rep
@@ -152,7 +151,7 @@ def envoyer_en_ligne(adresse, code, octets):
         if e.code in (401, 403):
             return False, "Code d'accès refusé : " + (msg or "vérifiez le code fourni par le destinataire."), rep
         if e.code == 404:
-            return False, ("Adresse incorrecte : aucune application SCOLARIS de circonscription ou de DDEMP "
+            return False, ("Adresse incorrecte : aucune application GESCOL de circonscription ou de DDEMP "
                            "ne répond à cette adresse."), rep
         if e.code == 413:
             return False, "Les données sont trop volumineuses pour un envoi en ligne : utilisez le fichier.", rep
@@ -237,8 +236,6 @@ def enregistrer(app, H):
         return out
 
     def type_deduit(classes):
-        if config.secondaire():   # v2.4.7 : collège (6ème-3ème) ou lycée (2nde-Tle)
-            return "LYC" if any(c.get("niveau") in ("2nde", "1ère", "Tle") for c in classes) else "CEG"
         cyc = {c["cycle"] for c in classes}
         if "primaire" in cyc:
             return "EP"
@@ -597,7 +594,7 @@ def enregistrer(app, H):
                 if not ident[k_id] and v.get(k_rec):
                     ident[k_id] = str(v[k_rec])[:80]
         p = jur_format.nouveau("ecole", ident["code"], ident["nom"], annee, ident["departement"], ident["cs"],
-                               config.EDITION, f"SCOLARIS {config.VERSION}")
+                               config.EDITION, f"GESCOL {config.VERSION}")
         p["genere_le"] = H.maintenant()
         p["ecoles"] = [{"ecole": ident, "sections": secs}]
         p = jur_format.sceller(json_propre(p))
@@ -609,7 +606,7 @@ def enregistrer(app, H):
                   "presentes": [k for k in jur_format.SECTIONS_ECOLE if k in secs],
                   "secondaire": [c["nom"] for c in secondaire], "ages_inconnus": (info_eff or {}).get("ages_inconnus", 0),
                   "type_deduit": type_deduit(classes), "cep": secs.get("cep"), "annee": annee,
-                  "nom_fichier": f"transmission_{ident['code'] or 'SANS-CODE'}_{annee}.scolaris"}
+                  "nom_fichier": f"transmission_{ident['code'] or 'SANS-CODE'}_{annee}.gescol"}
         return p, apercu
 
     def historiser(apercu, p, mode, statut, message, octets, destination=""):
@@ -718,7 +715,7 @@ def enregistrer(app, H):
         r = reglages()
         adr = normaliser_adresse(request.form.get("adresse", ""))
         if adr and not re.match(r"^https?://[\w.\-]+(:\d{1,5})?(/[\w.\-/~%]*)?$", adr):
-            flash("Adresse Internet invalide (exemple : https://cs-pobe.scolaris.bj).", "danger")
+            flash("Adresse Internet invalide (exemple : https://cs-pobe.gescol.bj).", "danger")
             return redirect(url_for("transmission_accueil") + "#en-ligne")
         r["adresse"] = adr
         code = request.form.get("code_acces", "").strip()

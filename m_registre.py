@@ -290,7 +290,7 @@ def releve_auto(H, cal, classe, annee, aujourdhui=None):
     """Valeurs calculées à partir du calendrier et du registre, pour chaque mois (None = mois à venir)."""
     auj = aujourdhui or date.today()
     # élèves inscrits de la classe. NB : la date d'inscription n'est pas utilisée (elle vaut souvent la date de
-    # saisie dans SCOLARIS, pas la date d'arrivée réelle) ; l'effectif d'un mois se corrige à la main si besoin.
+    # saisie dans GESCOL, pas la date d'arrivée réelle) ; l'effectif d'un mois se corrige à la main si besoin.
     eleves = {e["id"] for e in H.q("SELECT id FROM eleves WHERE classe_id=? AND statut='inscrit'", (classe["id"],))}
     a = int(annee[:4])
     reporter_appels(H, classe["id"], f"{a}-09-01", min(f"{a + 1}-06-30", auj.isoformat()))

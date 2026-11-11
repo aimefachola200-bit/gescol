@@ -10,7 +10,7 @@ propre processus et son propre dossier de données :
     modifié est refusé (signature) ; un paquet d'une autre clé est refusé (clé épinglée) puis accepté après validation ;
     conflit champ par champ (la CS garde sa valeur, la modification de l'école est listée) ;
 (2) PAR HTTP : la CS et la DDEMP tournent comme de vrais serveurs (werkzeug, 127.0.0.1) ; les écoles « Synchroniser
-    maintenant » (POST /sync/push puis GET /sync/pull, code d'accès X-Scolaris-Code), la CS synchronise avec la DDEMP ;
+    maintenant » (POST /sync/push puis GET /sync/pull, code d'accès X-Gescol-Code), la CS synchronise avec la DDEMP ;
     code d'accès faux refusé ; incrémental : un second envoi sans changement ne transporte aucun objet.
 Lancer : python3 -m unittest tests.test_v200"""
 import json
@@ -23,7 +23,7 @@ import time
 import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "SCOLARIS"
+PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "GESCOL"
 
 ENTETE = r'''
 import gzip, html, io, json, os, re, sys, time

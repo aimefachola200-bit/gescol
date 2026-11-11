@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
-    <!-- usesCleartextTraffic : SCOLARIS tourne sur l'appareil lui-même (http://127.0.0.1) -->
+    <!-- usesCleartextTraffic : GESCOL tourne sur l'appareil lui-même (http://127.0.0.1) -->
     <queries>
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />

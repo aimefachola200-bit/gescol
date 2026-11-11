@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Cœur des applications « SCOLARIS Circonscription » (CS) et « SCOLARIS DDEMP ».
+"""Cœur des applications « GESCOL Circonscription » (CS) et « GESCOL DDEMP ».
 
 Hiérarchie : DDEMP (département) → Circonscriptions scolaires (CS) → zones pédagogiques → écoles.
-* La CS rassemble les écoles de sa juridiction : elle reçoit leurs paquets de transmission (fichier .scolaris
+* La CS rassemble les écoles de sa juridiction : elle reçoit leurs paquets de transmission (fichier .gescol
   ou envoi en ligne), qui alimentent ses tableaux de bord, ses statistiques et ses fiches.
 * La DDEMP rassemble les CS du département : elle reçoit les paquets des CS (toutes leurs écoles + leurs
   données propres : agents, visites des CP…).
@@ -336,7 +336,7 @@ def exporter_paquet_cs(annee_=None):
     a = annee_ or annee()
     c = cs_courante()
     p = jur_format.nouveau("cs", f"CS-{norm(s['departement'])}-{norm(s['cs'])}".replace(" ", "_"), s["nom"], a,
-                           s["departement"], s["cs"], config.EDITION, f"SCOLARIS {config.VERSION}")
+                           s["departement"], s["cs"], config.EDITION, f"GESCOL {config.VERSION}")
     p["genere_le"] = _maintenant()
     for e in ecoles():
         ident = {k: (e[k] if k in e.keys() else "") or "" for k in jur_format.CHAMPS_ECOLE}
@@ -366,14 +366,9 @@ def _maintenant():
 # ======================================================================== configuration de la structure
 def configurer(niveau_, departement, cs="", **infos):
     """Crée / met à jour la structure et le référentiel (CS du département, zones pédagogiques)."""
-    if config.secondaire():   # v2.4.7 : Inspection de l'enseignement secondaire / DDESTFP
-        nom = infos.get("nom") or (f"Inspection de l'enseignement secondaire de {cs.title()}" if niveau_ == "cs"
-                                   else f"Direction départementale des Enseignements Secondaire, Technique et de la Formation Professionnelle du {departement}")
-        sigle = infos.get("sigle") or (f"IS {cs}" if niveau_ == "cs" else f"DDESTFP {departement}")
-    else:
-        nom = infos.get("nom") or (f"Circonscription scolaire de {cs.title()}" if niveau_ == "cs"
-                                   else f"Direction départementale des Enseignements Maternel et Primaire du {departement}")
-        sigle = infos.get("sigle") or (f"CS {cs}" if niveau_ == "cs" else f"DDEMP {departement}")
+    nom = infos.get("nom") or (f"Circonscription scolaire de {cs.title()}" if niveau_ == "cs"
+                               else f"Direction départementale des Enseignements Maternel et Primaire du {departement}")
+    sigle = infos.get("sigle") or (f"CS {cs}" if niveau_ == "cs" else f"DDEMP {departement}")
     ex("INSERT INTO jur_structure (id, niveau, departement, cs, nom, sigle, adresse, bp, telephone, email, ville, "
        "responsable_titre, responsable_nom, maj) VALUES (1,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now','localtime')) "
        "ON CONFLICT(id) DO UPDATE SET niveau=excluded.niveau, departement=excluded.departement, cs=excluded.cs, "
@@ -426,7 +421,7 @@ def enregistrer(app, H):
                                 cs=s["cs"] or "", adresse=s["adresse"] or "", telephone=s["telephone"] or "",
                                 email=s["email"] or "", ville=s["ville"] or "")
         else:
-            config.ECOLE.update(nom=config.NOMS_APPLI.get(config.EDITION, "SCOLARIS"), sigle="", cs="")
+            config.ECOLE.update(nom=config.NOMS_APPLI.get(config.EDITION, "GESCOL"), sigle="", cs="")
             ep = request.endpoint or ""
             if g.get("user") and ep not in ("jur_structure", "logout", "mon_compte", "static", "referentiel_js",
                                             "manifeste", "sw", "signature_png") and not ep.startswith("api_"):
@@ -711,5 +706,4 @@ def enregistrer(app, H):
 NOMS_SECTIONS = {"effectifs": "Effectifs des élèves", "personnel": "Personnel", "visites": "Visites de classe",
                  "cep": "CEP (candidats, résultats)", "recensement": "Fiches de recensement",
                  "rapports": "Rapports de rentrée / fin d'année", "patrimoine": "Patrimoine et infrastructures",
-                 "cantine": "Cantine scolaire", "pilotage": "Pilotage (évaluations, abandons, sport, santé)",
-                 "secondaire": "Secondaire (classes, séries, examens)"}
+                 "cantine": "Cantine scolaire", "pilotage": "Pilotage (évaluations, abandons, sport, santé)"}

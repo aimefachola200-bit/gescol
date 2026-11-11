@@ -13,7 +13,7 @@ import sys
 import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "SCOLARIS"
+PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "GESCOL"
 
 SCRIPT = r'''
 import html, io, os, re, sys, tempfile, zipfile
@@ -77,7 +77,7 @@ if C.get("programmes"):
 for u in pages:
     r = c.get(u, follow_redirects=True)
     h = r.data.decode("utf8", "replace")
-    m = re.search(r'class="export-barre.*?href="([^"]+)".*?href="([^"]+)".*?scolarisImprimer', h, re.S)
+    m = re.search(r'class="export-barre.*?href="([^"]+)".*?href="([^"]+)".*?gescolImprimer', h, re.S)
     if r.status_code != 200 or not m:
         erreurs.append(("barre", u, r.status_code)); continue
     pdf_ok(html.unescape(m.group(1)))
@@ -109,7 +109,7 @@ if m:
 # PDF à télécharger (Android) : pièce jointe
 r = c.get(f"/preparation/fiches/{f['id']}.pdf?telecharger=1")
 assert "attachment" in r.headers.get("Content-Disposition", "")
-r = c.get(f"/preparation/fiches/{f['id']}.pdf", headers={"User-Agent": "Mozilla/5.0 ScolarisAutonome/1.3"})
+r = c.get(f"/preparation/fiches/{f['id']}.pdf", headers={"User-Agent": "Mozilla/5.0 GescolAutonome/1.3"})
 assert "attachment" in r.headers.get("Content-Disposition", "")
 # (3) défauts
 txt = MP._reparer_texte("Respect des liaisons ; maîtrise de l’intonation du débit et de")
@@ -137,9 +137,9 @@ assert h.status_code == 200
 t = "".join(pg.extract_text() or "" for pg in pypdf.PdfReader(io.BytesIO(h.data)).pages)
 assert "Établissement Scolaire CPFA" not in t, "nom d'exemple de l'école sur la fiche"
 # (4) redirection en JSON pour un formulaire envoyé par JavaScript
-r = c.post("/logout", headers={"X-Scolaris-Fetch": "1"}) if any(r_.rule == "/logout" and "POST" in r_.methods for r_ in app.url_map.iter_rules()) else None
+r = c.post("/logout", headers={"X-Gescol-Fetch": "1"}) if any(r_.rule == "/logout" and "POST" in r_.methods for r_ in app.url_map.iter_rules()) else None
 c2 = app.test_client()
-r = c2.post("/login", data={"identifiant": "admin", "mdp": "admin123"}, headers={"X-Scolaris-Fetch": "1"})
+r = c2.post("/login", data={"identifiant": "admin", "mdp": "admin123"}, headers={"X-Gescol-Fetch": "1"})
 assert r.status_code == 200 and r.is_json and r.get_json().get("redirection"), (r.status_code, r.data[:200])
 assert not erreurs, erreurs[:20]
 print("OK", len(pages))
@@ -151,7 +151,7 @@ src, libs = sys.argv[1], sys.argv[2]
 sys.path[:0] = [src, libs]
 P = os.environ["PREFIXE_SCRIPT"]
 os.environ[P + "_DATA"] = tempfile.mkdtemp(); os.environ[P + "_AUTONOME"] = "1"; os.environ[P + "_SANS_PRECHARGEMENT"] = "1"
-import importlib.metadata as md            # comme scolaris_android._metadonnees_tolerantes (pas de .dist-info dans l'APK)
+import importlib.metadata as md            # comme gescol_android._metadonnees_tolerantes (pas de .dist-info dans l'APK)
 _v = md.version
 def _version(nom):
     try:
@@ -303,12 +303,12 @@ class TestTelechargements220(unittest.TestCase):
         self.assertIn("PRÉLIMINAIRES", r.pages[0].extract_text())
 
     def test_android_java(self):
-        """Téléchargements enregistrés par l'application (nom UTF-8, Téléchargements / SCOLARIS), impression, pont JS."""
+        """Téléchargements enregistrés par l'application (nom UTF-8, Téléchargements / GESCOL), impression, pont JS."""
         for paquet, dossier in (("autonome", "android_autonome"), ("app", "android")):
-            base = os.path.join(RACINE, "packaging", dossier, "app", "src", "main", "java", "bj", "scolaris", paquet)
+            base = os.path.join(RACINE, "packaging", dossier, "app", "src", "main", "java", "bj", "gescol", paquet)
             fic = open(os.path.join(base, "Fichiers.java"), encoding="utf-8").read()
             act = open(os.path.join(base, "MainActivity.java"), encoding="utf-8").read()
-            self.assertIn(f"package bj.scolaris.{paquet};", fic)
+            self.assertIn(f"package bj.gescol.{paquet};", fic)
             for m in ("filename\\\\*", "MediaStore.Downloads", "createPrintDocumentAdapter", "ACTION_SEND"):
                 self.assertIn(m, fic, (dossier, m))
             for m in ("public void imprimer(", "public void enregistrerFichier(", "Fichiers.telecharger(", "blob:"):

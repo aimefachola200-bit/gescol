@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Personnel et gestion de carrière des applications « SCOLARIS Circonscription » (CS) et « SCOLARIS DDEMP ».
+"""Personnel et gestion de carrière des applications « GESCOL Circonscription » (CS) et « GESCOL DDEMP ».
 
 Sources des données (lecture) :
 * personnel des écoles : section « personnel » des paquets de transmission (H.jur_personnel) ;

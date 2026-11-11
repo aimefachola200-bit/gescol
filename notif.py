@@ -91,7 +91,7 @@ def envoyer_sms(tel, texte, p=None):
         return False, "passerelle SMS non configurée"
     valeurs = {"telephone": n, "telephone_plus": "+" + n, "message": texte, "expediteur": p.get("sms_expediteur", "")}
     methode = (p.get("sms_methode") or "GET").upper()
-    entetes = {"User-Agent": "SCOLARIS"}
+    entetes = {"User-Agent": "GESCOL"}
     if p.get("sms_entete") and ":" in p["sms_entete"]:
         k, v = p["sms_entete"].split(":", 1)
         entetes[k.strip()] = v.strip()

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Tests du module Comité d'évaluation, épreuves et grilles (m_epreuves).
-Lancer : python3 -m unittest tests.test_epreuves   (depuis /home/claude/scolaris)
+Lancer : python3 -m unittest tests.test_epreuves   (depuis /home/claude/gescol)
 
-L'édition testée est choisie par SCOLARIS_EDITION_TEST (privee par défaut) ; la suite est rejouée dans un second
+L'édition testée est choisie par GESCOL_EDITION_TEST (privee par défaut) ; la suite est rejouée dans un second
 processus pour l'édition « publique » (TestEditionPublique)."""
 import html as html_mod
 import io
@@ -15,10 +15,10 @@ import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-EDITION = os.environ.get("SCOLARIS_EDITION_TEST", "privee")
-DOSSIER = tempfile.mkdtemp(prefix=f"scolaris_epreuves_{EDITION}_")
-os.environ["SCOLARIS_EDITION"] = EDITION
-os.environ["SCOLARIS_DATA"] = DOSSIER
+EDITION = os.environ.get("GESCOL_EDITION_TEST", "privee")
+DOSSIER = tempfile.mkdtemp(prefix=f"gescol_epreuves_{EDITION}_")
+os.environ["GESCOL_EDITION"] = EDITION
+os.environ["GESCOL_DATA"] = DOSSIER
 
 from app import app  # noqa: E402
 import config  # noqa: E402
@@ -332,9 +332,9 @@ class TestEditionPublique(unittest.TestCase):
     def test_publique(self):
         if EDITION != "privee":
             self.skipTest("déjà dans l'édition secondaire")
-        env = dict(os.environ, SCOLARIS_EDITION_TEST="publique")
-        env.pop("SCOLARIS_EDITION", None)
-        env.pop("SCOLARIS_DATA", None)
+        env = dict(os.environ, GESCOL_EDITION_TEST="publique")
+        env.pop("GESCOL_EDITION", None)
+        env.pop("GESCOL_DATA", None)
         r = subprocess.run([sys.executable, "-m", "unittest", "tests.test_epreuves.TestEpreuves", "tests.test_epreuves.TestCalculs"],
                            cwd=RACINE, env=env, capture_output=True, text=True, timeout=600)
         self.assertEqual(r.returncode, 0, r.stderr[-4000:])

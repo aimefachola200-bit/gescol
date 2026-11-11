@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Services, cachets et documents administratifs des applications « SCOLARIS Circonscription » (CS) et « SCOLARIS DDEMP ».
+"""Services, cachets et documents administratifs des applications « GESCOL Circonscription » (CS) et « GESCOL DDEMP ».
 
 1. Services et attributions (/juridiction/services) : services par défaut du niveau (CS : articles 9 à 14 du texte
    officiel des attributions ; DDEMP : services départementaux), ajout d'un service oublié, modification,
@@ -94,13 +94,13 @@ ART_13 = ("La Division de l'Organisation Scolaire et de la Prévision est charg�
 ART_14 = ("Article 14 : Les Chefs de Division de la Circonscription Scolaire (CS) sont nommés par le Chef de la "
           "Circonscription Scolaire (CCS) parmi les agents de l'État autres que les Conseillers Pédagogiques et les "
           "Inspecteurs.")
-REDIGE = "Attributions rédigées par SCOLARIS (non reprises du texte officiel) : à adapter par la structure."
+REDIGE = "Attributions rédigées par GESCOL (non reprises du texte officiel) : à adapter par la structure."
 # v1.6 — rubriques des divisions (a_divisions). AOF = arrêté portant Attributions, Organisation et Fonctionnement des
 # structures déconcentrées du MEMP (Circonscriptions scolaires, Directions départementales). Les textes des articles
-# 9 à 14 (CS) sont repris ci-dessus ; les autres attributions ont été rédigées par SCOLARIS faute du texte officiel.
+# 9 à 14 (CS) sont repris ci-dessus ; les autres attributions ont été rédigées par GESCOL faute du texte officiel.
 AOF = "Arrêté portant attributions, organisation et fonctionnement des structures déconcentrées du MEMP (AOF)"
 SOURCE_AOF = "AOF – article {n}"
-SOURCE_SCOLARIS = "Rédigé par SCOLARIS, à conformer à l'AOF"
+SOURCE_GESCOL = "Rédigé par GESCOL, à conformer à l'AOF"
 HORS_AOF = ("Service hors AOF : les articles 10 à 13 de l'AOF ne prévoient que quatre divisions pour la CS ; ce service "
             "est conservé parce que la structure y fait référence, en attendant la saisie du texte officiel. ")
 # v1.6 – Service des Ressources Humaines de la CS (ex-CSPAF) : le personnel des écoles (directeurs, enseignants,
@@ -114,7 +114,7 @@ ATTR_RH_CS = ("Le Service des Ressources Humaines est chargé de :\n"
               "permissions) et les propositions d'avancement ;\n"
               "- suivre les carrières (avancements, reclassements, évaluations, visites d'aptitude, diplômes), les "
               "mutations et les départs à la retraite ;\n"
-              "- gérer les comptes SCOLARIS des directeurs et des enseignants et leurs affectations aux classes ;\n"
+              "- gérer les comptes GESCOL des directeurs et des enseignants et leurs affectations aux classes ;\n"
               "- rendre compte au CCS de la situation du personnel.")
 # anciens libellés du service « personnel » (renommés par assurer_services)
 ANCIENS_NOMS_RH = ("Service du Personnel et des Affaires financières",)
@@ -1337,7 +1337,7 @@ def construire_pdf(doc, lots, titre):
     buf = io.BytesIO()
     c = GCanvas(buf, pagesize=A4)
     c.setTitle(titre)
-    c.setAuthor("SCOLARIS")
+    c.setAuthor("GESCOL")
     for v, opt in lots:
         v = preparer(doc, v)
         if DOCS[doc]["famille"] == "ame":
@@ -1362,7 +1362,7 @@ def pdf_organigramme(rangs, svcs, s):
     buf = io.BytesIO()
     c = GCanvas(buf, pagesize=landscape(A4))
     c.setTitle("Organigramme et attributions")
-    c.setAuthor("SCOLARIS")
+    c.setAuthor("GESCOL")
     LW, LH = landscape(A4)
     # page 1 : organigramme (paysage)
     DE.bloc_memp(c, 30, LH - 22, 40)

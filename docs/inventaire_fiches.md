@@ -1,4 +1,4 @@
-# Inventaire des fiches et guides — SCOLARIS / GESCOL Enseignant (v1.20)
+# Inventaire des fiches et guides — GESCOL / GESCOL Enseignant (v1.20)
 
 Sommaire : CM1 et lot 2 (v1.19) ; lot 3 (v1.20) — CI, CP, CE2, CM2, EST CM2 de la CS, guides officiels CM1, titres de SA, actualisation de l'Éducation sociale, doublons, intrus, ce qui manque encore.
 

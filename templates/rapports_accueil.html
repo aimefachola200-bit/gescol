@@ -9,7 +9,7 @@
 </style>
 <div class="entete">
   <div><h1>Rapports de rentrée et de fin d'année</h1>
-    <p class="sous">Carte d'identité de l'école – fiches officielles EP (primaire) et EM (maternelle), remplies automatiquement par SCOLARIS</p></div>
+    <p class="sous">Carte d'identité de l'école – fiches officielles EP (primaire) et EM (maternelle), remplies automatiquement par GESCOL</p></div>
   <div class="actions">{% if ep_existe('recensement_accueil') %}<a class="btn sec petit" href="{{ url_for('recensement_accueil') }}">{{ icone('classeur') }} Fiches de recensement</a>{% endif %}</div>
 </div>
 
@@ -20,7 +20,7 @@
 </form>
 
 <p class="aide">Chaque fiche reprend <b>exactement</b> les rubriques du modèle officiel. Les cases sont pré-remplies à partir de
-SCOLARIS (école, classes, élèves, personnel, cantine, patrimoine, évaluations) et restent toutes corrigibles avant l'impression.
+GESCOL (école, classes, élèves, personnel, cantine, patrimoine, évaluations) et restent toutes corrigibles avant l'impression.
 Une fois signé et visé, le rapport officiel scanné peut être téléversé pour l'archive de l'année.</p>
 
 <div class="rp-docs">
@@ -64,7 +64,7 @@ Une fois signé et visé, le rapport officiel scanné peut être téléversé po
 <div class="carte">
   <h3 style="margin-top:0">Armoiries de l'en-tête</h3>
   <p class="aide">Les fiches officielles portent les armoiries de la République. Vous pouvez téléverser leur image (PNG ou JPG) ;
-  sans image, SCOLARIS dessine un emblème générique. {% if armoiries %}<span class="badge ok">Image enregistrée</span>{% endif %}</p>
+  sans image, GESCOL dessine un emblème générique. {% if armoiries %}<span class="badge ok">Image enregistrée</span>{% endif %}</p>
   <form method="post" action="{{ url_for('rapports_armoiries') }}" enctype="multipart/form-data" class="ligne">
     <label for="rp-arm">Image</label> <input id="rp-arm" type="file" name="image" accept="image/png,image/jpeg">
     <button class="btn petit">Enregistrer</button>

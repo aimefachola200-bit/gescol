@@ -3,18 +3,17 @@
 l'application elle-même (menu Administration > Paramètres) : les valeurs saisies
 là-bas remplacent celles-ci."""
 import os
-
 import sys
 
-VERSION = "2.4.7"
+VERSION = "2.4.6"
 # v1.8 : vérification des nouvelles versions (page « Releases » du dépôt GitHub) et fichiers à proposer par édition
-DEPOT_MAJ = os.environ.get("SCOLARIS_DEPOT_MAJ", "aimefachola200-bit/scolaris")
-FICHIERS_MAJ = {"privee": ("SCOLARIS-Installation.exe", "SCOLARIS-Autonome.apk"),
-                "publique": ("SCOLARIS-Public-Installation.exe", "SCOLARIS-Public.apk"),
-                "cs": ("SCOLARIS-Circonscription-Installation.exe", "SCOLARIS-Circonscription.apk"),
-                "ddemp": ("SCOLARIS-DDEMP-Installation.exe", "SCOLARIS-DDEMP.apk"),
-                "enseignant": ("SCOLARIS-Enseignant-Installation.exe", "SCOLARIS-Enseignant.apk")}
-APK_CLIENT = "SCOLARIS.apk"
+DEPOT_MAJ = os.environ.get("GESCOL_DEPOT_MAJ", "aimefachola200-bit/gescol")
+FICHIERS_MAJ = {"privee": ("GESCOL-Installation.exe", "GESCOL-Autonome.apk"),
+                "publique": ("GESCOL-Public-Installation.exe", "GESCOL-Public.apk"),
+                "cs": ("GESCOL-Circonscription-Installation.exe", "GESCOL-Circonscription.apk"),
+                "ddemp": ("GESCOL-DDEMP-Installation.exe", "GESCOL-DDEMP.apk"),
+                "enseignant": ("GESCOL-Enseignant-Installation.exe", "GESCOL-Enseignant.apk")}
+APK_CLIENT = "GESCOL.apk"
 CONCEPTEUR = "Maître Aimé FACHOLA"   # mention « Conception » en bas de chaque écran et document
 CONCEPTEUR_TEL = "+229 01 96 51 03 33"   # v1.32 : en bas des fiches de préparation, résumés, épreuves et cahiers
 
@@ -27,10 +26,10 @@ else:
 
 
 # Gabarits et fichiers statiques : dans l'application Android autonome, ils sont recopiés sur le téléphone
-# (les fichiers de l'APK ne sont pas des fichiers ordinaires) et leur dossier est indiqué par SCOLARIS_WEB_DIR.
-WEB_DIR = os.environ.get("SCOLARIS_WEB_DIR") or BASE_DIR
+# (les fichiers de l'APK ne sont pas des fichiers ordinaires) et leur dossier est indiqué par GESCOL_WEB_DIR.
+WEB_DIR = os.environ.get("GESCOL_WEB_DIR") or BASE_DIR
 # Édition : « privee » (écoles privées : scolarité, paie…) ou « publique » (écoles publiques : cantine,
-# subventions, gestion de carrière, recensement…). Fixée par SCOLARIS_EDITION, par un fichier edition.txt
+# subventions, gestion de carrière, recensement…). Fixée par GESCOL_EDITION, par un fichier edition.txt
 # à côté du programme (installateurs), ou dans Administration → Paramètres.
 def _edition_fichier():
     for d in (BASE_DIR, os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else BASE_DIR):
@@ -43,13 +42,12 @@ def _edition_fichier():
     return ""
 
 
-EDITION_IMPOSEE = (os.environ.get("SCOLARIS_EDITION") or _edition_fichier() or "").lower()
-# v2.4.7 : applications jumelles du secondaire (collèges, lycées, ETP) : éditions « sec_privee » et « sec_publique ».
+EDITION_IMPOSEE = (os.environ.get("GESCOL_EDITION") or _edition_fichier() or "").lower()
+# v2.4.6 : applications jumelles du secondaire (collèges, lycées, ETP) : éditions « sec_privee » et « sec_publique ».
 # Le secteur (privé / public) reste « privee » / « publique » pour tout le code existant ; SECONDAIRE ajoute le périmètre.
-_SEC_ALIAS = {"sec_privee": "privee", "sec_publique": "publique", "sec_cs": "cs", "sec_ddestfp": "ddemp"}
-SECONDAIRE = EDITION_IMPOSEE in _SEC_ALIAS
+SECONDAIRE = EDITION_IMPOSEE in ("sec_privee", "sec_publique")
 if SECONDAIRE:
-    EDITION_IMPOSEE = _SEC_ALIAS[EDITION_IMPOSEE]
+    EDITION_IMPOSEE = EDITION_IMPOSEE[4:]
 EDITIONS = {"privee": "École privée", "publique": "École publique",
             "cs": "Circonscription scolaire (CS)", "ddemp": "Direction départementale (DDEMP)",
             # v1.14 : application personnelle de l'enseignant (son profil, ses classes, ses documents)
@@ -58,21 +56,21 @@ EDITIONS = {"privee": "École privée", "publique": "École publique",
 EDITIONS_PARAMETRES = {k: v for k, v in EDITIONS.items() if k != "enseignant"}
 EDITION = EDITION_IMPOSEE if EDITION_IMPOSEE in EDITIONS else "privee"
 # applications d'administration : la CS rassemble les écoles de sa juridiction, la DDEMP les CS du département
-NOMS_APPLI = {"privee": "SCOLARIS", "publique": "SCOLARIS Public", "cs": "SCOLARIS Circonscription", "ddemp": "SCOLARIS DDEMP",
-              "enseignant": "SCOLARIS Enseignant"}
-DOSSIERS = {"privee": "SCOLARIS", "publique": "SCOLARIS_Public", "cs": "SCOLARIS_CS", "ddemp": "SCOLARIS_DDEMP",
-            "enseignant": "SCOLARIS_Enseignant"}
-PORTS = {"privee": 5100, "publique": 5101, "cs": 5102, "ddemp": 5103, "enseignant": 5104}
+NOMS_APPLI = {"privee": "GESCOL", "publique": "GESCOL Public", "cs": "GESCOL Circonscription", "ddemp": "GESCOL DDEMP",
+              "enseignant": "GESCOL Enseignant"}
+DOSSIERS = {"privee": "GESCOL", "publique": "GESCOL_Public", "cs": "GESCOL_CS", "ddemp": "GESCOL_DDEMP",
+            "enseignant": "GESCOL_Enseignant"}
+PORTS = {"privee": 5000, "publique": 5001, "cs": 5002, "ddemp": 5003, "enseignant": 5004}
 if SECONDAIRE:   # nom, dossier de données, port et fichiers de mise à jour propres : s'installe à côté de l'application de base
     _marque = NOMS_APPLI["privee"]
-    _suffixe, _decal = {"privee": (" Secondaire", 5), "publique": (" Secondaire Public", 6),
-                        "cs": (" Inspection Secondaire", 7), "ddemp": (" DDESTFP", 8)}[EDITION_IMPOSEE]
+    _suffixe = " Secondaire" + (" Public" if EDITION_IMPOSEE == "publique" else "")
+    _port = PORTS["privee"] + (6 if EDITION_IMPOSEE == "publique" else 5)
     NOMS_APPLI[EDITION] = _marque + _suffixe
     DOSSIERS[EDITION_IMPOSEE] = (_marque + _suffixe).replace(" ", "_")
-    PORTS[EDITION_IMPOSEE] = PORTS["privee"] + _decal
+    PORTS[EDITION_IMPOSEE] = _port
     _fichier = (_marque + _suffixe).replace(" ", "-")
     FICHIERS_MAJ[EDITION] = (_fichier + "-Installation.exe", _fichier + ".apk")
-NOM_PORTAIL_ENSEIGNANT = "SCOLARIS Enseignant"
+NOM_PORTAIL_ENSEIGNANT = "GESCOL Enseignant"
 # application de l'enseignant : secteur de SON école (« publique » ou « privee »), choisi au premier lancement
 SECTEUR_ENSEIGNANT = "publique"
 
@@ -82,7 +80,7 @@ def publique():
 
 
 def enseignant():
-    """Vrai pour l'application personnelle de l'enseignant (SCOLARIS Enseignant)."""
+    """Vrai pour l'application personnelle de l'enseignant (GESCOL Enseignant)."""
     return EDITION == "enseignant"
 
 
@@ -96,20 +94,19 @@ def juridiction():
     return EDITION in ("cs", "ddemp")
 
 
-# Mode autonome : SCOLARIS tourne sur l'appareil lui-même (application Android autonome)
-AUTONOME = bool(os.environ.get("SCOLARIS_AUTONOME"))
+# Mode autonome : GESCOL tourne sur l'appareil lui-même (application Android autonome)
+AUTONOME = bool(os.environ.get("GESCOL_AUTONOME"))
 
 
 def _dossier_donnees():
     """Où vivent la base, les photos et le logo. Jamais dans le dossier du programme
     installé (Program Files n'est pas modifiable)."""
-    if os.environ.get("SCOLARIS_DATA"):
-        return os.environ["SCOLARIS_DATA"]
+    if os.environ.get("GESCOL_DATA"):
+        return os.environ["GESCOL_DATA"]
     if getattr(sys, "frozen", False):
         racine = os.environ.get("APPDATA") or os.path.expanduser("~")
-        # chaque application jumelle (SCOLARIS Public, Circonscription, DDEMP) garde ses données à part
-        # SCOLARIS est indépendant de GESCOL : il ne lit jamais les dossiers de données de GESCOL.
-        return os.path.join(racine, DOSSIERS.get(EDITION_IMPOSEE, "SCOLARIS"))
+        # chaque application jumelle (GESCOL Public, Circonscription, DDEMP) garde ses données à part
+        return os.path.join(racine, DOSSIERS.get(EDITION_IMPOSEE, "GESCOL"))
     return os.path.join(BASE_DIR, "instance")
 
 
@@ -132,7 +129,7 @@ PERIODES = ["Trimestre 1", "Trimestre 2", "Trimestre 3"]
 
 # Adresse encodée dans les QR codes. Vide = adresse par laquelle on consulte
 # l'application (détectée automatiquement).
-URL_PUBLIQUE = os.environ.get("SCOLARIS_URL", "")
+URL_PUBLIQUE = os.environ.get("GESCOL_URL", "")
 
 MODES_PAIEMENT = {
     "especes": "Espèces",

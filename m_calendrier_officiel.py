@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Calendrier scolaire officiel (MEMP) — toutes éditions (SCOLARIS, SCOLARIS Public, CS, DDEMP) — v1.6.
+"""Calendrier scolaire officiel (MEMP) — toutes éditions (GESCOL, GESCOL Public, CS, DDEMP) — v1.6.
 
 Le calendrier de l'année scolaire (pré-rentrée, trimestres, congés, jours fériés, grandes vacances…) est inséré
 dans le tableau synoptique de l'école (onglet « Calendrier scolaire » de m_synoptique) et dans celui de la
@@ -548,7 +548,7 @@ def enregistrer(app, H):
         """Remet les lignes officielles de l'année (les lignes ajoutées par l'utilisateur sont conservées)."""
         annee, eid = annee_choisie(), ecole_cible()
         if annee not in CALENDRIERS_OFFICIELS:
-            flash(f"Le calendrier officiel {annee} n'est pas connu de SCOLARIS : saisissez-le ou importez-le.", "danger")
+            flash(f"Le calendrier officiel {annee} n'est pas connu de GESCOL : saisissez-le ou importez-le.", "danger")
             return redirect(url_liste())
         ex("DELETE FROM calendrier_officiel WHERE ecole_id=? AND annee=? AND officiel=1", (eid, annee))
         n = remettre_officiel(eid, annee)

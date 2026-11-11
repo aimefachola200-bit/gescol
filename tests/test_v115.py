@@ -8,7 +8,7 @@ import sys
 import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "SCOLARIS"
+PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "GESCOL"
 SCRIPT = r'''
 import html, io, json, os, sys, tempfile
 P=os.environ["PREFIXE_SCRIPT"]; os.environ[P+"_EDITION"]=sys.argv[1]; os.environ[P+"_DATA"]=tempfile.mkdtemp()

@@ -65,7 +65,7 @@
       <div><label for="rg">Élèves en retard : garçons</label><input id="rg" name="eleves_ret_g" inputmode="numeric" value="{{ v.eleves_ret_g if v.eleves_ret_g is not none else '' }}"></div>
       <div><label for="rf">Élèves en retard : filles</label><input id="rf" name="eleves_ret_f" inputmode="numeric" value="{{ v.eleves_ret_f if v.eleves_ret_f is not none else '' }}"></div>
     </div>
-    <p class="aide">Registre d'appel de SCOLARIS pour ce jour : {{ sug.abs_g + sug.abs_f }} élève(s) absent(s) ({{ sug.abs_g }} G / {{ sug.abs_f }} F), {{ sug.ret_g + sug.ret_f }} retard(s) ({{ sug.ret_g }} G / {{ sug.ret_f }} F).{% if not j %} Ces nombres sont pré-remplis.{% endif %}</p>
+    <p class="aide">Registre d'appel de GESCOL pour ce jour : {{ sug.abs_g + sug.abs_f }} élève(s) absent(s) ({{ sug.abs_g }} G / {{ sug.abs_f }} F), {{ sug.ret_g + sug.ret_f }} retard(s) ({{ sug.ret_g }} G / {{ sug.ret_f }} F).{% if not j %} Ces nombres sont pré-remplis.{% endif %}</p>
     <label for="ed">Précisions sur les élèves</label><textarea id="ed" name="eleves_details" maxlength="2000">{{ v.eleves_details or '' }}</textarea>
   </fieldset>
 

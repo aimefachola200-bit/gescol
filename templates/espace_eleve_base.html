@@ -1,13 +1,13 @@
 <!doctype html>
 {# Mise en page de l'espace élève : indépendante de base.html (qui affiche l'en-tête public quand g.user est vide).
-   Même feuille de style et même script que le reste de SCOLARIS. #}
+   Même feuille de style et même script que le reste de GESCOL. #}
 <html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{% block titre %}Espace élève{% endblock %} – {{ ECOLE.sigle or ECOLE.nom }}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ VERSION }}">
-<script src="{{ url_for('static', filename='scolaris.js') }}?v={{ VERSION }}" defer></script>
+<script src="{{ url_for('static', filename='gescol.js') }}?v={{ VERSION }}" defer></script>
 <script src="{{ url_for('static', filename='choix.js') }}?v={{ VERSION }}" defer></script>
 <link rel="manifest" href="{{ url_for('manifeste') }}">
 <meta name="theme-color" content="#5B2C83">
@@ -29,7 +29,7 @@ header.top.eleve{background:#5B2C83}
 {% set ep = request.endpoint or '' %}
 {% set moi = g.get('eleve_session') %}
 <header class="top eleve">
-  <a class="marque" href="{{ url_for('eleve_accueil') if moi else url_for('eleve_login') }}">SCOLARIS · Espace élève</a>
+  <a class="marque" href="{{ url_for('eleve_accueil') if moi else url_for('eleve_login') }}">GESCOL · Espace élève</a>
   <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu" onclick="var n=document.getElementById('menu');var o=n.classList.toggle('ouvert');this.setAttribute('aria-expanded',o)">{{ icone('menu') }} Menu</button>
   <nav id="menu" aria-label="Menu de l'espace élève">
     {% if moi %}
@@ -51,7 +51,7 @@ header.top.eleve{background:#5B2C83}
     {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
   {% endwith %}
   {% block contenu %}{% endblock %}
-  <footer class="credit">SCOLARIS {{ VERSION }} · {{ ECOLE.nom }} · Conception : {{ CONCEPTEUR }}</footer>
+  <footer class="credit">GESCOL {{ VERSION }} · {{ ECOLE.nom }} · Conception : {{ CONCEPTEUR }}</footer>
 </main>
 </body>
 </html>

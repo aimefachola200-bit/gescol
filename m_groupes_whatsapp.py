@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """v1.9 — Groupes WhatsApp des directeurs et des enseignants, pour partager les informations.
 
-* École (SCOLARIS / SCOLARIS Public) : groupe des enseignants de l'école, groupe de tout le personnel.
+* École (GESCOL / GESCOL Public) : groupe des enseignants de l'école, groupe de tout le personnel.
 * Circonscription scolaire : groupe des directeurs, des enseignants (toutes les écoles ou une zone), des CP.
 * DDEMP : groupe des directeurs, des enseignants, des chefs de circonscription (CCS), des CP.
 

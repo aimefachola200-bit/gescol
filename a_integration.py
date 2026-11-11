@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Ouverture des modules des écoles dans SCOLARIS Circonscription (CS) et SCOLARIS DDEMP — v1.6.
+"""Ouverture des modules des écoles dans GESCOL Circonscription (CS) et GESCOL DDEMP — v1.6.
 
 Dans les éditions « cs » et « ddemp », tous les modules des écoles (Scolarité, Évaluations, CEP, Cantine, Vie de
 l'école, Données, Secrétariat, Personnel, Administration…) sont déjà chargés : ils travaillent sur « l'école
@@ -20,7 +20,7 @@ courante » (table ``ecoles``, ``g.ecole``). Ce module les ouvre à la CS / DDEM
    ``PREFIXES_STRUCTURE`` : juridiction, administration, connexion, fichiers, espaces publics, API) affichent
    alors la page « Choisissez une école à ouvrir » (jur_ecole_a_choisir.html, HTTP 200). POST
    /juridiction/ecole/fermer ferme l'école ouverte (un compte rattaché à une école la garde ouverte).
-3. Tableau de bord de l'école ouverte : /juridiction/ecole (mêmes indicateurs que l'accueil de SCOLARIS).
+3. Tableau de bord de l'école ouverte : /juridiction/ecole (mêmes indicateurs que l'accueil de GESCOL).
 4. Examen blanc CS / DDEMP (/juridiction/cep-blanc) : une session regroupe les résultats de toutes les écoles ;
    import du canevas Excel de chaque école (même format que l'examen blanc de l'école : N° table, Nom, Prénoms,
    Sexe (M/F), École de provenance, puis une colonne par matière) ou saisie manuelle par école ; règle du primaire
@@ -123,7 +123,7 @@ PREFIXES_STRUCTURE = (
     "/administration", "/ecoles", "/sauvegarde", "/mon-compte", "/demandes-ecoles", "/communication/reglages",
     "/paiements/en-ligne/reglages", "/paie/parametres", "/manifest.webmanifest", "/sw.js", "/hors-ligne",
     "/installer", "/referentiel.js", "/rejoindre", "/sante", "/signatures", "/cachet.svg",
-    "/groupes-whatsapp", "/acces", "/uascep", "/sec",   # v2.4.7 : supervision du secondaire
+    "/groupes-whatsapp", "/acces", "/uascep",
     "/sport", "/pilotage", "/reg", "/liaison", "/inspection", "/examens", "/examen-blanc",   # v1.25 : sport scolaire, pilotage, registres (structure ; registres d'école : école ouverte)
     "/synchronisation", "/sync",   # v2.0 : synchronisation entre niveaux (structure ; API sans session)
     # espaces publics (élèves, parents), API de transmission et de notification, retours de paiement en ligne
@@ -1364,7 +1364,7 @@ def enregistrer(app, H):
     @H.connexion_requise()
     def jur_messages():
         """Messages WhatsApp / SMS aux directeurs et aux enseignants de la juridiction (liens en 1 clic, comme les
-        messages aux parents dans SCOLARIS) : destinataires filtrés par CS, zone, école, fonction ; texte commun."""
+        messages aux parents dans GESCOL) : destinataires filtrés par CS, zone, école, fonction ; texte commun."""
         garde()
         import m_juridiction as J
         import notif
@@ -1708,7 +1708,7 @@ def enregistrer(app, H):
                 "cs": [{"libelle": g_["libelle"], **agreg(g_["lst"])} for g_ in cs_groupes.values()]}
 
     H.jur_financement = financement_ecoles
-    app.extensions.setdefault("scolaris", {})["H"] = H     # accès aux fonctions exposées (tests, scripts)
+    app.extensions.setdefault("gescol", {})["H"] = H     # accès aux fonctions exposées (tests, scripts)
 
     def annee_financement():
         annee = request.args.get("annee") or config.ANNEE_ACTIVE

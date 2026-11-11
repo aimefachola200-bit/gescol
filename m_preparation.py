@@ -943,7 +943,7 @@ def pdf_resumes(rs, eleve=False, titre_lot=None):
         c.drawRightString(W - marge, 7 * mm, f"Page {doc.page}")
     buf = io.BytesIO()
     SimpleDocTemplate(buf, pagesize=A4, leftMargin=marge, rightMargin=marge, topMargin=marge + 30 * mm, bottomMargin=13 * mm,
-                      title=titre_lot or rs[0]["titre"], author="SCOLARIS").build(histoire, onFirstPage=deco, onLaterPages=deco, canvasmaker=pdfs.GCanvasPeda)
+                      title=titre_lot or rs[0]["titre"], author="GESCOL").build(histoire, onFirstPage=deco, onLaterPages=deco, canvasmaker=pdfs.GCanvasPeda)
     return buf.getvalue()
 
 
@@ -1099,7 +1099,7 @@ def pdf_revision(rv, eleve=False, partie=None, sujet=None):
         c.drawRightString(W - marge, 7 * mm, f"{rv['cours']} — révision d'éveil — page {doc.page}")
     buf = io.BytesIO()
     SimpleDocTemplate(buf, pagesize=A4, leftMargin=marge, rightMargin=marge, topMargin=marge + 30 * mm, bottomMargin=13 * mm,
-                      title=rv["titre"], author="SCOLARIS").build(H_, onFirstPage=deco, onLaterPages=deco, canvasmaker=pdfs.GCanvasPeda)
+                      title=rv["titre"], author="GESCOL").build(H_, onFirstPage=deco, onLaterPages=deco, canvasmaker=pdfs.GCanvasPeda)
     return buf.getvalue()
 
 
@@ -1111,7 +1111,7 @@ def enregistrer(app, H):
                 maj TEXT, maj_par INTEGER, PRIMARY KEY (ecole_id, rid));""")
     # v1.31.1 : téléphone / tablette ; v1.33 : toutes les installations (la première page de la préparation ne paie plus
     # le chargement du corpus) — sauf pendant les tests, où l'on mesure aussi le premier chargement
-    if config.AUTONOME or not (app.config.get("TESTING") or os.environ.get("SCOLARIS_SANS_PRECHARGEMENT")):
+    if config.AUTONOME or not (app.config.get("TESTING") or os.environ.get("GESCOL_SANS_PRECHARGEMENT")):
         threading.Thread(target=corpus, name="corpus-pedagogique", daemon=True).start()
 
     @app.template_filter("prep_txt")
@@ -1501,7 +1501,7 @@ def enregistrer(app, H):
 
         def construire(B, rupture, compact, dense=False, colonnes=False, fusion=False):
             buf = io.BytesIO()
-            doc = Doc(buf, pagesize=A4, title=titre_doc, author="SCOLARIS", leftMargin=15 * mm, rightMargin=10 * mm)
+            doc = Doc(buf, pagesize=A4, title=titre_doc, author="GESCOL", leftMargin=15 * mm, rightMargin=10 * mm)
             doc.addPageTemplates([
                 PageTemplate("premiere", [cadre(15 * mm, 10 * mm, 50 * mm)], onPageEnd=bandeau),
                 PageTemplate("suite", [cadre(15 * mm, 10 * mm, 22 * mm)], onPageEnd=bandeau),
@@ -1555,7 +1555,7 @@ def enregistrer(app, H):
             if nb % 2 and n < len(fiches) - 1:
                 w.add_blank_page()
         sortie = io.BytesIO()
-        w.add_metadata({"/Title": titre_doc, "/Author": "SCOLARIS"})
+        w.add_metadata({"/Title": titre_doc, "/Author": "GESCOL"})
         if hasattr(w, "compress_identical_objects"):   # v2.2 : images (armoiries, logo, dessins) communes une seule fois
             try:
                 w.compress_identical_objects(remove_identicals=True, remove_orphans=True)
@@ -1695,7 +1695,7 @@ def enregistrer(app, H):
         h += [PageBreak(), Paragraph("Dispenses, adaptations et sécurité", sh)] + [Paragraph("• " + _html.escape(a), st) for a in BEE.ADAPTATIONS]
         buf = io.BytesIO()
         SimpleDocTemplate(buf, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm, topMargin=15 * mm, bottomMargin=16 * mm,
-                          title="Barèmes EPS", author="SCOLARIS").build(h, canvasmaker=pdfs.GCanvasPeda)
+                          title="Barèmes EPS", author="GESCOL").build(h, canvasmaker=pdfs.GCanvasPeda)
         return H.pdf_reponse(buf.getvalue(), "baremes_eps" + (f"_{cours}" if cours else "") + ".pdf")
 
     @app.route("/preparation/guides/<gid>")
@@ -1745,7 +1745,7 @@ def enregistrer(app, H):
             c.drawRightString(W - marge, 7 * mm, f"Page {doc.page}")
         buf = io.BytesIO()
         SimpleDocTemplate(buf, pagesize=A4, leftMargin=marge, rightMargin=marge, topMargin=marge + 30 * mm, bottomMargin=13 * mm,
-                          title=x["titre"], author="SCOLARIS").build(histoire, onFirstPage=deco, onLaterPages=deco, canvasmaker=pdfs.GCanvasPeda)
+                          title=x["titre"], author="GESCOL").build(histoire, onFirstPage=deco, onLaterPages=deco, canvasmaker=pdfs.GCanvasPeda)
         return H.pdf_reponse(buf.getvalue(), re.sub(r"[^A-Za-z0-9]+", "_", _sans_accent("guide_" + x["titre"]))[:70] + ".pdf")
 
     def fiches_demandees(a):

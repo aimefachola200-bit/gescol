@@ -1,9 +1,9 @@
-# Déploiement SCOLARIS sur Render (https://render.com) : « New + → Blueprint » puis choisir ce dépôt GitHub.
+# Déploiement GESCOL sur Render (https://render.com) : « New + → Blueprint » puis choisir ce dépôt GitHub.
 # Le disque persistant /data garde la base, les photos et les sauvegardes (obligatoire : sans disque,
 # les données seraient effacées à chaque redémarrage). Offre « Starter » ou supérieure nécessaire pour le disque.
 services:
   - type: web
-    name: scolaris
+    name: gescol
     runtime: python
     plan: starter
     region: frankfurt
@@ -13,13 +13,13 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.7"
-      - key: SCOLARIS_EN_LIGNE
+      - key: GESCOL_EN_LIGNE
         value: "1"
-      - key: SCOLARIS_DATA
+      - key: GESCOL_DATA
         value: /data
-      - key: SCOLARIS_ADMIN_MDP
+      - key: GESCOL_ADMIN_MDP
         generateValue: true
     disk:
-      name: donnees-scolaris
+      name: donnees-gescol
       mountPath: /data
       sizeGB: 1

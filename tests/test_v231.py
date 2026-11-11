@@ -11,7 +11,7 @@ import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "SCOLARIS"
+PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "GESCOL"
 
 import classes_org as CO  # noqa: E402
 import jur_calc as JC  # noqa: E402
@@ -213,7 +213,7 @@ class TestBoutEnBout(unittest.TestCase):
         import tempfile
         env = dict(os.environ, PREFIXE_SCRIPT=PREFIXE)
         for k in list(env):
-            if k.endswith(("_EDITION", "_DATA")) and k.startswith(("SCOLARIS", "GESCOL")):
+            if k.endswith(("_EDITION", "_DATA")) and k.startswith(("GESCOL", "GESCOL")):
                 env.pop(k)
         f = tempfile.mktemp(suffix=".json")
         nom = "EPP JUMELEE TEST"
@@ -227,7 +227,7 @@ class TestEcole(unittest.TestCase):
     def test_ecole(self):
         env = dict(os.environ, PREFIXE_SCRIPT=PREFIXE)
         for k in list(env):
-            if k.endswith(("_EDITION", "_DATA")) and k.startswith(("SCOLARIS", "GESCOL")):
+            if k.endswith(("_EDITION", "_DATA")) and k.startswith(("GESCOL", "GESCOL")):
                 env.pop(k)
         r = subprocess.run([sys.executable, "-c", SCRIPT], cwd=RACINE, env=env, capture_output=True, text=True, timeout=900)
         self.assertEqual(r.returncode, 0, r.stdout[-3000:] + r.stderr[-6000:])
@@ -303,7 +303,7 @@ class TestV232Ecole(unittest.TestCase):
     def test_autre_combinaison_rapport_et_signaletique(self):
         env = dict(os.environ, PREFIXE_SCRIPT=PREFIXE)
         for k in list(env):
-            if k.endswith(("_EDITION", "_DATA")) and k.startswith(("SCOLARIS", "GESCOL")):
+            if k.endswith(("_EDITION", "_DATA")) and k.startswith(("GESCOL", "GESCOL")):
                 env.pop(k)
         r = subprocess.run([sys.executable, "-c", SCRIPT_232], cwd=RACINE, env=env, capture_output=True, text=True, timeout=900)
         self.assertEqual(r.returncode, 0, r.stdout[-3000:] + r.stderr[-6000:])

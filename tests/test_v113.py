@@ -7,7 +7,7 @@ import sys
 import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "SCOLARIS"
+PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "GESCOL"
 SCRIPT = r'''
 import html, os, sys, tempfile
 P=os.environ["PREFIXE_SCRIPT"]; os.environ[P+"_EDITION"]="privee"; os.environ[P+"_DATA"]=tempfile.mkdtemp()
@@ -55,7 +55,7 @@ print("OK")
 class TestCorrections(unittest.TestCase):
     def test_privee(self):
         env = dict(os.environ)
-        for k in ("SCOLARIS_EDITION", "SCOLARIS_DATA", "GESCOL_EDITION", "GESCOL_DATA"):
+        for k in ("GESCOL_EDITION", "GESCOL_DATA", "GESCOL_EDITION", "GESCOL_DATA"):
             env.pop(k, None)
         env["PREFIXE_SCRIPT"] = PREFIXE
         r = subprocess.run([sys.executable, "-c", SCRIPT], cwd=RACINE, env=env, capture_output=True, text=True, timeout=600)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Tests de la planification mensuelle (CE-CM) du tableau synoptique (m_synoptique) et de la capture photo
-avant / arrière (static/scolaris.js).
-Lancer : python3 -m unittest tests.test_planification_mensuelle   (depuis /home/claude/scolaris)
+avant / arrière (static/gescol.js).
+Lancer : python3 -m unittest tests.test_planification_mensuelle   (depuis /home/claude/gescol)
 
 Édition publique, base de démonstration (demo.py), compte « directeur » (mot de passe demo1234)."""
 import html as html_mod
@@ -14,9 +14,9 @@ import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-DOSSIER = tempfile.mkdtemp(prefix="scolaris_pm_")
-os.environ["SCOLARIS_EDITION"] = "publique"
-os.environ["SCOLARIS_DATA"] = DOSSIER
+DOSSIER = tempfile.mkdtemp(prefix="gescol_pm_")
+os.environ["GESCOL_EDITION"] = "publique"
+os.environ["GESCOL_DATA"] = DOSSIER
 
 from app import app  # noqa: E402
 import config  # noqa: E402
@@ -290,15 +290,15 @@ class TestPlanificationMensuelle(unittest.TestCase):
 
 
 class TestCamera(unittest.TestCase):
-    def test_scolaris_js(self):
+    def test_gescol_js(self):
         """La capture photo propose la caméra avant / arrière, le choix de l'appareil et la mémorisation du choix."""
-        with open(os.path.join(RACINE, "static", "scolaris.js"), encoding="utf-8") as f:
+        with open(os.path.join(RACINE, "static", "gescol.js"), encoding="utf-8") as f:
             js = f.read()
         self.assertIn("facingMode", js)
         self.assertIn("'environment'", js)
         self.assertIn("enumerateDevices", js)
         self.assertIn("data-a=\"basculer\"", js)
-        self.assertIn("scolaris-camera-face", js)
+        self.assertIn("gescol-camera-face", js)
         self.assertIn("t.stop()", js)
         with open(os.path.join(RACINE, "static", "style.css"), encoding="utf-8") as f:
             self.assertIn(".pc-cams", f.read())

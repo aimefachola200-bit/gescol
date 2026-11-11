@@ -11,6 +11,6 @@
   <p class="aide">Pas encore d'accès ou mot de passe oublié ? Demandez-le au secrétariat de l'école : il vous sera envoyé par WhatsApp.</p>
   <p class="aide"><a href="{{ url_for('login') }}">Connexion du personnel</a></p>
 </div>
-<p class="aide" id="android-serveur" hidden style="text-align:center">Application connectée à <b id="android-adr"></b> · <a href="#" onclick="window.ScolarisAndroid.changerServeur();return false">Changer de serveur</a></p>
-<script>if(window.ScolarisAndroid){document.getElementById('android-serveur').hidden=false;document.getElementById('android-adr').textContent=window.ScolarisAndroid.serveur();}</script>
+<p class="aide" id="android-serveur" hidden style="text-align:center">Application connectée à <b id="android-adr"></b> · <a href="#" onclick="window.GescolAndroid.changerServeur();return false">Changer de serveur</a></p>
+<script>if(window.GescolAndroid){document.getElementById('android-serveur').hidden=false;document.getElementById('android-adr').textContent=window.GescolAndroid.serveur();}</script>
 {% endblock %}

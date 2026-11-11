@@ -12,6 +12,6 @@ if not exist venv\composants-1.3.ok (
   echo Installation des composants de la version 1.3 ^(Excel, PDF^)...
   venv\Scripts\pip install -r requirements.txt && echo ok> venv\composants-1.3.ok
 )
-REM La fenetre "SCOLARIS Serveur" s'ouvre et lance le navigateur.
-venv\Scripts\python scolaris_serveur.py
+REM La fenetre "GESCOL Serveur" s'ouvre et lance le navigateur.
+venv\Scripts\python gescol_serveur.py
 pause

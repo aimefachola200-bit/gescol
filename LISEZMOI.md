@@ -1,13 +1,13 @@
-# SCOLARIS — Guide d'utilisation (LISEZ-MOI)
+# GESCOL — Guide d'utilisation (LISEZ-MOI)
 
-Version 2.4.7. 
+Version 2.4.6. 
 Ce guide explique, en quelques étapes simples, comment utiliser chaque partie de l'application. Chaque rubrique indique pour qui elle est utile.
 
 ## Premiers pas
 
 *Pour : Tout le monde*
 
-SCOLARIS gère l'école au quotidien : élèves, présences, notes et bulletins, préparation de classe, examens, personnel, sport scolaire (UASCEP), santé, cantine, patrimoine et documents officiels vérifiables.
+GESCOL gère l'école au quotidien : élèves, présences, notes et bulletins, préparation de classe, examens, personnel, sport scolaire (UASCEP), santé, cantine, patrimoine et documents officiels vérifiables.
 
 1. Ouvrez l'application et connectez-vous avec l'identifiant et le mot de passe reçus (au premier démarrage : admin / admin123, à changer aussitôt).
 2. Saisissez une fois le code d'accès personnel demandé (page « Code d'accès », demande par WhatsApp au concepteur).
@@ -89,7 +89,7 @@ SCOLARIS gère l'école au quotidien : élèves, présences, notes et bulletins,
 
 *Pour : Administrateur / fondateur, Directeur / directrice, Conseiller pédagogique, Circonscription scolaire, DDEMP*
 
-1. Santé : visites médicales (aptitude sportive), infirmerie, élèves à besoins spécifiques, scolarisation des filles, décrochage.
+1. Santé : visites médicales (aptitude sportive), infirmerie, élèves à besoins spécifiques, gescolation des filles, décrochage.
 2. Cantine : journal des repas et stocks (alerte de rupture).
 3. Communication : notes de service, circulaires et convocations avec accusé de lecture, échéances, messages aux parents, agenda.
 4. Inspection et formation : visites de classe (grille APC), suivi des recommandations, plans de formation, animations pédagogiques.
@@ -148,7 +148,7 @@ SCOLARIS gère l'école au quotidien : élèves, présences, notes et bulletins,
 
 1. En haut de chaque page de pédagogie (fiches, résumés, épreuves, guides, programmes, révisions…) : « Télécharger PDF », « Télécharger Word » ou « Imprimer ».
 2. Dans les listes de fiches et de résumés, chaque ligne a ses boutons PDF et Word ; cochez plusieurs lignes (ou gardez le filtre) puis « Un PDF (livret) », « Un document Word » ou « ZIP (un Word par fiche) ».
-3. Sur téléphone ou tablette Android, le fichier va dans « Téléchargements / SCOLARIS » : touchez « Ouvrir » ou « Partager » (WhatsApp, e-mail…). « Imprimer » ouvre l'impression d'Android (imprimante ou « Enregistrer au format PDF »).
+3. Sur téléphone ou tablette Android, le fichier va dans « Téléchargements / GESCOL » : touchez « Ouvrir » ou « Partager » (WhatsApp, e-mail…). « Imprimer » ouvre l'impression d'Android (imprimante ou « Enregistrer au format PDF »).
 4. Une fiche de préparation tient sur une feuille recto verso : page 1, en-tête et éléments de planification ; page 2, déroulement et évaluation.
 5. Une épreuve courte s'imprime deux fois par feuille A4 avec une ligne de coupe.
 
@@ -223,7 +223,7 @@ SCOLARIS gère l'école au quotidien : élèves, présences, notes et bulletins,
 
 *Pour : Tout le monde*
 
-1. Les applications Android autonomes (SCOLARIS, Public, Enseignant…) fonctionnent sans internet ni ordinateur : installez-les avec le code QR de la fiche d'installation.
+1. Les applications Android autonomes (GESCOL, Public, Enseignant…) fonctionnent sans internet ni ordinateur : installez-les avec le code QR de la fiche d'installation.
 2. Sur ordinateur, l'application Windows sert aussi les téléphones du même réseau Wi-Fi (adresse affichée au démarrage).
 3. Sur téléphone, les listes de choix s'ouvrent en plein écran avec une recherche.
 

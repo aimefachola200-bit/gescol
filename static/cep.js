@@ -1,4 +1,4 @@
-/* SCOLARIS – module Examens (CEP) : aperçu en direct de la carte scolaire du candidat,
+/* GESCOL – module Examens (CEP) : aperçu en direct de la carte scolaire du candidat,
    tableau de saisie de l'examen blanc (maîtrise et moyenne calculées en direct, ajout / suppression de lignes). */
 (function () {
   "use strict";
@@ -44,13 +44,13 @@
     // Réinitialiser : données de l'inscription et de l'école
     $('#ca-reinit').addEventListener('click', function () {
       if (!window.confirm("Remettre dans le formulaire les données de l'inscription et de l'école ? (rien n'est enregistré tant que vous ne cliquez pas sur « Enregistrer »)")) return;
-      window.SCOLARIS.appliquer(form, JSON.parse(form.dataset.defaut || '{}')); maj();
-      window.SCOLARIS.toast('Données de l\'inscription rétablies. Cliquez sur « Enregistrer » pour les conserver.');
+      window.GESCOL.appliquer(form, JSON.parse(form.dataset.defaut || '{}')); maj();
+      window.GESCOL.toast('Données de l\'inscription rétablies. Cliquez sur « Enregistrer » pour les conserver.');
     });
     // Charger : valeurs enregistrées
     $('#ca-charger').addEventListener('click', function () {
       fetch(form.dataset.donnees, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
-        if (r.ok) { window.SCOLARIS.appliquer(form, r.valeurs); maj(); window.SCOLARIS.toast('Valeurs enregistrées rechargées.'); }
+        if (r.ok) { window.GESCOL.appliquer(form, r.valeurs); maj(); window.GESCOL.toast('Valeurs enregistrées rechargées.'); }
       });
     });
     maj();

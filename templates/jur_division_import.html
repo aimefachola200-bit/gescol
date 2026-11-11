@@ -8,7 +8,7 @@
     <div><label for="fichier">Fichier Excel (.xlsx) *</label><input id="fichier" type="file" name="fichier" accept=".xlsx,.csv" required></div>
     <div><label for="annee">Année scolaire</label><select id="annee" name="annee">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></div>
   </div>
-  <p class="aide">Colonnes reconnues : Ordre, Ligne d'action, Indicateur, Cible, Échéance, Responsable, Modules SCOLARIS (libellés séparés par « ; »), État (prévue, en cours, réalisée, reportée), Taux (%), Observations.</p>
+  <p class="aide">Colonnes reconnues : Ordre, Ligne d'action, Indicateur, Cible, Échéance, Responsable, Modules GESCOL (libellés séparés par « ; »), État (prévue, en cours, réalisée, reportée), Taux (%), Observations.</p>
   <div class="actions"><button class="btn">Importer</button></div>
 </form>
 {% endblock %}

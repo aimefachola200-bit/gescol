@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
-"""Format du « paquet de transmission » SCOLARIS : école → Circonscription scolaire (CS) → DDEMP.
+"""Format du « paquet de transmission » GESCOL : école → Circonscription scolaire (CS) → DDEMP.
 
-Un paquet est un document JSON (fichier « .scolaris », compressé gzip) ou le corps d'un POST en ligne.
+Un paquet est un document JSON (fichier « .gescol », compressé gzip) ou le corps d'un POST en ligne.
 Il est produit par l'école (module m_transmission) ou par la CS (a_transmission, à destination de la DDEMP)
 et lu par m_juridiction.importer_paquet.
 
     paquet = {
-      "format": "scolaris-transmission", "version": 1,
+      "format": "gescol-transmission", "version": 1,
       "emetteur": {"type": "ecole" | "cs", "code": str, "nom": str, "departement": str, "cs": str,
-                   "logiciel": "SCOLARIS 1.4.0", "edition": "privee" | "publique" | "cs"},
+                   "logiciel": "GESCOL 1.4.0", "edition": "privee" | "publique" | "cs"},
       "annee": "2026-2027", "genere_le": "2026-10-04 10:00:00",
       "ecoles": [ {"ecole": IDENTITE_ECOLE, "sections": {nom_section: donnees, ...}}, ... ],
       "cs": None | {"identite": IDENTITE_CS, "sections": {"agents": [...], "visites": [...], "cep": {...}, ...}},
@@ -61,20 +61,18 @@ import gzip
 import hashlib
 import json
 
-FORMAT = "scolaris-transmission"
-FORMATS_ACCEPTES = (FORMAT, "gescol-transmission")  # LEGACY-GESCOL : anciens paquets .gescol
+FORMAT = "gescol-transmission"
 VERSION = 1
-TYPES_ECOLE = {"EP": "École primaire", "EM": "École maternelle", "EE": "Espace enfance",
-               "CEG": "Collège d'enseignement général", "LYC": "Lycée", "ETP": "Établissement technique et professionnel"}
+TYPES_ECOLE = {"EP": "École primaire", "EM": "École maternelle", "EE": "Espace enfance"}
 SECTEURS = {"public": "Public", "prive": "Privé"}
 SECTIONS_ECOLE = ("effectifs", "personnel", "visites", "cep", "recensement", "rapports", "patrimoine", "cantine",
-                  "pilotage", "secondaire")   # v2.4.7 : section du secondaire (effectifs, examens…)   # v1.25 : évaluations (réussite G / F), abandons, transferts, sport, santé (m_pilotage)
+                  "pilotage")   # v1.25 : évaluations (réussite G / F), abandons, transferts, sport, santé (m_pilotage)
 SECTIONS_CS = ("agents", "visites", "cep", "structure", "frais_releves", "cp_bilans")  # v1.7 : bilans des CP
 CATEGORIES = {"FE": "FE (fonctionnaire de l'État)", "ACDPE": "ACDPE", "ACDPCTD": "ACDPCTD (AME)",
               "PRIVE": "Enseignant du privé", "AUTRE": "Autre"}
 ROLES_PERSONNE = {"directeur": "Directeur", "adjoint": "Adjoint", "enseignant": "Enseignant",
                   "soutien": "Personnel de soutien", "administratif": "Personnel administratif",
-                  "cp": "Conseiller pédagogique", "ip": "Inspecteur pédagogique", "ccs": "Chef de circonscription", "chef_service": "Chef de service"}
+                  "cp": "Conseiller pédagogique", "ccs": "Chef de circonscription", "chef_service": "Chef de service"}
 CHAMPS_ECOLE = ("code", "nom", "type", "secteur", "departement", "cs", "zone", "commune", "arrondissement",
                 "localite", "adresse", "telephone", "email", "directeur_titre", "directeur_nom", "directeur_tel",
                 "annee_creation")
@@ -116,12 +114,12 @@ def sceller(paquet):
 
 
 def vers_fichier(paquet):
-    """Octets du fichier .scolaris (JSON compressé)."""
+    """Octets du fichier .gescol (JSON compressé)."""
     return gzip.compress(json.dumps(paquet, ensure_ascii=False, default=str).encode("utf-8"))
 
 
 def lire(octets):
-    """Fichier .scolaris (gzip) ou JSON brut → paquet vérifié. Lève PaquetInvalide."""
+    """Fichier .gescol (gzip) ou JSON brut → paquet vérifié. Lève PaquetInvalide."""
     if not octets:
         raise PaquetInvalide("Fichier vide.")
     if len(octets) > TAILLE_MAX * 4:
@@ -131,15 +129,15 @@ def lire(octets):
             octets = gzip.decompress(octets)
         paquet = json.loads(octets.decode("utf-8"))
     except Exception as e:  # noqa: BLE001
-        raise PaquetInvalide("Ce fichier n'est pas un fichier de transmission SCOLARIS.") from e
+        raise PaquetInvalide("Ce fichier n'est pas un fichier de transmission GESCOL.") from e
     return verifier(paquet)
 
 
 def verifier(paquet):
-    if not isinstance(paquet, dict) or paquet.get("format") not in FORMATS_ACCEPTES:
-        raise PaquetInvalide("Ce fichier n'est pas un fichier de transmission SCOLARIS.")
+    if not isinstance(paquet, dict) or paquet.get("format") != FORMAT:
+        raise PaquetInvalide("Ce fichier n'est pas un fichier de transmission GESCOL.")
     if int(paquet.get("version") or 0) > VERSION:
-        raise PaquetInvalide("Fichier produit par une version plus récente de SCOLARIS : mettez l'application à jour.")
+        raise PaquetInvalide("Fichier produit par une version plus récente de GESCOL : mettez l'application à jour.")
     if paquet.get("empreinte") != empreinte(paquet):
         raise PaquetInvalide("Fichier abîmé ou modifié après sa création (empreinte incorrecte).")
     em = paquet.get("emetteur") or {}
@@ -152,7 +150,7 @@ def verifier(paquet):
         if not (e.get("code") or "").strip() or not (e.get("nom") or "").strip():
             raise PaquetInvalide("Une école du fichier n'a pas de code ou de nom.")
         if e.get("type") not in TYPES_ECOLE:
-            raise PaquetInvalide(f"Type d'école inconnu pour « {e.get('nom')} » (attendu EP, EM, EE, CEG, LYC ou ETP).")
+            raise PaquetInvalide(f"Type d'école inconnu pour « {e.get('nom')} » (attendu EP, EM ou EE).")
         if e.get("secteur") not in SECTEURS:
             raise PaquetInvalide(f"Secteur inconnu pour « {e.get('nom')} » (attendu public ou prive).")
     if not paquet.get("annee"):
@@ -160,7 +158,7 @@ def verifier(paquet):
     return paquet
 
 
-def nouveau(type_emetteur, code, nom, annee, departement="", cs="", edition="", logiciel="SCOLARIS"):
+def nouveau(type_emetteur, code, nom, annee, departement="", cs="", edition="", logiciel="GESCOL"):
     """Squelette de paquet à remplir puis à sceller()."""
     return {"format": FORMAT, "version": VERSION,
             "emetteur": {"type": type_emetteur, "code": code, "nom": nom, "departement": departement, "cs": cs,

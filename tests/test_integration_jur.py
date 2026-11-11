@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Tests de l'ouverture des modules des écoles dans SCOLARIS Circonscription / DDEMP (a_integration, v1.6).
-Lancer : python3 -m unittest tests.test_integration_jur   (depuis /home/claude/scolaris)
+"""Tests de l'ouverture des modules des écoles dans GESCOL Circonscription / DDEMP (a_integration, v1.6).
+Lancer : python3 -m unittest tests.test_integration_jur   (depuis /home/claude/gescol)
 
 La base est construite par demo_juridiction.py (sous-processus) dans un dossier temporaire ; l'édition testée
-est SCOLARIS_EDITION_TEST (cs par défaut). TestEditionDDEMP relance un sous-ensemble en édition « ddemp » et
+est GESCOL_EDITION_TEST (cs par défaut). TestEditionDDEMP relance un sous-ensemble en édition « ddemp » et
 TestEditionPrivee vérifie que le menu de l'édition privée est inchangé."""
 import html as html_mod
 import io
@@ -15,13 +15,13 @@ import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-EDITION = os.environ.get("SCOLARIS_EDITION_TEST", "cs")
-DOSSIER = tempfile.mkdtemp(prefix=f"scolaris_integ_{EDITION}_")
-os.environ["SCOLARIS_EDITION"] = EDITION
-os.environ["SCOLARIS_DATA"] = DOSSIER
+EDITION = os.environ.get("GESCOL_EDITION_TEST", "cs")
+DOSSIER = tempfile.mkdtemp(prefix=f"gescol_integ_{EDITION}_")
+os.environ["GESCOL_EDITION"] = EDITION
+os.environ["GESCOL_DATA"] = DOSSIER
 if EDITION in ("cs", "ddemp"):
     subprocess.run([sys.executable, os.path.join(RACINE, "demo_juridiction.py")], check=True, cwd=RACINE,
-                   env=dict(os.environ, SCOLARIS_EDITION=EDITION, SCOLARIS_DATA=DOSSIER), stdout=subprocess.DEVNULL)
+                   env=dict(os.environ, GESCOL_EDITION=EDITION, GESCOL_DATA=DOSSIER), stdout=subprocess.DEVNULL)
 
 from app import app, q, ex  # noqa: E402
 import config  # noqa: E402
@@ -32,9 +32,9 @@ EN_PLACE = config.EDITION == EDITION and config.INSTANCE_DIR == DOSSIER
 
 
 def _rejouer(edition, cible="tests.test_integration_jur"):
-    env = dict(os.environ, SCOLARIS_EDITION_TEST=edition)
-    env.pop("SCOLARIS_EDITION", None)
-    env.pop("SCOLARIS_DATA", None)
+    env = dict(os.environ, GESCOL_EDITION_TEST=edition)
+    env.pop("GESCOL_EDITION", None)
+    env.pop("GESCOL_DATA", None)
     return subprocess.run([sys.executable, "-m", "unittest", cible], cwd=RACINE, env=env, capture_output=True, text=True,
                           timeout=900)
 
@@ -485,7 +485,7 @@ class TestAutresEditions(unittest.TestCase):
     def test_privee_menus_inchanges(self):
         code = r'''
 import os, sys, tempfile, html
-os.environ["SCOLARIS_EDITION"] = "privee"; os.environ["SCOLARIS_DATA"] = tempfile.mkdtemp(prefix="scolaris_priv_")
+os.environ["GESCOL_EDITION"] = "privee"; os.environ["GESCOL_DATA"] = tempfile.mkdtemp(prefix="gescol_priv_")
 from app import app, ex, q
 from werkzeug.security import generate_password_hash
 app.config["TESTING"] = True
@@ -508,8 +508,8 @@ assert "ne peut pas être supprimée" in html.unescape(r.data.decode())
 print("ok")
 '''
         env = dict(os.environ)
-        env.pop("SCOLARIS_EDITION", None)
-        env.pop("SCOLARIS_DATA", None)
+        env.pop("GESCOL_EDITION", None)
+        env.pop("GESCOL_DATA", None)
         r = subprocess.run([sys.executable, "-c", code], cwd=RACINE, env=env, capture_output=True, text=True, timeout=300)
         self.assertEqual(r.returncode, 0, r.stderr[-3000:])
         self.assertIn("ok", r.stdout)

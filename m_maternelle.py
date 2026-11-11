@@ -246,7 +246,7 @@ def enregistrer(app, H):
             cv.restoreState()
 
         buf = io.BytesIO()
-        doc = BaseDocTemplate(buf, pagesize=taille, title=titre, author="SCOLARIS", leftMargin=15 * mm, rightMargin=12 * mm)
+        doc = BaseDocTemplate(buf, pagesize=taille, title=titre, author="GESCOL", leftMargin=15 * mm, rightMargin=12 * mm)
         def cadre(haut):
             return Frame(15 * mm, 16 * mm, W - 27 * mm, Hh - haut - 16 * mm, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
         doc.addPageTemplates([PageTemplate("premiere", [cadre(48 * mm)], onPage=deco, autoNextPageTemplate="suite"),
@@ -393,7 +393,7 @@ def enregistrer(app, H):
             for pg in pypdf.PdfReader(io.BytesIO(H.prep_pdf_fiches(fs, "FICHE D'ACTIVITÉ — ÉCOLE MATERNELLE"))).pages:
                 w.add_page(pg)
         out = io.BytesIO()
-        w.add_metadata({"/Title": "Classeur — école maternelle", "/Author": "SCOLARIS"})
+        w.add_metadata({"/Title": "Classeur — école maternelle", "/Author": "GESCOL"})
         if hasattr(w, "compress_identical_objects"):   # v2.2 : images communes une seule fois
             try:
                 w.compress_identical_objects(remove_identicals=True, remove_orphans=True)

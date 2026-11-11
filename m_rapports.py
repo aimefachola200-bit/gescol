@@ -6,14 +6,14 @@ Principe
 --------
 * Chaque document est décrit par un SCHÉMA déclaratif (rubriques → champs / tableaux / état nominatif) qui couvre
   tous les renseignements du modèle officiel (voir ``schema(doc)``).
-* Les valeurs AUTOMATIQUES sont calculées à partir de SCOLARIS (école, classes, élèves, personnel, cantine,
+* Les valeurs AUTOMATIQUES sont calculées à partir de GESCOL (école, classes, élèves, personnel, cantine,
   évaluations…) ; l'utilisateur peut corriger n'importe quelle case : seules les CORRECTIONS sont enregistrées
   (clé ``e<école>:rapports:<doc>:<année>`` dans documents_modules) avec un instantané complet des valeurs.
   Vider une case = revenir à la valeur calculée. « - » = case volontairement laissée sans objet.
 * Les renseignements stables (année de création, références, infrastructures, mobilier, diplômes…) sont repris
   du rapport « frère » de la même année (rentrée  fin d'année) ou du rapport de l'année précédente.
 * PDF : reproduction de la mise en forme de chaque modèle (mêmes rubriques, cadres, tableaux, numérotation),
-  version remplie ou vierge ; annexe SCOLARIS facultative (résultats, CEP, présence, âges, cantine).
+  version remplie ou vierge ; annexe GESCOL facultative (résultats, CEP, présence, âges, cantine).
 * Export Excel (même structure) ; téléversement du rapport officiel scanné (archive par année).
 """
 import io
@@ -264,7 +264,7 @@ def schema(doc):
     b.append(_champ("chef_nom", "Nom du Chef de la Circonscription Scolaire"))
     S.append({"id": "sig", "titre": "Visas, signatures et contrôles", "blocs": b})
     if ep:
-        S.append({"id": "annexe", "titre": "Annexe SCOLARIS (facultative) : résultats au CEP", "annexe": True, "blocs": [
+        S.append({"id": "annexe", "titre": "Annexe GESCOL (facultative) : résultats au CEP", "annexe": True, "blocs": [
             _champ("cep_session", "Session du CEP concernée (année)", "annee"),
             _tab("cep", [("insc", "Candidats inscrits"), ("pres", "Candidats présents"), ("adm", "Candidats admis")],
                  [_g("G", "Garçons"), _g("F", "Filles"), _g("T", "Total", somme=["G", "F"])])]})
@@ -507,7 +507,7 @@ def cours_de(v):
 
 
 # =====================================================================================================
-# 3. DONNÉES SCOLARIS → VALEURS AUTOMATIQUES
+# 3. DONNÉES GESCOL → VALEURS AUTOMATIQUES
 # =====================================================================================================
 def _colonnes(H, table):
     try:
@@ -638,7 +638,7 @@ def _visites(H, pid, d1, d2):
             elif "direct" in n:
                 res["vdir"] += 1
         if not res["vdir"]:
-            res.pop("vdir")  # visites du directeur non enregistrées dans SCOLARIS : case laissée à la saisie
+            res.pop("vdir")  # visites du directeur non enregistrées dans GESCOL : case laissée à la saisie
         return res
     return None
 
@@ -710,7 +710,7 @@ def patrimoine_auto(H, doc, v, classes):
 
 
 def calculer_auto(H, doc, annee):
-    """Valeurs calculées depuis SCOLARIS : ({clé: valeur}, indicateurs pour l'annexe)."""
+    """Valeurs calculées depuis GESCOL : ({clé: valeur}, indicateurs pour l'annexe)."""
     info = DOCS[doc]
     ep = info["cycle"] == "primaire"
     fin = info["moment"] == "fin"
@@ -742,7 +742,7 @@ def calculer_auto(H, doc, annee):
     v["date_remplissage"] = date.today().strftime("%d/%m/%Y")
     classes = classes_du_cycle(H, doc)
     if not active:
-        # année passée ou future : les effectifs ne sont pas historisés dans SCOLARIS → dernier instantané enregistré
+        # année passée ou future : les effectifs ne sont pas historisés dans GESCOL → dernier instantané enregistré
         v["pers_n"] = str(bloc_personnel(doc)["min"])
         return v, {"inactive": True}
     eleves = eleves_des_classes(H, classes)
@@ -2372,12 +2372,12 @@ def pied_personnel(R, doc, n):
         R.t(W / 2, R.PH - 24, f"Page {n}", 10, R.F, centre=True)
 
 
-# ------------------------------------------------------------------ annexe SCOLARIS
+# ------------------------------------------------------------------ annexe GESCOL
 def page_annexe(R, doc, annee, ind):
     from reportlab.lib.pagesizes import A4
     R.c.setPageSize(A4)
     info = DOCS[doc]
-    R.t(297, 40, "ANNEXE SCOLARIS – INDICATEURS CALCULÉS (document complémentaire, non officiel)", 10.5,
+    R.t(297, 40, "ANNEXE GESCOL – INDICATEURS CALCULÉS (document complémentaire, non officiel)", 10.5,
         "Helvetica-Bold", centre=True)
     R.t(297, 54, f"{info['titre']} · {R.v.get('nom_ecole') or ''} · année scolaire {annee}", 8.5, "Helvetica", centre=True)
     y = 72
@@ -2471,7 +2471,7 @@ def generer_pdf(H, doc, annee, v, vierge=False, annexe=False, ind=None, entete=N
     c = GCanvas(buf, pagesize=A4)
     c.setTitle(((entete or {}).get("titre", "") + " – " if (entete or {}).get("titre") else "")
                + DOCS[doc]["titre"] + f" {annee}")
-    c.setAuthor("SCOLARIS")
+    c.setAuthor("GESCOL")
     info = DOCS[doc]
     R = Rendu(c, v, vierge, info["moment"] == "fin", H, entete=entete)
     if info["cycle"] == "primaire":
@@ -2795,7 +2795,7 @@ def generer_excel(doc, annee, v, origine_auto):
     ws.column_dimensions["C"].width = 22
     for j in range(4, largeur + 3):
         ws.column_dimensions[get_column_letter(j)].width = 11
-    ws.oddFooter.center.text = "SCOLARIS · Conception : Maître Aimé FACHOLA"
+    ws.oddFooter.center.text = "Conception : Maître Aimé FACHOLA"
     ws.oddFooter.center.size = 8
     # feuille « Données » : chaque case, son libellé, sa valeur et son origine
     wd = wb.create_sheet("Données")
@@ -2820,7 +2820,7 @@ def generer_excel(doc, annee, v, origine_auto):
     wd.column_dimensions["B"].width = 60
     wd.column_dimensions["C"].width = 30
     wd.column_dimensions["D"].width = 22
-    wd.oddFooter.center.text = "SCOLARIS · Conception : Maître Aimé FACHOLA"
+    wd.oddFooter.center.text = "Conception : Maître Aimé FACHOLA"
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
@@ -2883,7 +2883,7 @@ def enregistrer(app, H):
         return sorted(ans, reverse=True)
 
     def rapports_valeurs(doc, annee=None):
-        """Valeurs COMPLÈTES du document (calculées par SCOLARIS + corrigées) pour l'école courante (transmission)."""
+        """Valeurs COMPLÈTES du document (calculées par GESCOL + corrigées) pour l'école courante (transmission)."""
         _api_doc(doc)
         an = annee_valide(annee or "", config.ANNEE_ACTIVE)
         return valeurs_completes(doc, donnees_document(H, doc, an)[3])
@@ -2925,7 +2925,7 @@ def enregistrer(app, H):
                 H.doc_ecrire(cle, {"valeurs": {}, "instantane": valeurs_calculees(doc, auto), "maj": H.maintenant(),
                                    "par": g.user["nom"]})
                 H.journal("rapport_reinitialise", f"{doc} {annee}")
-                flash("Rapport réinitialisé : toutes les cases reprennent les valeurs calculées par SCOLARIS.", "success")
+                flash("Rapport réinitialisé : toutes les cases reprennent les valeurs calculées par GESCOL.", "success")
                 return redirect(url_for("rapports_formulaire", doc=doc, annee=annee))
             try:
                 n_pers = int(request.form.get("pers_n") or auto.get("pers_n") or 0)
@@ -2995,7 +2995,7 @@ def enregistrer(app, H):
         doc = doc_ou_404(doc)
         annee = annee_demandee()
         auto, over, _, finales, _, origine, _ = donnees_document(H, doc, annee)
-        orig = {k: ("saisie manuelle" if k in over else (f"repris de {origine[k]}" if k in origine else "SCOLARIS"))
+        orig = {k: ("saisie manuelle" if k in over else (f"repris de {origine[k]}" if k in origine else "GESCOL"))
                 for k in finales}
         try:
             buf = generer_excel(doc, annee, finales, orig)

@@ -94,14 +94,14 @@
   <ol class="tr-etapes">
     <li>Cliquez sur « Télécharger le fichier de transmission » : <b>{{ ap.nom_fichier }}</b>.</li>
     <li>Remettez ce fichier à la circonscription (clé USB, WhatsApp, e-mail).</li>
-    <li>La CS l'importe dans SCOLARIS Circonscription (menu Transmissions → Recevoir).</li>
+    <li>La CS l'importe dans GESCOL Circonscription (menu Transmissions → Recevoir).</li>
   </ol>
   <p class="aide">Le fichier est scellé : s'il est modifié ou abîmé en route, la CS le refusera ; il suffit alors de le renvoyer.</p>
   {% if not ap.erreurs %}<a class="btn" href="{{ url_for('transmission_fichier') }}">{{ icone('telecharger') }} Télécharger le fichier de transmission</a>{% endif %}
 </div>
 
 <div class="carte" id="en-ligne"><h2>{{ 5 if cep else 4 }}. Envoyer en ligne</h2>
-  <p class="aide">Si votre circonscription utilise SCOLARIS Circonscription en ligne, elle vous communique son adresse Internet et un code d'accès propre à votre école.</p>
+  <p class="aide">Si votre circonscription utilise GESCOL Circonscription en ligne, elle vous communique son adresse Internet et un code d'accès propre à votre école.</p>
   <form method="post" action="{{ url_for('transmission_reglages') }}">
     <label>Adresse Internet de la CS<br><input name="adresse" value="{{ r.get('adresse','') }}" placeholder="https://cs-pobe.exemple.bj" style="width:100%"></label>
     <label>Code d'accès fourni par la CS<br><input name="code_acces" type="password" autocomplete="off" placeholder="{{ 'enregistré — laisser vide pour le conserver' if r.get('code_acces') else 'ex. K7QF-2MXP-9RTA' }}" style="width:100%"></label>

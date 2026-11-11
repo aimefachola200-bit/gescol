@@ -1,9 +1,9 @@
-/* SCOLARIS v1.18 — Choix faciles sur téléphone et tablette.
+/* GESCOL v1.18 — Choix faciles sur téléphone et tablette.
    Sur écran tactile, les listes de suggestions (input list=…, y compris les champs data-geo : département, commune,
    arrondissement, village, lieu de naissance) et les longues listes déroulantes (plus de 12 choix) s'ouvrent dans un
    panneau plein écran placé au-dessus du clavier (visualViewport) : recherche en haut, résultats juste en dessous,
    gros boutons, « Utiliser ce que j'ai tapé », Fermer ; la touche Retour du téléphone ferme le panneau.
-   Le choix déclenche les événements input / change habituels : les cascades data-geo de scolaris.js suivent.
+   Le choix déclenche les événements input / change habituels : les cascades data-geo de gescol.js suivent.
    Sur ordinateur (pointeur fin), rien ne change. Exclure un champ : data-choix="non". */
 (function (global) {
   'use strict';

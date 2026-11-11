@@ -9,7 +9,7 @@ table.em select{max-width:260px}
 </style>
 <div class="entete">
   <div><h1>Import-export EducMaster</h1>
-  <p class="sous">Mettre à jour les élèves à partir du fichier EducMaster et remplir ce même fichier avec les notes de SCOLARIS</p></div>
+  <p class="sous">Mettre à jour les élèves à partir du fichier EducMaster et remplir ce même fichier avec les notes de GESCOL</p></div>
 </div>
 
 <nav class="onglets" aria-label="Cycle">
@@ -87,16 +87,16 @@ table.em select{max-width:260px}
     <p>Les élèves sont retrouvés par matricule EducMaster, matricule, NIP ou nom + prénoms. Sont mis à jour : matricule EducMaster, NIP, sexe, date et lieu de naissance.</p>
     <form method="post" action="{{ url_for('educmaster_eleves') }}">
       <input type="hidden" name="cycle" value="{{ cycle }}">
-      <p><label><input type="checkbox" name="creer" value="1"> créer les élèves absents de SCOLARIS</label></p>
+      <p><label><input type="checkbox" name="creer" value="1"> créer les élèves absents de GESCOL</label></p>
       <p><label for="em-cl">Classe par défaut (si la colonne « Classe » manque ou n'est pas reconnue)</label><br>
         <select id="em-cl" name="classe_defaut"><option value="">— aucune —</option>{% for c in classes %}<option value="{{ c.id }}">{{ c.nom }}</option>{% endfor %}</select></p>
       <div class="actions"><button class="btn sec" name="simuler" value="1">Simuler (sans enregistrer)</button>
-        <button class="btn" data-confirmer="Mettre à jour les élèves de SCOLARIS à partir de ce fichier ?">Mettre à jour les élèves</button></div>
+        <button class="btn" data-confirmer="Mettre à jour les élèves de GESCOL à partir de ce fichier ?">Mettre à jour les élèves</button></div>
     </form>
   </div>
   <div class="carte">
     <h2 style="margin-top:0">3 b. Remplir les notes dans le fichier EducMaster</h2>
-    <p>Les notes SCOLARIS de l'évaluation choisie sont écrites dans les colonnes de matières reconnues du fichier déposé ; le reste du fichier (mise en forme, autres colonnes) est conservé. Rechargez ensuite le fichier sur EducMaster.
+    <p>Les notes GESCOL de l'évaluation choisie sont écrites dans les colonnes de matières reconnues du fichier déposé ; le reste du fichier (mise en forme, autres colonnes) est conservé. Rechargez ensuite le fichier sur EducMaster.
     {% if cycle == 'maternelle' %}<br><b>Maternelle :</b> ce sont les appréciations des domaines qui sont écrites, sous forme de code : A = Acquis, ECA = En cours d'acquisition, NA = Non acquis.{% endif %}</p>
     {% if evaluations %}
     <form method="post" action="{{ url_for('educmaster_notes') }}">
@@ -109,22 +109,22 @@ table.em select{max-width:260px}
   </div>
 </div>
 {% elif not e %}
-<div class="carte aide">Déposez le fichier .xlsx téléchargé depuis EducMaster : SCOLARIS repère lui-même la ligne des en-têtes (même avec des lignes de titre au-dessus) et les colonnes utiles, puis vous montre ce qu'il a reconnu avant toute modification.</div>
+<div class="carte aide">Déposez le fichier .xlsx téléchargé depuis EducMaster : GESCOL repère lui-même la ligne des en-têtes (même avec des lignes de titre au-dessus) et les colonnes utiles, puis vous montre ce qu'il a reconnu avant toute modification.</div>
 {% endif %}
 
 {# ============================================================ Modèles officiels EducMaster #}
 <div class="carte" id="modeles">
   <h2 style="margin-top:0">Modèles officiels EducMaster</h2>
-  <p>Modèles d'importation fournis par la plateforme EducMaster. SCOLARIS ne modifie jamais leur structure : il remplit
+  <p>Modèles d'importation fournis par la plateforme EducMaster. GESCOL ne modifie jamais leur structure : il remplit
     seulement les cellules de données (fusions, en-têtes et mise en forme conservées). Téléchargez le modèle vierge, ou le
-    modèle <b>rempli</b> par SCOLARIS pour le charger sur EducMaster, ou importez dans SCOLARIS un modèle rempli sur l'autre plateforme.</p>
+    modèle <b>rempli</b> par GESCOL pour le charger sur EducMaster, ou importez dans GESCOL un modèle rempli sur l'autre plateforme.</p>
   {% if not modeles_ok %}<div class="flash danger">Le dossier des modèles officiels (modeles/) est introuvable dans cette installation.</div>{% endif %}
   <div class="grille" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
 
     <div class="carte">
       <h3 style="margin-top:0">a. Modèle de notes (primaire)</h3>
       <p class="aide">4 feuilles : Évaluation formative 1, sommatives 1 à 3. Matricule = matricule EducMaster de l'élève ;
-        « Note obtenue » = note SCOLARIS, « Note perf. » = barème (20). Correspondance : Dictée, Math, Expression écrite,
+        « Note obtenue » = note GESCOL, « Note perf. » = barème (20). Correspondance : Dictée, Math, Expression écrite,
         Compréhension de l'écrit, EST, ES, EA (Oral) = éducation artistique (vivant), EA (Dessin/Couture) = éducation artistique (plastique), EPS.</p>
       <p><a class="btn sec petit" href="{{ url_for('educmaster_modele_vierge', cle='notes-primaire') }}">{{ icone('telecharger') }} Télécharger le modèle vierge</a></p>
       {% if classes_primaire %}
@@ -143,7 +143,7 @@ table.em select{max-width:260px}
         <p><input type="file" name="fichier" accept=".xlsx,.xlsm" required aria-label="Modèle de notes rempli"></p>
         <p><label style="font-weight:normal"><input type="checkbox" name="creer" value="1" checked> créer les évaluations manquantes (formative 1, sommatives 1 à 3)</label></p>
         <div class="actions"><button class="btn sec petit" name="simuler" value="1">Simuler</button>
-          <button class="btn petit" data-confirmer="Importer les notes de ce fichier dans SCOLARIS (les notes existantes de ces évaluations seront remplacées) ?">{{ icone('importer') }} Importer les notes</button></div>
+          <button class="btn petit" data-confirmer="Importer les notes de ce fichier dans GESCOL (les notes existantes de ces évaluations seront remplacées) ?">{{ icone('importer') }} Importer les notes</button></div>
       </form>
       <p class="aide">Chaque feuille va dans l'évaluation correspondante de la classe ; élève retrouvé par matricule EducMaster puis
         par nom + prénoms ; « Note obtenue » importée (0 à 20), « Note perf. » (barème) ignorée.</p>
@@ -170,7 +170,7 @@ table.em select{max-width:260px}
         </details>
         {% else %}<p class="gris">Aucune classe créée : les élèves ne pourront pas être importés.</p>{% endif %}
         <div class="actions"><button class="btn sec petit" name="simuler" value="1">Simuler</button>
-          <button class="btn petit" data-confirmer="Importer les élèves de ce fichier dans SCOLARIS (mise à jour / création) ?">{{ icone('importer') }} Importer</button></div>
+          <button class="btn petit" data-confirmer="Importer les élèves de ce fichier dans GESCOL (mise à jour / création) ?">{{ icone('importer') }} Importer</button></div>
       </form>
       <p class="aide">Élève retrouvé par NIP puis par nom + prénoms : sa fiche est mise à jour ; sinon il est créé dans la classe choisie pour le niveau de la feuille.</p>
     </div>

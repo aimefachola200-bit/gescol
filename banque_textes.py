@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.21 — Banque d'épreuves : supports de COMPRÉHENSION DE L'ÉCRIT (rédaction originale SCOLARIS) et dictées du CEP blanc.
+"""v1.21 — Banque d'épreuves : supports de COMPRÉHENSION DE L'ÉCRIT (rédaction originale GESCOL) et dictées du CEP blanc.
 
 Clé : (cours, période). Périodes : M1 … M6 (évaluations mensuelles d'octobre, novembre, janvier, février, avril, mai),
 T1, T2, T3 (sommatives trimestrielles), FA (fin d'année / évaluation de passage), C1 … C3 (examens blancs du CEP, CM2).

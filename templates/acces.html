@@ -17,7 +17,7 @@
   <pre id="demande" style="white-space:pre-wrap;background:#F2F4F7;border-radius:8px;padding:10px 12px;font-size:14px">{{ demande }}</pre>
   <div class="actions">
     <a class="btn wa" href="{{ lien_wa }}" target="_blank" rel="noopener">{{ icone('message') }} Envoyer la demande par WhatsApp</a>
-    <button type="button" class="btn sec" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('demande').textContent).then(function(){SCOLARIS.toast('Demande copiée.')})">{{ icone('presse_papiers') }} Copier la demande</button>
+    <button type="button" class="btn sec" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('demande').textContent).then(function(){GESCOL.toast('Demande copiée.')})">{{ icone('presse_papiers') }} Copier la demande</button>
   </div>
   <h3>2. Saisissez le code reçu</h3>
   <form method="post" class="f">

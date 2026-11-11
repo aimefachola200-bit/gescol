@@ -2,7 +2,7 @@
 """Tests v1.6 — applications CS / DDEMP : comptes des directeurs et enseignants (à la place des comptes parents),
 Service des Ressources Humaines de la CS, financement des écoles (subventions, cotisations de cantine, dépenses, bilan
 et budget), périmètre d'accès de chaque division (a_integration, a_divisions, a_structure).
-Lancer : python3 -m unittest tests.test_perimetres   (depuis /home/claude/scolaris)
+Lancer : python3 -m unittest tests.test_perimetres   (depuis /home/claude/gescol)
 
 La base est construite par demo_juridiction.py (sous-processus) dans un dossier temporaire, en édition « cs » ;
 TestEditionsSeparees rejoue la suite en édition « ddemp » dans un sous-processus."""
@@ -18,13 +18,13 @@ import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-EDITION = os.environ.get("SCOLARIS_EDITION_TEST", "cs")
-DOSSIER = tempfile.mkdtemp(prefix=f"scolaris_perim_{EDITION}_")
-os.environ["SCOLARIS_EDITION"] = EDITION
-os.environ["SCOLARIS_DATA"] = DOSSIER
+EDITION = os.environ.get("GESCOL_EDITION_TEST", "cs")
+DOSSIER = tempfile.mkdtemp(prefix=f"gescol_perim_{EDITION}_")
+os.environ["GESCOL_EDITION"] = EDITION
+os.environ["GESCOL_DATA"] = DOSSIER
 if EDITION in ("cs", "ddemp"):
     subprocess.run([sys.executable, os.path.join(RACINE, "demo_juridiction.py")], check=True, cwd=RACINE,
-                   env=dict(os.environ, SCOLARIS_EDITION=EDITION, SCOLARIS_DATA=DOSSIER), stdout=subprocess.DEVNULL)
+                   env=dict(os.environ, GESCOL_EDITION=EDITION, GESCOL_DATA=DOSSIER), stdout=subprocess.DEVNULL)
 
 from app import app, q, ex  # noqa: E402
 import config  # noqa: E402
@@ -42,9 +42,9 @@ except ImportError:  # pragma: no cover
 
 
 def _rejouer(edition):
-    env = dict(os.environ, SCOLARIS_EDITION_TEST=edition)
-    env.pop("SCOLARIS_EDITION", None)
-    env.pop("SCOLARIS_DATA", None)
+    env = dict(os.environ, GESCOL_EDITION_TEST=edition)
+    env.pop("GESCOL_EDITION", None)
+    env.pop("GESCOL_DATA", None)
     return subprocess.run([sys.executable, "-m", "unittest", CIBLE], cwd=RACINE, env=env, capture_output=True, text=True,
                           timeout=900)
 
@@ -166,7 +166,7 @@ class TestPerimetres(unittest.TestCase):
             self.assertEqual(svc["sigle"], "SRH" if DDEMP else "RH")
             if not DDEMP:
                 self.assertIn("HORS AOF", (svc["note"] or "").upper().replace("SERVICE HORS AOF", "HORS AOF"))
-                self.assertIn("comptes SCOLARIS des directeurs", svc["attributions"])
+                self.assertIn("comptes GESCOL des directeurs", svc["attributions"])
                 # un service encore nommé CSPAF est renommé par assurer_services
                 ex("UPDATE jur_services SET nom='Service du Personnel et des Affaires financières', sigle='CSPAF' WHERE code='personnel'")
                 S.assurer_services()
@@ -216,7 +216,7 @@ class TestPerimetres(unittest.TestCase):
             ex("INSERT INTO fp_parametres (ecole_id, annee, solde_ouverture) VALUES (?,?,1000)", (self.eid, config.ANNEE_ACTIVE))
             ex("INSERT OR REPLACE INTO budget (annee, type, categorie, montant) VALUES (?,'entree','Cantine',300000)", (config.ANNEE_ACTIVE,))
             ex("INSERT OR REPLACE INTO budget (annee, type, categorie, montant) VALUES (?,'sortie','Cantine',120000)", (config.ANNEE_ACTIVE,))
-        H = app.extensions["scolaris"]["H"]
+        H = app.extensions["gescol"]["H"]
         with app.test_request_context("/juridiction/financement"):
             app.preprocess_request()
             fin = H.jur_financement(config.ANNEE_ACTIVE)

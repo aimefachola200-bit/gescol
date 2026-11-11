@@ -425,7 +425,7 @@ def pdf_fiches(liste, pdfs, titre="Fiches CEP"):
     buf = io.BytesIO()
     c = pdfs.GCanvas(buf, pagesize=A4)
     c.setTitle(titre)
-    c.setAuthor("SCOLARIS")
+    c.setAuthor("GESCOL")
     for d in liste:
         _fiche_page(c, d, pdfs)
         c.showPage()

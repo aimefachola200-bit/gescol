@@ -136,7 +136,7 @@ def ouvrir(url, donnees=None, entetes=None, methode="GET"):
     if url.startswith("https://"):
         gestionnaires.append(urllib.request.HTTPSHandler(context=ssl.create_default_context()))
     op = urllib.request.build_opener(*gestionnaires)
-    req = urllib.request.Request(url, data=donnees, method=methode, headers=dict({"User-Agent": f"SCOLARIS/{config.VERSION}"}, **(entetes or {})))
+    req = urllib.request.Request(url, data=donnees, method=methode, headers=dict({"User-Agent": f"GESCOL/{config.VERSION}"}, **(entetes or {})))
     return op.open(req, timeout=TIMEOUT)
 
 
@@ -209,11 +209,11 @@ def enregistrer(app, H):
         if juridiction():
             s = H.jur_structure() or {}
             nom = s.get("nom") or (config.ECOLE or {}).get("nom") or ""
-            return {"installation": ident["installation"], "cle": ident["cle"], "application": config.NOMS_APPLI.get(config.EDITION, "SCOLARIS"),
+            return {"installation": ident["installation"], "cle": ident["cle"], "application": config.NOMS_APPLI.get(config.EDITION, "GESCOL"),
                     "version": config.VERSION, "edition": config.EDITION, "niveau": niveau_hub(), "code": H.jur_norm(nom) if nom else "",
                     "nom": nom, "cs": s.get("cs") or nom, "departement": s.get("departement") or ""}
         e = q("SELECT * FROM ecoles WHERE id=?", (H.eco(),), un=True)
-        return {"installation": ident["installation"], "cle": ident["cle"], "application": config.NOMS_APPLI.get(config.EDITION, "SCOLARIS"),
+        return {"installation": ident["installation"], "cle": ident["cle"], "application": config.NOMS_APPLI.get(config.EDITION, "GESCOL"),
                 "version": config.VERSION, "edition": config.EDITION, "niveau": "ECOLE", "code": ecole_code_assure(H.eco()) or "",
                 "nom": (e["nom"] if e else "") or "", "cs": (e["cs"] if e and "cs" in e.keys() else "") or "",
                 "departement": (e["departement"] if e and "departement" in e.keys() else "") or ""}
@@ -697,7 +697,7 @@ def enregistrer(app, H):
         p = paquet_montant(complet)
         octets = vers_octets(p)
         try:
-            with ouvrir(adr + "/sync/push", octets, {"Content-Type": "application/gzip", "X-Sync-Code": c["code"].strip(), "X-Scolaris-Code": c["code"].strip(),
+            with ouvrir(adr + "/sync/push", octets, {"Content-Type": "application/gzip", "X-Sync-Code": c["code"].strip(), "X-Gescol-Code": c["code"].strip(),
                                                     "Accept": "application/json"}, "POST") as r:
                 rep = json.loads(r.read(2_000_000).decode("utf-8"))
         except urllib.error.HTTPError as e:
@@ -724,7 +724,7 @@ def enregistrer(app, H):
         historiser("montant", "en_ligne", p["id"], adr, len(p["objets"]), "ok", rep.get("message") or "")
         # descendant
         try:
-            with ouvrir(adr + f"/sync/pull?depuis={client_etat()['desc_seq']}", None, {"X-Sync-Code": c["code"].strip(), "X-Scolaris-Code": c["code"].strip()}) as r:
+            with ouvrir(adr + f"/sync/pull?depuis={client_etat()['desc_seq']}", None, {"X-Sync-Code": c["code"].strip(), "X-Gescol-Code": c["code"].strip()}) as r:
                 pd = lire_octets(r.read(TAILLE_MAX + 1))
             _n, _c, msg2 = client_recevoir(pd, "en_ligne")
         except (urllib.error.URLError, OSError) as e:
@@ -847,8 +847,8 @@ def enregistrer(app, H):
         return SC.signer(p)
 
     def code_requete():
-        """Code d'accès : en-tête commun X-Sync-Code (toutes les applications) ou X-Scolaris-Code (transmission)."""
-        return request.headers.get("X-Sync-Code") or request.headers.get("X-Scolaris-Code")
+        """Code d'accès : en-tête commun X-Sync-Code (toutes les applications) ou X-Gescol-Code (transmission)."""
+        return request.headers.get("X-Sync-Code") or request.headers.get("X-Gescol-Code")
 
     def refus_json(code, message, compter=True):
         if compter:
@@ -868,7 +868,7 @@ def enregistrer(app, H):
     # CORS limité aux routes /sync/* : les applications JS (pages github.io, APK) appellent le hub depuis une autre origine ;
     # l'authentification reste le code d'accès + la signature des paquets (aucun cookie n'est accepté ici).
     CORS = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, X-Sync-Code, X-Scolaris-Code, X-Gescol-Code", "Access-Control-Max-Age": "86400"}
+            "Access-Control-Allow-Headers": "Content-Type, X-Sync-Code, X-Gescol-Code, X-Gescol-Code", "Access-Control-Max-Age": "86400"}
 
     @app.before_request
     def sync_preflight():
@@ -940,7 +940,7 @@ def enregistrer(app, H):
                 adr = MT.normaliser_adresse((lien or {}).get("adresse") or request.form.get("adresse") or "")
                 code = ((lien or {}).get("code") or request.form.get("code") or "").strip()[:80]
                 if adr and not re.match(r"^https?://[\w.\-]+(:\d{1,5})?(/[\w.\-/~%]*)?$", adr):
-                    flash("Adresse invalide (exemple : https://cs-pobe.scolaris.bj).", "danger")
+                    flash("Adresse invalide (exemple : https://cs-pobe.gescol.bj).", "danger")
                     return redirect(url_for("sync_page"))
                 client_etat()
                 client_maj(adresse=adr, code=code)

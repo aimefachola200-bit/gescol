@@ -1,4 +1,4 @@
-{# v1.6 – Modules des écoles ouverts aux applications SCOLARIS Circonscription / DDEMP (a_integration).
+{# v1.6 – Modules des écoles ouverts aux applications GESCOL Circonscription / DDEMP (a_integration).
    Mêmes liens, endpoints et conditions que le menu des écoles (base.html) : les modules fonctionnent sur
    « l'école ouverte » (ECOLE_COURANTE). Les menus de l'école publique (cantine, carrière, dépenses…) ou privée
    (scolarité, paie…) sont choisis selon le statut de l'école ouverte. #}
@@ -43,7 +43,7 @@
   {{ lien('jur_synthese_eval', "Synthèse de l'évaluation (" ~ ('CS' if JUR_NIVEAU == 'cs' else 'DDEMP') ~ ')', ep=='jur_synthese_eval') }}{% endif %}
   {{ lien('matieres', 'Matières et domaines', ep=='matieres') }}
 {% endcall %}
-{% if peut('cep') and not SECONDAIRE %}
+{% if peut('cep') %}
 {% call groupe('cep', 'CEP', ep.startswith('cep') or ep.startswith('carte') or ep.startswith('jur_cep_blanc'), 'diplome') %}
   {{ lien('cep_accueil', "Fiches d'inscription au CEP", ep.startswith('cep_fiche') or ep=='cep_accueil') }}
   {{ lien('carte_editeur', 'Carte scolaire du candidat', ep.startswith('carte')) }}
@@ -68,7 +68,7 @@
   {% if peut('cantine') %}{{ lien('cantine_accueil', 'Cotisations de cantine (paiements)', false) }}
   {{ lien('cantine_impayes', 'Impayés de cantine', ep=='cantine_impayes') }}{% endif %}
   {% if peut('depenses') %}{{ lien('depenses_accueil', 'Dépenses', ep.startswith('depense')) }}
-  {% if not SECONDAIRE %}{{ lien('cep_frais', 'Frais de dossier CEP', ep.startswith('cep_frais')) }}{% endif %}{% endif %}
+  {{ lien('cep_frais', 'Frais de dossier CEP', ep.startswith('cep_frais')) }}{% endif %}
   {% if peut('tresorerie') %}{{ lien('tresorerie', 'Trésorerie', ep=='tresorerie') }}
   {{ lien('tresorerie_bilan', 'Bilan et budget', ep in ('tresorerie_bilan','tresorerie_budget')) }}{% endif %}
   {% if peut('stock') and ep_existe('stock_accueil') %}{{ lien('stock_accueil', 'Vivres et stock', false) }}{% endif %}

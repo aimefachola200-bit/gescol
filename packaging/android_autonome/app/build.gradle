@@ -1,29 +1,29 @@
-// SCOLARIS Autonome : l'application complète (Python + base de données) tourne sur le téléphone ou la tablette,
+// GESCOL Autonome : l'application complète (Python + base de données) tourne sur le téléphone ou la tablette,
 // sans PC serveur, sans Wi-Fi et sans Internet. Python est fourni par Chaquopy (https://chaquo.com/chaquopy/).
-// Avant de fabriquer : python3 preparer.py (recopie le code SCOLARIS et les bibliothèques Python pures).
+// Avant de fabriquer : python3 preparer.py (recopie le code GESCOL et les bibliothèques Python pures).
 plugins {
     id "com.android.application"
     id "com.chaquo.python"
 }
 
-def cleFichier = System.getenv("SCOLARIS_KEYSTORE") ?: "scolaris-signature.keystore"  // dans le dépôt, protégé par le mot de passe des secrets
-def cleMdp = System.getenv("SCOLARIS_KEYSTORE_PASSWORD") ?: ""
-def cleAlias = System.getenv("SCOLARIS_KEY_ALIAS") ?: "scolaris"
-def cleAliasMdp = System.getenv("SCOLARIS_KEY_PASSWORD") ?: cleMdp
+def cleFichier = System.getenv("GESCOL_KEYSTORE") ?: "gescol-release.keystore"
+def cleMdp = System.getenv("GESCOL_KEYSTORE_PASSWORD") ?: "gescol-benin"
+def cleAlias = System.getenv("GESCOL_KEY_ALIAS") ?: "gescol"
+def cleAliasMdp = System.getenv("GESCOL_KEY_PASSWORD") ?: "gescol-benin"
 
 android {
-    namespace "bj.scolaris.autonome"
+    namespace "bj.gescol.autonome"
     compileSdk 34
 
     defaultConfig {
         // différent de l'application « connectée » : les deux peuvent coexister.
-        // Application jumelle des écoles publiques : SCOLARIS_APP_ID=bj.scolaris.publique, SCOLARIS_APP_NOM="SCOLARIS Public"
+        // Application jumelle des écoles publiques : GESCOL_APP_ID=bj.gescol.publique, GESCOL_APP_NOM="GESCOL Public"
         // (et preparer.py --edition publique)
-        applicationId System.getenv("SCOLARIS_APP_ID") ?: "bj.scolaris.autonome"
-        manifestPlaceholders = [appNom: System.getenv("SCOLARIS_APP_NOM") ?: "SCOLARIS Autonome"]
+        applicationId System.getenv("GESCOL_APP_ID") ?: "bj.gescol.autonome"
+        manifestPlaceholders = [appNom: System.getenv("GESCOL_APP_NOM") ?: "GESCOL Autonome"]
         minSdk 24
         targetSdk 34
-        versionCode 64
+        versionCode 65
         versionName "2.4.4"
         ndk {
             abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
@@ -64,7 +64,7 @@ android {
 chaquopy {
     defaultConfig {
         version "3.11"
-        def py = System.getenv("SCOLARIS_BUILD_PYTHON")
+        def py = System.getenv("GESCOL_BUILD_PYTHON")
         if (py) {
             buildPython py
         }

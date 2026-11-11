@@ -25,7 +25,7 @@ RE_CLE_SIGNATURE = re.compile(r"^(ecole:\d+:(directeur|admin|ccs)|classe:\d+:tit
 
 def enregistrer(app, H):
     q, ex, config = H.q, H.ex, H.config
-    # v1.6 : lien d'une école locale avec l'école de la juridiction (jur_ecoles) dans SCOLARIS Circonscription / DDEMP
+    # v1.6 : lien d'une école locale avec l'école de la juridiction (jur_ecoles) dans GESCOL Circonscription / DDEMP
     H.ajouter_colonne("ecoles", "jur_ecole_id", "INTEGER")
     # v1.6 : griffe (cachet rectangulaire du nom du directeur), composée automatiquement depuis directeur_titre / _nom
     H.ajouter_colonne("ecoles", "griffe_actif", "INTEGER DEFAULT 1")

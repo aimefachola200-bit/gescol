@@ -9,7 +9,7 @@
 </style>
 <div class="entete">
   <div><h1>Documents de l'enseignant</h1>
-  <p class="sous">Fiches d'évaluation, certificats et attestations remplis automatiquement avec les données de SCOLARIS
+  <p class="sous">Fiches d'évaluation, certificats et attestations remplis automatiquement avec les données de GESCOL
   (école, personnel{% if carriere %}, carrière{% endif %}, élèves, classes, registre d'appel, notes) — année {{ ANNEE }}.</p></div>
   <div class="actions"><a class="btn sec petit" href="{{ url_for('docs_enseignant_historique') }}">{{ icone('classeur') }} Historique des documents</a></div>
 </div>
@@ -54,6 +54,6 @@ Ils sont imprimés sans cachet ni signature : faites-les signer par le directeur
     <tr><td>{{ date_fr(h.cree_le) }} {{ h.cree_le[11:16] }}</td><td>{{ h.libelle }}</td><td class="c">{{ h.nombre }}</td><td>{{ h.auteur or '—' }}</td>
       <td><a class="btn sec petit" href="{{ url_for('docs_enseignant_reimprimer', hid=h.id) }}" target="_blank" rel="noopener">Réimprimer</a></td></tr>
     {% endfor %}</tbody></table></div>
-  {% else %}<p class="aide">Aucun document produit pour l'instant. Choisissez un document ci-dessus, sélectionnez la personne concernée : tout ce que SCOLARIS connaît est déjà rempli.</p>{% endif %}
+  {% else %}<p class="aide">Aucun document produit pour l'instant. Choisissez un document ci-dessus, sélectionnez la personne concernée : tout ce que GESCOL connaît est déjà rempli.</p>{% endif %}
 </div>
 {% endblock %}

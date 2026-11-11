@@ -3,7 +3,7 @@
 
 * /synthese            : choix de l'évaluation (type, numéro, classe ou toutes les classes), en-tête
                          (Zone, UP, École, DDEMP, Année, Directeur(trice), CCS, Titulaire), fiches de saisie par
-                         classe (pré-remplies depuis les évaluations de SCOLARIS, modifiables, et fiches libres pour
+                         classe (pré-remplies depuis les évaluations de GESCOL, modifiables, et fiches libres pour
                          les autres écoles de l'UP / CS), synthèse générale par niveau et analyse des résultats.
 * /synthese/pdf        : PDF paysage (signatures + cachet) de la synthèse enregistrée
 * /synthese/excel      : classeur Excel (une feuille par fiche + synthèse + écarts de genre + analyse)
@@ -291,13 +291,13 @@ def enregistrer(app, H):
                (cl["id"], H.config.ANNEE_ACTIVE, lib), un=True)
         return EC.evaluation(ev["id"]) if ev else None
 
-    def fiche_scolaris(cl, type_, numero, ecole):
-        """Fiche pré-remplie depuis les notes SCOLARIS de l'évaluation choisie (vide si l'évaluation n'existe pas)."""
+    def fiche_gescol(cl, type_, numero, ecole):
+        """Fiche pré-remplie depuis les notes GESCOL de l'évaluation choisie (vide si l'évaluation n'existe pas)."""
         cl = dict(cl)
         cl["cycle"] = cycle_du_niveau(cl["niveau"])
         ev = evaluation_de(cl, type_, numero)
         f = {"id": f"c{cl['id']}", "classe_id": cl["id"], "ecole": ecole, "classe": cl["nom"], "niveau": cl["niveau"],
-             "source": "scolaris", "evaluation": bool(ev)}
+             "source": "gescol", "evaluation": bool(ev)}
         if ev:
             matieres, lignes = EC.resultats(ev, cl)
             st = EC.statistiques(matieres, lignes)
@@ -334,7 +334,7 @@ def enregistrer(app, H):
         return H.doc_lire(cle_doc(annee or H.config.ANNEE_ACTIVE, type_, numero), None)
 
     def document(type_, numero, cid, forcer_prefill=False):
-        """Document de synthèse : enregistré s'il existe, sinon pré-rempli depuis SCOLARIS."""
+        """Document de synthèse : enregistré s'il existe, sinon pré-rempli depuis GESCOL."""
         doc = lire_doc(type_, numero)
         neuf = doc is None
         if neuf:
@@ -352,13 +352,13 @@ def enregistrer(app, H):
         if neuf or forcer_prefill:
             existantes = {f["id"]: f for f in doc["fiches"]}
             for c in classes_prefill(type_, numero, cid):
-                f = fiche_scolaris(c, type_, numero, ent.get("ecole") or "")
+                f = fiche_gescol(c, type_, numero, ent.get("ecole") or "")
                 existantes[f["id"]] = f
             doc["fiches"] = trier(list(existantes.values()))
         return doc, neuf
 
     def trier(fiches):
-        return sorted(fiches, key=lambda f: (f.get("source") != "scolaris", (f.get("ecole") or "").lower(),
+        return sorted(fiches, key=lambda f: (f.get("source") != "gescol", (f.get("ecole") or "").lower(),
                                             ordre_niveau(f.get("niveau")), (f.get("classe") or "").lower()))
 
     def visibles(doc, cid):
@@ -477,13 +477,13 @@ def enregistrer(app, H):
                 doc, _ = lire_formulaire(doc, cid)  # garde l'en-tête et les fiches libres non sauvegardés
                 ids = set()
                 for c in classes_prefill(type_, numero, cid):
-                    fg = fiche_scolaris(c, type_, numero, doc["entete"].get("ecole") or "")
+                    fg = fiche_gescol(c, type_, numero, doc["entete"].get("ecole") or "")
                     ids.add(fg["id"])
                     doc["fiches"] = [x for x in doc["fiches"] if x["id"] != fg["id"]] + [fg]
                 doc["fiches"] = trier(doc["fiches"])
                 sauver(type_, numero, doc)
                 H.journal("synthese_prefill", f"{EC.libelle(type_, numero)} : {len(ids)} classe(s)")
-                flash(f"{len(ids)} fiche(s) de classe recalculée(s) à partir des notes de SCOLARIS "
+                flash(f"{len(ids)} fiche(s) de classe recalculée(s) à partir des notes de GESCOL "
                       "(les fiches des autres écoles sont conservées).", "success")
                 return redirect(url_for("synthese_accueil", type=type_, numero=numero, classe=cid or None))
             doc, _ = document(type_, numero, cid)
@@ -512,7 +512,7 @@ def enregistrer(app, H):
         doc, neuf = document(type_, numero, cid)
         if cid and not visibles(doc, cid):  # classe ajoutée après la première sauvegarde
             c = H.classe_ou_404(cid)
-            doc["fiches"] = trier(doc["fiches"] + [fiche_scolaris(c, type_, numero, doc["entete"].get("ecole") or "")])
+            doc["fiches"] = trier(doc["fiches"] + [fiche_gescol(c, type_, numero, doc["entete"].get("ecole") or "")])
         r = rapport(doc, cid)
         return render_template("synthese_accueil.html", doc=doc, neuf=neuf, r=r, type_=type_, numero=numero, cid=cid,
                                classes=classes, TYPES=EC.TYPES, NIVEAUX=NIVEAUX, fr=_fr, TAUX_REFERENCE=TAUX_REFERENCE,
@@ -729,11 +729,11 @@ def enregistrer(app, H):
     @app.route("/synthese/supprimer", methods=["POST"])
     @H.connexion_requise("synthese")
     def synthese_supprimer():
-        """Supprime la synthèse enregistrée (elle sera de nouveau pré-remplie depuis SCOLARIS)."""
+        """Supprime la synthèse enregistrée (elle sera de nouveau pré-remplie depuis GESCOL)."""
         type_, numero, cid = selection()
         db = H.get_db()
         db.execute("DELETE FROM documents_modules WHERE cle=?", (cle_doc(H.config.ANNEE_ACTIVE, type_, numero),))
         db.commit()
         H.journal("synthese_supprimee", EC.libelle(type_, numero))
-        flash("Synthèse enregistrée supprimée : les fiches sont de nouveau pré-remplies depuis SCOLARIS.", "success")
+        flash("Synthèse enregistrée supprimée : les fiches sont de nouveau pré-remplies depuis GESCOL.", "success")
         return redirect(url_for("synthese_accueil", type=type_, numero=numero, classe=cid or None))

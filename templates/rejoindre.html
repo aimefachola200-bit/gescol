@@ -1,11 +1,11 @@
 {% extends "base.html" %}{% block titre %}Inscrire mon école{% endblock %}
 {% block contenu %}
 <div style="max-width:860px;margin:0 auto">
-<h1>Inscrire mon école à SCOLARIS</h1>
-<p class="sous">Votre établissement souhaite gérer ses élèves, notes, bulletins et paiements avec SCOLARIS ? Renseignez ce formulaire : l'équipe vous recontacte pour une démonstration.</p>
+<h1>Inscrire mon école à GESCOL</h1>
+<p class="sous">Votre établissement souhaite gérer ses élèves, notes, bulletins et paiements avec GESCOL ? Renseignez ce formulaire : l'équipe vous recontacte pour une démonstration.</p>
 
 {% if ok %}
-<div class="flash success"><b>Merci !</b> La demande pour {{ ok }} est enregistrée.{% if telephone %} L'équipe SCOLARIS vous contactera au {{ telephone }}.{% endif %}</div>
+<div class="flash success"><b>Merci !</b> La demande pour {{ ok }} est enregistrée.{% if telephone %} L'équipe GESCOL vous contactera au {{ telephone }}.{% endif %}</div>
 {% endif %}
 {% if erreurs %}<div class="flash danger">Complétez {{ erreurs|join(', ') }}.</div>{% endif %}
 
@@ -49,7 +49,7 @@
   </div>
   <label>Message (facultatif)</label><textarea name="message" rows="3" maxlength="1500">{{ f.message or '' }}</textarea>
   <div style="position:absolute;left:-9999px" aria-hidden="true"><label>Site web</label><input name="site_web" tabindex="-1" autocomplete="off"></div>
-  <label style="font-weight:400;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" name="accord" style="margin-top:4px"> J'accepte que l'équipe SCOLARIS utilise ces coordonnées pour me recontacter au sujet de l'application.</label>
+  <label style="font-weight:400;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" name="accord" style="margin-top:4px"> J'accepte que l'équipe GESCOL utilise ces coordonnées pour me recontacter au sujet de l'application.</label>
 </div>
 <button class="btn">Envoyer la demande</button>
 </form>

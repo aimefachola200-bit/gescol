@@ -19,9 +19,9 @@ import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-EDITION = os.environ.get("SCOLARIS_EDITION_TEST", "publique")
-os.environ.setdefault("SCOLARIS_EDITION", EDITION)
-os.environ.setdefault("SCOLARIS_DATA", tempfile.mkdtemp(prefix=f"scolaris_v17_{EDITION}_"))
+EDITION = os.environ.get("GESCOL_EDITION_TEST", "publique")
+os.environ.setdefault("GESCOL_EDITION", EDITION)
+os.environ.setdefault("GESCOL_DATA", tempfile.mkdtemp(prefix=f"gescol_v17_{EDITION}_"))
 
 from app import app  # noqa: E402
 import config  # noqa: E402
@@ -58,7 +58,7 @@ class TestReferentielVillages(unittest.TestCase):
 
 
 class TestImagesHorsDuCode(unittest.TestCase):
-    """Android autonome : les fichiers web (static/) sont décompressés à part des modules Python (SCOLARIS_WEB_DIR).
+    """Android autonome : les fichiers web (static/) sont décompressés à part des modules Python (GESCOL_WEB_DIR).
     Les armoiries et l'emblème du MEMP doivent être trouvés dans ce dossier (correctif 1.7.1)."""
 
     def test_dossier_web_en_premier(self):
@@ -189,7 +189,7 @@ class TestEnteteEtSignature(unittest.TestCase):
 
 SCRIPT_CS = r'''
 import io, json, os, re, sys, html, tempfile
-os.environ["SCOLARIS_EDITION"] = "cs"; os.environ["SCOLARIS_DATA"] = tempfile.mkdtemp()
+os.environ["GESCOL_EDITION"] = "cs"; os.environ["GESCOL_DATA"] = tempfile.mkdtemp()
 sys.path.insert(0, os.getcwd())
 import config, demo_juridiction
 from app import app
@@ -255,8 +255,8 @@ print("CS-OK")
 class TestModuleCP(unittest.TestCase):
     def test_parcours_cs(self):
         env = dict(os.environ)
-        env.pop("SCOLARIS_EDITION", None)
-        env.pop("SCOLARIS_DATA", None)
+        env.pop("GESCOL_EDITION", None)
+        env.pop("GESCOL_DATA", None)
         r = subprocess.run([sys.executable, "-c", SCRIPT_CS], cwd=RACINE, env=env, capture_output=True, text=True, timeout=900)
         self.assertIn("CS-OK", r.stdout, r.stderr[-4000:])
 

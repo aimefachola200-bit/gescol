@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Page de téléchargement SCOLARIS (GitHub Pages) : un lien simple + QR codes pour installer sur Android, tablette et PC.
+"""Page de téléchargement GESCOL (GitHub Pages) : un lien simple + QR codes pour installer sur Android, tablette et PC.
 
 Les liens pointent vers la dernière version publiée (« releases/latest ») : ils ne changent jamais.
 Utilisation : GITHUB_REPOSITORY=proprietaire/depot python packaging/page/generer.py site"""
@@ -18,46 +18,40 @@ RACINE = os.path.abspath(os.path.join(ICI, "..", ".."))
 sys.path.insert(0, RACINE)
 import config  # noqa: E402
 
-DEPOT = os.environ.get("GITHUB_REPOSITORY", "proprietaire/scolaris")
+DEPOT = os.environ.get("GITHUB_REPOSITORY", "proprietaire/gescol")
 PROPRIO, NOM = DEPOT.split("/", 1)
 BASE = f"https://github.com/{DEPOT}/releases/latest/download"
 PAGE = f"https://{PROPRIO.lower()}.github.io/{NOM}/"
 GROUPES = [
-    ("SCOLARIS — écoles privées", "Scolarité, paiements des parents, paie du personnel…", [
-        ("autonome", "SCOLARIS-Autonome.apk", "Android autonome", "Fonctionne seul sur le téléphone ou la tablette, sans PC, sans Wi-Fi, sans Internet. Les données restent sur l'appareil."),
-        ("connecte", "SCOLARIS.apk", "Android connecté", "Se connecte au serveur SCOLARIS de l'école (Wi-Fi) ou à la version en ligne : tout le monde partage les mêmes données. Convient aussi à SCOLARIS Public."),
-        ("windows", "SCOLARIS-Installation.exe", "Windows (PC)", "Installe SCOLARIS sur un PC : il fonctionne seul et peut servir les tablettes du Wi-Fi."),
+    ("GESCOL — écoles privées", "Scolarité, paiements des parents, paie du personnel…", [
+        ("autonome", "GESCOL-Autonome.apk", "Android autonome", "Fonctionne seul sur le téléphone ou la tablette, sans PC, sans Wi-Fi, sans Internet. Les données restent sur l'appareil."),
+        ("connecte", "GESCOL.apk", "Android connecté", "Se connecte au serveur GESCOL de l'école (Wi-Fi) ou à la version en ligne : tout le monde partage les mêmes données. Convient aussi à GESCOL Public."),
+        ("windows", "GESCOL-Installation.exe", "Windows (PC)", "Installe GESCOL sur un PC : il fonctionne seul et peut servir les tablettes du Wi-Fi."),
     ]),
-    ("SCOLARIS Public — écoles publiques", "Cantine et subventions, dépenses, gestion de carrière, maître de semaine, visites de classe, "
+    ("GESCOL Public — écoles publiques", "Cantine et subventions, dépenses, gestion de carrière, maître de semaine, visites de classe, "
      "patrimoine, fiches de recensement, rapports de rentrée et de fin d'année, documents de l'enseignant.", [
-        ("autonome", "SCOLARIS-Public.apk", "Android autonome – SCOLARIS Public", "Application jumelle pour les écoles publiques, sans PC ni Internet. Elle s'installe à côté de SCOLARIS sans le remplacer."),
-        ("windows", "SCOLARIS-Public-Installation.exe", "Windows (PC) – SCOLARIS Public", "Installe SCOLARIS Public sur un PC (données séparées de SCOLARIS, adresse http://localhost:5101)."),
+        ("autonome", "GESCOL-Public.apk", "Android autonome – GESCOL Public", "Application jumelle pour les écoles publiques, sans PC ni Internet. Elle s'installe à côté de GESCOL sans le remplacer."),
+        ("windows", "GESCOL-Public-Installation.exe", "Windows (PC) – GESCOL Public", "Installe GESCOL Public sur un PC (données séparées de GESCOL, adresse http://localhost:5001)."),
     ]),
-    ("SCOLARIS Secondaire — collèges et lycées", "Vie de l'établissement, examens (BEPC, BAC), pilotage, enseignement technique et professionnel ; version privée et version publique, avec leurs propres données.", [
-        ("autonome", "SCOLARIS-Secondaire.apk", "Android autonome – SCOLARIS Secondaire", "Établissements privés, sans PC ni Internet. S'installe à côté des autres applications."),
-        ("windows", "SCOLARIS-Secondaire-Installation.exe", "Windows (PC) – SCOLARIS Secondaire", "Installe l'application sur un PC (adresse http://localhost:5105)."),
-        ("autonome", "SCOLARIS-Secondaire-Public.apk", "Android autonome – SCOLARIS Secondaire Public", "Établissements publics, sans PC ni Internet."),
-        ("windows", "SCOLARIS-Secondaire-Public-Installation.exe", "Windows (PC) – SCOLARIS Secondaire Public", "Installe la version publique sur un PC (adresse http://localhost:5106)."),
-    ]),
-    ("SCOLARIS Inspection et DDESTFP — supervision du secondaire", "Reçoit les transmissions des collèges et lycées : effectifs, résultats BEPC et baccalauréat, personnel, exports PDF et Excel.", [
-        ("autonome", "SCOLARIS-Inspection-Secondaire.apk", "Android autonome – Inspection Secondaire", "Inspection de l'enseignement secondaire."),
-        ("windows", "SCOLARIS-Inspection-Secondaire-Installation.exe", "Windows (PC) – Inspection Secondaire", "Adresse http://localhost:5107."),
-        ("autonome", "SCOLARIS-DDESTFP.apk", "Android autonome – DDESTFP", "Direction départementale du secondaire."),
-        ("windows", "SCOLARIS-DDESTFP-Installation.exe", "Windows (PC) – DDESTFP", "Adresse http://localhost:5108."),
+    ("GESCOL Secondaire — collèges et lycées", "Vie de l'établissement, examens (BEPC, BAC), pilotage, enseignement technique et professionnel ; version privée et version publique, avec leurs propres données.", [
+        ("autonome", "GESCOL-Secondaire.apk", "Android autonome – GESCOL Secondaire", "Établissements privés, sans PC ni Internet. S'installe à côté des autres applications."),
+        ("windows", "GESCOL-Secondaire-Installation.exe", "Windows (PC) – GESCOL Secondaire", "Installe l'application sur un PC (adresse http://localhost:5005)."),
+        ("autonome", "GESCOL-Secondaire-Public.apk", "Android autonome – GESCOL Secondaire Public", "Établissements publics, sans PC ni Internet."),
+        ("windows", "GESCOL-Secondaire-Public-Installation.exe", "Windows (PC) – GESCOL Secondaire Public", "Installe la version publique sur un PC (adresse http://localhost:5006)."),
     ]),
     ("Administration scolaire — Circonscription et DDEMP", "Tableaux de bord de la juridiction, statistiques des apprenants et des enseignants, "
      "CEP (taux par zone et par CS, prévisions, frais de relevés), carrière et retraites, visites des CP et CCS, fiches "
      "de recensement et rapports consolidés, attestations et certificats, transmissions des écoles.", [
-        ("autonome", "SCOLARIS-Circonscription.apk", "Android – SCOLARIS Circonscription", "Pour le CCS, les CP et les chefs de division : reçoit les fichiers des écoles de la circonscription."),
-        ("windows", "SCOLARIS-Circonscription-Installation.exe", "Windows – SCOLARIS Circonscription", "Installe l'application de la circonscription scolaire sur un PC (adresse http://localhost:5102)."),
-        ("autonome", "SCOLARIS-DDEMP.apk", "Android – SCOLARIS DDEMP", "Pour la Direction départementale : rassemble les circonscriptions du département."),
-        ("windows", "SCOLARIS-DDEMP-Installation.exe", "Windows – SCOLARIS DDEMP", "Installe l'application de la DDEMP sur un PC (adresse http://localhost:5103)."),
+        ("autonome", "GESCOL-Circonscription.apk", "Android – GESCOL Circonscription", "Pour le CCS, les CP et les chefs de division : reçoit les fichiers des écoles de la circonscription."),
+        ("windows", "GESCOL-Circonscription-Installation.exe", "Windows – GESCOL Circonscription", "Installe l'application de la circonscription scolaire sur un PC (adresse http://localhost:5002)."),
+        ("autonome", "GESCOL-DDEMP.apk", "Android – GESCOL DDEMP", "Pour la Direction départementale : rassemble les circonscriptions du département."),
+        ("windows", "GESCOL-DDEMP-Installation.exe", "Windows – GESCOL DDEMP", "Installe l'application de la DDEMP sur un PC (adresse http://localhost:5003)."),
     ]),
-    ("SCOLARIS Enseignant — l'application de l'enseignant", "Ma classe (élèves, appel, notes, bulletins), emplois du temps, "
+    ("GESCOL Enseignant — l'application de l'enseignant", "Ma classe (élèves, appel, notes, bulletins), emplois du temps, "
      "planifications annuelle et mensuelle, calendrier officiel, règlement intérieur, thèmes d'UP, documents officiels et "
      "certificats pré-remplis, ma carrière — sur son propre téléphone ou ordinateur, sans l'application de l'école.", [
-        ("autonome", "SCOLARIS-Enseignant.apk", "Android – SCOLARIS Enseignant", "Application personnelle de l'enseignant : premier lancement = son profil, son école et ses classes."),
-        ("windows", "SCOLARIS-Enseignant-Installation.exe", "Windows – SCOLARIS Enseignant", "Installe l'application de l'enseignant sur un PC (adresse http://localhost:5104)."),
+        ("autonome", "GESCOL-Enseignant.apk", "Android – GESCOL Enseignant", "Application personnelle de l'enseignant : premier lancement = son profil, son école et ses classes."),
+        ("windows", "GESCOL-Enseignant-Installation.exe", "Windows – GESCOL Enseignant", "Installe l'application de l'enseignant sur un PC (adresse http://localhost:5004)."),
     ]),
 ]
 
@@ -91,8 +85,8 @@ def main(sortie):
 </div>""")
     page = f"""<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Installer SCOLARIS</title><link rel="icon" href="icone.png">
-<meta property="og:title" content="Installer SCOLARIS"><meta property="og:description" content="Gestion d'établissement scolaire – Android, tablette, PC">
+<title>Installer GESCOL</title><link rel="icon" href="icone.png">
+<meta property="og:title" content="Installer GESCOL"><meta property="og:description" content="Gestion d'établissement scolaire – Android, tablette, PC">
 <style>
 :root{{--bleu:#1F4E79;--fond:#F4F6F9}}*{{box-sizing:border-box}}
 body{{margin:0;font-family:"Segoe UI",Roboto,Arial,sans-serif;background:var(--fond);color:#1D2939}}
@@ -110,17 +104,17 @@ h2.groupe{{color:var(--bleu);font-size:21px;margin:22px 0 2px}}p.sous{{margin:0 
 .partage{{margin-top:18px;text-align:center}}.partage .qr svg{{max-width:200px}}
 footer{{text-align:center;color:#667085;font-size:13px;padding:0 16px 30px}}
 </style></head><body>
-<header><img src="icone.png" alt=""><h1>Installer SCOLARIS</h1><p>Gestion d'établissement scolaire · version {config.VERSION}</p></header>
+<header><img src="icone.png" alt=""><h1>Installer GESCOL</h1><p>Gestion d'établissement scolaire · version {config.VERSION}</p></header>
 <main>
 {''.join(blocs)}
 <div class="etapes">
   <h2 style="color:var(--bleu);font-size:18px">Installer sur Android ou tablette</h2>
   <ol>
-    <li>Appuyez sur <b>Télécharger</b> (SCOLARIS ou SCOLARIS Public).</li>
+    <li>Appuyez sur <b>Télécharger</b> (GESCOL ou GESCOL Public).</li>
     <li>Ouvrez le fichier téléchargé avec le <b>Gestionnaire de fichiers</b> (dossier « Téléchargements »).</li>
     <li>Si Android le demande : <b>Paramètres → Autoriser cette source</b>, puis revenez et appuyez sur <b>Installer</b>.
         Si Play Protect avertit : <b>Plus de détails → Installer quand même</b>.</li>
-    <li>Ouvrez <b>SCOLARIS</b>. Première connexion : <b>admin / admin123</b>, puis choisissez votre mot de passe.</li>
+    <li>Ouvrez <b>GESCOL</b>. Première connexion : <b>admin / admin123</b>, puis choisissez votre mot de passe.</li>
   </ol>
   <p class="astuce"><b>Tecno, Infinix, itel :</b> si le fichier s'ouvre avec Word ou une autre application,
   ouvrez le <b>Gestionnaire de fichiers</b> → <b>Téléchargements</b>, appuyez longuement sur le fichier .apk →
@@ -129,7 +123,7 @@ footer{{text-align:center;color:#667085;font-size:13px;padding:0 16px 30px}}
 </div>
 <div class="partage"><p>Partagez cette page : <b>{html.escape(PAGE)}</b></p><div class="qr">{qr_svg(PAGE, 200)}</div></div>
 </main>
-<footer>SCOLARIS {config.VERSION} — Conception : {html.escape(config.CONCEPTEUR)}</footer>
+<footer>GESCOL {config.VERSION} — Conception : {html.escape(config.CONCEPTEUR)}</footer>
 </body></html>"""
     with open(os.path.join(sortie, "index.html"), "w", encoding="utf-8") as f:
         f.write(page)

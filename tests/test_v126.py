@@ -2,7 +2,7 @@
 """Tests 1.26 (lot B) : communication et alertes (notes, circulaires, convocations diffusées aux écoles, boîte de
 réception et accusés de réception, état des accusés signé, échéances et rappels, messages aux parents WhatsApp / SMS,
 agenda, alertes) ; santé, cantine et inclusion (visites médicales -> aptitude des licences, IMC, certificat d'aptitude,
-infirmerie, cantine : repas et stocks avec soldes et alerte, besoins spécifiques, scolarisation des filles, absences de
+infirmerie, cantine : repas et stocks avec soldes et alerte, besoins spécifiques, gescolation des filles, absences de
 l'appel -> alerte de décrochage et fiche) ; Excel commun (Niveau · Entité · Saison, clé d'unicité à l'import).
 Lancer : python3 -m unittest tests.test_v126"""
 import os
@@ -12,7 +12,7 @@ import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "SCOLARIS"
+PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "GESCOL"
 
 SCRIPT = r'''
 import html, io, os, re, sys, tempfile
@@ -228,7 +228,7 @@ print("OK-" + config.EDITION)
 
 def lancer(edition):
     env = dict(os.environ)
-    for k in ("SCOLARIS_EDITION", "SCOLARIS_DATA", "GESCOL_EDITION", "GESCOL_DATA"):
+    for k in ("GESCOL_EDITION", "GESCOL_DATA", "GESCOL_EDITION", "GESCOL_DATA"):
         env.pop(k, None)
     env["EDITION_SCRIPT"] = edition
     env["PREFIXE_SCRIPT"] = PREFIXE

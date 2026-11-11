@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Données : import / export de SCOLARIS, échanges avec EducMaster et conversion PDF → Excel / CSV.
+"""Données : import / export de GESCOL, échanges avec EducMaster et conversion PDF → Excel / CSV.
 
 * /donnees                    : page d'accueil « Import / export » (liens vers les imports / exports de tous les modules
                                 installés, selon les droits de l'utilisateur) + sauvegarde de la base
@@ -8,7 +8,7 @@
     - détection souple des colonnes (matricule EducMaster, NIP, nom, prénoms, sexe, date / lieu de naissance, classe,
       matières) avec rapport, correspondance modifiable (mémorisée : Sauvegarde / Charger / Réinitialiser) et aperçu ;
     - (a) mise à jour / création des élèves (matricule EducMaster, NIP, sexe, naissance) ;
-    - (b) remplissage des notes d'une évaluation SCOLARIS DANS le fichier déposé (mise en forme conservée : seules les
+    - (b) remplissage des notes d'une évaluation GESCOL DANS le fichier déposé (mise en forme conservée : seules les
       cellules des colonnes de matières reconnues sont écrites) puis téléchargement pour le recharger sur EducMaster.
 * /conversion-pdf             : extraction des tableaux d'un PDF texte (pdfplumber) -> aperçu -> .xlsx ou .csv
 
@@ -20,15 +20,15 @@ Modèles officiels EducMaster (dossier modeles/, fournis par la plateforme : ils
 cellules de données sont remplies avec openpyxl, en conservant fusions, en-têtes et styles) :
 * educmaster_modele_notes_primaire.xlsx — 4 feuilles (« Évaluation formative 1 », « Évaluation sommative 1 / 2 / 3 »),
   en-têtes sur les lignes 1-2, données dès la ligne 3 : Matricule (EducMaster), Nom, Prénoms, puis par matière
-  « Note obtenue » / « Note perf. ». Correspondance feuille  évaluation SCOLARIS de la classe : formative n 
+  « Note obtenue » / « Note perf. ». Correspondance feuille  évaluation GESCOL de la classe : formative n 
   évaluation de type « formative » n° n, sommative n  évaluation « sommative » n° n (à défaut, la n-ième du type dans
-  l'ordre de l'année). Correspondance matières  codes SCOLARIS (MATIERES_MODELE_PRIMAIRE) : Dictée = DIC,
+  l'ordre de l'année). Correspondance matières  codes GESCOL (MATIERES_MODELE_PRIMAIRE) : Dictée = DIC,
   Math = MATH, Expression écrite = EXP.EC, Compréhension de l'écrit = COMP.EC, EST = ED.SCI, ES = ED.SOC,
   EA (Oral) = ART.V, EA (Dessin/Couture) = ART.P, EPS = EPS. « Note perf. » = barème de la note (NOTE_PERF = 20) :
-  toutes les notes SCOLARIS sont sur 20.
+  toutes les notes GESCOL sont sur 20.
 * educmaster_modele_classe.xlsx — une feuille par niveau (CM2 … CI, « Marternelle 2 », « Marternelle 1 ») :
   Nom, Prénom(s), Sexe, Date de naissance (jj/mm/aaaa), Lieu de naissance, Téléphone de parents, Nationalité, Npi (= NIP).
-  Export rempli pour toute l'école ; import : chaque feuille est versée dans la classe SCOLARIS choisie pour ce niveau
+  Export rempli pour toute l'école ; import : chaque feuille est versée dans la classe GESCOL choisie pour ce niveau
   (élève retrouvé par NIP puis nom + prénoms : mis à jour ; sinon créé).
 * educmaster_modele_agents.xlsx — feuille « Mes agents » : Matricule, Id ANPE (AME), Nom, Prénoms, Sexe, Date et lieu de
   naissance, Nationalité, Téléphone, Email, IFU, Date de première prise de service (personnel_carriere).
@@ -59,15 +59,15 @@ MODELES = {  # clé -> (fichier officiel, nom de téléchargement)
     "classe": ("educmaster_modele_classe.xlsx", "EducMaster_modele_classe.xlsx"),
     "agents": ("educmaster_modele_agents.xlsx", "EducMaster_modele_agents.xlsx"),
 }
-# modèle de notes : intitulé normalisé de la ligne 1 -> code de matière SCOLARIS (primaire)
+# modèle de notes : intitulé normalisé de la ligne 1 -> code de matière GESCOL (primaire)
 MATIERES_MODELE_PRIMAIRE = [
     ("dictee", "DIC"), ("math", "MATH"), ("expresion ecrite", "EXP.EC"), ("expression ecrite", "EXP.EC"),
     ("comprehension de l ecrit", "COMP.EC"), ("est", "ED.SCI"), ("es", "ED.SOC"), ("ea oral", "ART.V"),
     ("ea dessin couture", "ART.P"), ("ea dessin", "ART.P"), ("eps", "EPS"),
 ]
-NOTE_PERF = 20                      # « Note perf. » = barème (toutes les notes SCOLARIS sont sur 20)
+NOTE_PERF = 20                      # « Note perf. » = barème (toutes les notes GESCOL sont sur 20)
 LIGNE_DONNEES_NOTES = 3             # première ligne de données du modèle de notes
-# modèle des classes : nom de feuille (normalisé) -> niveau SCOLARIS
+# modèle des classes : nom de feuille (normalisé) -> niveau GESCOL
 FEUILLES_CLASSE = {"cm2": "CM2", "cm1": "CM1", "ce2": "CE2", "ce1": "CE1", "cp": "CP", "ci": "CI",
                    "marternelle 2": "Maternelle 2", "maternelle 2": "Maternelle 2",
                    "marternelle 1": "Maternelle 1", "maternelle 1": "Maternelle 1"}
@@ -81,7 +81,7 @@ MAX_PAGES_PDF = 200
 
 # Champs d'identification reconnus dans un fichier EducMaster : (clé, libellé)
 CHAMPS_ID = [
-    ("matricule_em", "Matricule EducMaster"), ("matricule", "Matricule SCOLARIS (école)"), ("nip", "NIP"),
+    ("matricule_em", "Matricule EducMaster"), ("matricule", "Matricule GESCOL (école)"), ("nip", "NIP"),
     ("nom", "Nom"), ("prenoms", "Prénoms"), ("nom_complet", "Nom et prénoms"), ("sexe", "Sexe"),
     ("date_naissance", "Date de naissance"), ("lieu_naissance", "Lieu de naissance"),
     ("naissance", "Date et lieu de naissance"), ("classe", "Classe"),
@@ -90,7 +90,7 @@ LIB_ID = dict(CHAMPS_ID)
 # intitulés « numéro d'ordre » à ignorer
 IGNORES = {"n", "no", "num", "numero", "n ordre", "no ordre", "numero d ordre", "ordre", "rang", "n d ordre", "nr",
            "observation", "observations", "decision", "moyenne", "moy", "total", "rang", "mention", "appreciation"}
-# alias de matières (intitulé normalisé -> code SCOLARIS), en plus du nom et du code des matières
+# alias de matières (intitulé normalisé -> code GESCOL), en plus du nom et du code des matières
 ALIAS_MATIERES = {
     "primaire": {"communication orale": "COM.OR", "co": "COM.OR", "dictee": "DIC", "lecture": "COMP.EC",
                  "comprehension de l ecrit": "COMP.EC", "ce": "COMP.EC", "maths": "MATH", "math": "MATH",
@@ -175,7 +175,7 @@ def role_identite(h):
 
 
 def matiere_de(h, matieres, cycle):
-    """Intitulé normalisé -> matière SCOLARIS (Row) ou None."""
+    """Intitulé normalisé -> matière GESCOL (Row) ou None."""
     if not h or h in IGNORES:
         return None
     par_code = {normaliser(m["code"]): m for m in matieres}
@@ -261,12 +261,12 @@ def enregistrer(app, H):
                 ("paie_accueil", "Paie : livre de paie (CSV)", "Ouvrez un mois puis « Livre de paie ».", "paie", None),
                 ("cantine_recap", "Cantine : récapitulatif", "Récapitulatif des paiements de cantine.", "cantine", None),
                 ("fondateur_xlsx", "Tableau du fondateur (Excel)", "Indicateurs consolidés de toutes les écoles.", None, ("fondateur", "admin")),
-                ("demandes_ecoles_csv", "Demandes d'adhésion des écoles (CSV)", "Liste des écoles ayant demandé à rejoindre SCOLARIS.", "ecoles", ("fondateur", "admin")),
+                ("demandes_ecoles_csv", "Demandes d'adhésion des écoles (CSV)", "Liste des écoles ayant demandé à rejoindre GESCOL.", "ecoles", ("fondateur", "admin")),
             ]),
             ("Échanges et conversions", "⇅", [
                 ("educmaster_accueil", "Import-export EducMaster", "Élèves et notes avec la plateforme EducMaster (maternelle, primaire, secondaire).", "donnees", None),
                 ("educmaster_modeles", "Modèles officiels EducMaster (notes, élèves par classe, agents)",
-                 "Télécharger les modèles vierges ou remplis par SCOLARIS, importer un modèle rempli.", "donnees", None),
+                 "Télécharger les modèles vierges ou remplis par GESCOL, importer un modèle rempli.", "donnees", None),
                 ("educmaster_modele_classe_rempli", "EducMaster : modèle des élèves par classe, rempli (Excel)",
                  "Tous les élèves inscrits de l'école, une feuille par niveau (CM2 … Maternelle 1).", "donnees", None),
                 ("educmaster_modele_agents_rempli", "EducMaster : modèle des agents, rempli (Excel)",
@@ -655,10 +655,10 @@ def enregistrer(app, H):
                 stats["maj"] += 1
                 details.append([k, qui, "Mis à jour", ", ".join(f"{c} = {v}" for c, v in maj.items())])
                 continue
-            # élève inconnu de SCOLARIS
+            # élève inconnu de GESCOL
             if not creer:
                 stats["ignores"] += 1
-                details.append([k, qui, "Ignoré", "élève absent de SCOLARIS (cochez « créer les élèves absents »)"])
+                details.append([k, qui, "Ignoré", "élève absent de GESCOL (cochez « créer les élèves absents »)"])
                 continue
             cl = retrouver_classe(d["classe"], classes) or defaut
             if not (d["nom"] and d["prenoms"]):
@@ -773,7 +773,7 @@ def enregistrer(app, H):
         msg = (f"Fichier EducMaster rempli avec « {ev['titre']} » ({cl['nom']}) : {reconnues} élève(s) reconnu(s), "
                f"{ecrites} note(s) écrite(s)")
         if sans_note:
-            msg += f", {sans_note} case(s) laissée(s) telle(s) quelle(s) (pas de note dans SCOLARIS)"
+            msg += f", {sans_note} case(s) laissée(s) telle(s) quelle(s) (pas de note dans GESCOL)"
         flash(msg + ".", "success")
         if inconnus:
             flash(f"{len(inconnus)} ligne(s) du fichier sans élève correspondant dans {cl['nom']} : "
@@ -785,7 +785,7 @@ def enregistrer(app, H):
         suffixe = re.sub(r"[^A-Za-z0-9]+", "_", normaliser(f"{cl['nom']} {ev['libelle']}"))
         ext = e.get("ext", "xlsx")
         mime = MIME_XLSX if ext == "xlsx" else "application/vnd.ms-excel.sheet.macroEnabled.12"
-        return send_file(buf, mimetype=mime, as_attachment=True, download_name=f"{base}_SCOLARIS_{suffixe}.{ext}")
+        return send_file(buf, mimetype=mime, as_attachment=True, download_name=f"{base}_GESCOL_{suffixe}.{ext}")
 
     # ============================================================ Modèles officiels EducMaster
     def cle_rapport_modeles():
@@ -831,7 +831,7 @@ def enregistrer(app, H):
         return out
 
     def niveaux_modele_classe():
-        """[(nom de feuille du modèle, niveau SCOLARIS)] dans l'ordre du modèle officiel."""
+        """[(nom de feuille du modèle, niveau GESCOL)] dans l'ordre du modèle officiel."""
         try:
             import openpyxl
             wb = openpyxl.load_workbook(chemin_modele("classe"), read_only=True)
@@ -862,7 +862,7 @@ def enregistrer(app, H):
 
     # --- a) modèle de notes (primaire) rempli pour une classe
     def colonnes_modele_notes(ws):
-        """{code matière SCOLARIS: colonne « Note obtenue » (1..)} d'après la ligne 1 du modèle (fusions : l'intitulé est
+        """{code matière GESCOL: colonne « Note obtenue » (1..)} d'après la ligne 1 du modèle (fusions : l'intitulé est
         dans la première cellule ; « Note perf. » est la colonne suivante)."""
         cols = {}
         for cell in ws[1]:
@@ -876,7 +876,7 @@ def enregistrer(app, H):
         return cols
 
     def evaluation_pour_feuille(nom_feuille, evaluations):
-        """« Évaluation sommative 2 » -> l'évaluation SCOLARIS de type sommative n° 2 (sinon la 2e sommative)."""
+        """« Évaluation sommative 2 » -> l'évaluation GESCOL de type sommative n° 2 (sinon la 2e sommative)."""
         h = normaliser(nom_feuille)
         m = re.search(r"(formative|sommative|diagnostique|certificative)\D*(\d+)", h)
         if not m:
@@ -948,10 +948,10 @@ def enregistrer(app, H):
                   + ", ".join(infos["sans_matricule"][:15]) + (" …" if len(infos["sans_matricule"]) > 15 else ""), "warning")
         sans_ev = [f["feuille"] for f in infos["feuilles"] if not f["evaluation"]]
         if sans_ev:
-            flash("Feuilles sans évaluation SCOLARIS correspondante (élèves seuls, sans notes) : " + ", ".join(sans_ev), "info")
+            flash("Feuilles sans évaluation GESCOL correspondante (élèves seuls, sans notes) : " + ", ".join(sans_ev), "info")
         return reponse_classeur(wb, f"EducMaster_notes_{nom_fichier(cl['nom'])}_{H.config.ANNEE_ACTIVE}.xlsx")
 
-    # --- a bis) v1.15 : importer dans SCOLARIS le modèle de notes rempli (sur EducMaster ou par l'enseignant)
+    # --- a bis) v1.15 : importer dans GESCOL le modèle de notes rempli (sur EducMaster ou par l'enseignant)
     def lire_note_modele(v):
         """Cellule « Note obtenue » -> note sur 20 (None si vide). ValueError si illisible ou hors de 0 à 20."""
         if v is None or (isinstance(v, str) and not v.strip()):
@@ -964,7 +964,7 @@ def enregistrer(app, H):
     @app.route("/educmaster/modeles/notes-primaire/<int:cid>/importer", methods=["POST"])
     @H.connexion_requise()
     def educmaster_modele_notes_importer(cid):
-        """Chaque feuille (Évaluation formative 1, sommatives 1 à 3) va dans l'évaluation SCOLARIS correspondante de la
+        """Chaque feuille (Évaluation formative 1, sommatives 1 à 3) va dans l'évaluation GESCOL correspondante de la
         classe (créée si demandé) ; élève retrouvé par matricule EducMaster puis par nom + prénoms ; « Note perf. »
         (barème) n'est pas importée. Rapport détaillé ligne par ligne ; mode simulation."""
         if not H.peut("donnees") and g.user["role"] != "enseignant":
@@ -1525,7 +1525,7 @@ def enregistrer(app, H):
             if res["caracteres"] == 0:
                 flash("Ce PDF ne contient pas de texte : c'est probablement un document scanné (une image). "
                       "La conversion n'est possible qu'avec un PDF « texte » (produit par un logiciel : Word, Excel, "
-                      "SCOLARIS, EducMaster…). Pour un scan, il faut d'abord une reconnaissance de caractères (OCR).", "danger")
+                      "GESCOL, EducMaster…). Pour un scan, il faut d'abord une reconnaissance de caractères (OCR).", "danger")
                 return redirect(url_for("conversion_pdf"))
             if not res["tableaux"]:
                 flash("Aucun tableau n'a été trouvé dans ce PDF (le texte ne présente pas de colonnes).", "warning")

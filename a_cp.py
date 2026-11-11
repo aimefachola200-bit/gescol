@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Conseillers pédagogiques (CP) — applications « SCOLARIS Circonscription » (CS) et « SCOLARIS DDEMP » (v1.7).
+"""Conseillers pédagogiques (CP) — applications « GESCOL Circonscription » (CS) et « GESCOL DDEMP » (v1.7).
 
 Le module suit le travail du réseau d'animation pédagogique (RAP : le CCS et les CP des zones) et produit le
 BILAN TRIMESTRIEL ET ANNUEL DES ACTIVITÉS PÉDAGOGIQUES, au niveau de la zone (un CP) ou de la CS (CCS + CP),
@@ -1446,13 +1446,13 @@ def enregistrer(app, H):
             c.saveState()
             c.setFont("Helvetica", 6.5)
             c.setFillColor(colors.HexColor("#667085"))
-            c.drawString(14 * mm, 7 * mm, f"SCOLARIS – {titre_bilan(b)}")
+            c.drawString(14 * mm, 7 * mm, f"GESCOL – {titre_bilan(b)}")
             c.drawRightString(W - 14 * mm, 7 * mm, f"Page {doc.page}")
             c.restoreState()
 
         buf = io.BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=(W, Hh), leftMargin=14 * mm, rightMargin=14 * mm, topMargin=12 * mm,
-                                bottomMargin=13 * mm, title=titre_bilan(b), author="SCOLARIS")
+                                bottomMargin=13 * mm, title=titre_bilan(b), author="GESCOL")
 
         cachet_vals = None
         if not zone:

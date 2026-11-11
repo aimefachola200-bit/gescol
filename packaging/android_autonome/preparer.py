@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """Prépare l'application Android autonome avant la fabrication (GitHub Actions ou Android Studio).
 
-1. recopie le code Python de SCOLARIS dans app/src/main/python ;
-2. recopie les gabarits et fichiers statiques dans app/src/main/assets/scolaris_web ;
+1. recopie le code Python de GESCOL dans app/src/main/python ;
+2. recopie les gabarits et fichiers statiques dans app/src/main/assets/gescol_web ;
 3. ajoute les bibliothèques Python « pures » (Flask, ReportLab, openpyxl…) sans leurs parties compilées
    (elles fonctionnent sans : MarkupSafe et charset-normalizer ont une version Python de secours).
    Pillow, seule bibliothèque compilée nécessaire, est installée par Chaquopy (voir app/build.gradle).
 
 Utilisation : python3 packaging/android_autonome/preparer.py      (depuis la racine du projet ou d'ailleurs)
-Option --edition publique|cs|ddemp : applications jumelles SCOLARIS Public, Circonscription, DDEMP.
+Option --edition publique|cs|ddemp : applications jumelles GESCOL Public, Circonscription, DDEMP.
 Option --local : prendre les bibliothèques déjà installées sur cet ordinateur au lieu de les télécharger.
 """
 import glob
@@ -23,16 +23,16 @@ import zipfile
 ICI = os.path.dirname(os.path.abspath(__file__))
 RACINE = os.path.abspath(os.path.join(ICI, "..", ".."))
 PY = os.path.join(ICI, "app", "src", "main", "python")
-WEB = os.path.join(ICI, "app", "src", "main", "assets", "scolaris_web")
+WEB = os.path.join(ICI, "app", "src", "main", "assets", "gescol_web")
 
-# modules SCOLARIS à ne pas embarquer (lanceur Windows, démo, point d'entrée hébergeur)
-EXCLUS = {"scolaris_serveur.py", "demo.py", "wsgi.py"}
+# modules GESCOL à ne pas embarquer (lanceur Windows, démo, point d'entrée hébergeur)
+EXCLUS = {"gescol_serveur.py", "demo.py", "wsgi.py"}
 # bibliothèques pures (nom pip, nom du paquet importé)
 LIBS = [("flask", "flask"), ("werkzeug", "werkzeug"), ("jinja2", "jinja2"), ("markupsafe", "markupsafe"),
         ("itsdangerous", "itsdangerous"), ("click", "click"), ("blinker", "blinker"),
         ("reportlab", "reportlab"), ("charset-normalizer", "charset_normalizer"),
         ("openpyxl", "openpyxl"), ("et-xmlfile", "et_xmlfile"), ("pypdf", "pypdf")]
-GARDER = {"scolaris_android.py"}
+GARDER = {"gescol_android.py"}
 
 
 def nettoyer():
@@ -44,7 +44,7 @@ def nettoyer():
     shutil.rmtree(WEB, ignore_errors=True)
 
 
-def copier_scolaris():
+def copier_gescol():
     for f in sorted(glob.glob(os.path.join(RACINE, "*.py"))):
         if os.path.basename(f) not in EXCLUS:
             shutil.copy2(f, PY)
@@ -86,14 +86,14 @@ def copier_local():
 
 
 def ecrire_edition():
-    """--edition publique : application jumelle « SCOLARIS Public » (écoles publiques).
+    """--edition publique : application jumelle « GESCOL Public » (écoles publiques).
     Sans option : édition choisie dans Administration > Paramètres (écoles privées par défaut)."""
     edition = ""
     if "--edition" in sys.argv:
         edition = sys.argv[sys.argv.index("--edition") + 1].lower()
-        if edition not in ("privee", "publique", "cs", "ddemp", "enseignant", "sec_privee", "sec_publique", "sec_cs", "sec_ddestfp"):
-            raise SystemExit("--edition : privee, publique, cs, ddemp, enseignant, sec_privee, sec_publique, sec_cs ou sec_ddestfp")
-    with open(os.path.join(PY, "scolaris_edition.py"), "w", encoding="utf-8") as f:
+        if edition not in ("privee", "publique", "cs", "ddemp", "enseignant", "sec_privee", "sec_publique"):
+            raise SystemExit("--edition : privee, publique, cs, ddemp, enseignant, sec_privee ou sec_publique")
+    with open(os.path.join(PY, "gescol_edition.py"), "w", encoding="utf-8") as f:
         f.write(f'# Écrit par preparer.py\nEDITION = "{edition}"\n')
     if edition in MARQUES:
         marquer_icones(*MARQUES[edition])
@@ -103,8 +103,7 @@ def ecrire_edition():
 # pastille de l'icône : lettre et couleur de chaque application jumelle
 MARQUES = {"publique": ("P", (0, 135, 81, 255)), "cs": ("C", (191, 90, 0, 255)), "ddemp": ("D", (122, 31, 162, 255)),
            "enseignant": ("E", (0, 121, 107, 255)),
-           "sec_privee": ("S", (21, 71, 160, 255)), "sec_publique": ("S", (0, 105, 92, 255)),
-           "sec_cs": ("I", (106, 27, 154, 255)), "sec_ddestfp": ("D", (183, 28, 28, 255))}
+           "sec_privee": ("S", (21, 71, 160, 255)), "sec_publique": ("S", (0, 105, 92, 255))}
 
 
 def marquer_icones(lettre="P", couleur=(0, 135, 81, 255)):
@@ -117,7 +116,7 @@ def marquer_icones(lettre="P", couleur=(0, 135, 81, 255)):
     for f in glob.glob(os.path.join(ICI, "app", "src", "main", "res", "mipmap-*", "ic_launcher.png")):
         im = Image.open(f).convert("RGBA")
         w, h = im.size
-        r = max(6, w * 7 // 20)   # pastille en haut à droite (le nom SCOLARIS reste lisible)
+        r = max(6, w * 7 // 20)   # pastille en haut à droite (le nom GESCOL reste lisible)
         d = ImageDraw.Draw(im)
         d.ellipse([w - r, 0, w - 1, r - 1], fill=couleur, outline=(255, 255, 255, 255), width=max(1, w // 48))
         try:
@@ -135,7 +134,7 @@ def marquer_icones(lettre="P", couleur=(0, 135, 81, 255)):
 def main():
     os.makedirs(PY, exist_ok=True)
     nettoyer()
-    copier_scolaris()
+    copier_gescol()
     print("Édition :", ecrire_edition() or "au choix (Paramètres)")
     if "--local" in sys.argv:
         copier_local()

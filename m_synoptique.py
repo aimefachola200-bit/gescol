@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tableau synoptique de l'école (toutes éditions : SCOLARIS, SCOLARIS Public ; consultable aussi depuis les
+Tableau synoptique de l'école (toutes éditions : GESCOL, GESCOL Public ; consultable aussi depuis les
 applications CS / DDEMP pour l'école courante).
 
 Le tableau synoptique précède le tableau de bord : il rassemble, pour une école, les rubriques demandées
@@ -1472,13 +1472,13 @@ def enregistrer(app, H):
         def deco(c, doc):
             c.setFont("Helvetica", 6.5)
             c.setFillColor(colors.grey)
-            c.drawString(marge, 6 * mm, f"SCOLARIS · {ident['epp'] or config.ECOLE.get('nom', '')} · {config.ANNEE_ACTIVE} · planification mensuelle {cl['nom']}")
+            c.drawString(marge, 6 * mm, f"GESCOL · {ident['epp'] or config.ECOLE.get('nom', '')} · {config.ANNEE_ACTIVE} · planification mensuelle {cl['nom']}")
             c.drawRightString(W - marge, 6 * mm, f"Page {doc.page} · imprimé le {date.today().strftime('%d/%m/%Y')}")
             c.setFillColor(colors.black)
 
         buf = io.BytesIO()
         doc = SimpleDocTemplate(buf, pagesize=landscape(A4), leftMargin=marge, rightMargin=marge, topMargin=marge, bottomMargin=9 * mm,
-                                title=f"Planification mensuelle {cl['nom']} — {d['mois_lib']}", author="SCOLARIS")
+                                title=f"Planification mensuelle {cl['nom']} — {d['mois_lib']}", author="GESCOL")
         doc.build([tete, Spacer(1, 4), grille, Spacer(1, 3), Signatures()], onFirstPage=deco, onLaterPages=deco, canvasmaker=P.GCanvas)
         return buf.getvalue()
 
@@ -1673,12 +1673,12 @@ def enregistrer(app, H):
             P._entete_primaire(c, W, Hh, marge, infos_haut())
             c.setFont("Helvetica", 6.5)
             c.setFillColor(colors.grey)
-            c.drawString(marge, 7 * mm, f"SCOLARIS · {config.ECOLE.get('nom', '')} · {config.ANNEE_ACTIVE} · tableau synoptique")
+            c.drawString(marge, 7 * mm, f"GESCOL · {config.ECOLE.get('nom', '')} · {config.ANNEE_ACTIVE} · tableau synoptique")
             c.drawRightString(W - marge, 7 * mm, f"Page {doc.page} · imprimé le {date.today().strftime('%d/%m/%Y')}")
             c.setFillColor(colors.black)
 
         doc = SimpleDocTemplate(buf, pagesize=taille_page, leftMargin=marge, rightMargin=marge, topMargin=marge + 30 * mm,
-                                bottomMargin=13 * mm, title=titre, author="SCOLARIS")
+                                bottomMargin=13 * mm, title=titre, author="GESCOL")
         doc.build(histoire, onFirstPage=deco, onLaterPages=deco, canvasmaker=P.GCanvas)
         return buf.getvalue()
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Thèmes d'unité pédagogique (UP), de conférence pédagogique (CP) et de formation groupée (FG) — toutes éditions
-(SCOLARIS, SCOLARIS Public, CS, DDEMP) — v1.6.
+(GESCOL, GESCOL Public, CS, DDEMP) — v1.6.
 
 Le client demande « le thème de l'UP dans les 4 applications comme le PDF » de la Direction de l'Inspection et de
 l'Innovation Pédagogiques (DIIP) : « Planning d'exécution des thèmes d'unité pédagogique au titre de l'année
@@ -674,7 +674,7 @@ def enregistrer(app, H):
         """Remet les thèmes officiels de l'année (les thèmes ajoutés par l'utilisateur sont conservés)."""
         annee, eid = annee_choisie(), ecole_cible()
         if annee not in THEMES_OFFICIELS:
-            flash(f"Les thèmes officiels {annee} ne sont pas connus de SCOLARIS : saisissez-les ou importez-les.", "danger")
+            flash(f"Les thèmes officiels {annee} ne sont pas connus de GESCOL : saisissez-les ou importez-les.", "danger")
             return redirect(url_liste())
         ex("DELETE FROM themes_up WHERE ecole_id=? AND annee=? AND officiel=1", (eid, annee))
         n = remettre_officiel(eid, annee)

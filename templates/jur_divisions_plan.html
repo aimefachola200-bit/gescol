@@ -6,7 +6,7 @@
 table.t.plan tr.div td{background:#E4ECF5;font-weight:700}
 table.t.plan tr.total td{background:#1F4E79;color:#fff;font-weight:700}
 table.t.plan td.mods{font-size:12px;color:#475467}
-.src.aof{color:#067647}.src.scolaris{color:#B54708}
+.src.aof{color:#067647}.src.gescol{color:#B54708}
 </style>
 {% macro badge_taux(v) %}{% if v is none %}<span class="taux na">—</span>{% elif v >= 75 %}<span class="taux ok">{{ pct(v) }}</span>{% elif v >= 50 %}<span class="taux moy">{{ pct(v) }}</span>{% else %}<span class="taux ko">{{ pct(v) }}</span>{% endif %}{% endmacro %}
 <div class="entete"><div><h1>Plan d'action des divisions</h1>
@@ -36,7 +36,7 @@ table.t.plan td.mods{font-size:12px;color:#475467}
     {% for d in divisions %}{% set sy = d.synthese %}
     <tr><td><a href="{{ url_for('jur_division', code=d.code, annee=annee) }}#lignes"><b>{{ d.sigle or d.code|upper }}</b> – {{ d.nom }}</a></td>
       <td>{{ 'Article ' ~ d.article if d.article else '—' }}{% if d.hors_aof %} <span class="badge att">hors AOF</span>{% endif %}</td>
-      <td class="src {{ 'aof' if d.officiel else 'scolaris' }}">{{ d.source }}</td><td>{{ d.chef_nom or '—' }}</td>
+      <td class="src {{ 'aof' if d.officiel else 'gescol' }}">{{ d.source }}</td><td>{{ d.chef_nom or '—' }}</td>
       <td class="num">{{ sy.total }}</td><td class="num">{{ sy.prevues }}</td><td class="num">{{ sy.en_cours }}</td><td class="num">{{ sy.realisees }}</td><td class="num">{{ sy.reportees }}</td><td class="num">{{ badge_taux(sy.taux) }}</td></tr>
     {% endfor %}
     <tr><td><b>TOTAL STRUCTURE</b></td><td colspan="3"></td><td class="num"><b>{{ synthese.total }}</b></td><td class="num">{{ synthese.prevues }}</td><td class="num">{{ synthese.en_cours }}</td><td class="num">{{ synthese.realisees }}</td><td class="num">{{ synthese.reportees }}</td><td class="num"><b>{{ pct(synthese.taux) }}</b></td></tr>
@@ -45,7 +45,7 @@ table.t.plan td.mods{font-size:12px;color:#475467}
 
 <section class="carte" style="margin-top:16px"><h2>Lignes d'action par division</h2>
   <div class="tw"><table class="t compact plan">
-    <tr><th>N°</th><th>Ligne d'action</th><th>Indicateur / cible</th><th>Échéance</th><th>Responsable</th><th>Modules SCOLARIS</th><th>État</th><th class="num">Taux</th></tr>
+    <tr><th>N°</th><th>Ligne d'action</th><th>Indicateur / cible</th><th>Échéance</th><th>Responsable</th><th>Modules GESCOL</th><th>État</th><th class="num">Taux</th></tr>
     {% for d in divisions %}
     <tr class="div"><td></td><td colspan="5"><a href="{{ url_for('jur_division', code=d.code, annee=annee) }}#lignes">{{ d.sigle or d.code|upper }} – {{ d.nom }}</a> <span class="aide">· {{ d.source }} · chef : {{ d.chef_nom or 'non désigné' }}</span></td><td>{{ d.synthese.realisees }} / {{ d.synthese.total }}</td><td class="num">{{ badge_taux(d.synthese.taux) }}</td></tr>
     {% for l in d.lignes %}

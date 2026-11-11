@@ -87,7 +87,7 @@ LISTES = {"discipline": DISCIPLINES, "categorie": CATEGORIES, "categorie_fin": C
           "etat": ["Bon", "Usagé", "À réparer", "Hors d’usage"], "origine": ["Achat", "Don", "Dotation", "Prêt"], "oui_non": ["Oui", "Non"]}
 # (clé, libellé, type) ; types : texte, long, date, entier, montant, choix:<liste>, liste:<liste> (saisie libre proposée)
 # v1.25 : clés, libellés et ordre des colonnes identiques au module commun (outils/uascep/uascep.js, SPEC) ; colonnes calculées
-# (CALC) insérées dans l'Excel à la même place ; rubriques propres à SCOLARIS en fin de feuille (EXTRA).
+# (CALC) insérées dans l'Excel à la même place ; rubriques propres à GESCOL en fin de feuille (EXTRA).
 COLL = {
     "activites": {"titre": "Calendrier, compétitions et résultats", "feuille": "Activités", "unite": "activité", "oblig": "discipline", "champs": [
         ("date", "Date", "date"), ("discipline", "Discipline", "liste:discipline"), ("categorie", "Catégorie", "liste:categorie"),
@@ -888,7 +888,7 @@ def enregistrer(app, H):
             h = [bandeau_logo(b["niveau"], b["entite"], b.get("entite_lib"), W - 2 * marge)] + list(h)
         buf = io.BytesIO()
         SimpleDocTemplate(buf, pagesize=(W, Hh), leftMargin=marge, rightMargin=marge, topMargin=marge + 30 * mm, bottomMargin=12 * mm,
-                          title=titre, author="SCOLARIS").build(h, onFirstPage=deco, onLaterPages=deco, canvasmaker=pdfs.GCanvas)
+                          title=titre, author="GESCOL").build(h, onFirstPage=deco, onLaterPages=deco, canvasmaker=pdfs.GCanvas)
         return buf.getvalue()
 
     def _largeur(paysage=False):

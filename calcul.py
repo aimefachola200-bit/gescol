@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Moteur de calcul des notes – SCOLARIS / CPFA
+Moteur de calcul des notes – GESCOL / CPFA
 Indépendant de la base de données et de Flask : testable seul.
 
 PRIMAIRE

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests du calendrier scolaire officiel (m_calendrier_officiel).
-Lancer : python3 -m unittest tests.test_calendrier_officiel   (depuis /home/claude/scolaris)
+Lancer : python3 -m unittest tests.test_calendrier_officiel   (depuis /home/claude/gescol)
 
 Édition « publique » (comptes de demo.py recréés à la main, connexion directeur / demo1234) : page, préremplissage 2026-2027, CRUD,
 recharger, réinitialiser, année suivante, Excel, import, PDF, calculs, onglet du synoptique (?retour=synoptique),
@@ -17,10 +17,10 @@ from datetime import date
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-EDITION = os.environ.get("SCOLARIS_EDITION_TEST", "publique")
-DOSSIER = tempfile.mkdtemp(prefix=f"scolaris_calo_{EDITION}_")
-os.environ["SCOLARIS_EDITION"] = EDITION
-os.environ["SCOLARIS_DATA"] = DOSSIER
+EDITION = os.environ.get("GESCOL_EDITION_TEST", "publique")
+DOSSIER = tempfile.mkdtemp(prefix=f"gescol_calo_{EDITION}_")
+os.environ["GESCOL_EDITION"] = EDITION
+os.environ["GESCOL_DATA"] = DOSSIER
 
 from app import app  # noqa: E402
 import config  # noqa: E402
@@ -432,9 +432,9 @@ class TestEditionCS(unittest.TestCase):
     def test_cs(self):
         if config.juridiction():
             raise unittest.SkipTest("déjà en édition de juridiction")
-        env = dict(os.environ, SCOLARIS_EDITION_TEST="cs")
-        env.pop("SCOLARIS_EDITION", None)
-        env.pop("SCOLARIS_DATA", None)
+        env = dict(os.environ, GESCOL_EDITION_TEST="cs")
+        env.pop("GESCOL_EDITION", None)
+        env.pop("GESCOL_DATA", None)
         r = subprocess.run([sys.executable, "-m", "unittest", "tests.test_calendrier_officiel.TestCalendrierCS"], cwd=RACINE,
                            env=env, capture_output=True, text=True, timeout=900)
         self.assertEqual(r.returncode, 0, r.stderr[-3000:])

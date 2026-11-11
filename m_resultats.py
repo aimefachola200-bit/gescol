@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Exploitation des évaluations (SCOLARIS v1.3) :
+"""Exploitation des évaluations (GESCOL v1.3) :
 * Statistiques d'une évaluation (par sexe, tranches, matières, graphiques SVG, PDF, Excel) ;
 * Analyse et rapport (texte rédigé automatiquement à partir des statistiques, modifiable, PDF signé) ;
 * Tableau d'honneur (par évaluation ou bilan annuel) et certificats individuels d'honneur ;

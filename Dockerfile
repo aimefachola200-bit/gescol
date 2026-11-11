@@ -1,6 +1,6 @@
-# Image SCOLARIS (tout hébergeur acceptant Docker, ou VPS : docker compose up -d)
+# Image GESCOL (tout hébergeur acceptant Docker, ou VPS : docker compose up -d)
 FROM python:3.12-slim
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 SCOLARIS_DATA=/data SCOLARIS_EN_LIGNE=1 PORT=8000
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 GESCOL_DATA=/data GESCOL_EN_LIGNE=1 PORT=8000
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

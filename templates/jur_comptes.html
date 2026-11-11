@@ -3,7 +3,7 @@
 <style>.deux-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:18px}</style>
 <div class="entete">
   <div><h1>Comptes des directeurs et enseignants</h1>
-    <p class="sous">Comptes SCOLARIS des directeurs et des enseignants des écoles de la {{ 'DDEMP' if DDEMP else 'circonscription' }} : chaque compte est
+    <p class="sous">Comptes GESCOL des directeurs et des enseignants des écoles de la {{ 'DDEMP' if DDEMP else 'circonscription' }} : chaque compte est
       rattaché à son école (ouverte d'office à la connexion) ; un enseignant est affecté à ses classes. {{ nb_dir }} directeur(s), {{ nb_ens }} enseignant(s).</p></div>
   <div class="actions">
     <a class="btn sec" href="{{ url_for('jur_comptes_xlsx', ecole=f.ecole, role=f.role, q=f.q) }}">Excel</a>

@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% block titre %}Mise en ligne et sauvegardes{% endblock %}
 {% block contenu %}
 <h1>Mise en ligne et sauvegardes</h1>
-<p class="sous">SCOLARIS peut fonctionner sur le PC de l'école (Wi-Fi de l'école) ou chez un hébergeur Internet : il est alors accessible partout (maison, téléphone, autre école), sans dépendre du Wi-Fi de l'école.</p>
+<p class="sous">GESCOL peut fonctionner sur le PC de l'école (Wi-Fi de l'école) ou chez un hébergeur Internet : il est alors accessible partout (maison, téléphone, autre école), sans dépendre du Wi-Fi de l'école.</p>
 
 <div class="grille indicateurs">
   <div class="kpi"><div class="l">Fonctionnement actuel</div><div class="v" style="font-size:18px">{{ hebergeur }}</div>
@@ -16,9 +16,9 @@
 
 {% if not en_ligne %}
 <div class="carte">
-  <h2 style="margin-top:0">Mettre SCOLARIS en ligne</h2>
+  <h2 style="margin-top:0">Mettre GESCOL en ligne</h2>
   <ol>
-    <li>Choisissez un hébergeur : <b>PythonAnywhere</b> (gratuit pour commencer, le plus simple), <b>Render</b> (déploiement automatique depuis GitHub) ou un <b>serveur VPS</b> (le plus puissant, votre nom de domaine). Le guide <b>EN_LIGNE.md</b> fourni avec SCOLARIS détaille chaque étape.</li>
+    <li>Choisissez un hébergeur : <b>PythonAnywhere</b> (gratuit pour commencer, le plus simple), <b>Render</b> (déploiement automatique depuis GitHub) ou un <b>serveur VPS</b> (le plus puissant, votre nom de domaine). Le guide <b>EN_LIGNE.md</b> fourni avec GESCOL détaille chaque étape.</li>
     <li>Ici, cliquez sur <b>Créer une sauvegarde maintenant</b> puis téléchargez-la.</li>
     <li>Sur la version en ligne : connectez-vous, ouvrez cette même page et utilisez <b>Restaurer une sauvegarde</b> : élèves, notes, paiements, photos et réglages sont repris.</li>
     <li>Sur les tablettes, téléphones et dans l'application Android, remplacez l'adresse du PC par l'adresse en ligne (https://…).</li>
@@ -26,7 +26,7 @@
   <p class="aide">Le PC de l'école peut rester en <b>secours</b> (sans Internet), mais ses données sont séparées de la version en ligne : pour le remettre à jour, restaurez-y une sauvegarde téléchargée depuis la version en ligne.</p>
 </div>
 {% else %}
-<div class="flash info">SCOLARIS est en ligne : il fonctionne partout où il y a Internet. Téléchargez régulièrement une sauvegarde et gardez-en une copie (clé USB, PC de l'école en secours).</div>
+<div class="flash info">GESCOL est en ligne : il fonctionne partout où il y a Internet. Téléchargez régulièrement une sauvegarde et gardez-en une copie (clé USB, PC de l'école en secours).</div>
 {% endif %}
 
 <div class="grille2">
@@ -63,7 +63,7 @@
     <div class="actions" style="margin-top:8px"><button class="btn sec">{{ icone('verifier') }} Vérifier sans restaurer</button></div>
   </form>
   <h2>Restaurer une sauvegarde</h2>
-  <p>Remplace <b>toutes</b> les données de cette installation par celles d'une sauvegarde SCOLARIS (.zip). La sauvegarde est d'abord vérifiée (empreintes, contrôle de la base) ; l'état actuel est sauvegardé automatiquement (« avant_restauration »).</p>
+  <p>Remplace <b>toutes</b> les données de cette installation par celles d'une sauvegarde GESCOL (.zip). La sauvegarde est d'abord vérifiée (empreintes, contrôle de la base) ; l'état actuel est sauvegardé automatiquement (« avant_restauration »).</p>
   <form method="post" action="{{ url_for('restaurer') }}" enctype="multipart/form-data" class="f">
     <label for="fichier">Fichier de sauvegarde (.zip)</label>
     <input id="fichier" type="file" name="fichier" accept=".zip" required>

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Divisions, rubriques, modules et lignes d'action des applications « SCOLARIS Circonscription » (CS) et « SCOLARIS DDEMP »
+"""Divisions, rubriques, modules et lignes d'action des applications « GESCOL Circonscription » (CS) et « GESCOL DDEMP »
 (v1.6).
 
 Demande du client : « les divisions apparaissent chacune avec leurs modules et attributions » et « chaque division au
@@ -18,15 +18,15 @@ Décisions
     division (utilisateurs.service_code, sinon jur_agents.user_id) n'accède qu'aux modules de MODULES_PAR_DIVISION
     de sa division (et à leurs sous-pages) ; la fiche /juridiction/divisions/<code> montre les comptes rattachés et
     leur périmètre (H.perimetre_division).
-  * DDEMP : le texte de l'AOF n'a pas pu être obtenu ; les attributions des services ont été rédigées par SCOLARIS et
-    sont marquées « Rédigé par SCOLARIS, à conformer à l'AOF ». Le bouton « Saisir le texte de l'AOF » (numéro d'article +
+  * DDEMP : le texte de l'AOF n'a pas pu être obtenu ; les attributions des services ont été rédigées par GESCOL et
+    sont marquées « Rédigé par GESCOL, à conformer à l'AOF ». Le bouton « Saisir le texte de l'AOF » (numéro d'article +
     attributions collées) remplace le texte rédigé et change la source en « AOF – article N ».
   * Rubrique d'une division = sigle, nom, article de l'AOF, autorité de rattachement (parent_code), chef (agent
     responsable + titre du signataire), attributions, source. Colonnes ajoutées à jur_services (H.ajouter_colonne, sans
     modifier m_juridiction) : article_aof TEXT, source_aof TEXT, initialisées depuis jur_services.reference
-    (« Article N » → AOF) ou la note (REDIGE → SCOLARIS).
+    (« Article N » → AOF) ou la note (REDIGE → GESCOL).
   * Lignes d'action (table jur_lignes_action) : une ligne d'action = une attribution de l'AOF (une puce « - … ; » ou
-    « • … ; » du texte), avec indicateur, cible, échéance, responsable, modules SCOLARIS liés (JSON d'endpoints), état
+    « • … ; » du texte), avec indicateur, cible, échéance, responsable, modules GESCOL liés (JSON d'endpoints), état
     (prévue | en cours | réalisée | reportée), taux (0-100), observations. Au premier affichage d'une division pour une
     année, les lignes sont générées depuis les puces des attributions (table jur_lignes_action_gen = mémoire de cette
     génération, pour ne pas recréer ce que l'utilisateur a supprimé). « Régénérer depuis l'AOF » AJOUTE les attributions
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS jur_lignes_action (
     ordre INTEGER DEFAULT 0,
     libelle TEXT NOT NULL,                -- une attribution de l'AOF (verbe d'action)
     indicateur TEXT, cible TEXT, echeance TEXT, responsable TEXT,
-    modules TEXT,                         -- JSON : liste d'endpoints SCOLARIS liés
+    modules TEXT,                         -- JSON : liste d'endpoints GESCOL liés
     etat TEXT DEFAULT 'prévue',           -- prévue | en cours | réalisée | reportée
     taux INTEGER DEFAULT 0,               -- 0-100
     observations TEXT, maj TEXT);
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS jur_lignes_action_gen (
 """
 
 ETATS = ["prévue", "en cours", "réalisée", "reportée"]
-ENT_LIGNES = ["Division", "Ordre", "Ligne d'action", "Indicateur", "Cible", "Échéance", "Responsable", "Modules SCOLARIS",
+ENT_LIGNES = ["Division", "Ordre", "Ligne d'action", "Indicateur", "Cible", "Échéance", "Responsable", "Modules GESCOL",
               "État", "Taux (%)", "Observations"]
 
 # ------------------------------------------------------------------------------------------ modules par division
@@ -255,7 +255,7 @@ def source_division(d):
     n = numero_article(d.get("article_aof") or d.get("reference"))
     if n:
         return S.SOURCE_AOF.format(n=n), True
-    return S.SOURCE_SCOLARIS, False
+    return S.SOURCE_GESCOL, False
 
 
 def lignes_depuis_attributions(texte):
@@ -325,7 +325,7 @@ def pdf_divisions(divs, s, annee=None):
     buf = io.BytesIO()
     c = GCanvas(buf, pagesize=A4)
     c.setTitle("Divisions, modules et attributions")
-    c.setAuthor("SCOLARIS")
+    c.setAuthor("GESCOL")
     st_t = ParagraphStyle("t", fontName="Times-Bold", fontSize=15, leading=19, alignment=1, spaceAfter=4)
     st_s = ParagraphStyle("s", fontName="Times-Italic", fontSize=9.5, leading=12, alignment=1, spaceAfter=10)
     st_h = ParagraphStyle("h", fontName="Times-Bold", fontSize=11.5, leading=14, spaceBefore=10, spaceAfter=3,
@@ -416,7 +416,7 @@ def enregistrer(app, H):
             if num:
                 ex("UPDATE jur_services SET article_aof=?, source_aof=? WHERE id=?", (num, S.SOURCE_AOF.format(n=num), r["id"]))
             else:
-                ex("UPDATE jur_services SET source_aof=? WHERE id=?", (S.SOURCE_SCOLARIS, r["id"]))
+                ex("UPDATE jur_services SET source_aof=? WHERE id=?", (S.SOURCE_GESCOL, r["id"]))
 
     def agents_par_service():
         out = {}
@@ -768,7 +768,7 @@ def enregistrer(app, H):
 
     def pdf_plan(divs, annee, titre, sous_titre, code=None, ensemble=False):
         P = H.pdfs
-        ent = ["N°", "Ligne d'action", "Indicateur", "Cible", "Échéance", "Responsable", "Modules SCOLARIS", "État", "Taux", "Observations"]
+        ent = ["N°", "Ligne d'action", "Indicateur", "Cible", "Échéance", "Responsable", "Modules GESCOL", "État", "Taux", "Observations"]
         rows, surlignes = [], {}
         for d in divs:
             if ensemble:
@@ -916,7 +916,7 @@ def enregistrer(app, H):
                     "", LIBELLES_MODULES.get("archives", ""), "prévue", 0, ""]]
             return H.xlsx.reponse_xlsx(f"modele_plan_action_{code}.xlsx", ENT_LIGNES, ex_, "Lignes d'action",
                                        ["Modèle d'import des lignes d'action : une ligne par attribution. État : prévue, en cours, "
-                                        "réalisée ou reportée ; taux de 0 à 100 ; modules : libellés SCOLARIS séparés par « ; »."])
+                                        "réalisée ou reportée ; taux de 0 à 100 ; modules : libellés GESCOL séparés par « ; »."])
         if request.method == "POST":
             fic = request.files.get("fichier")
             if not fic or not fic.filename.lower().endswith((".xlsx", ".csv")):

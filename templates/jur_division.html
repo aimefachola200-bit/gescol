@@ -5,7 +5,7 @@
 .deux-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:18px}
 .rub{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px;margin:0}
 .rub dt{color:#667085;font-weight:600}.rub dd{margin:0}
-.src.aof{color:#067647;font-weight:600}.src.scolaris{color:#B54708;font-weight:600}
+.src.aof{color:#067647;font-weight:600}.src.gescol{color:#B54708;font-weight:600}
 .taux{display:inline-block;min-width:52px;text-align:center;border-radius:12px;padding:1px 8px;font-weight:600;font-size:12.5px}
 .taux.ok{background:#ECFDF3;color:#067647}.taux.moy{background:#FFFAEB;color:#B54708}.taux.ko{background:#FEF3F2;color:#B42318}.taux.na{background:#F2F4F7;color:#667085}
 table.t.la td{vertical-align:top}table.t.la input,table.t.la select{font-size:12.5px;padding:3px 5px;width:100%;box-sizing:border-box}
@@ -40,7 +40,7 @@ details.aof summary{cursor:pointer;font-weight:600;color:var(--bleu)}
     <dt>Article de l'AOF</dt><dd>{% if d.article %}Article {{ d.article }}{% else %}<span class="gris">non renseigné</span>{% endif %}{% if d.hors_aof %} <span class="badge att">hors AOF</span> <span class="aide">(les articles 10 à 13 ne prévoient pas ce service ; conservé à la demande de la structure)</span>{% endif %}</dd>
     <dt>Autorité de rattachement</dt><dd>{% if d.parent_nom %}{{ d.parent_nom }}{% elif d.racine %}<span class="aide">Autorité de la structure</span>{% else %}<span class="gris">—</span>{% endif %}</dd>
     <dt>Chef</dt><dd><b>{{ d.chef_nom or 'non désigné' }}</b>{% if d.chef_titre %} — {{ d.chef_titre }}{% endif %}</dd>
-    <dt>Source</dt><dd><span class="src {{ 'aof' if d.officiel else 'scolaris' }}">{{ d.source }}</span></dd>
+    <dt>Source</dt><dd><span class="src {{ 'aof' if d.officiel else 'gescol' }}">{{ d.source }}</span></dd>
     <dt>Lignes d'action {{ annee }}</dt><dd>{{ sy.realisees }} réalisée(s) / {{ sy.total }} {{ badge_taux(sy.taux) }}</dd>
   </dl>
   {% if d.note %}<p class="aide" style="margin-top:10px"><i>{{ d.note }}</i></p>{% endif %}
@@ -56,7 +56,7 @@ details.aof summary{cursor:pointer;font-weight:600;color:var(--bleu)}
   </form>
   <details class="aof" {{ 'open' if not d.officiel }}>
     <summary>{{ 'Saisir le texte de l\'AOF' if not d.officiel else 'Remplacer par un autre texte de l\'AOF' }}</summary>
-    <p class="aide">Collez le texte officiel de l'arrêté (AOF) : il remplace le texte {{ 'rédigé par SCOLARIS' if not d.officiel else 'actuel' }} et la source devient « AOF – article N ».</p>
+    <p class="aide">Collez le texte officiel de l'arrêté (AOF) : il remplace le texte {{ 'rédigé par GESCOL' if not d.officiel else 'actuel' }} et la source devient « AOF – article N ».</p>
     <form method="post" action="{{ url_for('jur_division_aof', code=d.code) }}">
       <input type="hidden" name="annee" value="{{ annee }}">
       <div class="grille-id"><div><label for="article">Numéro de l'article de l'AOF *</label><input id="article" name="article" required placeholder="ex. 12" value="{{ d.article or '' }}" style="max-width:140px"></div></div>
@@ -70,7 +70,7 @@ details.aof summary{cursor:pointer;font-weight:600;color:var(--bleu)}
 
 <section class="carte" id="lignes" style="margin-top:16px">
   <div class="entete" style="margin-bottom:8px"><div><h2 style="margin:0">Lignes d'action {{ annee }}</h2>
-    <p class="aide" style="margin:2px 0 0">Une ligne d'action par attribution de l'AOF, avec indicateur, cible, échéance, responsable, modules SCOLARIS et état d'avancement. Taux de la division : moyenne des lignes (une ligne réalisée = 100 %).</p></div>
+    <p class="aide" style="margin:2px 0 0">Une ligne d'action par attribution de l'AOF, avec indicateur, cible, échéance, responsable, modules GESCOL et état d'avancement. Taux de la division : moyenne des lignes (une ligne réalisée = 100 %).</p></div>
     {% if modifiable %}<div class="actions">
       <a class="btn petit" href="{{ url_for('jur_division_ligne_form', code=d.code, annee=annee) }}">+ Ajouter une ligne</a>
       <form method="post" action="{{ url_for('jur_division_lignes_generer', code=d.code) }}" style="display:inline"><input type="hidden" name="annee" value="{{ annee }}">
@@ -80,7 +80,7 @@ details.aof summary{cursor:pointer;font-weight:600;color:var(--bleu)}
   {% if d.lignes %}
   {% if modifiable %}{% for l in d.lignes %}<form method="post" id="f{{ l.id }}" action="{{ url_for('jur_division_ligne_rapide', lid=l.id) }}"></form>{% endfor %}{% endif %}
   <div class="tw"><table class="t compact la">
-    <tr><th>N°</th><th>Ligne d'action</th><th>Indicateur / cible</th><th>Échéance</th><th>Responsable</th><th>Modules SCOLARIS</th><th>État</th><th>Taux</th><th>Observations</th>{% if modifiable %}<th></th>{% endif %}</tr>
+    <tr><th>N°</th><th>Ligne d'action</th><th>Indicateur / cible</th><th>Échéance</th><th>Responsable</th><th>Modules GESCOL</th><th>État</th><th>Taux</th><th>Observations</th>{% if modifiable %}<th></th>{% endif %}</tr>
     {% for l in d.lignes %}
     <tr class="etat-{{ l.etat|replace('é','e')|replace(' ','-') }}">
       <td class="ord">{% if modifiable %}<input form="f{{ l.id }}" name="ordre" type="number" min="0" value="{{ l.ordre }}">{% else %}{{ l.ordre }}{% endif %}</td>
@@ -106,7 +106,7 @@ details.aof summary{cursor:pointer;font-weight:600;color:var(--bleu)}
 
 <div class="deux-col" style="margin-top:16px">
   <section class="carte"><h2>Modules de l'application</h2>
-    <p class="aide">Fonctionnalités installées qui concernent cette division. Les modules des autres applications SCOLARIS (fiches, rapports, cantine, stock…) sont présentés tels que construits.</p>
+    <p class="aide">Fonctionnalités installées qui concernent cette division. Les modules des autres applications GESCOL (fiches, rapports, cantine, stock…) sont présentés tels que construits.</p>
     {% if d.modules %}<div class="tw"><table class="t compact">
       <tr><th>Module</th><th>Accès</th></tr>
       {% for m in d.modules %}<tr><td><a href="{{ m.url }}">{{ m.libelle }}</a></td><td>{% if m.acces %}<span class="badge ok">{{ 'saisie' if m.droit else 'ouvert' }}</span>{% else %}<span class="badge">consultation</span>{% endif %}</td></tr>{% endfor %}

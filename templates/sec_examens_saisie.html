@@ -1,9 +1,0 @@
-{# v2.4.7 — résultats BEPC / BAC de l'établissement (transmis à l'Inspection) #}
-{% extends "base.html" %}{% block titre %}Résultats aux examens{% endblock %}
-{% block contenu %}
-<h1>Résultats aux examens</h1>
-<p class="sous">BEPC et baccalauréat · année {{ annee }} · ces chiffres partent avec la transmission à l'Inspection.</p>
-<form method="post" class="carte" style="max-width:820px"><div class="tw"><table class="t"><tr><th>Examen</th><th>Inscrits G</th><th>Inscrits F</th><th>Présents G</th><th>Présents F</th><th>Admis G</th><th>Admis F</th></tr>
-  {% for x in EXAMENS %}<tr><td><b>{{ x }}</b></td>{% for k in CHAMPS %}<td><input type="number" min="0" style="width:84px" name="{{ x }}_{{ k }}" value="{{ cur[x][k] if cur.get(x) else '' }}"></td>{% endfor %}</tr>{% endfor %}</table></div>
-  <p><button class="btn">Enregistrer</button></p></form>
-{% endblock %}

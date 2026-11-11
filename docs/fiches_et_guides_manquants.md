@@ -1,6 +1,6 @@
-# Fiches et guides manquants — corpus PédaFiche dans SCOLARIS / GESCOL Enseignant
+# Fiches et guides manquants — corpus PédaFiche dans GESCOL / GESCOL Enseignant
 
-Source : PédaFiche Pro (CI à CM2, APC) et PédaFiche Pro — Tout en un. SA prévues : planification annuelle officielle intégrée à SCOLARIS (synoptique). Pour le Français et les Mathématiques, les SA sont numérotées dans chaque unité / dossier : seule la présence de fiches est comptée.
+Source : PédaFiche Pro (CI à CM2, APC) et PédaFiche Pro — Tout en un. SA prévues : planification annuelle officielle intégrée à GESCOL (synoptique). Pour le Français et les Mathématiques, les SA sont numérotées dans chaque unité / dossier : seule la présence de fiches est comptée.
 
 ## Avant conception
 

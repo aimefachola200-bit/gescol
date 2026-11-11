@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>{% block titre %}SCOLARIS{% endblock %} – {{ ECOLE.sigle }}</title>
+<title>{% block titre %}GESCOL{% endblock %} – {{ ECOLE.sigle }}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ VERSION }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='sombre.css') }}?v={{ VERSION }}">
 <script src="{{ url_for('static', filename='theme.js') }}?v={{ VERSION }}"></script>
 <script src="{{ url_for('static', filename='cachets.js') }}?v={{ VERSION }}" defer></script>
-<script src="{{ url_for('static', filename='scolaris.js') }}?v={{ VERSION }}" defer></script>
+<script src="{{ url_for('static', filename='gescol.js') }}?v={{ VERSION }}" defer></script>
 <script src="{{ url_for('static', filename='choix.js') }}?v={{ VERSION }}" defer></script>
 {% if g.user %}<script src="{{ url_for('referentiel_js') }}" defer></script>{% endif %}
 <link rel="manifest" href="{{ url_for('ens_manifeste') if PORTAIL_ENSEIGNANT is defined and PORTAIL_ENSEIGNANT() else url_for('manifeste') }}">
@@ -17,7 +17,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="{{ NOM_APPLI }}">
 <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192.png') }}">
-<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/scolaris-icone.svg') }}">
 <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
 </head>
 <body>
@@ -27,7 +26,7 @@
 {% macro groupe(cle, titre, actif, ico) %}<details class="groupe-l {{ 'actif' if actif }}" data-g="{{ cle }}" {{ 'open' if actif }}><summary><span class="ico" aria-hidden="true">{{ icone(ico) }}</span>{{ titre }}</summary><div class="sous">{{ caller() }}</div></details>{% endmacro %}
 <div class="app">
 <aside id="lateral" class="lateral" aria-label="Menu principal">
-  <a class="marque" href="{{ url_for('accueil') }}"><img class="logo-img" src="{{ url_for('static', filename='icons/scolaris-icone.svg') }}" alt="" width="34" height="34"><span>{{ NOM_APPLI }}<small title="{{ ECOLE.devise or '' }}">{{ ECOLE.sigle or ECOLE.nom }}</small></span>{% if ECOLE.id %}<img class="logo-ecole-entete" src="{{ url_for('ecole_logo', eid=ECOLE.id) }}" alt="" width="30" height="30" onerror="this.remove()" style="margin-left:6px;border-radius:50%;object-fit:contain">{% endif %}</a>
+  <a class="marque" href="{{ url_for('accueil') }}"><span class="logo-g">G</span><span>{{ NOM_APPLI }}<small title="{{ ECOLE.devise or '' }}">{{ ECOLE.sigle or ECOLE.nom }}</small></span>{% if ECOLE.id %}<img class="logo-ecole-entete" src="{{ url_for('ecole_logo', eid=ECOLE.id) }}" alt="" width="30" height="30" onerror="this.remove()" style="margin-left:6px;border-radius:50%;object-fit:contain">{% endif %}</a>
   {% if JURIDICTION and not ECOLE_COURANTE %}
   {# CS / DDEMP : aucune école ouverte tant que l'utilisateur n'en a pas choisi une (a_integration) #}
   <div class="choix-ecole"><span class="aide">École ouverte</span><br><b style="font-size:13px">Aucune école ouverte</b>
@@ -40,8 +39,7 @@
     {% if JURIDICTION and ep_existe('jur_ecole_fermer') %}<button type="submit" class="btn sec petit" style="margin-top:4px;font-size:11px;padding:1px 7px" formaction="{{ url_for('jur_ecole_fermer') }}" onclick="this.form.onsubmit=null">Fermer l'école</button>{% endif %}
   </form>{% endif %}
   <nav id="menu">
-    <button type="button" class="btn-theme" data-theme-btn>◐ Auto</button>
-    {% if MENU_ENSEIGNANT is defined and MENU_ENSEIGNANT() %}{% include "_menu_enseignant.html" %}{# v1.14 : SCOLARIS Enseignant #}
+    {% if MENU_ENSEIGNANT is defined and MENU_ENSEIGNANT() %}{% include "_menu_enseignant.html" %}{# v1.14 : GESCOL Enseignant #}
     {% elif JURIDICTION %}{% include "_menu_juridiction.html" %}{% else %}
     {% set ENS = g.user.role == 'enseignant' %}{# périmètre de l'enseignant : ses classes, hors domaine du directeur (m_perimetre_enseignant) #}
     {% if peut('synoptique') and ep_existe('synoptique_accueil') %}{{ lien('synoptique_accueil', "Tableau synoptique de l'école", ep.startswith('synoptique'), 'ecole') }}{% endif %}
@@ -114,7 +112,7 @@
       <a href="{{ url_for('reg_page', gcle='sante', rcle='cantine') }}">Cantine : journal des repas</a>
       <a href="{{ url_for('reg_page', gcle='sante', rcle='stocks') }}">Cantine : stocks</a>
       <a href="{{ url_for('reg_page', gcle='sante', rcle='besoins') }}">Élèves à besoins spécifiques</a>
-      <a href="{{ url_for('reg_page', gcle='sante', rcle='filles') }}">Scolarisation des filles</a>
+      <a href="{{ url_for('reg_page', gcle='sante', rcle='filles') }}">Gescolation des filles</a>
       {{ lien('sante_scolaire_absences', 'Absences et décrochage', ep=='sante_scolaire_absences') }}
     {% endcall %}{% endif %}
     {% if peut('secondaire') and ep_existe('sec_synoptique') and a_secondaire() %}{# v2.4 : établissement secondaire (visible si l'école a des classes de 6ème à Tle) #}
@@ -235,7 +233,6 @@
     {% if peut('donnees') %}
     {% call groupe('don', 'Données', ep.startswith('donnees') or ep.startswith('educmaster') or ep.startswith('conversion') or ep.startswith('transmission'), 'transmission') %}
       {{ lien('transmission_accueil', 'Transmission à la circonscription', ep.startswith('transmission')) }}
-      {% if SECONDAIRE and ep_existe('sec_examens_saisie') %}{{ lien('sec_examens_saisie', 'Résultats aux examens (BEPC, BAC)', ep=='sec_examens_saisie') }}{% endif %}
       {% if peut('synchronisation') %}{{ lien('sync_page', 'Synchronisation avec la circonscription', ep.startswith('sync_')) }}{% endif %}
       {{ lien('donnees_accueil', 'Import / export', ep.startswith('donnees')) }}
       {{ lien('educmaster_accueil', 'EducMaster (maternelle, primaire, secondaire)', ep.startswith('educmaster')) }}
@@ -263,7 +260,7 @@
 {{ lien('guide_utilisation', "Guide d'utilisation", ep=='guide_utilisation', 'info') }}
     {% endif %}
   </nav>
-  <div class="lateral-pied aide">SCOLARIS {{ VERSION }}<br>Conception : {{ CONCEPTEUR }}</div>
+  <div class="lateral-pied aide">GESCOL {{ VERSION }}<br>Conception : {{ CONCEPTEUR }}</div>
 </aside>
 <div id="voile" class="voile" hidden></div>
 <div class="zone">
@@ -278,7 +275,7 @@
 </header>
 {% elif g.get('parent') %}
 <header class="top parent">
-  <a class="marque" href="{{ url_for('parent_accueil') }}">SCOLARIS · Espace parents</a>
+  <a class="marque" href="{{ url_for('parent_accueil') }}">GESCOL · Espace parents</a>
   <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu" onclick="var n=document.getElementById('menu');var o=n.classList.toggle('ouvert');this.setAttribute('aria-expanded',o)">{{ icone('menu') }} Menu</button>
   <nav id="menu">
     <button type="button" class="btn-theme" data-theme-btn>◐ Auto</button>
@@ -290,7 +287,7 @@
 </header>
 {% else %}
 <header class="top">
-  <a class="marque" href="{{ url_for('login') }}">SCOLARIS</a>
+  <a class="marque" href="{{ url_for('login') }}">GESCOL</a>
   <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu" onclick="var n=document.getElementById('menu');var o=n.classList.toggle('ouvert');this.setAttribute('aria-expanded',o)">{{ icone('menu') }} Menu</button>
   <nav id="menu">
     <button type="button" class="btn-theme" data-theme-btn>◐ Auto</button>
@@ -306,15 +303,15 @@
 {% if g.user %}
 <a id="file-attente" class="bandeau attente" href="#" hidden title="Saisies faites sans connexion : touchez pour les envoyer maintenant">{{ icone('sablier') }} <b class="fa-n">0</b> saisie(s) gardée(s) sur cet appareil, en attente d'envoi au serveur — toucher pour envoyer</a>
 {% if MAJ %}<div id="bandeau-maj" class="bandeau maj" hidden data-depot="{{ MAJ.depot }}" data-version="{{ VERSION }}" data-fichier="{{ MAJ.fichier }}">
-  <span>{{ icone('nouveau') }} Nouvelle version <b class="maj-v"></b> de SCOLARIS disponible (installée : {{ VERSION }}). Installez-la par-dessus l'ancienne : vos données sont conservées.</span>
+  <span>{{ icone('nouveau') }} Nouvelle version <b class="maj-v"></b> de GESCOL disponible (installée : {{ VERSION }}). Installez-la par-dessus l'ancienne : vos données sont conservées.</span>
   <a class="btn petit maj-lien" href="#" target="_blank" rel="noopener">Télécharger la mise à jour</a>
   <button class="btn sec petit maj-plus-tard" type="button">Plus tard</button>
 </div>{% endif %}
 {% endif %}
 <div id="bandeau-install" class="bandeau" hidden>
-  <span>Installez SCOLARIS sur cet appareil pour l'ouvrir comme une application.</span>
+  <span>Installez GESCOL sur cet appareil pour l'ouvrir comme une application.</span>
   <button class="btn petit" type="button" id="btn-install">Installer</button>
-  <button class="btn sec petit" type="button" onclick="document.getElementById('bandeau-install').hidden=true;try{localStorage.setItem('scolaris-install-ignore','1')}catch(e){}">Plus tard</button>
+  <button class="btn sec petit" type="button" onclick="document.getElementById('bandeau-install').hidden=true;try{localStorage.setItem('gescol-install-ignore','1')}catch(e){}">Plus tard</button>
 </div>
 <main {% if g.user %}class="travail"{% endif %}>
   {% if acces_bandeau is defined %}{% set _ab = acces_bandeau() %}{% if _ab is not none %}<div class="flash warning">{{ icone('verrou') }} Votre compte n'a pas encore son <b>code d'accès personnel</b> : {% if _ab > 0 %}encore {{ _ab }} jour(s) avant le blocage.{% else %}délai écoulé.{% endif %} <a href="{{ url_for('acces_page') }}"><b>Demander / saisir mon code</b></a>{% if acces_gestion() %} · <a href="{{ url_for('acces_comptes') }}">codes de tous les comptes</a>{% endif %}</div>{% endif %}{% endif %}
@@ -326,23 +323,23 @@
   {% if EXPORT_BARRE %}<div class="export-barre no-print" role="toolbar" aria-label="Télécharger ou imprimer cette page">
     <a class="btn petit" href="{{ EXPORT_BARRE.pdf }}" data-telechargement="pdf">{{ icone('document') }} Télécharger PDF</a>
     <a class="btn petit" href="{{ EXPORT_BARRE.word }}" data-telechargement="docx">{{ icone('texte') }} Télécharger Word</a>
-    <button type="button" class="btn sec petit" onclick="scolarisImprimer()">{{ icone('imprimer') }} Imprimer</button></div>{% endif %}
+    <button type="button" class="btn sec petit" onclick="gescolImprimer()">{{ icone('imprimer') }} Imprimer</button></div>{% endif %}
   {% block contenu %}{% endblock %}
-  <footer class="credit">SCOLARIS {{ VERSION }} · Conception : {{ CONCEPTEUR }}</footer>
+  <footer class="credit">GESCOL {{ VERSION }} · Conception : {{ CONCEPTEUR }}</footer>
 </main>
 {% if g.user %}</div></div>{% endif %}
 <script>
 /* v2.2 — impression et téléchargements, y compris dans les applications Android (navigateur intégré) */
 (function(){
-  var pont = window.ScolarisAutonome || window.ScolarisAndroid || null;
+  var pont = window.GescolAutonome || window.GescolAndroid || null;
   var natif = window.print ? window.print.bind(window) : null;
-  window.scolarisImprimer = function(){
-    if (pont && pont.imprimer) { try { pont.imprimer(document.title || 'SCOLARIS'); return; } catch (e) {} }
+  window.gescolImprimer = function(){
+    if (pont && pont.imprimer) { try { pont.imprimer(document.title || 'GESCOL'); return; } catch (e) {} }
     var b = document.querySelector('.export-barre [data-telechargement="pdf"]');
     if (pont && b) { location.href = b.href; return; }       // pas d'impression possible : le PDF à la place
     if (natif) natif();
   };
-  if (pont) { window.print = window.scolarisImprimer; }
+  if (pont) { window.print = window.gescolImprimer; }
   /* Fichier reçu par JavaScript (formulaire « POST », blob) : enregistré par l'application Android */
   function nomDe(r, defaut){
     var cd = r.headers.get('Content-Disposition') || '', m = /filename\*=UTF-8''([^;]+)/i.exec(cd);
@@ -356,7 +353,7 @@
       else { var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nom; document.body.appendChild(a); a.click(); a.remove(); } };
     lecteur.readAsDataURL(blob);
   }
-  window.scolarisGarderBlob = enregistrerBlob;
+  window.gescolGarderBlob = enregistrerBlob;
   var FICHIERS_POST = /(\.pdf|\/pdf|\.xlsx|\.docx|\.zip)(\?|$|\/)|\/cachets|\/transmissions\/envoi|\/docs-enseignant\/|\/educmaster\/notes|telecharger-maintenant/;
   if (pont && pont.enregistrerFichier) {
     /* le navigateur d'Android ne sait pas télécharger la réponse d'un formulaire envoyé (POST) : on l'envoie nous-mêmes */
@@ -367,7 +364,7 @@
       if (f.dataset.fichier !== '1' && !FICHIERS_POST.test(cible)) return;   // seulement les formulaires qui renvoient un fichier
       ev.preventDefault();
       var donnees = new FormData(f); if (ev.submitter && ev.submitter.name) donnees.append(ev.submitter.name, ev.submitter.value || '');
-      fetch(f.action || location.href, {method: 'POST', body: donnees, credentials: 'same-origin', headers: {'X-Scolaris-Fetch': '1'}}).then(function(r){
+      fetch(f.action || location.href, {method: 'POST', body: donnees, credentials: 'same-origin', headers: {'X-Gescol-Fetch': '1'}}).then(function(r){
         var cd = r.headers.get('Content-Disposition') || '', ct = (r.headers.get('Content-Type') || '').toLowerCase();
         if (/attachment/i.test(cd) || (ct && ct.indexOf('text/html') < 0 && ct.indexOf('json') < 0)) {
           return r.blob().then(function(b){ enregistrerBlob(b, nomDe(r, 'document')); });
@@ -413,10 +410,10 @@ function scolarisRetour(accueil){
   }
   var invite=null, b=document.getElementById('bandeau-install');
   window.addEventListener('beforeinstallprompt',function(e){
-    e.preventDefault(); invite=e; window.scolarisInvite=e;
-    var ignore=false; try{ignore=localStorage.getItem('scolaris-install-ignore')==='1'}catch(_){}
+    e.preventDefault(); invite=e; window.gescolInvite=e;
+    var ignore=false; try{ignore=localStorage.getItem('gescol-install-ignore')==='1'}catch(_){}
     if(!ignore) b.hidden=false;
-    document.dispatchEvent(new Event('scolaris-installable'));
+    document.dispatchEvent(new Event('gescol-installable'));
   });
   document.getElementById('btn-install').addEventListener('click',function(){
     if(!invite) return; invite.prompt(); invite.userChoice.finally(function(){invite=null;b.hidden=true;});

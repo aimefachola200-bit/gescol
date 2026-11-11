@@ -378,7 +378,7 @@ def enregistrer(app, H):
             pdfs._entete_primaire(c, W, Hh, marge, None, None)
             c.setFont(F["normal"], 7)
             c.setFillColor(colors.grey)
-            c.drawString(marge, 7 * mm, f"SCOLARIS · {config.ECOLE.get('nom', '')} · {config.ANNEE_ACTIVE}")
+            c.drawString(marge, 7 * mm, f"GESCOL · {config.ECOLE.get('nom', '')} · {config.ANNEE_ACTIVE}")
             c.drawRightString(W - marge, 7 * mm, f"Page {doc.page}")
 
         def deco_duo(c, doc):
@@ -399,7 +399,7 @@ def enregistrer(app, H):
             c.restoreState()
             c.setFont(F["normal"], 7)
             c.setFillColor(colors.grey)
-            c.drawRightString(WL - m2, 5 * mm, f"SCOLARIS · {config.ANNEE_ACTIVE} · page {doc.page} · 2 exemplaires")
+            c.drawRightString(WL - m2, 5 * mm, f"GESCOL · {config.ANNEE_ACTIVE} · page {doc.page} · 2 exemplaires")
 
         portrait = PageTemplate("portrait", [Frame(marge, 13 * mm, W - 2 * marge, port_h, id="p", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)],
                                 onPage=deco, pagesize=A4)
@@ -409,7 +409,7 @@ def enregistrer(app, H):
         modeles = [duo, portrait] if modes and modes[0] == "duo" else [portrait, duo]
         buf = io.BytesIO()
         doc = BaseDocTemplate(buf, pagesize=A4, leftMargin=marge, rightMargin=marge, topMargin=marge + 30 * mm, bottomMargin=13 * mm,
-                              title="Épreuves", author="SCOLARIS", pageTemplates=modeles)
+                              title="Épreuves", author="GESCOL", pageTemplates=modeles)
         doc.build(h, canvasmaker=pdfs.GCanvasPeda)
         return buf.getvalue()
 
@@ -879,7 +879,7 @@ def enregistrer(app, H):
              Spacer(1, 6), tb]
         buf = io.BytesIO()
         SimpleDocTemplate(buf, pagesize=(W, Hh), leftMargin=marge, rightMargin=marge, topMargin=marge, bottomMargin=marge, title=titre,
-                          author="SCOLARIS").build(h, canvasmaker=pdfs.GCanvasPeda)
+                          author="GESCOL").build(h, canvasmaker=pdfs.GCanvasPeda)
         return H.pdf_reponse(buf.getvalue(), nom(f"planification_{vue}_{cl['nom']}", "pdf"))
 
     # ------------------------------------------------------------------ classeurs de fiches
@@ -952,7 +952,7 @@ def enregistrer(app, H):
         tb.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#98A2B3")), ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E4ECF5")), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
         h.append(tb)
         buf = io.BytesIO()
-        SimpleDocTemplate(buf, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm, topMargin=15 * mm, bottomMargin=15 * mm, title="Classeur", author="SCOLARIS").build(h, canvasmaker=pdfs.GCanvasPeda)
+        SimpleDocTemplate(buf, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm, topMargin=15 * mm, bottomMargin=15 * mm, title="Classeur", author="GESCOL").build(h, canvasmaker=pdfs.GCanvasPeda)
         return buf.getvalue()
 
     @app.route("/preparation/classeur")

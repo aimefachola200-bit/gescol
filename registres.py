@@ -140,7 +140,7 @@ def code_document(type_doc, libelle, cle):
         return None
 
 
-def pdf_document(titre, histoire_corps, sigs, code, paysage=False, sous_titre=None, nom_auteur="SCOLARIS", bandeau=None):
+def pdf_document(titre, histoire_corps, sigs, code, paysage=False, sous_titre=None, nom_auteur="GESCOL", bandeau=None):
     """PDF avec en-tête officiel, corps (flowables), bloc de signatures (cachets) et QR de vérification."""
     import pdfs
     from m_uascep import bloc_signatures
@@ -169,7 +169,7 @@ def pdf_document(titre, histoire_corps, sigs, code, paysage=False, sous_titre=No
         from reportlab.lib import colors
         c.setFont("Helvetica", 6.5)
         c.setFillColor(colors.grey)
-        c.drawString(marge, 7 * mm, f"{_H.config.NOMS_APPLI.get(_H.config.EDITION, 'SCOLARIS') if hasattr(_H.config, 'NOMS_APPLI') else 'SCOLARIS'} · "
+        c.drawString(marge, 7 * mm, f"{_H.config.NOMS_APPLI.get(_H.config.EDITION, 'GESCOL') if hasattr(_H.config, 'NOMS_APPLI') else 'GESCOL'} · "
                                     f"{_H.config.ECOLE.get('nom', '')} · {annee_active()}")
         c.drawRightString(W - marge, 7 * mm, f"Page {doc.page} · imprimé le {date.today().strftime('%d/%m/%Y')}")
         if code:

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v1.32 — « Guide d'utilisation » (LISEZ-MOI) de SCOLARIS : rubriques par rôle (administrateur, directeur, enseignant,
+"""v1.32 — « Guide d'utilisation » (LISEZ-MOI) de GESCOL : rubriques par rôle (administrateur, directeur, enseignant,
 conseiller pédagogique, circonscription, DDEMP), premiers pas, chaque module en quelques étapes, sauvegarde, hors ligne,
 impression, codes QR, questions fréquentes. Même plan que le guide des applications web (outils/lots/guide-contenus.mjs).
 
@@ -65,7 +65,7 @@ SECTIONS = [
                 "Onglet « Vie du bureau » : activités, réunions (rapporteur), caisse et budget (trésorier), matériel, rapport de fin de saison.",
                 "« Sport scolaire » : licences, compétitions, feuilles de match, classements, palmarès, records et diplômes."]},
     {"id": "suivi", "titre": "Santé, cantine, communication, inspection, patrimoine", "roles": ["admin", "directeur", "cp", "cs", "ddemp"],
-     "etapes": ["Santé : visites médicales (aptitude sportive), infirmerie, élèves à besoins spécifiques, scolarisation des filles, décrochage.",
+     "etapes": ["Santé : visites médicales (aptitude sportive), infirmerie, élèves à besoins spécifiques, gescolation des filles, décrochage.",
                 "Cantine : journal des repas et stocks (alerte de rupture).",
                 "Communication : notes de service, circulaires et convocations avec accusé de lecture, échéances, messages aux parents, agenda.",
                 "Inspection et formation : visites de classe (grille APC), suivi des recommandations, plans de formation, animations pédagogiques.",
@@ -100,7 +100,7 @@ SECTIONS = [
     {"id": "impression", "titre": "Télécharger en PDF ou en Word, imprimer", "roles": ["tous"],
      "etapes": ["En haut de chaque page de pédagogie (fiches, résumés, épreuves, guides, programmes, révisions…) : « Télécharger PDF », « Télécharger Word » ou « Imprimer ».",
                 "Dans les listes de fiches et de résumés, chaque ligne a ses boutons PDF et Word ; cochez plusieurs lignes (ou gardez le filtre) puis « Un PDF (livret) », « Un document Word » ou « ZIP (un Word par fiche) ».",
-                "Sur téléphone ou tablette Android, le fichier va dans « Téléchargements / SCOLARIS » : touchez « Ouvrir » ou « Partager » (WhatsApp, e-mail…). « Imprimer » ouvre l'impression d'Android (imprimante ou « Enregistrer au format PDF »).",
+                "Sur téléphone ou tablette Android, le fichier va dans « Téléchargements / GESCOL » : touchez « Ouvrir » ou « Partager » (WhatsApp, e-mail…). « Imprimer » ouvre l'impression d'Android (imprimante ou « Enregistrer au format PDF »).",
                 "Une fiche de préparation tient sur une feuille recto verso : page 1, en-tête et éléments de planification ; page 2, déroulement et évaluation.",
                 "Une épreuve courte s'imprime deux fois par feuille A4 avec une ligne de coupe."]},
     {"id": "verification", "titre": "Code QR et vérification des documents", "roles": ["tous"],
@@ -144,7 +144,7 @@ SECTIONS = [
                 "Une fiche partagée par un collègue se lit et se copie dans ses propres fiches (« Copier dans mes fiches »).",
                 "Le directeur ou le CP peut « Proposer à la CS / DDEMP » une version : elle part avec la synchronisation."]},
     {"id": "hors-ligne", "titre": "Hors ligne, téléphone et tablette", "roles": ["tous"],
-     "etapes": ["Les applications Android autonomes (SCOLARIS, Public, Enseignant…) fonctionnent sans internet ni ordinateur : installez-les avec le code QR de la fiche d'installation.",
+     "etapes": ["Les applications Android autonomes (GESCOL, Public, Enseignant…) fonctionnent sans internet ni ordinateur : installez-les avec le code QR de la fiche d'installation.",
                 "Sur ordinateur, l'application Windows sert aussi les téléphones du même réseau Wi-Fi (adresse affichée au démarrage).",
                 "Sur téléphone, les listes de choix s'ouvrent en plein écran avec une recherche."]},
 ]
@@ -171,7 +171,7 @@ def texte(t, appli):
     return t.replace("{appli}", appli)
 
 
-def markdown(appli="SCOLARIS", version=""):
+def markdown(appli="GESCOL", version=""):
     out = [f"# {appli} — Guide d'utilisation (LISEZ-MOI)", "",
            f"Version {version}. " if version else "",
            "Ce guide explique, en quelques étapes simples, comment utiliser chaque partie de l'application. "
@@ -193,7 +193,7 @@ def markdown(appli="SCOLARIS", version=""):
     return "\n".join(x for x in out if x is not None)
 
 
-def pdf(appli="SCOLARIS", version="", role=None):
+def pdf(appli="GESCOL", version="", role=None):
     """PDF « LISEZ-MOI » (Times New Roman 14 pt, titres en couleur)."""
     import pdfs
     from reportlab.lib import colors
@@ -234,7 +234,7 @@ def pdf(appli="SCOLARIS", version="", role=None):
         c.drawRightString(A4[0] - 18 * mm, 8 * mm, f"Page {doc.page}")
         c.restoreState()
     SimpleDocTemplate(buf, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm, bottomMargin=16 * mm,
-                      title=f"{appli} — Guide d'utilisation", author="SCOLARIS").build(h, onFirstPage=pied, onLaterPages=pied,
+                      title=f"{appli} — Guide d'utilisation", author="GESCOL").build(h, onFirstPage=pied, onLaterPages=pied,
                                                                                        canvasmaker=pdfs.GCanvasPeda)
     return buf.getvalue()
 
@@ -253,7 +253,7 @@ def enregistrer(app, H):
     @H.connexion_requise()
     def guide_pdf():
         import config
-        return H.pdf_reponse(pdf(config.NOMS_APPLI.get(config.EDITION, "SCOLARIS") if hasattr(config, "NOMS_APPLI") else "SCOLARIS",
+        return H.pdf_reponse(pdf(config.NOMS_APPLI.get(config.EDITION, "GESCOL") if hasattr(config, "NOMS_APPLI") else "GESCOL",
                                  config.VERSION, request.args.get("role")), "LISEZ-MOI.pdf")
 
 
@@ -261,5 +261,5 @@ if __name__ == "__main__":
     import config
     ici = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(ici, "LISEZMOI.md"), "w", encoding="utf-8") as f:
-        f.write(markdown(config.NOMS_APPLI.get("privee", "SCOLARIS") if hasattr(config, "NOMS_APPLI") else "SCOLARIS", config.VERSION))
+        f.write(markdown(config.NOMS_APPLI.get("privee", "GESCOL") if hasattr(config, "NOMS_APPLI") else "GESCOL", config.VERSION))
     print("LISEZMOI.md écrit")

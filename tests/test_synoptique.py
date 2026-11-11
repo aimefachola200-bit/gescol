@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Tests du tableau synoptique de l'école (m_synoptique) et des règles de retraite / ancienneté (m_carriere).
-Lancer : python3 -m unittest tests.test_synoptique   (depuis /home/claude/scolaris)
+Lancer : python3 -m unittest tests.test_synoptique   (depuis /home/claude/gescol)
 
-L'édition testée est choisie par SCOLARIS_EDITION_TEST (publique par défaut) ; la suite est exécutée pour
+L'édition testée est choisie par GESCOL_EDITION_TEST (publique par défaut) ; la suite est exécutée pour
 l'édition « publique » et, dans un second processus, pour l'édition « privee » (voir TestEditionPrivee)."""
 import html as html_mod
 import io
@@ -15,10 +15,10 @@ from datetime import date
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-EDITION = os.environ.get("SCOLARIS_EDITION_TEST", "publique")
-DOSSIER = tempfile.mkdtemp(prefix=f"scolaris_syno_{EDITION}_")
-os.environ["SCOLARIS_EDITION"] = EDITION
-os.environ["SCOLARIS_DATA"] = DOSSIER
+EDITION = os.environ.get("GESCOL_EDITION_TEST", "publique")
+DOSSIER = tempfile.mkdtemp(prefix=f"gescol_syno_{EDITION}_")
+os.environ["GESCOL_EDITION"] = EDITION
+os.environ["GESCOL_DATA"] = DOSSIER
 
 from app import app  # noqa: E402
 import config  # noqa: E402
@@ -476,9 +476,9 @@ class TestEditionPrivee(unittest.TestCase):
     def test_privee(self):
         if EDITION != "publique":
             self.skipTest("déjà dans l'édition secondaire")
-        env = dict(os.environ, SCOLARIS_EDITION_TEST="privee")
-        env.pop("SCOLARIS_EDITION", None)
-        env.pop("SCOLARIS_DATA", None)
+        env = dict(os.environ, GESCOL_EDITION_TEST="privee")
+        env.pop("GESCOL_EDITION", None)
+        env.pop("GESCOL_DATA", None)
         r = subprocess.run([sys.executable, "-m", "unittest", "tests.test_synoptique.TestSynoptique"], cwd=RACINE, env=env,
                            capture_output=True, text=True, timeout=600)
         self.assertEqual(r.returncode, 0, r.stderr[-4000:])

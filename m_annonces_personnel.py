@@ -48,10 +48,10 @@ def enregistrer(app, H):
         sujet, texte = (sujet or "").strip()[:150], (texte or "").strip()[:1000]
         if not sujet or not texte or cible not in CIBLES:
             return False
-        aid = ex("INSERT INTO annonces_personnel (ecole_id, sujet, texte, cible, auteur_id, cree_le) VALUES (?,?,?,?,?,?)",
-                 (H.eco(), sujet, texte, cible, g.user["id"], H.maintenant()))
+        ex("INSERT INTO annonces_personnel (ecole_id, sujet, texte, cible, auteur_id, cree_le) VALUES (?,?,?,?,?,?)",
+           (H.eco(), sujet, texte, cible, g.user["id"], H.maintenant()))
         H.journal("annonce_personnel", f"{cible} : {sujet}")
-        return aid or True
+        return True
 
     H.publier_annonce_personnel = publier
 
@@ -87,102 +87,11 @@ def enregistrer(app, H):
     def annonces_nouvelle():
         if not peut_publier():
             abort(403)
-        aid = publier(request.form.get("sujet"), request.form.get("texte"), request.form.get("cible", "enseignants"))
-        if aid:
-            canaux = [c for c in request.form.getlist("canaux") if c in ("whatsapp", "sms")]
-            if canaux and aid is not True:
-                flash("Annonce publiée. Envoyez-la maintenant par WhatsApp ou SMS.", "success")
-                return redirect(url_for("annonces_diffuser", aid=aid))
+        if publier(request.form.get("sujet"), request.form.get("texte"), request.form.get("cible", "enseignants")):
             flash("Annonce publiée : les enseignants la verront dans « Annonces ».", "success")
         else:
             flash("Indiquez un sujet et un message.", "danger")
         return redirect(url_for("annonces_accueil"))
-
-    # ------------------------------------------------------------------ v2.4.7 : diffusion WhatsApp / SMS aux enseignants
-    H.schema("""
-        CREATE TABLE IF NOT EXISTS annonces_envois (
-            annonce_id INTEGER NOT NULL, personnel_id INTEGER NOT NULL, canal TEXT NOT NULL, date TEXT,
-            PRIMARY KEY (annonce_id, personnel_id, canal));
-    """)
-
-    def est_enseignant(fonction):
-        f = (fonction or "").lower()
-        return any(m in f for m in ("enseign", "professeur", "instit", "educat", "éducat", "maitre", "maître", "animat", "pcem", "pcet"))
-
-    def destinataires(a):
-        out = []
-        for p in q("SELECT id, nom, prenoms, fonction, telephone FROM personnel WHERE ecole_id=? AND actif=1 ORDER BY nom, prenoms", (H.eco(),)):
-            if a["cible"] == "enseignants" and not est_enseignant(p["fonction"]):
-                continue
-            out.append(p)
-        return out
-
-    def texte_message(a):
-        ecole = (H.identification() or {}).get("ecole") or ""
-        return (f"{ecole} - " if ecole else "") + f"{a['sujet']}\n{a['texte']}"
-
-    def annonce_ou_404(aid):
-        a = q("SELECT * FROM annonces_personnel WHERE id=? AND ecole_id=?", (aid, H.eco()), un=True)
-        if not a:
-            abort(404)
-        return a
-
-    @app.route("/annonces/<int:aid>/diffuser")
-    @H.connexion_requise("communication")
-    def annonces_diffuser(aid):
-        if not peut_publier():
-            abort(403)
-        import notif
-        a = annonce_ou_404(aid)
-        envoyes = {(r["personnel_id"], r["canal"]) for r in q("SELECT * FROM annonces_envois WHERE annonce_id=?", (aid,))}
-        lignes = [{"p": p, "tel": notif.normaliser_tel(p["telephone"]), "affiche": notif.affiche_tel(p["telephone"]),
-                   "wa": (p["id"], "whatsapp") in envoyes, "sms": (p["id"], "sms") in envoyes} for p in destinataires(a)]
-        return render_template("annonce_diffusion.html", a=a, lignes=lignes, texte=texte_message(a), CIBLES=CIBLES,
-                               sms_ok=bool(notif.params().get("sms_url")))
-
-    @app.route("/annonces/<int:aid>/envoi/<int:pid>/<canal>")
-    @H.connexion_requise("communication")
-    def annonces_envoi(aid, pid, canal):
-        if not peut_publier() or canal not in ("whatsapp", "sms"):
-            abort(403)
-        import urllib.parse
-        import notif
-        a = annonce_ou_404(aid)
-        p = q("SELECT id, telephone FROM personnel WHERE id=? AND ecole_id=?", (pid, H.eco()), un=True)
-        tel = notif.normaliser_tel(p["telephone"]) if p else None
-        if not tel:
-            flash("Numéro de téléphone absent ou invalide.", "danger")
-            return redirect(url_for("annonces_diffuser", aid=aid))
-        ex("INSERT OR REPLACE INTO annonces_envois (annonce_id, personnel_id, canal, date) VALUES (?,?,?,?)", (aid, pid, canal, H.maintenant()))
-        texte = texte_message(a)
-        if canal == "whatsapp":
-            return redirect(notif.lien_whatsapp(tel, texte))
-        return redirect("sms:+" + tel + "?body=" + urllib.parse.quote(texte))
-
-    @app.route("/annonces/<int:aid>/sms-groupe", methods=["POST"])
-    @H.connexion_requise("communication")
-    def annonces_sms_groupe(aid):
-        if not peut_publier():
-            abort(403)
-        import notif
-        a = annonce_ou_404(aid)
-        p_ = notif.params()
-        if not p_.get("sms_url"):
-            flash("Passerelle SMS non configurée (Réglages WhatsApp / SMS) : utilisez les liens SMS ci-dessous.", "danger")
-            return redirect(url_for("annonces_diffuser", aid=aid))
-        deja = {r["personnel_id"] for r in q("SELECT personnel_id FROM annonces_envois WHERE annonce_id=? AND canal='sms'", (aid,))}
-        ok = ko = 0
-        for p in destinataires(a):
-            if p["id"] in deja or not notif.normaliser_tel(p["telephone"]):
-                continue
-            reussi, _ = notif.envoyer_sms(p["telephone"], texte_message(a), p_)
-            if reussi:
-                ex("INSERT OR REPLACE INTO annonces_envois (annonce_id, personnel_id, canal, date) VALUES (?,?,'sms',?)", (aid, p["id"], H.maintenant()))
-                ok += 1
-            else:
-                ko += 1
-        flash(f"SMS envoyés : {ok}" + (f" ; échecs : {ko}" if ko else "") + ".", "success" if ok and not ko else "danger")
-        return redirect(url_for("annonces_diffuser", aid=aid))
 
     @app.route("/annonces/<int:aid>/supprimer", methods=["POST"])
     @H.connexion_requise("communication")

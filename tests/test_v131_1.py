@@ -13,7 +13,7 @@ import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "SCOLARIS"
+PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "GESCOL"
 
 SCRIPT = r'''
 import html, os, re, sys, tempfile, random
@@ -97,7 +97,7 @@ print("OK-" + ED, len(clients))
 
 def lancer(edition):
     env = dict(os.environ)
-    for k in ("SCOLARIS_EDITION", "SCOLARIS_DATA", "GESCOL_EDITION", "GESCOL_DATA", "SCOLARIS_AUTONOME", "GESCOL_AUTONOME"):
+    for k in ("GESCOL_EDITION", "GESCOL_DATA", "GESCOL_EDITION", "GESCOL_DATA", "GESCOL_AUTONOME", "GESCOL_AUTONOME"):
         env.pop(k, None)
     env["EDITION_SCRIPT"] = edition
     env["PREFIXE_SCRIPT"] = PREFIXE

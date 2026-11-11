@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Inscriptions et espaces (SCOLARIS v1.3).
+"""Inscriptions et espaces (GESCOL v1.3).
 
 * Page Élèves : modèle Excel, export Excel (tous les champs de la carte scolaire), import Excel/CSV avec aperçu,
   prise de photo rapide pour toute une classe.
@@ -150,7 +150,7 @@ def enregistrer(app, H):
         classes = ", ".join(c["nom"] for c in classes_ecole()) or "(aucune classe créée)"
         consignes = [
             ["Nom, Prénoms, Sexe", "Obligatoires. Sexe : M ou F (G, garçon, fille… sont aussi acceptés)."],
-            ["Matricule", "Laisser vide pour un nouvel élève : SCOLARIS l'attribue automatiquement. "
+            ["Matricule", "Laisser vide pour un nouvel élève : GESCOL l'attribue automatiquement. "
                           "Rempli : l'élève existant est mis à jour."],
             ["Matricule EducMaster", "Si le matricule EducMaster existe déjà, la fiche de l'élève est mise à jour."],
             ["Date de naissance", "Format date Excel, ou 03/05/2015, ou 2015-05-03."],

@@ -13,7 +13,7 @@
 .rub dt{color:#667085;font-weight:600}.rub dd{margin:0}
 .taux{display:inline-block;min-width:52px;text-align:center;border-radius:12px;padding:1px 8px;font-weight:600;font-size:12.5px}
 .taux.ok{background:#ECFDF3;color:#067647}.taux.moy{background:#FFFAEB;color:#B54708}.taux.ko{background:#FEF3F2;color:#B42318}.taux.na{background:#F2F4F7;color:#667085}
-.src.aof{color:#067647}.src.scolaris{color:#B54708}
+.src.aof{color:#067647}.src.gescol{color:#B54708}
 </style>
 {% macro badge_taux(v) %}{% if v is none %}<span class="taux na">—</span>{% elif v >= 75 %}<span class="taux ok">{{ pct(v) }}</span>{% elif v >= 50 %}<span class="taux moy">{{ pct(v) }}</span>{% else %}<span class="taux ko">{{ pct(v) }}</span>{% endif %}{% endmacro %}
 <div class="entete"><div><h1>Divisions, modules et attributions</h1>
@@ -38,7 +38,7 @@
 </div>
 
 {% if not s %}<div class="flash info">La structure n'est pas encore configurée{% if peut('jur_structure') %} : <a href="{{ url_for('jur_structure') }}">Identité de la structure</a>{% endif %}.</div>{% endif %}
-<p class="aide">AOF : {{ AOF }}. Les rubriques marquées <span class="src scolaris">« {{ 'Rédigé par SCOLARIS' }} »</span> attendent la saisie du texte officiel (bouton « Saisir le texte de l'AOF » sur la fiche de la division).</p>
+<p class="aide">AOF : {{ AOF }}. Les rubriques marquées <span class="src gescol">« {{ 'Rédigé par GESCOL' }} »</span> attendent la saisie du texte officiel (bouton « Saisir le texte de l'AOF » sur la fiche de la division).</p>
 
 <div class="div-grille">
 {% for d in divisions %}
@@ -46,7 +46,7 @@
     <h2><span class="sigle">{{ d.sigle or d.code|upper }}</span>{{ d.nom }}</h2>
     <dl class="rub">
       <dt>Article AOF</dt><dd>{% if d.article %}Article {{ d.article }}{% else %}<span class="gris">—</span>{% endif %}{% if d.hors_aof %} <span class="badge att">hors AOF</span>{% endif %}</dd>
-      <dt>Source</dt><dd><span class="src {{ 'aof' if d.officiel else 'scolaris' }}">{{ d.source }}</span></dd>
+      <dt>Source</dt><dd><span class="src {{ 'aof' if d.officiel else 'gescol' }}">{{ d.source }}</span></dd>
       {% if d.parent_nom %}<dt>Rattachement</dt><dd>{{ d.parent_nom }}</dd>{% endif %}
       <dt>Chef</dt><dd><b>{{ d.chef_nom or 'non désigné' }}</b>{% if d.chef_titre %} <span class="aide">({{ d.chef_titre }})</span>{% endif %}{% if d.agents %} · {{ d.agents|length }} agent(s){% endif %}</dd>
       <dt>Lignes d'action</dt><dd>{{ d.synthese.realisees }} réalisée(s) / {{ d.synthese.total }} {{ badge_taux(d.synthese.taux) }}</dd>

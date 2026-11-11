@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Tests du chantier « Griffe et NIP » : cachet rectangulaire du nom du responsable (griffe), préconçu, apposé sur les
 documents signés, et ligne « NIP » avant la ligne du nom sur les certificats (enseignant, élève, CS / DDEMP).
-Lancer : python3 -m unittest tests.test_griffe_nip   (depuis /home/claude/scolaris)
+Lancer : python3 -m unittest tests.test_griffe_nip   (depuis /home/claude/gescol)
 
-L'édition chargée est choisie par SCOLARIS_EDITION_TEST (publique par défaut) ; la partie CS est rejouée dans un second
+L'édition chargée est choisie par GESCOL_EDITION_TEST (publique par défaut) ; la partie CS est rejouée dans un second
 processus (TestEditionsSeparees) avec la base de démonstration de demo_juridiction (compte « responsable »)."""
 import base64
 import html as html_mod
@@ -17,10 +17,10 @@ import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-EDITION = os.environ.get("SCOLARIS_EDITION_TEST", "publique")
-DOSSIER = tempfile.mkdtemp(prefix=f"scolaris_griffe_{EDITION}_")
-os.environ["SCOLARIS_EDITION"] = EDITION
-os.environ["SCOLARIS_DATA"] = DOSSIER
+EDITION = os.environ.get("GESCOL_EDITION_TEST", "publique")
+DOSSIER = tempfile.mkdtemp(prefix=f"gescol_griffe_{EDITION}_")
+os.environ["GESCOL_EDITION"] = EDITION
+os.environ["GESCOL_DATA"] = DOSSIER
 
 from app import app  # noqa: E402
 import config  # noqa: E402
@@ -58,9 +58,9 @@ def champs_formulaire(html):
 
 
 def _rejouer(edition, classe):
-    env = dict(os.environ, SCOLARIS_EDITION_TEST=edition)
-    env.pop("SCOLARIS_EDITION", None)
-    env.pop("SCOLARIS_DATA", None)
+    env = dict(os.environ, GESCOL_EDITION_TEST=edition)
+    env.pop("GESCOL_EDITION", None)
+    env.pop("GESCOL_DATA", None)
     return subprocess.run([sys.executable, "-m", "unittest", f"tests.test_griffe_nip.{classe}"], cwd=RACINE, env=env,
                           capture_output=True, text=True, timeout=900)
 

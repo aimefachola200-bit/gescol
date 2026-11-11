@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Fonctionnement en ligne (hébergement Internet) : SCOLARIS accessible partout, sans le Wi-Fi de l'école.
+"""Fonctionnement en ligne (hébergement Internet) : GESCOL accessible partout, sans le Wi-Fi de l'école.
 
 * détection de l'hébergement (PythonAnywhere, Render, VPS derrière un proxy https) et réglages adaptés :
   adresses en https, cookies sécurisés, en-têtes de sécurité ;
@@ -35,8 +35,8 @@ ENDPOINTS_CONNEXION = {"login", "parent_login", "eleve_login"}
 
 
 def en_ligne():
-    """Vrai si SCOLARIS tourne chez un hébergeur (derrière un proxy https)."""
-    return bool(os.environ.get("SCOLARIS_EN_LIGNE") or os.environ.get("RENDER")
+    """Vrai si GESCOL tourne chez un hébergeur (derrière un proxy https)."""
+    return bool(os.environ.get("GESCOL_EN_LIGNE") or os.environ.get("RENDER")
                 or os.environ.get("PYTHONANYWHERE_DOMAIN") or os.environ.get("PYTHONANYWHERE_SITE"))
 
 
@@ -45,7 +45,7 @@ def hebergeur():
         return "Render"
     if os.environ.get("PYTHONANYWHERE_DOMAIN") or os.environ.get("PYTHONANYWHERE_SITE"):
         return "PythonAnywhere"
-    if os.environ.get("SCOLARIS_EN_LIGNE"):
+    if os.environ.get("GESCOL_EN_LIGNE"):
         return "Serveur en ligne (VPS)"
     return "PC de l'école (réseau local)"
 
@@ -67,7 +67,7 @@ def creer_sauvegarde(chemin_db, destination, note=""):
         dst.close()
         src.close()
         with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED) as z:
-            z.write(tmp, "scolaris.db")
+            z.write(tmp, "gescol.db")
             for sous in SOUS_DOSSIERS:
                 dossier = os.path.join(config.INSTANCE_DIR, sous)
                 if os.path.isdir(dossier):
@@ -76,11 +76,11 @@ def creer_sauvegarde(chemin_db, destination, note=""):
                         if os.path.isfile(p):
                             z.write(p, f"{sous}/{nom}")
             z.writestr("LISEZ-MOI.txt",
-                       f"Sauvegarde SCOLARIS {config.VERSION} du {datetime.now():%d/%m/%Y %H:%M}. {note}\r\n"
+                       f"Sauvegarde GESCOL {config.VERSION} du {datetime.now():%d/%m/%Y %H:%M}. {note}\r\n"
                        "Pour restaurer : Administration > Mise en ligne et sauvegardes > Restaurer une sauvegarde.\r\n")
             # v1.33 : manifeste (empreinte SHA-256 de chaque fichier) pour vérifier l'archive avant une restauration
             empreintes = {i.filename: hashlib.sha256(z.read(i.filename)).hexdigest() for i in z.infolist()}
-            z.writestr("manifeste.json", json.dumps({"application": config.NOMS_APPLI.get(config.EDITION, "SCOLARIS"),
+            z.writestr("manifeste.json", json.dumps({"application": config.NOMS_APPLI.get(config.EDITION, "GESCOL"),
                                                      "version": config.VERSION, "edition": config.EDITION,
                                                      "date": datetime.now().isoformat(timespec="seconds"), "note": note,
                                                      "fichiers": empreintes}, ensure_ascii=False, indent=1))
@@ -96,8 +96,8 @@ def verifier_archive(source):
     except (zipfile.BadZipFile, OSError):
         return False, ["Fichier illisible : ce n'est pas une archive .zip valide."], infos
     noms = z.namelist()
-    if "scolaris.db" not in noms:
-        return False, ["La base de données (scolaris.db) est absente de l'archive."], infos
+    if "gescol.db" not in noms:
+        return False, ["La base de données (gescol.db) est absente de l'archive."], infos
     if sum(i.file_size for i in z.infolist()) > 800 * 1024 * 1024:
         return False, ["Archive trop grosse (plus de 800 Mo une fois décompressée)."], infos
     ok = True
@@ -121,7 +121,7 @@ def verifier_archive(source):
     os.close(fd)
     try:
         with open(tmp, "wb") as out:
-            out.write(z.read("scolaris.db"))
+            out.write(z.read("gescol.db"))
         with open(tmp, "rb") as t:
             if t.read(16) != b"SQLite format 3\x00":
                 return False, msgs + ["La base n'est pas une base SQLite."], infos
@@ -132,7 +132,7 @@ def verifier_archive(source):
             except sqlite3.DatabaseError as e:   # schéma illisible : base abîmée ou modifiée
                 return False, msgs + [f"Base endommagée ({e})."], infos
             if not {"utilisateurs", "eleves", "classes"} <= tables:
-                return False, msgs + ["Ce n'est pas une base SCOLARIS."], infos
+                return False, msgs + ["Ce n'est pas une base GESCOL."], infos
             res = c.execute("PRAGMA integrity_check").fetchone()[0]
             if res != "ok":
                 return False, msgs + [f"Base endommagée ({res})."], infos
@@ -182,12 +182,12 @@ def jours_depuis_copie_externe():
 def enregistrer(app, H):
     from db import chemin_db, initialiser
 
-    # ------------------------------------------------------------ réglages quand SCOLARIS est en ligne
+    # ------------------------------------------------------------ réglages quand GESCOL est en ligne
     if en_ligne():
         from werkzeug.middleware.proxy_fix import ProxyFix
         # l'hébergeur reçoit le https et transmet la requête : on lui fait confiance pour l'adresse et le protocole
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
-        if os.environ.get("SCOLARIS_HTTPS", "1") != "0":
+        if os.environ.get("GESCOL_HTTPS", "1") != "0":
             app.config.update(SESSION_COOKIE_SECURE=True, PREFERRED_URL_SCHEME="https")
 
     @app.after_request
@@ -414,17 +414,17 @@ def enregistrer(app, H):
         try:
             z = zipfile.ZipFile(io.BytesIO(donnees))
         except zipfile.BadZipFile:
-            flash("Ce fichier n'est pas une sauvegarde SCOLARIS valide (zip illisible).", "danger")
+            flash("Ce fichier n'est pas une sauvegarde GESCOL valide (zip illisible).", "danger")
             return redirect(url_for("en_ligne_page"))
         noms = z.namelist()
-        if "scolaris.db" not in noms or sum(i.file_size for i in z.infolist()) > 800 * 1024 * 1024:
-            flash("Sauvegarde invalide : le fichier scolaris.db est absent (ou l'archive est trop grosse).", "danger")
+        if "gescol.db" not in noms or sum(i.file_size for i in z.infolist()) > 800 * 1024 * 1024:
+            flash("Sauvegarde invalide : le fichier gescol.db est absent (ou l'archive est trop grosse).", "danger")
             return redirect(url_for("en_ligne_page"))
         fd, tmp = tempfile.mkstemp(suffix=".db")
         os.close(fd)
         try:
             with open(tmp, "wb") as out:
-                out.write(z.read("scolaris.db"))
+                out.write(z.read("gescol.db"))
             with open(tmp, "rb") as t:
                 if t.read(16) != b"SQLite format 3\x00":
                     raise ValueError("pas une base SQLite")
@@ -432,7 +432,7 @@ def enregistrer(app, H):
             tables = {r[0] for r in src.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             if not {"utilisateurs", "eleves", "classes"} <= tables:
                 src.close()
-                raise ValueError("ce n'est pas une base SCOLARIS")
+                raise ValueError("ce n'est pas une base GESCOL")
             if src.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                 src.close()
                 raise ValueError("base endommagée")

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Unités pédagogiques (UP) des applications « SCOLARIS Circonscription » (CS) et « SCOLARIS DDEMP » (v1.6).
+"""Unités pédagogiques (UP) des applications « GESCOL Circonscription » (CS) et « GESCOL DDEMP » (v1.6).
 
 Le client demande « le module des activités de l'unité pédagogique : nombre d'UP par zone pédagogique et total CS
 et DDEMP, avec les noms et prénoms des responsables UP (RUP) et Co-RUP, le nombre d'activités prévues, exécutées,

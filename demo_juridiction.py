@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Données de démonstration des applications Circonscription (CS) et DDEMP.
 
-    SCOLARIS_EDITION=cs    SCOLARIS_DATA=dossier python3 demo_juridiction.py      → CS de Pobè (Plateau)
-    SCOLARIS_EDITION=ddemp SCOLARIS_DATA=dossier python3 demo_juridiction.py      → DDEMP du Plateau (6 CS)
+    GESCOL_EDITION=cs    GESCOL_DATA=dossier python3 demo_juridiction.py      → CS de Pobè (Plateau)
+    GESCOL_EDITION=ddemp GESCOL_DATA=dossier python3 demo_juridiction.py      → DDEMP du Plateau (6 CS)
 
 Comptes (mot de passe demo1234) : responsable, cp1, cp2, chef (DOSP), rh (Ressources humaines), agent ; admin / admin123.
 Les écoles « envoient » de vrais paquets de transmission (jur_format), importés comme le ferait la CS.
@@ -127,7 +127,7 @@ def paquet_ecole(rnd, code, nom, typ, secteur, dep, cs, zone, an):
              "telephone": "", "email": "", "directeur_titre": "Directrice" if d["sexe"] == "F" else "Directeur",
              "directeur_nom": f"{d['nom']} {d['prenoms']}", "directeur_tel": d["telephone"],
              "annee_creation": str(rnd.randint(1950, 2018))}
-    p = jur_format.nouveau("ecole", code, nom, an, dep, cs, "publique" if secteur == "public" else "privee", "SCOLARIS démo")
+    p = jur_format.nouveau("ecole", code, nom, an, dep, cs, "publique" if secteur == "public" else "privee", "GESCOL démo")
     p["genere_le"] = f"{date.today().isoformat()} 08:00:00"
     p["ecoles"] = [{"ecole": ident, "sections": secs}]
     return jur_format.sceller(p)
@@ -307,7 +307,7 @@ def inserer_synoptique(niveau, an):
 def main():
     niveau = config.EDITION
     if niveau not in ("cs", "ddemp"):
-        raise SystemExit("Lancez avec SCOLARIS_EDITION=cs ou SCOLARIS_EDITION=ddemp")
+        raise SystemExit("Lancez avec GESCOL_EDITION=cs ou GESCOL_EDITION=ddemp")
     rnd = random.Random(2027)
     an = config.ANNEE_ACTIVE
     dep = "Plateau"
@@ -327,7 +327,7 @@ def main():
                          ville="Pobè")
             for c in RB.CIRCONSCRIPTIONS[dep]:
                 p = jur_format.nouveau("cs", f"CS-{c['cs']}", f"Circonscription scolaire de {c['cs'].title()}", an, dep,
-                                       c["cs"], "cs", "SCOLARIS démo")
+                                       c["cs"], "cs", "GESCOL démo")
                 p["genere_le"] = f"{date.today().isoformat()} 09:00:00"
                 for code, nom, typ, sect, zone in ecoles_de_cs(rnd, dep, c["cs"], c["zones"], rnd.randint(8, 14)):
                     p["ecoles"] += paquet_ecole(rnd, code, nom, typ, sect, dep, c["cs"], zone, an)["ecoles"]

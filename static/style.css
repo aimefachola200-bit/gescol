@@ -217,8 +217,6 @@ table.t.plan-m td.case.gabarit{color:#98A2B3;font-style:italic}
 table.t.plan-m textarea{width:100%;min-width:120px;min-height:34px;font-size:12px;padding:2px 4px;resize:vertical;box-sizing:border-box}
 table.t.plan-m input[type=date]{font-size:11px;padding:2px 3px;width:118px}
 .plan-m-sem{display:flex;gap:4px;align-items:center;flex-wrap:wrap;font-weight:400;font-size:11px}
-.logo-img{border-radius:9px;display:block;flex:none}
-
 /* ---------- v1.8 : saisies hors ligne, nouvelle version, accueil par rôle, Ma classe, appel rapide ---------- */
 .bandeau.attente{background:#FFFAEB;border-bottom-color:#FEC84B;color:#93370D;text-decoration:none;font-weight:600}
 .bandeau.maj{background:#ECFDF3;border-bottom-color:#ABEFC6;color:#067647}
@@ -309,7 +307,6 @@ tr.prep-vide{display:none}
 .grille-form{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;align-items:end}
 ul.arbre,ul.arbre ul{list-style:none;margin:0;padding-left:18px;border-left:1px dashed #98A2B3}
 ul.arbre li{margin:4px 0}
-
 /* ---- v2.4.3 : graphiques d'accueil ---- */
 .graphiques{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
 .piste{display:block;background:var(--bord);border-radius:5px;overflow:hidden;opacity:.9}

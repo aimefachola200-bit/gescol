@@ -23,16 +23,16 @@ class TestEntetesFixes(unittest.TestCase):
         self.assertRegex(css, r"@media print\{\.tw\{max-height:none!important")
 
     def test_script(self):
-        js = lire("static", "scolaris.js")
+        js = lire("static", "gescol.js")
         for marque in ("function fixerEntetes", "function placerEntetes", "function titreAuDessus", "fixerEntetes(racine);",
-                       "window.SCOLARIS.fixerEntetes", "data-entete=\"non\""):
+                       "window.GESCOL.fixerEntetes", "data-entete=\"non\""):
             self.assertIn(marque, js)
 
     def test_gabarits(self):
         # les grands tableaux de saisie sont dans un cadre .tw (défilement propre, en-tête collé)
         for g in ("registre_accueil.html", "eval_saisie.html", "rapports_formulaire.html"):
             self.assertRegex(lire("templates", g), r'class="tw[ "]', g)
-        self.assertIn("scolaris.js", lire("templates", "base.html"))
+        self.assertIn("gescol.js", lire("templates", "base.html"))
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ messages aux parents…) avec sa signature digitale « enseignant:<uid> », et s
 (tableau de bord, synoptique, finances, administration, recensement, données, secrétariat, suppression d'élèves…).
 Le directeur, le secrétariat, la comptabilité et l'administrateur gardent leurs accès.
 
-Lancer : python3 -m unittest tests.test_perimetre_enseignant   (depuis /home/claude/scolaris)
+Lancer : python3 -m unittest tests.test_perimetre_enseignant   (depuis /home/claude/gescol)
 La base est construite par demo.py (sous-processus) dans un dossier temporaire, en édition « publique » ;
 TestEditionPrivee rejoue la suite en édition « privee »."""
 import html as html_mod
@@ -17,12 +17,12 @@ import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-EDITION = os.environ.get("SCOLARIS_EDITION_TEST", "publique")
-DOSSIER = tempfile.mkdtemp(prefix=f"scolaris_perim_ens_{EDITION}_")
-os.environ["SCOLARIS_EDITION"] = EDITION
-os.environ["SCOLARIS_DATA"] = DOSSIER
+EDITION = os.environ.get("GESCOL_EDITION_TEST", "publique")
+DOSSIER = tempfile.mkdtemp(prefix=f"gescol_perim_ens_{EDITION}_")
+os.environ["GESCOL_EDITION"] = EDITION
+os.environ["GESCOL_DATA"] = DOSSIER
 subprocess.run([sys.executable, os.path.join(RACINE, "demo.py")], check=True, cwd=RACINE,
-               env=dict(os.environ, SCOLARIS_EDITION=EDITION, SCOLARIS_DATA=DOSSIER), stdout=subprocess.DEVNULL)
+               env=dict(os.environ, GESCOL_EDITION=EDITION, GESCOL_DATA=DOSSIER), stdout=subprocess.DEVNULL)
 
 from app import app, q, ex  # noqa: E402
 import config  # noqa: E402
@@ -299,9 +299,9 @@ def _H_de(module):
 
 
 def _rejouer(edition):
-    env = dict(os.environ, SCOLARIS_EDITION_TEST=edition)
-    env.pop("SCOLARIS_EDITION", None)
-    env.pop("SCOLARIS_DATA", None)
+    env = dict(os.environ, GESCOL_EDITION_TEST=edition)
+    env.pop("GESCOL_EDITION", None)
+    env.pop("GESCOL_DATA", None)
     return subprocess.run([sys.executable, "-m", "unittest", f"{CIBLE}.TestPerimetreEnseignant", f"{CIBLE}.TestRegles"],
                           cwd=RACINE, env=env, capture_output=True, text=True, timeout=900)
 

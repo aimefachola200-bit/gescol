@@ -9,7 +9,7 @@
 </style>
 <div class="entete">
   <div><h1>Import / export des données</h1>
-  <p class="sous">Tous les imports et exports de SCOLARIS, échanges avec EducMaster, conversion de PDF et sauvegarde de la base</p></div>
+  <p class="sous">Tous les imports et exports de GESCOL, échanges avec EducMaster, conversion de PDF et sauvegarde de la base</p></div>
 </div>
 
 <div class="grille2">
@@ -24,10 +24,10 @@
     <p>Télécharge une archive ZIP contenant la base de données, les photos, le logo, le cachet et les signatures.
        Conservez-la sur une clé USB ou un autre ordinateur.</p>
     <a class="btn" href="{{ url_for('sauvegarde') }}">{{ icone('telecharger') }} Télécharger la sauvegarde</a>
-    <p class="aide">Restauration : arrêtez SCOLARIS et recopiez le contenu de l'archive dans le dossier de données (voir le fichier LISEZ-MOI.txt de l'archive).</p></div>
+    <p class="aide">Restauration : arrêtez GESCOL et recopiez le contenu de l'archive dans le dossier de données (voir le fichier LISEZ-MOI.txt de l'archive).</p></div>
 {% else %}
   <div class="carte"><h2 style="margin-top:0"><span aria-hidden="true">{{ icone('enregistrer') }}</span> Sauvegarde de la base</h2>
-    <p class="gris">La sauvegarde complète de la base est réservée à l'administrateur (fondateur) de SCOLARIS.</p></div>
+    <p class="gris">La sauvegarde complète de la base est réservée à l'administrateur (fondateur) de GESCOL.</p></div>
 {% endif %}
 </div>
 {% if not blocs and not sauvegarde %}<div class="carte">Aucun import ou export n'est accessible avec votre rôle.</div>{% endif %}

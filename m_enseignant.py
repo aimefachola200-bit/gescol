@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""v1.14 — SCOLARIS Enseignant : l'application de l'enseignant, limitée à son périmètre.
+"""v1.14 — GESCOL Enseignant : l'application de l'enseignant, limitée à son périmètre.
 
 Deux usages, un seul module :
 
-1. **Application personnelle** (édition ``enseignant`` : SCOLARIS-Enseignant.apk / SCOLARIS-Enseignant-Installation.exe).
+1. **Application personnelle** (édition ``enseignant`` : GESCOL-Enseignant.apk / GESCOL-Enseignant-Installation.exe).
    L'enseignant l'installe sur SON téléphone ou SON ordinateur, sans passer par l'application de l'école.
    Au premier lancement, un assistant (``/enseignant/premier-lancement``) enregistre :
    son profil (nom, prénoms, sexe, NIP, matricule, grade, catégorie / statut, date de naissance, dates de prise de
@@ -12,8 +12,8 @@ Deux usages, un seul module :
    le compte « admin » de départ est désactivé. L'enseignant ajoute ou importe lui-même ses élèves et tient
    l'emploi du temps et la planification de ses niveaux (m_perimetre_enseignant, règles propres à cette édition).
 
-2. **Portail enseignant des applications d'école** (SCOLARIS, SCOLARIS Public, Circonscription, DDEMP) :
-   ``/enseignant`` = page de connexion « SCOLARIS Enseignant » (manifeste PWA propre : nom et adresse de départ),
+2. **Portail enseignant des applications d'école** (GESCOL, GESCOL Public, Circonscription, DDEMP) :
+   ``/enseignant`` = page de connexion « GESCOL Enseignant » (manifeste PWA propre : nom et adresse de départ),
    réservée aux comptes enseignant ; même menu réduit sur les données de l'école, sécurité inchangée
    (m_perimetre_enseignant).
 
@@ -320,7 +320,7 @@ def enregistrer(app, H):
     def ens_manifeste():
         nom = config.NOMS_APPLI["enseignant"] if config.enseignant() else config.NOM_PORTAIL_ENSEIGNANT
         m = {
-            "name": f"{nom} – {config.ECOLE['nom']}", "short_name": nom.replace("SCOLARIS ", "") if len(nom) > 12 else nom,
+            "name": f"{nom} – {config.ECOLE['nom']}", "short_name": nom.replace("GESCOL ", "") if len(nom) > 12 else nom,
             "description": "Application de l'enseignant : ma classe, emplois du temps, planifications, documents "
                            "officiels et certificats.",
             "lang": "fr", "id": "/enseignant", "start_url": "/enseignant?source=app", "scope": "/", "display": "standalone",

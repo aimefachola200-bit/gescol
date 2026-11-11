@@ -29,7 +29,7 @@
   <form method="post" class="f"><input type="hidden" name="action" value="rejoindre">
     <label for="ln">Lien d'inscription (texte du code QR « memp-sync:1?… »)</label><input id="ln" name="lien" placeholder="memp-sync:1?u=…&c=…" autocomplete="off">
     <p class="aide">ou bien :</p>
-    <label for="ad">Adresse de l'application de la {{ 'DDEMP' if est_hub else 'circonscription' }}</label><input id="ad" name="adresse" value="{{ c.adresse or '' }}" placeholder="https://cs-pobe.scolaris.bj">
+    <label for="ad">Adresse de l'application de la {{ 'DDEMP' if est_hub else 'circonscription' }}</label><input id="ad" name="adresse" value="{{ c.adresse or '' }}" placeholder="https://cs-pobe.gescol.bj">
     <label for="cd">Code d'accès</label><input id="cd" name="code" value="{{ c.code or '' }}" autocomplete="off">
     <div class="actions" style="margin-top:8px"><button class="btn sec">Enregistrer</button></div></form>
   {% if c.hub_cle %}<form method="post" style="margin-top:6px"><input type="hidden" name="action" value="oublier_cle"><button class="btn sec petit" onclick="return confirm('Effacer la clé enregistrée du niveau supérieur ?')">Effacer la clé du niveau supérieur</button></form>{% endif %}

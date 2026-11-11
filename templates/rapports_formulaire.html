@@ -46,14 +46,14 @@ table.rp-p input.nom{min-width:170px;text-align:left}
   <div class="kpi"><div class="l">Contrôles</div><div class="v">{{ controles|length }}</div><div class="d">{{ 'point(s) à vérifier' if controles else 'aucune incohérence' }}</div></div>
 </div>
 
-{% if not active %}<div class="flash info">Année {{ annee }} : les effectifs ne sont pas historisés dans SCOLARIS ; les valeurs proposées sont celles du dernier enregistrement de ce rapport (sinon à saisir).</div>{% endif %}
+{% if not active %}<div class="flash info">Année {{ annee }} : les effectifs ne sont pas historisés dans GESCOL ; les valeurs proposées sont celles du dernier enregistrement de ce rapport (sinon à saisir).</div>{% endif %}
 {% if controles %}<div class="carte"><h3 style="margin-top:0">Contrôles de cohérence</h3><ul class="rp-alertes">{% for niv, m in controles %}<li class="{{ niv }}">{{ icone('interdit') if niv == 'danger' else icone('attention') }} {{ m }}</li>{% endfor %}</ul></div>{% endif %}
 
 {% macro val_in(k, typ='texte', classe='') -%}
 {%- set a = auto.get(k, '') -%}
 <input name="{{ k }}" id="f-{{ k|replace('.', '-') }}" value="{{ over.get(k, '') }}" placeholder="{{ a }}" class="{{ classe }}" data-auto="{{ a }}"
   {% if typ in ('nombre','annee') %}inputmode="numeric"{% endif %} {% if typ == 'email' %}type="email"{% endif %}
-  title="{% if k in origine %}Repris de : {{ origine[k] }}{% elif a %}Valeur calculée par SCOLARIS : {{ a }}{% else %}À saisir{% endif %}">
+  title="{% if k in origine %}Repris de : {{ origine[k] }}{% elif a %}Valeur calculée par GESCOL : {{ a }}{% else %}À saisir{% endif %}">
 {%- endmacro %}
 {% macro sel_in(k, options, lab='') -%}
 {%- set a = auto.get(k, '') -%}
@@ -68,24 +68,24 @@ table.rp-p input.nom{min-width:170px;text-align:left}
 {% call M.barre_doc(sauver=False, charger=False, reinit=False) %}
   <button type="submit" name="action" value="sauver" class="btn vert petit">{{ icone('enregistrer') }} Sauvegarder</button>
   <a class="btn sec petit" href="{{ J.enregistrer if J else url_for('rapports_formulaire', doc=doc, annee=annee) }}" title="Recharger la version enregistrée (abandonne les modifications non sauvegardées)">{{ icone('dossier') }} Charger</a>
-  <button type="submit" name="action" value="reinit" class="btn sec petit" data-confirmer="Effacer toutes les corrections manuelles de ce rapport et revenir aux valeurs calculées par SCOLARIS ?">↺ Réinitialiser</button>
+  <button type="submit" name="action" value="reinit" class="btn sec petit" data-confirmer="Effacer toutes les corrections manuelles de ce rapport et revenir aux valeurs calculées par GESCOL ?">↺ Réinitialiser</button>
   <span class="sep"></span>
   <button type="submit" name="action" value="pdf" class="btn petit" formtarget="_blank">{{ icone('document') }} Enregistrer et télécharger (PDF)</button>
   {% if J %}<a class="btn sec petit" href="{{ J.pdf_vierge }}" target="_blank">{{ icone('document') }} PDF vierge</a>{% else %}
-  <button type="submit" name="action" value="pdf_annexe" class="btn sec petit" formtarget="_blank" title="PDF officiel + page d'annexe SCOLARIS (résultats, présence, âges, cantine)">{{ icone('document') }} PDF + annexe</button>
+  <button type="submit" name="action" value="pdf_annexe" class="btn sec petit" formtarget="_blank" title="PDF officiel + page d'annexe GESCOL (résultats, présence, âges, cantine)">{{ icone('document') }} PDF + annexe</button>
   <a class="btn sec petit" href="{{ url_for('rapports_pdf', doc=doc, vierge=1) }}" target="_blank">{{ icone('document') }} PDF vierge</a>
   <a class="btn sec petit" href="{{ url_for('rapports_excel', doc=doc, annee=annee) }}">{{ icone('graphique') }} Télécharger le rapport rempli (Excel)</a>
   <a class="btn sec petit" href="#televersement">{{ icone('importer') }} Téléverser</a>{% endif %}
 {% endcall %}
 
-<p class="aide">Les valeurs en gris sont <b>calculées par SCOLARIS</b> (ou reprises d'un autre rapport) ; tapez dans une case pour la
+<p class="aide">Les valeurs en gris sont <b>calculées par GESCOL</b> (ou reprises d'un autre rapport) ; tapez dans une case pour la
 <b>corriger</b> (case jaune), videz-la pour revenir au calcul, tapez « - » pour une case sans objet. Les totaux (T, ENSEMBLE, a+b) se calculent seuls.</p>
 <div class="rp-legende" aria-hidden="true"><span><i style="background:#fff"></i>valeur calculée</span><span><i style="background:#FFFAEB;border-color:#E9A23B"></i>corrigée à la main</span><span><i style="background:#EEF2F6"></i>total automatique</span></div>
 
 {% for s in sections %}
 <section class="carte" id="s-{{ s.id }}">
   <h2 style="margin-top:0;font-size:17px">{{ s.titre }}</h2>
-  {% if s.annexe %}<p class="aide">Cette rubrique ne figure pas sur le modèle officiel : elle alimente la page d'annexe SCOLARIS (bouton « PDF + annexe »).</p>{% endif %}
+  {% if s.annexe %}<p class="aide">Cette rubrique ne figure pas sur le modèle officiel : elle alimente la page d'annexe GESCOL (bouton « PDF + annexe »).</p>{% endif %}
   {% set champs_ouverts = namespace(v=false) %}
   <div class="rp-champs">
   {% for b in s.blocs %}
@@ -125,7 +125,7 @@ table.rp-p input.nom{min-width:170px;text-align:left}
           <tbody>{% for i in range(1, n_pers + 1) %}<tr><td class="lib" style="min-width:30px">{{ i }}</td>
             {% for col in b.cols %}{% set k = 'pers.' ~ i ~ '.' ~ col.c %}<td>
               {% if col.type == 'choix' %}{{ sel_in(k, col.options, col.l ~ ' ligne ' ~ i) }}
-              {% else %}{%- set a = auto.get(k, '') -%}<input name="{{ k }}" value="{{ over.get(k, '') }}" placeholder="{{ a }}" data-auto="{{ a }}" class="{{ 'nom' if col.c == 'nom' }}" aria-label="{{ col.l }} ligne {{ i }}" {% if col.liste %}list="dl-statuts"{% endif %} title="{% if k in origine %}Repris de : {{ origine[k] }}{% elif a %}SCOLARIS : {{ a }}{% endif %}">{% endif %}
+              {% else %}{%- set a = auto.get(k, '') -%}<input name="{{ k }}" value="{{ over.get(k, '') }}" placeholder="{{ a }}" data-auto="{{ a }}" class="{{ 'nom' if col.c == 'nom' }}" aria-label="{{ col.l }} ligne {{ i }}" {% if col.liste %}list="dl-statuts"{% endif %} title="{% if k in origine %}Repris de : {{ origine[k] }}{% elif a %}GESCOL : {{ a }}{% endif %}">{% endif %}
             </td>{% endfor %}</tr>{% endfor %}</tbody>
         </table></div>
       </div>
@@ -138,7 +138,7 @@ table.rp-p input.nom{min-width:170px;text-align:left}
 </form>
 
 {% if not J %}<section class="carte rp-ann" id="annexe">
-  <h2 style="margin-top:0;font-size:17px">Indicateurs SCOLARIS (annexe facultative du PDF)</h2>
+  <h2 style="margin-top:0;font-size:17px">Indicateurs GESCOL (annexe facultative du PDF)</h2>
   {% if ind.inactive %}<p class="aide">Indicateurs disponibles uniquement pour l'année active.</p>{% else %}
   <div class="grille2">
     <div><h3>Résultats scolaires (dernière évaluation)</h3>

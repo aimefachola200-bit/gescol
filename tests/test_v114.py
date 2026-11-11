@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests de la version 1.14 : SCOLARIS Enseignant — application personnelle de l'enseignant (premier lancement,
+"""Tests de la version 1.14 : GESCOL Enseignant — application personnelle de l'enseignant (premier lancement,
 menu réduit, élèves ajoutés / importés par l'enseignant, emplois du temps de ses niveaux, certificats PDF pré-remplis,
 périmètre) et portail /enseignant des applications d'école. Lancer : python3 -m unittest tests.test_v114"""
 import os
@@ -8,12 +8,12 @@ import sys
 import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "SCOLARIS"
+PREFIXE = "GESCOL" if os.path.exists(os.path.join(RACINE, "GESCOL_PUBLIC.md")) else "GESCOL"
 
 
 def lancer(script, edition):
     env = dict(os.environ)
-    for k in ("SCOLARIS_EDITION", "SCOLARIS_DATA", "GESCOL_EDITION", "GESCOL_DATA"):
+    for k in ("GESCOL_EDITION", "GESCOL_DATA", "GESCOL_EDITION", "GESCOL_DATA"):
         env.pop(k, None)
     env["EDITION_SCRIPT"] = edition
     env["PREFIXE_SCRIPT"] = PREFIXE
@@ -169,7 +169,7 @@ with app.app_context():
     ex("INSERT INTO personnel (matricule, nom, prenoms, sexe, fonction, ecole_id, user_id) VALUES ('P-9','DOSSOU','Jean','M','Enseignant',1,?)", (uid,))
 c = app.test_client()
 t = txt(ok(c.get("/enseignant")))
-assert "SCOLARIS Enseignant".replace("SCOLARIS", P) in t or config.NOM_PORTAIL_ENSEIGNANT in t
+assert "GESCOL Enseignant".replace("GESCOL", P) in t or config.NOM_PORTAIL_ENSEIGNANT in t
 assert "/enseignant/manifest.webmanifest" in t
 m = json.loads(ok(c.get("/enseignant/manifest.webmanifest")).data)
 assert m["start_url"].startswith("/enseignant") and m["id"] == "/enseignant" and config.NOM_PORTAIL_ENSEIGNANT in m["name"]

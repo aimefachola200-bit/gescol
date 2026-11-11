@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Référentiel des unités administratives locales du Bénin : 12 départements, 77 communes, 546 arrondissements,
 5 290 villages et quartiers de ville (static/referentiel_villages.json). Utilisé par les listes en cascade des
-formulaires (static/scolaris.js, champs data-geo) et par les modules qui ont besoin des noms officiels."""
+formulaires (static/gescol.js, champs data-geo) et par les modules qui ont besoin des noms officiels."""
 import json
 import os
 import unicodedata

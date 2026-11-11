@@ -125,7 +125,7 @@ def enregistrer(app, H):
         tel = tel_ecole()
         if tel and ident:
             wa = "https://wa.me/" + tel + "?text=" + urllib.parse.quote(
-                f"Bonjour, j'ai oublié mon mot de passe {(getattr(config, 'NOMS_APPLI', {}).get(config.EDITION) or 'SCOLARIS')}. "
+                f"Bonjour, j'ai oublié mon mot de passe {(getattr(config, 'NOMS_APPLI', {}).get(config.EDITION) or 'GESCOL')}. "
                 f"Identifiant : {ident}. Merci de me remettre un mot de passe provisoire.")
         return render_template("mdp_oublie.html", etape=etape, ident=ident, question=question if u else None, wa=wa)
 

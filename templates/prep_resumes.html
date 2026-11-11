@@ -2,7 +2,7 @@
 {% extends "base.html" %}{% block titre %}Résumés — l'essentiel à retenir{% endblock %}
 {% block contenu %}{% set onglet = 'resumes' %}{% include "_prep_onglets.html" %}
 <h2>Résumés — l'essentiel à retenir</h2>
-<p class="aide">Pour chaque notion : la règle, la méthode, un exemple et trois exercices corrigés. Version <b>enseignant</b> (avec le corrigé) et version <b>élève</b> à imprimer (sans les réponses). Rédaction originale SCOLARIS, à valider par le conseiller pédagogique.</p>
+<p class="aide">Pour chaque notion : la règle, la méthode, un exemple et trois exercices corrigés. Version <b>enseignant</b> (avec le corrigé) et version <b>élève</b> à imprimer (sans les réponses). Rédaction originale GESCOL, à valider par le conseiller pédagogique.</p>
 <form method="get" class="filtres" style="margin:10px 0" aria-label="Filtre des résumés">
   <label>Collection <select name="col" onchange="this.form.submit()"><option value="">Toutes</option>{% for c, l in COLLECTIONS %}<option value="{{ c }}" {{ 'selected' if c == col }}>{{ l }}</option>{% endfor %}</select></label>
   <label>Cours <select name="cours" onchange="this.form.submit()"><option value="">Tous</option>{% for c in COURS %}<option value="{{ c }}" {{ 'selected' if c == cours }}>{{ PREP_COURS_LIB[c] }}</option>{% endfor %}</select></label>

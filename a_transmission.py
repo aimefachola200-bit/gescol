@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Transmissions reçues et envoyées par la Circonscription scolaire (CS) et la DDEMP.
 
-* La CS reçoit les paquets de ses écoles (fichiers .scolaris ou envoi en ligne) et envoie SON paquet à la DDEMP.
+* La CS reçoit les paquets de ses écoles (fichiers .gescol ou envoi en ligne) et envoie SON paquet à la DDEMP.
 * La DDEMP reçoit les paquets des CS de son département.
 
 Routes (actives seulement dans les éditions cs / ddemp) :
@@ -11,7 +11,7 @@ Routes (actives seulement dans les éditions cs / ddemp) :
                                                                         (?export=xlsx | pdf)
 * /juridiction/transmissions/envoi           jur_transmission_envoi     paquet de la CS vers la DDEMP (CS seulement)
 * /api/transmission                  POST    api_transmission           réception en ligne (sans session,
-                                                                        en-tête X-Scolaris-Code)
+                                                                        en-tête X-Gescol-Code)
 
 Droits : lecture = tout utilisateur connecté ; import / envoi = « jur_transmission » ;
 codes d'accès = « jur_ecoles » (admin, responsable, chef de service).
@@ -48,7 +48,7 @@ ATTENDUES = {"EP": ("effectifs", "personnel", "cep", "recensement", "rapports"),
              "EE": ("effectifs", "personnel", "recensement", "rapports")}
 COURTS = {"effectifs": "Effectifs", "personnel": "Personnel", "visites": "Visites", "cep": "CEP",
           "recensement": "Recensement", "rapports": "Rapports", "patrimoine": "Patrimoine", "cantine": "Cantine",
-          "pilotage": "Pilotage", "secondaire": "Secondaire"}
+          "pilotage": "Pilotage"}
 ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"   # sans O/0, I/1/L : code facile à dicter
 ECHECS_MAX, FENETRE = 20, 3600
 _echecs = {}
@@ -155,11 +155,11 @@ def enregistrer(app, H):
         s = struct()
         if cs:
             return (f"Bonjour, la Circonscription scolaire de {s.get('cs', '').title()} n'a pas encore reçu toutes les "
-                    f"données de « {nom} » pour l'année scolaire {annee}. Merci de les transmettre depuis SCOLARIS "
+                    f"données de « {nom} » pour l'année scolaire {annee}. Merci de les transmettre depuis GESCOL "
                     f"(menu Données → Transmission à la circonscription), par fichier ou en ligne. Merci.")
         return (f"Bonjour, la DDEMP du {s.get('departement', '')} n'a pas encore reçu la transmission de la "
                 f"Circonscription scolaire de {nom.title()} pour l'année scolaire {annee}. Merci de l'envoyer depuis "
-                f"SCOLARIS Circonscription (menu Transmissions → Envoyer à la DDEMP). Merci.")
+                f"GESCOL Circonscription (menu Transmissions → Envoyer à la DDEMP). Merci.")
 
     def lien_wa(tel, texte):
         n = numero_whatsapp(tel)
@@ -176,7 +176,7 @@ def enregistrer(app, H):
                 abort(403)
             fichiers = [f for f in request.files.getlist("fichiers") if f and f.filename]
             if not fichiers:
-                flash("Choisissez au moins un fichier de transmission (.scolaris).", "danger")
+                flash("Choisissez au moins un fichier de transmission (.gescol).", "danger")
             for f in fichiers[:200]:
                 nom = f.filename
                 r = {"nom": nom, "ok": False}
@@ -382,7 +382,7 @@ def enregistrer(app, H):
                 abort(403)
             p = H.jur_exporter_paquet_cs(annee)
             octets = jur_format.vers_fichier(p)
-            nom = f"transmission_{p['emetteur']['code']}_{annee}.scolaris"
+            nom = f"transmission_{p['emetteur']['code']}_{annee}.gescol"
             historiser(p, annee, "fichier", True, "Fichier téléchargé.", octets, nom_fichier=nom)
             H.journal("jur_transmission_fichier", nom)
             return Response(octets, mimetype="application/octet-stream",
@@ -404,7 +404,7 @@ def enregistrer(app, H):
                       "cs_sections": [k for k in ((p.get("cs") or {}).get("sections") or {})],
                       "rub": {k: sum(1 for it in avec if k in it["sections"]) for k in jur_format.SECTIONS_ECOLE},
                       "taille": len(jur_format.vers_fichier(p)),
-                      "nom": f"transmission_{p['emetteur']['code']}_{annee}.scolaris"}
+                      "nom": f"transmission_{p['emetteur']['code']}_{annee}.gescol"}
         hist = q("SELECT * FROM jur_trans_envois ORDER BY id DESC LIMIT 30")
         return render_template("jur_transmission_envoi.html", apercu=apercu, erreur=erreur, r=r, hist=hist, annee=annee,
                                annees=H.jur_annees(), noms=COURTS, sections=jur_format.SECTIONS_ECOLE)
@@ -431,7 +431,7 @@ def enregistrer(app, H):
     @app.route("/api/transmission", methods=["POST"])
     def api_transmission():
         """Réception en ligne d'un paquet (école → CS, ou CS → DDEMP). Pas de session : authentification par
-        l'en-tête X-Scolaris-Code (code d'accès de l'école ou de la CS émettrice, généré dans « Suivi des envois »)."""
+        l'en-tête X-Gescol-Code (code d'accès de l'école ou de la CS émettrice, généré dans « Suivi des envois »)."""
         if not config.juridiction():
             return jsonify(ok=False, message="Cette application ne reçoit pas de transmissions.", resume=None), 404
         ip = request.remote_addr or "?"
@@ -444,7 +444,7 @@ def enregistrer(app, H):
             return refus(503, "Application destinataire non configurée.", ip, compter=False)
         if (request.content_length or 0) > jur_format.TAILLE_MAX:
             return refus(413, "Données trop volumineuses (15 Mo au maximum) : envoyez le fichier.", ip, compter=False)
-        code = (request.headers.get("X-Scolaris-Code") or "").strip().upper()
+        code = (request.headers.get("X-Gescol-Code") or "").strip().upper()
         if not code:
             return refus(403, "Code d'accès manquant.", ip)
         # recherche de l'émetteur par comparaison à temps constant

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Tests v1.6 — divisions : rubriques, lignes d'action conformes à l'AOF (a_divisions).
-Lancer : python3 -m unittest tests.test_divisions_aof   (depuis /home/claude/scolaris)
+Lancer : python3 -m unittest tests.test_divisions_aof   (depuis /home/claude/gescol)
 
-Base de démonstration (demo_juridiction.main()) dans un dossier temporaire, édition choisie par SCOLARIS_EDITION_TEST.
+Base de démonstration (demo_juridiction.main()) dans un dossier temporaire, édition choisie par GESCOL_EDITION_TEST.
 Sans cette variable (« python3 -m unittest discover » ou lancement direct), ce module n'impose PAS d'édition au
 processus (il est le premier chargé par « discover » et les modules suivants attendent l'édition privée) : la suite
 est rejouée dans deux sous-processus, « cs » puis « ddemp » (TestEditionsSeparees), comme tests/test_jur_v16.py.
@@ -17,14 +17,14 @@ import unittest
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
-EDITION = os.environ.get("SCOLARIS_EDITION_TEST")
+EDITION = os.environ.get("GESCOL_EDITION_TEST")
 EN_PLACE = EDITION is not None
 if EN_PLACE:
-    os.environ["SCOLARIS_EDITION"] = EDITION
-    os.environ["SCOLARIS_DATA"] = tempfile.mkdtemp(prefix=f"scolaris_divaof_{EDITION}_")
+    os.environ["GESCOL_EDITION"] = EDITION
+    os.environ["GESCOL_DATA"] = tempfile.mkdtemp(prefix=f"gescol_divaof_{EDITION}_")
 else:
     EDITION = "cs"
-    os.environ.setdefault("SCOLARIS_DATA", tempfile.mkdtemp(prefix="scolaris_tests_"))
+    os.environ.setdefault("GESCOL_DATA", tempfile.mkdtemp(prefix="gescol_tests_"))
 
 from app import app  # noqa: E402
 import config  # noqa: E402
@@ -51,9 +51,9 @@ def xlsx_feuilles(data):
 
 
 def _rejouer(edition):
-    env = dict(os.environ, SCOLARIS_EDITION_TEST=edition)
-    env.pop("SCOLARIS_EDITION", None)
-    env.pop("SCOLARIS_DATA", None)
+    env = dict(os.environ, GESCOL_EDITION_TEST=edition)
+    env.pop("GESCOL_EDITION", None)
+    env.pop("GESCOL_DATA", None)
     return subprocess.run([sys.executable, "-m", "unittest", "tests.test_divisions_aof.TestDivisionsAOF"], cwd=RACINE,
                           env=env, capture_output=True, text=True, timeout=900)
 
@@ -71,7 +71,7 @@ class TestDivisionsAOF(unittest.TestCase):
         cls.annee = config.ANNEE_ACTIVE
         cls.ddemp = EDITION == "ddemp"
         cls.code = "spaf" if cls.ddemp else "animation"           # division de travail
-        cls.redige = "spaf" if cls.ddemp else "personnel"         # division dont le texte est rédigé par SCOLARIS
+        cls.redige = "spaf" if cls.ddemp else "personnel"         # division dont le texte est rédigé par GESCOL
 
     def get(self, url, code=200):
         r = self.c.get(url)
@@ -101,7 +101,7 @@ class TestDivisionsAOF(unittest.TestCase):
         self.assertEqual(AD.numero_article("13"), "13")
         self.assertEqual(AD.numero_article(""), "")
         self.assertEqual(AD.source_division({"reference": "Article 11"}), ("AOF – article 11", True))
-        self.assertEqual(AD.source_division({"reference": "", "note": S.REDIGE}), (S.SOURCE_SCOLARIS, False))
+        self.assertEqual(AD.source_division({"reference": "", "note": S.REDIGE}), (S.SOURCE_GESCOL, False))
         sy = AD.synthese_lignes([{"etat": "réalisée", "taux": 10}, {"etat": "en cours", "taux": 50}, {"etat": "prévue"},
                                  {"etat": "reportée", "taux": 0}])
         self.assertEqual((sy["total"], sy["realisees"], sy["en_cours"], sy["prevues"], sy["reportees"], sy["taux"]), (4, 1, 1, 1, 1, 37.5))
@@ -120,7 +120,7 @@ class TestDivisionsAOF(unittest.TestCase):
                 self.assertIn(art, t)
             self.assertIn("hors AOF", t)                      # CSPAF conservée, marquée hors AOF
             self.assertIn("CDOSP", t)
-        self.assertIn(S.SOURCE_SCOLARIS, t)                      # textes rédigés par SCOLARIS signalés
+        self.assertIn(S.SOURCE_GESCOL, t)                      # textes rédigés par GESCOL signalés
         t2 = txt(self.get(f"/juridiction/divisions/{self.code}"))
         for mot in ("Rubrique", "Autorité de rattachement", "Chef", "Source", "Lignes d'action", "Modules de l'application", "Agents affectés"):
             self.assertIn(mot, t2)
@@ -136,7 +136,7 @@ class TestDivisionsAOF(unittest.TestCase):
             r = self.q("SELECT article_aof, source_aof FROM jur_services WHERE niveau=? AND code='animation'", (EDITION,))[0]
             self.assertEqual((r["article_aof"], r["source_aof"]), ("11", "AOF – article 11"))
         r = self.q("SELECT source_aof FROM jur_services WHERE niveau=? AND code=?", (EDITION, self.redige))[0]
-        self.assertEqual(r["source_aof"], S.SOURCE_SCOLARIS)
+        self.assertEqual(r["source_aof"], S.SOURCE_GESCOL)
         # menu
         self.assertIn("Plan d'action des divisions", txt(self.get("/juridiction/tableau-de-bord")))
 
@@ -231,16 +231,16 @@ class TestDivisionsAOF(unittest.TestCase):
         code = self.redige
         t = txt(self.get(f"/juridiction/divisions/{code}"))
         self.assertIn("Saisir le texte de l'AOF", t)
-        self.assertIn(S.SOURCE_SCOLARIS, t)
+        self.assertIn(S.SOURCE_GESCOL, t)
         self.post(f"/juridiction/divisions/{code}/aof", {"annee": self.annee, "article": "", "attributions": "x"})     # refusé
-        self.assertEqual(self.q("SELECT source_aof FROM jur_services WHERE niveau=? AND code=?", (EDITION, code))[0]["source_aof"], S.SOURCE_SCOLARIS)
+        self.assertEqual(self.q("SELECT source_aof FROM jur_services WHERE niveau=? AND code=?", (EDITION, code))[0]["source_aof"], S.SOURCE_GESCOL)
         texte = "Le Service est chargé de :\n- première attribution officielle ;\n- deuxième attribution officielle ;\n- troisième attribution officielle."
         self.post(f"/juridiction/divisions/{code}/aof", {"annee": ANNEE_2, "article": "Article 17", "attributions": texte})
         r = self.q("SELECT * FROM jur_services WHERE niveau=? AND code=?", (EDITION, code))[0]
         self.assertEqual((r["article_aof"], r["source_aof"], r["attributions"], r["reference"]), ("17", "AOF – article 17", texte, "Article 17"))
         t = txt(self.get(f"/juridiction/divisions/{code}?annee={ANNEE_2}"))
         self.assertIn("AOF – article 17", t)
-        self.assertNotIn(S.SOURCE_SCOLARIS, t)
+        self.assertNotIn(S.SOURCE_GESCOL, t)
         self.assertNotIn("hors AOF", t)
         self.assertIn("Première attribution officielle", t)        # lignes d'action générées depuis le texte officiel
         self.assertEqual(self.q("SELECT COUNT(*) n FROM jur_lignes_action WHERE service_code=? AND annee=?", (code, ANNEE_2))[0]["n"], 3)

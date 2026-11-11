@@ -169,7 +169,7 @@ table.rl tr.avertir td.mois{box-shadow:inset 3px 0 0 #B42318}
   document.getElementById('b-auto').addEventListener('click', function () {
     if (!confirm('Effacer toutes les corrections manuelles du tableau ?')) return;
     T.querySelectorAll('input').forEach(function (i) { i.value = ''; }); calculer();
-    SCOLARIS.toast('Valeurs automatiques rétablies (pensez à sauvegarder).');
+    GESCOL.toast('Valeurs automatiques rétablies (pensez à sauvegarder).');
   });
   calculer();
 })();

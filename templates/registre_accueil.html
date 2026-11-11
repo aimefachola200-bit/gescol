@@ -214,12 +214,12 @@ table.rg td.sep-j{border-left:2px solid #98A2B3!important}
     var absent = !td.classList.contains('A');
     var eid = td.parentNode.dataset.eleve;
     poser(td, absent); td.classList.add('encours'); majTotaux();
-    SCOLARIS.json('{{ url_for("registre_presence") }}', { eleve_id: eid, date: td.dataset.d, demi: td.dataset.m, absent: absent })
+    GESCOL.json('{{ url_for("registre_presence") }}', { eleve_id: eid, date: td.dataset.d, demi: td.dataset.m, absent: absent })
       .then(function (r) {
         td.classList.remove('encours');
-        if (!r.ok) { poser(td, !absent); majTotaux(); SCOLARIS.toast(r.erreur || 'Enregistrement refusé.', false); }
+        if (!r.ok) { poser(td, !absent); majTotaux(); GESCOL.toast(r.erreur || 'Enregistrement refusé.', false); }
       })
-      .catch(function () { td.classList.remove('encours'); SCOLARIS.toast('Connexion perdue : cliquez sur « Sauvegarder » quand le réseau revient.', false); });
+      .catch(function () { td.classList.remove('encours'); GESCOL.toast('Connexion perdue : cliquez sur « Sauvegarder » quand le réseau revient.', false); });
   }
   T.addEventListener('click', function (e) {
     var td = e.target.closest('td.case[data-d]'); if (td) basculer(td);
@@ -231,9 +231,9 @@ table.rg td.sep-j{border-left:2px solid #98A2B3!important}
   document.getElementById('b-sauver').addEventListener('click', function () {
     var abs = [];
     T.querySelectorAll('tbody td.case.A[data-d]').forEach(function (td) { abs.push([+td.parentNode.dataset.eleve, td.dataset.d, +td.dataset.m]); });
-    SCOLARIS.json('{{ url_for("registre_sauvegarder") }}', { classe: cid, du: T.dataset.du, au: T.dataset.au, absences: abs })
-      .then(function (r) { SCOLARIS.toast(r.ok ? 'Registre enregistré (' + r.n + ' absence(s)).' : (r.erreur || 'Erreur'), !!r.ok); })
-      .catch(function () { SCOLARIS.toast('Serveur injoignable : réessayez.', false); });
+    GESCOL.json('{{ url_for("registre_sauvegarder") }}', { classe: cid, du: T.dataset.du, au: T.dataset.au, absences: abs })
+      .then(function (r) { GESCOL.toast(r.ok ? 'Registre enregistré (' + r.n + ' absence(s)).' : (r.erreur || 'Erreur'), !!r.ok); })
+      .catch(function () { GESCOL.toast('Serveur injoignable : réessayez.', false); });
   });
   document.getElementById('b-charger').addEventListener('click', function () {
     fetch('{{ url_for("registre_absences") }}?classe=' + cid + '&du=' + T.dataset.du + '&au=' + T.dataset.au, { credentials: 'same-origin' })
@@ -242,9 +242,9 @@ table.rg td.sep-j{border-left:2px solid #98A2B3!important}
         var set = {};
         (r.absences || []).forEach(function (a) { set[a[0] + '|' + a[1] + '|' + a[2]] = 1; });
         T.querySelectorAll('tbody td.case[data-d]').forEach(function (td) { poser(td, !!set[td.parentNode.dataset.eleve + '|' + td.dataset.d + '|' + td.dataset.m]); });
-        majTotaux(); SCOLARIS.toast('Registre rechargé depuis le serveur.');
+        majTotaux(); GESCOL.toast('Registre rechargé depuis le serveur.');
       })
-      .catch(function () { SCOLARIS.toast('Serveur injoignable : réessayez.', false); });
+      .catch(function () { GESCOL.toast('Serveur injoignable : réessayez.', false); });
   });
 })();
 </script>
