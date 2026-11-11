@@ -11,7 +11,7 @@ on:
     tags: ["v*"]
 
 env:
-  VERSION: "2.4.6"
+  VERSION: "2.4.7"
 
 jobs:
   tests:
@@ -62,7 +62,7 @@ jobs:
           if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
           & $iscc "/DVersion=${env:VERSION}" packaging\windows\gescol.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup a échoué (GESCOL)" }
-          foreach ($ed in @("publique", "cs", "ddemp", "enseignant", "sec_privee", "sec_publique")) {
+          foreach ($ed in @("publique", "cs", "ddemp", "enseignant", "sec_privee", "sec_publique", "sec_cs", "sec_ddestfp")) {
             & $iscc "/DVersion=${env:VERSION}" "/DEdition=$ed" packaging\windows\gescol.iss
             if ($LASTEXITCODE -ne 0) { throw "Inno Setup a échoué ($ed)" }
           }
@@ -148,6 +148,14 @@ jobs:
             id: bj.gescol.secondaire.public
             nom: GESCOL Secondaire Public
             fichier: GESCOL-Secondaire-Public
+          - edition: sec_cs
+            id: bj.gescol.inspection.secondaire
+            nom: GESCOL Inspection Secondaire
+            fichier: GESCOL-Inspection-Secondaire
+          - edition: sec_ddestfp
+            id: bj.gescol.ddestfp
+            nom: GESCOL DDESTFP
+            fichier: GESCOL-DDESTFP
     steps:
       - uses: actions/checkout@v4
       - name: Décompresser le code source (gescol_source.zip)
@@ -230,6 +238,10 @@ jobs:
           cp GESCOL-Secondaire-Public-[0-9]*.apk GESCOL-Secondaire-Public.apk
           cp GESCOL-Secondaire-Installation-*.exe GESCOL-Secondaire-Installation.exe
           cp GESCOL-Secondaire-Public-Installation-*.exe GESCOL-Secondaire-Public-Installation.exe
+          cp GESCOL-Inspection-Secondaire-[0-9]*.apk GESCOL-Inspection-Secondaire.apk
+          cp GESCOL-DDESTFP-[0-9]*.apk GESCOL-DDESTFP.apk
+          cp GESCOL-Inspection-Secondaire-Installation-*.exe GESCOL-Inspection-Secondaire-Installation.exe
+          cp GESCOL-DDESTFP-Installation-*.exe GESCOL-DDESTFP-Installation.exe
           ls -l
       - uses: softprops/action-gh-release@v2
         with:
@@ -245,6 +257,8 @@ jobs:
             **GESCOL Enseignant** (application personnelle de l'enseignant) : GESCOL-Enseignant.apk et GESCOL-Enseignant-Installation.exe.
             **GESCOL Secondaire** (collèges, lycées privés) : GESCOL-Secondaire.apk et GESCOL-Secondaire-Installation.exe.
             **GESCOL Secondaire Public** (collèges, lycées publics) : GESCOL-Secondaire-Public.apk et GESCOL-Secondaire-Public-Installation.exe.
+            **GESCOL Inspection Secondaire** (supervision des collèges et lycées) : GESCOL-Inspection-Secondaire.apk et GESCOL-Inspection-Secondaire-Installation.exe.
+            **GESCOL DDESTFP** (direction départementale du secondaire) : GESCOL-DDESTFP.apk et GESCOL-DDESTFP-Installation.exe.
             **Android connecté** : GESCOL.apk se connecte au serveur de l'école ou à la version en ligne.
             **Windows** : GESCOL-Installation.exe installe GESCOL sur un PC.
 

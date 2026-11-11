@@ -1,0 +1,49 @@
+{# v2.4.7 — supervision du secondaire (Inspection secondaire / DDESTFP) #}
+{% extends "base.html" %}{% block titre %}Secondaire{% endblock %}
+{% block contenu %}
+{% set titres = {'tableau': 'Effectifs du secondaire', 'examens': 'Résultats aux examens (BEPC, BAC)', 'personnel': 'Personnel des établissements'} %}
+<div class="entete"><div><h1>{{ titres[vue] }}</h1><p class="sous">{{ struct.nom if struct else '' }} · année {{ a.annee }}</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('sec_export_pdf', vue=vue, annee=a.annee, cs_id=a.cs_id, zone_id=a.zone_id, type=a.type_, secteur=a.secteur) }}">PDF</a>
+    <a class="btn sec" href="{{ url_for('sec_export_xlsx', vue=vue, annee=a.annee, cs_id=a.cs_id, zone_id=a.zone_id, type=a.type_, secteur=a.secteur) }}">Excel</a></div></div>
+<div class="actions" style="margin-bottom:12px">
+  <a class="btn {{ '' if vue=='tableau' else 'sec' }}" href="{{ url_for('sec_tableau') }}">Effectifs</a>
+  <a class="btn {{ '' if vue=='examens' else 'sec' }}" href="{{ url_for('sec_examens') }}">Examens</a>
+  <a class="btn {{ '' if vue=='personnel' else 'sec' }}" href="{{ url_for('sec_personnel') }}">Personnel</a></div>
+<form method="get" class="carte filtres">
+  <label>Année <select name="annee">{% for x in annees %}<option {{ 'selected' if x==a.annee }}>{{ x }}</option>{% endfor %}</select></label>
+  {% if DDEMP %}<label>Circonscription <select name="cs_id"><option value="">Toutes</option>{% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if c.id==a.cs_id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+  {% if not DDEMP %}<label>Zone <select name="zone_id"><option value="">Toutes</option>{% for z in zones %}<option value="{{ z.id }}" {{ 'selected' if z.id==a.zone_id }}>{{ z.nom }}</option>{% endfor %}</select></label>{% endif %}
+  <label>Type <select name="type"><option value="">Tous</option>{% for k, v in TYPES.items() %}<option value="{{ k }}" {{ 'selected' if k==a.type_ }}>{{ v }}</option>{% endfor %}</select></label>
+  <label>Secteur <select name="secteur"><option value="">Tous</option><option value="public" {{ 'selected' if a.secteur=='public' }}>Public</option><option value="prive" {{ 'selected' if a.secteur=='prive' }}>Privé</option></select></label>
+  <button class="btn sec">Filtrer</button></form>
+
+{% if vue == 'tableau' %}
+<div class="grille">
+  <div class="kpi"><div class="l">Établissements</div><div class="v">{{ tot.etabs }}</div><div class="d">{{ tot.transmis }} ont transmis</div></div>
+  <div class="kpi"><div class="l">Élèves</div><div class="v">{{ tot.t }}</div><div class="d">{{ tot.g }} garçons · {{ tot.f }} filles{% if tot.pct_f is not none %} ({{ tot.pct_f }} %){% endif %}</div></div>
+  <div class="kpi"><div class="l">Classes</div><div class="v">{{ tot.classes }}</div><div class="d">{% if tot.eleves_classe is not none %}{{ tot.eleves_classe }} élèves par classe{% endif %}</div></div>
+  <div class="kpi"><div class="l">Enseignants</div><div class="v">{{ tot.ens }}</div><div class="d">{% if tot.eleves_ens is not none %}{{ tot.eleves_ens }} élèves par enseignant{% endif %}</div></div>
+  <div class="kpi"><div class="l">Redoublants</div><div class="v">{{ tot.red }}</div></div>
+</div>
+<div class="carte"><h2>Par niveau</h2><div class="tw"><table class="t"><tr><th>Niveau</th><th>Garçons</th><th>Filles</th><th>Total</th><th>Redoublants</th></tr>
+  {% for n in NIVEAUX %}{% set v = niv[n] %}<tr><td>{{ n }}</td><td class="num">{{ v[0] }}</td><td class="num">{{ v[1] }}</td><td class="num"><b>{{ v[0] + v[1] }}</b></td><td class="num">{{ v[2] + v[3] }}</td></tr>{% endfor %}</table></div></div>
+{% if groupes|length > 1 %}<div class="carte"><h2>{{ 'Par circonscription' if DDEMP else 'Par zone' }}</h2><div class="tw"><table class="t"><tr><th>{{ 'Circonscription' if DDEMP else 'Zone' }}</th><th>Établissements</th><th>Classes</th><th>Garçons</th><th>Filles</th><th>Total</th><th>Enseignants</th></tr>
+  {% for r in groupes %}<tr><td>{{ r.nom }}</td><td class="num">{{ r.etabs }}</td><td class="num">{{ r.classes }}</td><td class="num">{{ r.g }}</td><td class="num">{{ r.f }}</td><td class="num"><b>{{ r.t }}</b></td><td class="num">{{ r.ens }}</td></tr>{% endfor %}</table></div></div>{% endif %}
+<div class="carte"><h2>Par établissement</h2><div class="tw"><table class="t"><tr><th>Établissement</th><th>Type</th><th>{{ 'Circonscription' if DDEMP else 'Zone' }}</th><th>Classes</th><th>G</th><th>F</th><th>Total</th><th>Red.</th><th>Ens.</th><th>É/classe</th><th>É/ens.</th></tr>
+  {% for l in lignes %}<tr><td>{{ l.nom }}{% if not l.transmis %} <span class="badge att">non transmis</span>{% endif %}</td><td>{{ l.type }}</td><td>{{ (l.cs_nom if DDEMP else l.zone_nom) or '' }}</td><td class="num">{{ l.classes }}</td><td class="num">{{ l.g }}</td><td class="num">{{ l.f }}</td><td class="num"><b>{{ l.t }}</b></td><td class="num">{{ l.red }}</td><td class="num">{{ l.ens }}</td><td class="num">{{ l.eleves_classe if l.eleves_classe is not none else '' }}</td><td class="num">{{ l.eleves_ens if l.eleves_ens is not none else '' }}</td></tr>
+  {% else %}<tr><td colspan="11" class="gris">Aucun établissement du secondaire : ajoutez-les dans « Établissements » ou recevez leurs transmissions.</td></tr>{% endfor %}</table></div></div>
+
+{% elif vue == 'examens' %}
+<div class="grille">{% for x in EXAMENS %}<div class="kpi"><div class="l">{{ x }}</div><div class="v">{{ res[x].taux if res[x].taux is not none else '—' }}{% if res[x].taux is not none %} %{% endif %}</div>
+  <div class="d">{{ res[x].admis_g + res[x].admis_f }} admis / {{ res[x].presents_g + res[x].presents_f }} présents<br>garçons {{ res[x].taux_g if res[x].taux_g is not none else '—' }} % · filles {{ res[x].taux_f if res[x].taux_f is not none else '—' }} %</div></div>{% endfor %}</div>
+<div class="carte"><div class="tw"><table class="t"><tr><th rowspan="2">Établissement</th><th rowspan="2">Type</th>{% for x in EXAMENS %}<th colspan="4">{{ x }}</th>{% endfor %}</tr>
+  <tr>{% for x in EXAMENS %}<th>Inscrits</th><th>Présents</th><th>Admis</th><th>Taux %</th>{% endfor %}</tr>
+  {% for l in lignes %}<tr><td>{{ l.nom }}</td><td>{{ l.type }}</td>{% for x in EXAMENS %}{% set v = l[x] %}<td class="num">{{ v.inscrits_g + v.inscrits_f if v.saisi else '' }}</td><td class="num">{{ v.presents_g + v.presents_f if v.saisi else '' }}</td><td class="num">{{ v.admis_g + v.admis_f if v.saisi else '' }}</td><td class="num"><b>{{ v.taux if v.taux is not none else '' }}</b></td>{% endfor %}</tr>
+  {% else %}<tr><td colspan="10" class="gris">Aucun établissement.</td></tr>{% endfor %}</table></div></div>
+
+{% else %}
+<div class="carte"><div class="tw"><table class="t"><tr><th>Établissement</th><th>Type</th><th>{{ 'Circonscription' if DDEMP else 'Zone' }}</th><th>Enseignants</th><th>dont F</th><th>Administration</th><th>Soutien</th><th>Total</th><th>Par catégorie</th></tr>
+  {% for l in lignes %}<tr><td>{{ l.nom }}{% if not l.transmis %} <span class="badge att">non transmis</span>{% endif %}</td><td>{{ l.type }}</td><td>{{ (l.cs_nom if DDEMP else l.zone_nom) or '' }}</td><td class="num"><b>{{ l.ens }}</b></td><td class="num">{{ l.ensf }}</td><td class="num">{{ l.admin }}</td><td class="num">{{ l.soutien }}</td><td class="num">{{ l.total }}</td><td class="aide">{% for k, v in l.cat.items() %}{{ k }} : {{ v }}{{ ' · ' if not loop.last }}{% endfor %}</td></tr>
+  {% else %}<tr><td colspan="9" class="gris">Aucun établissement.</td></tr>{% endfor %}</table></div></div>
+{% endif %}
+{% endblock %}

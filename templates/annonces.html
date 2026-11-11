@@ -9,6 +9,7 @@
   <select name="cible">{% for k, l in CIBLES.items() %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select>
   <label>Sujet</label><input name="sujet" required maxlength="150" placeholder="ex. Conseil des maîtres vendredi">
   <label>Message</label><textarea name="texte" rows="4" required maxlength="1000"></textarea>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin:6px 0 10px"><label style="font-weight:400;display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" name="canaux" value="whatsapp"> Envoyer aussi par WhatsApp</label><label style="font-weight:400;display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" name="canaux" value="sms"> Envoyer aussi par SMS</label></div>
   <p><button class="btn">Publier</button></p>
 </form></div>
 {% endif %}
@@ -17,6 +18,7 @@
   <div class="actions" style="justify-content:space-between"><b>{{ a.sujet }}{% if a.id in nouvelles %} <span class="badge att">nouveau</span>{% endif %}</b>
     <span class="aide">{{ CIBLES.get(a.cible, a.cible) }} · {{ (a.cree_le or '')[:10] }}{% if a.auteur %} · {{ a.auteur }}{% endif %}</span></div>
   <p style="white-space:pre-wrap;margin:8px 0 0">{{ a.texte }}</p>
+  {% if peut_publier %}<a class="btn wa petit" style="margin-top:8px" href="{{ url_for('annonces_diffuser', aid=a.id) }}">Envoyer par WhatsApp / SMS</a>{% endif %}
   {% if peut_publier %}<form method="post" action="{{ url_for('annonces_supprimer', aid=a.id) }}" onsubmit="return confirm('Supprimer cette annonce ?')" style="margin-top:8px"><button class="btn sec petit">Supprimer</button></form>{% endif %}
 </div>
 {% else %}<div class="carte">Aucune annonce.</div>{% endfor %}

@@ -63,16 +63,17 @@ import json
 
 FORMAT = "gescol-transmission"
 VERSION = 1
-TYPES_ECOLE = {"EP": "École primaire", "EM": "École maternelle", "EE": "Espace enfance"}
+TYPES_ECOLE = {"EP": "École primaire", "EM": "École maternelle", "EE": "Espace enfance",
+               "CEG": "Collège d'enseignement général", "LYC": "Lycée", "ETP": "Établissement technique et professionnel"}
 SECTEURS = {"public": "Public", "prive": "Privé"}
 SECTIONS_ECOLE = ("effectifs", "personnel", "visites", "cep", "recensement", "rapports", "patrimoine", "cantine",
-                  "pilotage")   # v1.25 : évaluations (réussite G / F), abandons, transferts, sport, santé (m_pilotage)
+                  "pilotage", "secondaire")   # v2.4.7 : section du secondaire (effectifs, examens…)   # v1.25 : évaluations (réussite G / F), abandons, transferts, sport, santé (m_pilotage)
 SECTIONS_CS = ("agents", "visites", "cep", "structure", "frais_releves", "cp_bilans")  # v1.7 : bilans des CP
 CATEGORIES = {"FE": "FE (fonctionnaire de l'État)", "ACDPE": "ACDPE", "ACDPCTD": "ACDPCTD (AME)",
               "PRIVE": "Enseignant du privé", "AUTRE": "Autre"}
 ROLES_PERSONNE = {"directeur": "Directeur", "adjoint": "Adjoint", "enseignant": "Enseignant",
                   "soutien": "Personnel de soutien", "administratif": "Personnel administratif",
-                  "cp": "Conseiller pédagogique", "ccs": "Chef de circonscription", "chef_service": "Chef de service"}
+                  "cp": "Conseiller pédagogique", "ip": "Inspecteur pédagogique", "ccs": "Chef de circonscription", "chef_service": "Chef de service"}
 CHAMPS_ECOLE = ("code", "nom", "type", "secteur", "departement", "cs", "zone", "commune", "arrondissement",
                 "localite", "adresse", "telephone", "email", "directeur_titre", "directeur_nom", "directeur_tel",
                 "annee_creation")
@@ -150,7 +151,7 @@ def verifier(paquet):
         if not (e.get("code") or "").strip() or not (e.get("nom") or "").strip():
             raise PaquetInvalide("Une école du fichier n'a pas de code ou de nom.")
         if e.get("type") not in TYPES_ECOLE:
-            raise PaquetInvalide(f"Type d'école inconnu pour « {e.get('nom')} » (attendu EP, EM ou EE).")
+            raise PaquetInvalide(f"Type d'école inconnu pour « {e.get('nom')} » (attendu EP, EM, EE, CEG, LYC ou ETP).")
         if e.get("secteur") not in SECTEURS:
             raise PaquetInvalide(f"Secteur inconnu pour « {e.get('nom')} » (attendu public ou prive).")
     if not paquet.get("annee"):

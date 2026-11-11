@@ -233,6 +233,7 @@
     {% if peut('donnees') %}
     {% call groupe('don', 'Données', ep.startswith('donnees') or ep.startswith('educmaster') or ep.startswith('conversion') or ep.startswith('transmission'), 'transmission') %}
       {{ lien('transmission_accueil', 'Transmission à la circonscription', ep.startswith('transmission')) }}
+      {% if SECONDAIRE and ep_existe('sec_examens_saisie') %}{{ lien('sec_examens_saisie', 'Résultats aux examens (BEPC, BAC)', ep=='sec_examens_saisie') }}{% endif %}
       {% if peut('synchronisation') %}{{ lien('sync_page', 'Synchronisation avec la circonscription', ep.startswith('sync_')) }}{% endif %}
       {{ lien('donnees_accueil', 'Import / export', ep.startswith('donnees')) }}
       {{ lien('educmaster_accueil', 'EducMaster (maternelle, primaire, secondaire)', ep.startswith('educmaster')) }}

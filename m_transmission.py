@@ -62,7 +62,8 @@ CREATE INDEX IF NOT EXISTS ix_trans_envois ON trans_envois(ecole_id, annee);
 NOMS_RUBRIQUES = {"effectifs": "Effectifs des élèves", "personnel": "Personnel", "visites": "Visites de classe (CP / CCS)",
                   "cep": "CEP (candidats et résultats)", "recensement": "Fiches de recensement",
                   "rapports": "Rapports de rentrée / fin d'année", "patrimoine": "Patrimoine et infrastructures",
-                  "cantine": "Cantine scolaire", "pilotage": "Pilotage (évaluations, abandons, sport, santé)"}
+                  "cantine": "Cantine scolaire", "pilotage": "Pilotage (évaluations, abandons, sport, santé)",
+                  "secondaire": "Secondaire (classes, séries, examens)"}
 RE_CODE = re.compile(r"^[A-Z0-9][A-Z0-9-]{3,30}$")
 TIMEOUT = 20
 LIMITE_DECOMPRESSION = 60 * 1024 * 1024
@@ -236,6 +237,8 @@ def enregistrer(app, H):
         return out
 
     def type_deduit(classes):
+        if config.secondaire():   # v2.4.7 : collège (6ème-3ème) ou lycée (2nde-Tle)
+            return "LYC" if any(c.get("niveau") in ("2nde", "1ère", "Tle") for c in classes) else "CEG"
         cyc = {c["cycle"] for c in classes}
         if "primaire" in cyc:
             return "EP"

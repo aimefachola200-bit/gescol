@@ -258,7 +258,11 @@ def enregistrer(app, H):
         sujet = request.form.get("sujet", "").strip()[:150]
         texte = request.form.get("texte", "").strip()[:1000]
         if cible == "enseignants" and getattr(H, "publier_annonce_personnel", None) and g.user["role"] != "enseignant":
-            if H.publier_annonce_personnel(sujet, texte, "enseignants"):
+            aid = H.publier_annonce_personnel(sujet, texte, "enseignants")
+            if aid:
+                if aid is not True and {c for c in request.form.getlist("canaux") if c in ("whatsapp", "sms")}:
+                    flash("Annonce publiée. Envoyez-la maintenant aux enseignants par WhatsApp ou SMS.", "success")
+                    return redirect(url_for("annonces_diffuser", aid=aid))
                 flash("Annonce publiée pour les enseignants (page « Annonces »).", "success")
                 return redirect(url_for("annonces_accueil"))
             flash("Indiquez un sujet et un message.", "danger")

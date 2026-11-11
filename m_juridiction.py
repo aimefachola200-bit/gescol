@@ -366,9 +366,14 @@ def _maintenant():
 # ======================================================================== configuration de la structure
 def configurer(niveau_, departement, cs="", **infos):
     """Crée / met à jour la structure et le référentiel (CS du département, zones pédagogiques)."""
-    nom = infos.get("nom") or (f"Circonscription scolaire de {cs.title()}" if niveau_ == "cs"
-                               else f"Direction départementale des Enseignements Maternel et Primaire du {departement}")
-    sigle = infos.get("sigle") or (f"CS {cs}" if niveau_ == "cs" else f"DDEMP {departement}")
+    if config.secondaire():   # v2.4.7 : Inspection de l'enseignement secondaire / DDESTFP
+        nom = infos.get("nom") or (f"Inspection de l'enseignement secondaire de {cs.title()}" if niveau_ == "cs"
+                                   else f"Direction départementale des Enseignements Secondaire, Technique et de la Formation Professionnelle du {departement}")
+        sigle = infos.get("sigle") or (f"IS {cs}" if niveau_ == "cs" else f"DDESTFP {departement}")
+    else:
+        nom = infos.get("nom") or (f"Circonscription scolaire de {cs.title()}" if niveau_ == "cs"
+                                   else f"Direction départementale des Enseignements Maternel et Primaire du {departement}")
+        sigle = infos.get("sigle") or (f"CS {cs}" if niveau_ == "cs" else f"DDEMP {departement}")
     ex("INSERT INTO jur_structure (id, niveau, departement, cs, nom, sigle, adresse, bp, telephone, email, ville, "
        "responsable_titre, responsable_nom, maj) VALUES (1,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now','localtime')) "
        "ON CONFLICT(id) DO UPDATE SET niveau=excluded.niveau, departement=excluded.departement, cs=excluded.cs, "
@@ -706,4 +711,5 @@ def enregistrer(app, H):
 NOMS_SECTIONS = {"effectifs": "Effectifs des élèves", "personnel": "Personnel", "visites": "Visites de classe",
                  "cep": "CEP (candidats, résultats)", "recensement": "Fiches de recensement",
                  "rapports": "Rapports de rentrée / fin d'année", "patrimoine": "Patrimoine et infrastructures",
-                 "cantine": "Cantine scolaire", "pilotage": "Pilotage (évaluations, abandons, sport, santé)"}
+                 "cantine": "Cantine scolaire", "pilotage": "Pilotage (évaluations, abandons, sport, santé)",
+                 "secondaire": "Secondaire (classes, séries, examens)"}

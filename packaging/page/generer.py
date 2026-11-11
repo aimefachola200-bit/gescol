@@ -39,6 +39,12 @@ GROUPES = [
         ("autonome", "GESCOL-Secondaire-Public.apk", "Android autonome – GESCOL Secondaire Public", "Établissements publics, sans PC ni Internet."),
         ("windows", "GESCOL-Secondaire-Public-Installation.exe", "Windows (PC) – GESCOL Secondaire Public", "Installe la version publique sur un PC (adresse http://localhost:5006)."),
     ]),
+    ("GESCOL Inspection et DDESTFP — supervision du secondaire", "Reçoit les transmissions des collèges et lycées : effectifs, résultats BEPC et baccalauréat, personnel, exports PDF et Excel.", [
+        ("autonome", "GESCOL-Inspection-Secondaire.apk", "Android autonome – Inspection Secondaire", "Inspection de l'enseignement secondaire."),
+        ("windows", "GESCOL-Inspection-Secondaire-Installation.exe", "Windows (PC) – Inspection Secondaire", "Adresse http://localhost:5007."),
+        ("autonome", "GESCOL-DDESTFP.apk", "Android autonome – DDESTFP", "Direction départementale du secondaire."),
+        ("windows", "GESCOL-DDESTFP-Installation.exe", "Windows (PC) – DDESTFP", "Adresse http://localhost:5008."),
+    ]),
     ("Administration scolaire — Circonscription et DDEMP", "Tableaux de bord de la juridiction, statistiques des apprenants et des enseignants, "
      "CEP (taux par zone et par CS, prévisions, frais de relevés), carrière et retraites, visites des CP et CCS, fiches "
      "de recensement et rapports consolidés, attestations et certificats, transmissions des écoles.", [

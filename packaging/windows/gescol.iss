@@ -1,10 +1,10 @@
 ﻿; Inno Setup : fabrique GESCOL-Installation-x.y.z.exe à partir de dist\GESCOL
 ; Compiler depuis la racine du projet :  iscc /DVersion=1.3.0 packaging\windows\gescol.iss
-; Applications jumelles :  iscc /DVersion=2.4.6 /DEdition=publique|cs|ddemp|enseignant|sec_privee|sec_publique packaging\windows\gescol.iss
+; Applications jumelles :  iscc /DVersion=2.4.7 /DEdition=publique|cs|ddemp|enseignant|sec_privee|sec_publique|sec_cs|sec_ddestfp packaging\windows\gescol.iss
 ;   -> GESCOL-Public-Installation-x.y.z.exe (dossier, données, port 5001 et raccourcis séparés)
 
 #ifndef Version
-  #define Version "2.4.6"
+  #define Version "2.4.7"
 #endif
 #ifndef Edition
   #define Edition "privee"
@@ -45,6 +45,18 @@
   #define Donnees "GESCOL_Secondaire_Public"
   #define Port "5006"
   #define Id "{{43D5A16F-0F03-5763-992B-4F2398EB8819}"
+#elif Edition == "sec_cs"
+  #define Nom "GESCOL Inspection Secondaire"
+  #define Fichier "GESCOL-Inspection-Secondaire-Installation-"
+  #define Donnees "GESCOL_Inspection_Secondaire"
+  #define Port "5007"
+  #define Id "{{0FEBD3F4-8148-5171-BE54-3AEB919B5EF5}"
+#elif Edition == "sec_ddestfp"
+  #define Nom "GESCOL DDESTFP"
+  #define Fichier "GESCOL-DDESTFP-Installation-"
+  #define Donnees "GESCOL_DDESTFP"
+  #define Port "5008"
+  #define Id "{{ADF323A8-D01F-5A07-9A40-1F69CCF1D1F9}"
 #else
   #define Nom "GESCOL"
   #define Fichier "GESCOL-Installation-"

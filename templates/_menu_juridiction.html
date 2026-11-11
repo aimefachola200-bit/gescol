@@ -5,6 +5,11 @@
 {% if ep_existe('groupes_whatsapp') and groupes_whatsapp_autorise() %}{{ lien('groupes_whatsapp', 'Groupes WhatsApp (directeurs, enseignants)', ep.startswith('groupes_whatsapp'), 'message') }}{% endif %}
 {% if g.user.role != 'observateur' %}{{ lien('listes_classe', 'Listes de classe (écoles)', ep.startswith('listes_classe'), 'liste') }}{% endif %}
 {{ lien('jur_synoptique', 'Tableau synoptique de la ' ~ ('CS' if CS_ else 'DDEMP'), ep.startswith('jur_synoptique'), 'tableau') }}
+{% if SECONDAIRE %}{% call groupe('jsec', 'Secondaire (supervision)', ep.startswith('sec_'), 'graphique') %}
+  {{ lien('sec_tableau', 'Effectifs : élèves, classes, enseignants', ep=='sec_tableau') }}
+  {{ lien('sec_examens', 'Résultats BEPC et baccalauréat', ep=='sec_examens') }}
+  {{ lien('sec_personnel', 'Personnel des établissements', ep=='sec_personnel') }}
+{% endcall %}{% endif %}
 {% if ep_existe('liaison_boite') and peut('notes_service') %}{% call groupe('jliaison', 'Communication et alertes', ep.startswith('liaison_') or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'communication'), 'annonce') %}
   {{ lien('liaison_boite', 'Boîte de réception', ep=='liaison_boite') }}
   <a href="{{ url_for('reg_page', gcle='communication', rcle='notes') }}">Notes, circulaires et convocations</a>
@@ -21,11 +26,11 @@
   <a href="{{ url_for('reg_page', gcle='inspection', rcle='animations') }}">Animations pédagogiques</a>
 {% endcall %}{% endif %}
 {% if ep_existe('examens_session') and peut('examens_pvs') %}{% call groupe('jexam', 'Examens et concours', ep.startswith('examen') or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'examens'), 'examen') %}
-  {{ lien('examens_session', 'Session CEP', ep=='examens_session') }}
+    {% if not SECONDAIRE %}{{ lien('examens_session', 'Session CEP', ep=='examens_session') }}{% endif %}
   <a href="{{ url_for('reg_page', gcle='examens', rcle='candidats') }}">Candidats</a>
   {{ lien('examens_notes', 'Saisie des notes', ep=='examens_notes') }}
   {{ lien('examens_deliberation', 'Délibération et résultats', ep=='examens_deliberation') }}
-      {{ lien('examen_blanc', 'Examen blanc du CEP', ep.startswith('examen_blanc') or ep.startswith('cep_blanc')) }}
+  {% if not SECONDAIRE %}{{ lien('examen_blanc', 'Examen blanc du CEP', ep.startswith('examen_blanc') or ep.startswith('cep_blanc')) }}{% endif %}
   <a href="{{ url_for('reg_page', gcle='examens', rcle='concours') }}">Concours scolaires</a>
 {% endcall %}{% endif %}
 {% if peut('patrimoine_materiel') %}{% call groupe('jpat', 'Patrimoine et matériel', (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'patrimoine'), 'patrimoine') %}
@@ -42,7 +47,7 @@
   {{ lien('sport_records', 'Records', ep=='sport_records') }}
   {% if ep_existe('uascep') %}{{ lien('uascep', "Bureaux de l'UASCEP", ep.startswith('uascep')) }}{% endif %}
 {% endcall %}{% endif %}
-{% call groupe('jstat', 'Statistiques', ep.startswith('jur_stats') or ep in ('jur_classes', 'jur_financement', 'jur_effectifs', 'jur_infra', 'jur_ecoles_struct'), 'graphique') %}
+{% if not SECONDAIRE %}{% call groupe('jstat', 'Statistiques', ep.startswith('jur_stats') or ep in ('jur_classes', 'jur_financement', 'jur_effectifs', 'jur_infra', 'jur_ecoles_struct'), 'graphique') %}
   {{ lien('jur_stats_ecoles', 'Écoles (nombre, classement)', ep=='jur_stats_ecoles') }}
   {% if ep_existe('jur_ecoles_struct') %}{{ lien('jur_ecoles_struct', 'Écoles : structure, écarts types, équipements', ep=='jur_ecoles_struct') }}{% endif %}
   {% if ep_existe('jur_effectifs') %}{{ lien('jur_effectifs', 'Effectifs : apprenants, personnel, CAP / CEAP (courbes)', ep=='jur_effectifs') }}{% endif %}
@@ -51,13 +56,13 @@
   {{ lien('jur_stats_enseignants', 'Enseignants (besoins, écarts)', ep=='jur_stats_enseignants') }}
   {{ lien('jur_classes', 'Classes par cours et par zone', ep=='jur_classes') }}
   {% if peut('jur_financement') %}{{ lien('jur_financement', 'Financement des écoles (subventions, cantine, bilan)', ep=='jur_financement') }}{% endif %}
-{% endcall %}
-{% call groupe('jcep', 'Examens (CEP)', ep.startswith('jur_cep'), 'diplome') %}
+{% endcall %}{% endif %}
+{% if not SECONDAIRE %}{% call groupe('jcep', 'Examens (CEP)', ep.startswith('jur_cep'), 'diplome') %}
   {{ lien('jur_cep', 'Candidats et résultats', ep=='jur_cep' or ep=='jur_cep_ecole') }}
   {% if ep_existe('jur_cep_fiches') %}{{ lien('jur_cep_fiches', 'Candidats et réussite selon les fiches (sexe, %, écart type)', ep=='jur_cep_fiches') }}{% endif %}
   {{ lien('jur_cep_prevision', 'Prévision (année suivante)', ep=='jur_cep_prevision') }}
   {{ lien('jur_cep_frais', 'Frais de relevés', ep=='jur_cep_frais') }}
-{% endcall %}
+{% endcall %}{% endif %}
 {% call groupe('jpers', 'Ressources humaines (personnel, carrière)', ep.startswith('jur_personnel') or ep.startswith('jur_retraite') or ep.startswith('jur_aptitude') or ep.startswith('jur_agent'), 'groupe') %}
   {{ lien('jur_personnel', 'Gestion de carrière (par catégorie)', ep.startswith('jur_personnel')) }}
   {{ lien('jur_aptitude', "Visites d'aptitude et diplômes", ep.startswith('jur_aptitude')) }}
@@ -69,7 +74,7 @@
   {{ lien('jur_bilan_activites', 'Bilan des activités des CP et CCS', ep.startswith('jur_bilan')) }}
   {% if ep_existe('jur_cp_accueil') %}{{ lien('jur_cp_accueil', 'Conseillers pédagogiques : programmation et bilans', ep.startswith('jur_cp_')) }}{% endif %}
   {{ lien('jur_cp', 'Conseillers pédagogiques (visites, synthèses)', ep=='jur_cp') }}
-  {{ lien('jur_up', 'Unités pédagogiques (UP)', ep.startswith('jur_up')) }}
+  {% if not SECONDAIRE %}{{ lien('jur_up', 'Unités pédagogiques (UP)', ep.startswith('jur_up')) }}{% endif %}
   {% if ep_existe('uascep') %}{{ lien('uascep', "Bureaux de l'UASCEP", ep.startswith('uascep')) }}{% endif %}
   {% if ep_existe('themes_up') %}{{ lien('themes_up', "Thèmes d'UP, conférences et formations", ep.startswith('themes_up')) }}{% endif %}
   {% if ep_existe('calendrier_officiel') %}{{ lien('calendrier_officiel', 'Calendrier scolaire officiel', ep.startswith('calendrier_officiel')) }}{% endif %}
@@ -80,12 +85,12 @@
   {{ lien('jur_saisie_directeurs', 'Directeurs des écoles', ep == 'jur_saisie_directeurs') }}
   {% if ep_existe('jur_agents') %}{{ lien('jur_agents', 'Agents administratifs de la ' ~ ('circonscription' if CS_ else 'DDEMP'), false) }}{% endif %}
 {% endcall %}{% endif %}
-{% call groupe('jfiche', 'Fiches des écoles', ep.startswith('jur_fiche') or ep == 'jur_rubriques', 'presse_papiers') %}
+{% if not SECONDAIRE %}{% call groupe('jfiche', 'Fiches des écoles', ep.startswith('jur_fiche') or ep == 'jur_rubriques', 'presse_papiers') %}
   {{ lien('jur_fiches', 'Recensement, rentrée, fin d’année', ep.startswith('jur_fiche') and ep not in ('jur_fiches_synthese', 'jur_fiches_tableaux')) }}
   {{ lien('jur_fiches_synthese', 'Synthèse ' ~ ('de la CS' if CS_ else 'départementale'), ep=='jur_fiches_synthese') }}
   {% if ep_existe('jur_rubriques') %}{{ lien('jur_rubriques', 'Rubriques des fiches (toutes, consolidées)', ep=='jur_rubriques') }}{% endif %}
   {% if ep_existe('jur_fiches_tableaux') %}{{ lien('jur_fiches_tableaux', 'Tableaux globaux (infrastructures, mobilier…) par ' ~ ('zone' if CS_ else 'CS'), ep=='jur_fiches_tableaux') }}{% endif %}
-{% endcall %}
+{% endcall %}{% endif %}
 {% call groupe('jtrans', 'Transmissions', ep.startswith('jur_transmission'), 'transmission') %}
   {{ lien('jur_transmissions', 'Recevoir (fichiers, en ligne)', ep in ('jur_transmissions','jur_transmission_detail')) }}
   {% if peut('synchronisation') %}{{ lien('sync_page', 'Synchronisation (écoles, niveau supérieur)', ep == 'sync_page') }}{{ lien('sync_entites', 'Entités inscrites et codes QR', ep == 'sync_entites') }}{% endif %}

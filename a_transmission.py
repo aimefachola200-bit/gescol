@@ -48,7 +48,7 @@ ATTENDUES = {"EP": ("effectifs", "personnel", "cep", "recensement", "rapports"),
              "EE": ("effectifs", "personnel", "recensement", "rapports")}
 COURTS = {"effectifs": "Effectifs", "personnel": "Personnel", "visites": "Visites", "cep": "CEP",
           "recensement": "Recensement", "rapports": "Rapports", "patrimoine": "Patrimoine", "cantine": "Cantine",
-          "pilotage": "Pilotage"}
+          "pilotage": "Pilotage", "secondaire": "Secondaire"}
 ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"   # sans O/0, I/1/L : code facile à dicter
 ECHECS_MAX, FENETRE = 20, 3600
 _echecs = {}

@@ -5,7 +5,7 @@ là-bas remplacent celles-ci."""
 import os
 import sys
 
-VERSION = "2.4.6"
+VERSION = "2.4.7"
 # v1.8 : vérification des nouvelles versions (page « Releases » du dépôt GitHub) et fichiers à proposer par édition
 DEPOT_MAJ = os.environ.get("GESCOL_DEPOT_MAJ", "aimefachola200-bit/gescol")
 FICHIERS_MAJ = {"privee": ("GESCOL-Installation.exe", "GESCOL-Autonome.apk"),
@@ -43,11 +43,12 @@ def _edition_fichier():
 
 
 EDITION_IMPOSEE = (os.environ.get("GESCOL_EDITION") or _edition_fichier() or "").lower()
-# v2.4.6 : applications jumelles du secondaire (collèges, lycées, ETP) : éditions « sec_privee » et « sec_publique ».
+# v2.4.7 : applications jumelles du secondaire (collèges, lycées, ETP) : éditions « sec_privee » et « sec_publique ».
 # Le secteur (privé / public) reste « privee » / « publique » pour tout le code existant ; SECONDAIRE ajoute le périmètre.
-SECONDAIRE = EDITION_IMPOSEE in ("sec_privee", "sec_publique")
+_SEC_ALIAS = {"sec_privee": "privee", "sec_publique": "publique", "sec_cs": "cs", "sec_ddestfp": "ddemp"}
+SECONDAIRE = EDITION_IMPOSEE in _SEC_ALIAS
 if SECONDAIRE:
-    EDITION_IMPOSEE = EDITION_IMPOSEE[4:]
+    EDITION_IMPOSEE = _SEC_ALIAS[EDITION_IMPOSEE]
 EDITIONS = {"privee": "École privée", "publique": "École publique",
             "cs": "Circonscription scolaire (CS)", "ddemp": "Direction départementale (DDEMP)",
             # v1.14 : application personnelle de l'enseignant (son profil, ses classes, ses documents)
@@ -63,11 +64,11 @@ DOSSIERS = {"privee": "GESCOL", "publique": "GESCOL_Public", "cs": "GESCOL_CS", 
 PORTS = {"privee": 5000, "publique": 5001, "cs": 5002, "ddemp": 5003, "enseignant": 5004}
 if SECONDAIRE:   # nom, dossier de données, port et fichiers de mise à jour propres : s'installe à côté de l'application de base
     _marque = NOMS_APPLI["privee"]
-    _suffixe = " Secondaire" + (" Public" if EDITION_IMPOSEE == "publique" else "")
-    _port = PORTS["privee"] + (6 if EDITION_IMPOSEE == "publique" else 5)
+    _suffixe, _decal = {"privee": (" Secondaire", 5), "publique": (" Secondaire Public", 6),
+                        "cs": (" Inspection Secondaire", 7), "ddemp": (" DDESTFP", 8)}[EDITION_IMPOSEE]
     NOMS_APPLI[EDITION] = _marque + _suffixe
     DOSSIERS[EDITION_IMPOSEE] = (_marque + _suffixe).replace(" ", "_")
-    PORTS[EDITION_IMPOSEE] = _port
+    PORTS[EDITION_IMPOSEE] = PORTS["privee"] + _decal
     _fichier = (_marque + _suffixe).replace(" ", "-")
     FICHIERS_MAJ[EDITION] = (_fichier + "-Installation.exe", _fichier + ".apk")
 NOM_PORTAIL_ENSEIGNANT = "GESCOL Enseignant"

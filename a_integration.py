@@ -123,7 +123,7 @@ PREFIXES_STRUCTURE = (
     "/administration", "/ecoles", "/sauvegarde", "/mon-compte", "/demandes-ecoles", "/communication/reglages",
     "/paiements/en-ligne/reglages", "/paie/parametres", "/manifest.webmanifest", "/sw.js", "/hors-ligne",
     "/installer", "/referentiel.js", "/rejoindre", "/sante", "/signatures", "/cachet.svg",
-    "/groupes-whatsapp", "/acces", "/uascep",
+    "/groupes-whatsapp", "/acces", "/uascep", "/sec",   # v2.4.7 : supervision du secondaire
     "/sport", "/pilotage", "/reg", "/liaison", "/inspection", "/examens", "/examen-blanc",   # v1.25 : sport scolaire, pilotage, registres (structure ; registres d'école : école ouverte)
     "/synchronisation", "/sync",   # v2.0 : synchronisation entre niveaux (structure ; API sans session)
     # espaces publics (élèves, parents), API de transmission et de notification, retours de paiement en ligne
