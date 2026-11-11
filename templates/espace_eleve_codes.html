@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% block titre %}Codes élèves {{ cl.nom }}{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Codes d'accès – {{ cl.nom }}</h1>
+    <p class="sous">{{ lignes|length }} code(s) provisoire(s). Ils ne seront plus affichés : imprimez la fiche maintenant.</p></div>
+  <div class="actions">
+    <form method="post" action="{{ url_for('espace_eleves_codes_pdf') }}" target="_blank" style="display:inline">
+      {% for e, mdp in lignes %}<input type="hidden" name="eid" value="{{ e.id }}"><input type="hidden" name="mdp" value="{{ mdp }}">{% endfor %}
+      <button class="btn">Fiche des codes (PDF)</button>
+    </form>
+    <a class="btn sec" href="{{ url_for('espace_eleves_acces', classe=cl.id) }}">Terminé</a>
+  </div>
+</div>
+<p class="aide">Adresse de l'espace élève : <b>{{ url }}</b></p>
+<div class="tw"><table class="t">
+  <tr><th>N°</th><th>Nom et prénoms</th><th>Identifiant (matricule)</th><th>Mot de passe provisoire</th></tr>
+  {% for e, mdp in lignes %}
+  <tr><td>{{ loop.index }}</td><td><b>{{ e.nom }}</b> {{ e.prenoms }}</td><td>{{ e.matricule }}</td>
+    <td style="font-family:Consolas,monospace;font-size:16px;letter-spacing:.12em">{{ mdp }}</td></tr>
+  {% endfor %}
+</table></div>
+<p class="aide">À sa première connexion, l'élève doit choisir son propre mot de passe (6 caractères au moins).</p>
+{% endblock %}

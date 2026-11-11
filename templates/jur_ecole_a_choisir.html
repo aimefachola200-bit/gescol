@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% block titre %}Choisissez une école{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Choisissez une école à ouvrir</h1>
+<p class="sous">Aucune école n'est ouverte. Cette page ({{ request.path }}) est un module d'école : ouvrez d'abord l'école sur laquelle vous voulez travailler, vous y serez ramené(e) ensuite. Les pages de la {{ 'circonscription' if JUR_NIVEAU == 'cs' else 'DDEMP' }} et de l'administration restent accessibles sans école ouverte.</p></div>
+<div class="actions">
+  <a class="btn sec" href="{{ url_for('jur_ecoles_modules') }}">Écoles et modules</a>
+  <a class="btn sec" href="{{ url_for('jur_tableau') if ep_existe('jur_tableau') else url_for('accueil') }}">Tableau de bord</a>
+</div></div>
+<div class="carte"><b>Aucune école ouverte.</b> <span class="aide">Cliquez sur « Ouvrir cette école » : les modules d'école (élèves, classes, évaluations, CEP, cantine, personnel…) travailleront sur cette école jusqu'à ce que vous la fermiez ou en ouvriez une autre.</span></div>
+{% include "_jur_ecoles_choix.html" %}
+{% endblock %}

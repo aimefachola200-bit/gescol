@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% block titre %}Accès parent{% endblock %}
+{% block contenu %}
+<div style="max-width:720px">
+<h1>Accès à l'espace parents</h1>
+<p class="sous">Transmettez ces informations au parent. Le mot de passe provisoire ne sera plus affiché ensuite.</p>
+<div class="carte" id="fiche-acces">
+  <dl class="info">
+    <dt>Parent</dt><dd>{{ p.nom }}</dd>
+    <dt>Enfant(s)</dt><dd>{% for e in enfants %}{{ e.prenoms }} {{ e.nom }} ({{ e.classe_nom }}){{ ', ' if not loop.last }}{% endfor %}</dd>
+    <dt>Adresse</dt><dd>{{ url }}</dd>
+    <dt>Identifiant</dt><dd style="font-size:18px">{{ affiche_tel(p.telephone) }}</dd>
+    <dt>Mot de passe provisoire</dt><dd style="font-size:22px;letter-spacing:.15em;font-family:Consolas,monospace">{{ mdp }}</dd>
+  </dl>
+  <p class="aide">À la première connexion, le parent choisit son propre mot de passe.</p>
+</div>
+<div class="actions">
+  {% if wa %}<a class="btn wa" href="{{ wa }}" target="_blank" rel="noopener">Envoyer par WhatsApp</a>{% endif %}
+  <button class="btn sec" type="button" onclick="window.print()">Imprimer</button>
+  <button class="btn sec" type="button" onclick="navigator.clipboard&&navigator.clipboard.writeText({{ texte|tojson }}).then(function(){this.textContent='Copié'}.bind(this))">Copier le message</button>
+  {% if e %}<a class="btn sec" href="{{ url_for('eleve_detail', eid=e.id) }}">Retour à la fiche</a>{% else %}<a class="btn sec" href="{{ url_for('parents_liste') }}">Retour aux comptes</a>{% endif %}
+</div>
+</div>
+{% endblock %}

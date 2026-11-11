@@ -1,0 +1,22 @@
+{# v1.28 — examen blanc du CEP (modèle commun CS Pobè) : centres de la session et synthèse #}
+{% extends "base.html" %}{% block titre %}Examen blanc du CEP{% endblock %}
+{% block contenu %}{% include "_examen_blanc_onglets.html" %}
+<div class="entete"><div><h1>{{ icone('examen', 26) }} Examen blanc du CEP</h1>
+<p class="sous">9 épreuves, maîtrise à 10/20, seuil atteint à 6 maîtrises (6 sur 8 pour un dispensé d'EPS), classement au total avec ex æquo, bilan par centre et par sexe, recommandations.</p></div>
+<div class="actions"><a class="btn sec petit" href="{{ url_for('examen_blanc_resultats_pdf', session=s) }}">{{ icone('document') }} Résultats (PDF signé)</a>
+<a class="btn sec petit" href="{{ url_for('examen_blanc_tous_xlsx', session=s) }}">{{ icone('graphique') }} Excel</a>
+{% if ep_existe('pilotage') and peut('pilotage') %}<a class="btn sec petit" href="{{ url_for('pilotage') }}">{{ icone('pilotage') }} Tableau de bord</a>{% endif %}</div></div>
+<form method="get" class="filtres" style="margin:6px 0 10px"><label>Session <select name="session" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == s }}>{{ a }}</option>{% endfor %}</select></label></form>
+{% if not lignes %}<div class="carte"><p><b>Aucun centre pour la session {{ s }}.</b> Ajoutez les centres d'examen blanc (nom, chef de centre, date), puis les candidats de chaque centre (saisie, reprise de la liste du CEP ou Excel).</p>
+{% if peut_ecrire %}<form method="post"><input type="hidden" name="session" value="{{ s }}"><button class="btn" name="action" value="proposer">{{ icone('ajouter') }} Créer les centres proposés</button></form>{% endif %}</div>{% endif %}
+{% if lignes %}<div class="tw"><table class="t" aria-label="Centres"><thead><tr><th>Centre</th><th>Chef de centre</th><th>Date</th><th>Inscrits G / F / T</th><th>Ont composé</th><th>Seuil atteint</th><th>Taux (%)</th><th>Moyenne</th><th></th></tr></thead><tbody>
+{% for c, b in lignes %}<tr><td><a href="{{ url_for('examen_blanc_centre', cid=c.id) }}"><b>{{ c.nom }}</b></a></td><td>{{ c.chef or '' }}</td><td>{{ c.date or '' }}</td><td>{{ b.g.inscrits }} / {{ b.f.inscrits }} / {{ b.inscrits }}</td><td>{{ b.composes }}</td><td>{{ b.admis }}</td><td>{{ num(b.taux) }}</td><td>{{ num(b.moyenneCentre) }}</td>
+<td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('examen_blanc_centre', cid=c.id) }}">Candidats et notes</a>{% if peut_ecrire %} <a class="btn sec petit" href="{{ url_for('examen_blanc', session=s, modifier=c.id) }}#form-centre">{{ icone('modifier') }}</a>
+<form method="post" style="display:inline" onsubmit="return confirm('Supprimer le centre et ses candidats ?')"><input type="hidden" name="session" value="{{ s }}"><input type="hidden" name="cid" value="{{ c.id }}"><button class="btn sec petit" name="action" value="supprimer" aria-label="Supprimer">{{ icone('supprimer') }}</button></form>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+{% if peut_ecrire %}{% set e = (lignes|map(attribute=0)|selectattr('id', 'equalto', editer)|first) if editer else none %}
+<form method="post" class="carte" id="form-centre" style="margin-top:10px"><input type="hidden" name="session" value="{{ s }}"><input type="hidden" name="cid" value="{{ e.id if e else 0 }}">
+<h3>{{ 'Modifier le centre' if e else 'Ajouter un centre' }}</h3>
+<label>Nom du centre * <input name="nom" value="{{ e.nom if e else '' }}" required></label> <label>Chef de centre <input name="chef" value="{{ (e.chef or '') if e else '' }}"></label>
+<label>Date de composition <input name="date" value="{{ (e.date or '') if e else '' }}" placeholder="JJ/MM/AAAA"></label> <button class="btn" name="action" value="centre">Enregistrer</button></form>{% endif %}
+{% endblock %}

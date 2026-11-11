@@ -1,0 +1,44 @@
+{% extends "base.html" %}{% block titre %}Comptes élèves{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Comptes de l'espace élève</h1>
+    <p class="sous">Chaque élève se connecte avec son <b>matricule</b> et un mot de passe. L'école remet un code provisoire que l'élève remplace à sa première connexion.</p></div>
+</div>
+<p class="aide">Adresse de l'espace élève : <b>{{ url }}</b></p>
+{{ M.choix_classe(classes, cl.id if cl else None) }}
+{% if not cl %}
+<div class="carte gris">{% if classes %}Choisissez une classe pour gérer les accès de ses élèves.{% else %}Aucune classe n'est encore créée.{% endif %}</div>
+{% else %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Élèves inscrits</div><div class="v">{{ eleves|length }}</div><div class="d">{{ cl.nom }}</div></div>
+  <div class="kpi"><div class="l">Avec un accès</div><div class="v">{{ nb_comptes }}</div><div class="d">{{ eleves|length - nb_comptes }} sans accès</div></div>
+  <div class="kpi"><div class="l">Code provisoire non changé</div><div class="v">{{ eleves|selectattr('doit_changer')|selectattr('mdp_hash')|list|length }}</div><div class="d">élève(s) jamais connecté(s)</div></div>
+</div>
+{% if eleves %}
+<form method="post" data-coches>
+  <input type="hidden" name="classe" value="{{ cl.id }}">
+  <div class="actions" style="margin-bottom:10px">
+    <button class="btn" name="action" value="creer">Créer les accès manquants</button>
+    <button class="btn sec" name="action" value="reinit" data-confirmer="Donner un nouveau code provisoire aux élèves cochés ? Leur mot de passe actuel ne fonctionnera plus.">Nouveau code pour les élèves cochés</button>
+    <button class="btn danger" name="action" value="retirer" data-confirmer="Retirer l'accès des élèves cochés ?">Retirer l'accès des cochés</button>
+    <span class="aide"><a href="#" data-cocher="1">tout cocher</a> · <a href="#" data-cocher="0">tout décocher</a> · <span class="nb-coches">0</span> coché(s)</span>
+  </div>
+  <div class="tw"><table class="t">
+    <tr><th></th><th>Matricule (identifiant)</th><th>Nom et prénoms</th><th>Accès</th><th>Créé le</th><th>Dernière connexion</th></tr>
+    {% for e in eleves %}
+    <tr><td><input type="checkbox" name="eleves" value="{{ e.id }}" aria-label="Choisir {{ e.nom }} {{ e.prenoms }}"></td>
+      <td>{{ e.matricule or '' }}{% if not e.matricule %}<span class="badge ko">sans matricule</span>{% endif %}</td>
+      <td><b>{{ e.nom }}</b> {{ e.prenoms }}</td>
+      <td>{% if e.mdp_hash and e.compte_actif %}{% if e.doit_changer %}<span class="badge att">code provisoire</span>{% else %}<span class="badge ok">actif</span>{% endif %}
+        {% else %}<span class="badge">aucun</span>{% endif %}</td>
+      <td>{{ date_fr(e.compte_cree[:10]) if e.compte_cree else '' }}</td>
+      <td>{{ (date_fr(e.dernier_acces[:10]) ~ ' ' ~ e.dernier_acces[11:16]) if e.dernier_acces else '—' }}</td></tr>
+    {% endfor %}
+  </table></div>
+</form>
+<p class="aide">Les codes provisoires ne sont affichés qu'une seule fois, juste après leur création : imprimez alors la fiche PDF des codes.
+  Un élève qui a oublié son mot de passe reçoit simplement un nouveau code (bouton « Nouveau code »).</p>
+{% else %}<div class="carte gris">Aucun élève inscrit dans cette classe.</div>{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}{% import "jur_tableau_commun.html" as T with context %}
+{% block titre %}Rubriques des fiches{% endblock %}
+{% block contenu %}
+{{ T.styles() }}
+<style>.rb td.ind{background:#fff8e1;font-weight:700}.rb small.gris{color:#6b7280}.rb td.tab{color:#6b7280;font-size:.85em}
+.rb details>summary{cursor:pointer}.rb tr.st td{border-top:2px solid #e5e7eb}</style>
+{% macro f(v, d=2) %}{{ (('%.' ~ d ~ 'f')|format(v))|replace('.', ',')|replace(',00', '') if v is not none else '–' }}{% endmacro %}
+{% macro cel(c) %}{% if c is none %}<td class="num">–</td>{% else %}<td class="num">{{ c[0] }}<small class="gris">/{{ c[1] }}</small> <small>({{ f(c[2], 1) }} %)</small></td>{% endif %}{% endmacro %}
+
+<div class="entete"><div><h1>{{ icone('classeur') }} Rubriques des fiches, consolidées</h1>
+  <p class="sous">{{ FICHES[fiche][3] }} · secteur {{ 'privé' if sect == 'prive' else 'public' }} · année scolaire {{ flt.annee }} · par {{ lib|lower }} · {{ tot.fiches }} fiche(s) reçue(s) sur {{ tot.ecoles }} école(s)</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_rubriques', export='xlsx', **args) }}">⇩ Excel (toutes les rubriques)</a>
+    <button class="btn sec" type="button" onclick="document.querySelectorAll('.rb details').forEach(d => d.open = true); window.print()">{{ icone('imprimer') }} Imprimer</button></div></div>
+{{ T.filtres(flt, 'jur_rubriques', extra={'par': par, 'fiche': fiche, 'sect': sect}) }}
+<div class="actions noprint" style="margin:-4px 0 6px">Fiche :
+  {% for k, x in FICHES.items() %}<a class="btn petit {{ '' if fiche == k else 'sec' }}" href="{{ url_for('jur_rubriques', **dict(args_f, fiche=k)) }}">{{ x[3] }}</a>{% endfor %}</div>
+<div class="actions noprint" style="margin:0 0 6px">Secteur :
+  <a class="btn petit {{ '' if sect == 'public' else 'sec' }}" href="{{ url_for('jur_rubriques', **dict(args_s, sect='public')) }}">Public ({{ nb_sect.public }} écoles)</a>
+  <a class="btn petit {{ '' if sect == 'prive' else 'sec' }}" style="{{ '' if sect != 'prive' else 'background:#8e44ad;border-color:#8e44ad' }}" href="{{ url_for('jur_rubriques', **dict(args_s, sect='prive')) }}">Privé, à part ({{ nb_sect.prive }} écoles)</a></div>
+<div class="actions noprint" style="margin:0 0 12px">Regrouper par :
+  {% if JUR_NIVEAU == 'ddemp' %}<a class="btn petit {{ '' if par == 'cs' else 'sec' }}" href="{{ url_for('jur_rubriques', **dict(args_p, par='cs')) }}">circonscription</a>{% endif %}
+  <a class="btn petit {{ '' if par == 'zone' else 'sec' }}" href="{{ url_for('jur_rubriques', **dict(args_p, par='zone')) }}">zone pédagogique</a>
+  <a class="btn petit {{ '' if par == 'ecole' else 'sec' }}" href="{{ url_for('jur_rubriques', **dict(args_p, par='ecole')) }}">école</a></div>
+<p class="aide">Toutes les rubriques de la fiche, dans l'ordre de la fiche officielle (hors identification, état nominatif et visas).
+  Questions Oui / Non, cases et choix : écoles concernées / écoles ayant répondu (pourcentage). Nombres et cellules de tableaux : somme, puis sur l'ensemble des écoles moyenne, écart type, minimum et maximum.</p>
+
+{% if not tot.ecoles %}<div class="carte">{{ T.vide("Aucune école de ce secteur pour ces critères.") }}</div>{% else %}
+<div class="rb">
+{% for tb in tables %}{% if tb.lignes %}
+<details class="carte" {{ 'open' if loop.first }}><summary><h2 style="display:inline">{{ tb.titre }}</h2> <small class="gris">({{ tb.lignes|length }} ligne(s))</small></summary>
+  <div class="tw"><table class="t serre">
+    <tr><th>Question / case</th>{% for g in groupes %}<th class="num">{{ g.nom }}<br><small>{{ g.fiches }}/{{ g.ecoles }}</small></th>{% endfor %}<th class="num">Total</th><th class="num">Moyenne par école</th><th class="num">Écart type</th><th class="num">Min</th><th class="num">Max</th></tr>
+    {% set ns = namespace(tab='') %}
+    {% for x in tb.lignes %}
+      {% if x.tab and x.tab != ns.tab %}{% set ns.tab = x.tab %}<tr class="st"><td colspan="{{ groupes|length + 6 }}" class="tab"><b>{{ x.tab }}</b></td></tr>{% endif %}
+      <tr><td>{{ x.lib }}{% if x.suffixe %} <small class="gris">({{ x.suffixe }})</small>{% endif %}</td>
+      {% if x.type == 'oui' %}{% for c in x.cells %}{{ cel(c) }}{% endfor %}{{ cel(x.total) }}<td colspan="4"></td>
+      {% else %}{% for c in x.cells %}<td class="num">{{ f(c) }}</td>{% endfor %}<td class="num"><b>{{ f(x.total) }}</b></td>
+        <td class="num ind">{{ f(x.stat.moy) }}</td><td class="num ind">{{ f(x.stat.et) }}</td><td class="num">{{ f(x.stat.min) }}</td><td class="num">{{ f(x.stat.max) }}</td>{% endif %}</tr>
+    {% endfor %}
+  </table></div>
+</details>
+{% endif %}{% endfor %}
+{% if not tables|selectattr('lignes')|list %}<div class="carte">{{ T.vide("Aucune fiche reçue pour ces critères.") }}</div>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

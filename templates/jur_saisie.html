@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% block titre %}Saisie manuelle{% endblock %}
+{% block contenu %}
+<style>.js-t td.f{text-align:center;white-space:nowrap}.js-t .b{font-size:11px;border-radius:9px;padding:1px 7px;display:inline-block;margin-bottom:2px}
+.b.saisie{background:#E3F1E8;color:#1b6b3a}.b.recue{background:#E5EEF9;color:#1F4E79}.b.absente{background:#FCEBEA;color:#a5281b}</style>
+<div class="entete"><div><h1>{{ icone('signature') }} Saisie manuelle des fiches et du personnel</h1>
+  <p class="sous">Remplir directement, école par école, les fiches officielles (recensement, rapports de rentrée et de fin d'année, primaire et maternelle, public et privé)
+  et l'état nominatif du personnel — sans importer de fichier Excel ni attendre la transmission de l'école · année {{ annee }}</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_saisie_directeurs') }}">{{ icone('personne') }} Directeurs des écoles</a>
+    {% if ep_existe('jur_agents') %}<a class="btn sec" href="{{ url_for('jur_agents') }}">{{ icone('classeur') }} Agents administratifs de la structure</a>{% endif %}
+    <a class="btn sec" href="{{ url_for('jur_fiches', annee=annee) }}">{{ icone('presse_papiers') }} Fiches des écoles</a></div>
+</div>
+<form method="get" class="filtres">
+  <label for="js-annee">Année<br><select id="js-annee" name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  {% if JUR_NIVEAU=='ddemp' %}<label for="js-cs">Circonscription<br><select id="js-cs" name="cs" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if cs_id == c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+  <label for="js-zone">Zone pédagogique<br><select id="js-zone" name="zone" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for z in zones %}<option value="{{ z.id }}" {{ 'selected' if zone_id == z.id }}>{{ z.nom }}</option>{% endfor %}</select></label>
+  <label for="js-q">École<br><input id="js-q" name="q" value="{{ q }}" placeholder="Rechercher"></label>
+  <button class="btn sec petit">Filtrer</button>
+</form>
+<p class="aide">Pastilles : <span class="b saisie">saisie</span> fiche remplie ici · <span class="b recue">reçue</span> fiche transmise par l'école (modifiable ici) · <span class="b absente">absente</span> à saisir.
+Une fiche enregistrée ici est exploitée par tous les modules (fiches, synthèse, rubriques, effectifs par âge, infrastructures, CEP, tableau de bord).</p>
+{% if not lignes %}<div class="carte"><p>Aucune école. Ajoutez les écoles dans « Écoles de la juridiction ».</p></div>{% else %}
+<div class="tw"><table class="t js-t">
+  <tr><th>École</th><th>Type</th><th>Secteur</th>{% for f in FICHES %}<th>{{ f[4] }}</th>{% endfor %}<th>Personnel (état nominatif)</th></tr>
+  {% for l in lignes %}{% set e = l.e %}<tr><td><b>{{ e.nom }}</b><br><span class="aide">{{ e.zone_nom or '' }}{% if e.directeur_nom %} · {{ e.directeur_nom }}{% endif %}</span></td>
+    <td>{{ e.type }}</td><td>{{ JUR_SECTEURS.get(e.secteur, e.secteur) }}</td>
+    {% for f in FICHES %}{% set st = l.etats[f[0]] %}<td class="f">{% if st %}<span class="b {{ st }}">{{ st }}</span><br>
+      <a class="btn {{ 'sec ' if st != 'absente' }}petit" href="{{ url_for('jur_saisie_fiche', eid=e.id, code=f[0], annee=annee) }}">{{ 'Compléter' if st != 'absente' else 'Saisir' }}</a>{% else %}<span class="aide">—</span>{% endif %}</td>{% endfor %}
+    <td class="f"><span class="b {{ 'saisie' if l.n_pers else 'absente' }}">{{ l.n_pers }} agent(s)</span><br><a class="btn {{ 'sec ' if l.n_pers }}petit" href="{{ url_for('jur_saisie_personnel', eid=e.id, annee=annee) }}">{{ icone('groupe') }} Saisir les noms</a></td></tr>{% endfor %}
+</table></div>{% endif %}
+{% endblock %}

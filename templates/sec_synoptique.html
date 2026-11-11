@@ -1,0 +1,20 @@
+{# v2.4 — tableau synoptique chiffré de l'établissement secondaire #}
+{% extends "base.html" %}{% block titre %}Tableau synoptique — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<div class="entete" style="margin-bottom:6px"><div><h2 style="margin:0">Tableau synoptique — année {{ s.annee }}</h2>
+<p class="aide">Effectifs des classes du secondaire (6ème à Tle) et professeurs enregistrés. À envoyer à la direction départementale (PDF signé ou Excel).</p></div>
+<div class="actions"><a class="btn sec petit" href="{{ url_for('sec_synoptique_pdf', annee=s.annee) }}">{{ icone('document') }} PDF signé (QR)</a>
+<a class="btn sec petit" href="{{ url_for('sec_synoptique_xlsx', annee=s.annee) }}">{{ icone('graphique') }} Excel</a></div></div>
+{% if s.identite %}<div class="carte"><b>{{ s.identite.typeEtab }}</b>{% if s.identite.ddestfp %} · {{ s.identite.ddestfp }}{% endif %}{% if s.identite.commune %} · {{ s.identite.commune }}{% endif %}<br>
+{% if s.identite.directeur %}Proviseur / Directeur : {{ s.identite.directeur }}{% endif %}{% if s.identite.censeur %} · Censeur : {{ s.identite.censeur }}{% endif %}{% if s.identite.surveillantGeneral %} · Surveillant général : {{ s.identite.surveillantGeneral }}{% endif %}</div>
+{% else %}<p class="aide">Identité non renseignée — <a href="{{ url_for('reg_page', gcle='sec', rcle='etablissement') }}">la saisir</a>.</p>{% endif %}
+<div class="tw"><table class="t" aria-label="Effectifs par niveau"><thead><tr><th>Niveau</th><th>Cycle</th><th>Classes</th><th>Garçons</th><th>Filles</th><th>Total</th><th>% de filles</th><th>Élèves par classe</th></tr></thead><tbody>
+{% for n in niveaux %}{% set v = s.niveaux[n] %}{% set t = v.M + v.F %}
+<tr><td>{{ n }}</td><td>{{ cycles[n] }}</td><td>{{ v.classes }}</td><td>{{ v.M }}</td><td>{{ v.F }}</td><td>{{ t }}</td><td>{{ ('%.1f' % (100 * v.F / t))|replace('.', ',') if t else '' }}</td><td>{{ ('%.1f' % (t / v.classes))|replace('.', ',') if v.classes else '' }}</td></tr>{% endfor %}
+<tr class="total"><td><b>Total</b></td><td></td><td><b>{{ s.classes }}</b></td><td><b>{{ s.garcons }}</b></td><td><b>{{ s.filles }}</b></td><td><b>{{ s.effectif }}</b></td><td><b>{{ (s.pct_filles|string)|replace('.', ',') if s.pct_filles is not none else '' }}</b></td><td><b>{{ (s.eleves_par_classe|string)|replace('.', ',') if s.eleves_par_classe else '' }}</b></td></tr>
+</tbody></table></div>
+<p style="margin-top:8px"><b>Professeurs :</b> {{ s.professeurs.total }} (dont {{ s.professeurs.F }} femme(s)){% for k, v in s.professeurs.statuts.items() %} · {{ k }} : {{ v }}{% endfor %}
+{% if s.eleves_par_professeur %} — <b>élèves par professeur :</b> {{ s.eleves_par_professeur|string|replace('.', ',') }}{% endif %}</p>
+{% endblock %}

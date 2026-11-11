@@ -1,0 +1,62 @@
+{# v1.21 — Planification journalière, hebdomadaire et mensuelle d'une classe ; classeurs de fiches #}
+{% extends "base.html" %}{% block titre %}Planification et classeurs{% endblock %}
+{% block contenu %}{% set onglet = 'planif' %}{% include "_prep_onglets.html" %}
+<h2>Planification de la classe et classeurs de fiches</h2>
+<p class="aide">Construite à partir de l'<b>emploi du temps</b> du cours (tableau synoptique), de la <b>planification mensuelle</b> de la classe (modifiable dans le tableau synoptique) et de la <b>progression</b> ; chaque créneau propose la fiche à utiliser et peut être modifié (vos changements sont conservés).</p>
+{% if not cl %}<div class="carte"><p class="aide">Aucune classe ne vous est affectée.</p></div>{% else %}
+<form method="get" class="filtres" style="margin:10px 0" aria-label="Choix de la classe et de la vue">
+  <label>Classe <select name="classe" onchange="this.form.submit()">{% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if c.id == cl.id }}>{{ c.nom }}</option>{% endfor %}</select></label>
+  <label>Vue <select name="vue" onchange="this.form.submit()">{% for v, l in [('jour','Journalière'),('semaine','Hebdomadaire'),('mois','Mensuelle')] %}<option value="{{ v }}" {{ 'selected' if v == vue }}>{{ l }}</option>{% endfor %}</select></label>
+  <label>Date <input type="date" name="date" value="{{ d.isoformat() }}" onchange="this.form.submit()"></label>
+  <noscript><button class="btn sec petit">Afficher</button></noscript>
+</form>
+<div class="actions" style="margin:4px 0 10px">
+  <a class="btn sec petit" href="{{ url_for('prep_planif_pdf', classe=cl.id, vue=vue, date=d.isoformat()) }}">PDF</a>
+  <a class="btn sec petit" href="{{ url_for('prep_planif_xlsx', classe=cl.id, vue=vue, date=d.isoformat()) }}">Excel</a>
+  <a class="btn petit" href="{{ url_for('prep_classeur', classe=cl.id, portee=vue, date=d.isoformat()) }}">Classeur des fiches (PDF)</a>
+  <a class="btn sec petit" href="{{ url_for('prep_classeur', classe=cl.id, portee=vue, date=d.isoformat(), format='doc') }}">Classeur (Word)</a>
+  <a class="btn sec petit" href="{{ url_for('prep_classeur', classe=cl.id, portee=vue, date=d.isoformat(), format='zip') }}">Classeur (zip)</a>
+  <a class="btn sec petit" href="{{ url_for('synoptique_planification_mensuelle', classe=cl.id) }}">Modifier la planification mensuelle</a>
+</div>
+{% if vue == 'jour' %}
+<h3>{{ JOURS_LIB[d.weekday()] if d.weekday() < 5 else 'Week-end' }} {{ d.strftime('%d/%m/%Y') }}</h3>
+{% if not jour %}<p class="aide">Pas de classe ce jour.</p>{% endif %}
+<div class="tw"><table class="t"><thead><tr><th>Horaire</th><th>Matière</th><th>Activité</th><th>Durée</th><th>Fiche à utiliser</th><th>Modifier</th></tr></thead><tbody>
+{% for c in jour %}<tr><td>{{ c.horaire }}</td><td>{{ 'Vie de la classe' if c.matiere == 'dg' else prep_nom_matiere(c.matiere) }}</td><td>{{ c.sous_matiere or c.libelle }}</td><td>{{ c.duree }}</td>
+<td>{% if c.fiche_id and not c.fiche_id.startswith('mes-') %}<a href="{{ url_for('prep_fiche', fid=c.fiche_id) }}">{{ c.fiche_titre }}</a>{% else %}{{ c.fiche_titre }}{% endif %}{% if c.note %}<br><span class="aide">{{ c.note }}</span>{% endif %}{% if c.modifie %} <span class="badge ok">modifié</span>{% endif %}</td>
+<td><details><summary>Modifier</summary><form method="post" action="{{ url_for('prep_planif_case') }}">
+<input type="hidden" name="classe" value="{{ cl.id }}"><input type="hidden" name="date" value="{{ d.isoformat() }}"><input type="hidden" name="creneau" value="{{ c.creneau }}"><input type="hidden" name="vue" value="jour">
+<label>Matière <select name="matiere">{% for m in ['francais','maths','es','est','eps','ea','dg'] %}<option value="{{ m }}" {{ 'selected' if m == c.matiere }}>{{ prep_nom_matiere(m) }}</option>{% endfor %}</select></label>
+<label>Activité <input name="sous_matiere" value="{{ c.sous_matiere }}"></label>
+<label>Identifiant de fiche (bibliothèque, ou mes-N) <input name="fiche_id" value="{{ c.fiche_id }}"></label>
+<label>ou titre libre <input name="fiche_titre" value="{{ '' if c.fiche_id else c.fiche_titre }}"></label>
+<label>Note <input name="note" value="{{ c.note }}"></label>
+<button class="btn petit">Enregistrer</button> {% if c.modifie %}<button class="btn sec petit" name="retablir" value="1">Rétablir</button>{% endif %}</form></details></td></tr>{% endfor %}
+</tbody></table></div>
+{% if resumes_jour %}<h3>Résumés des séances du jour</h3>
+<ul>{% for m, liste in resumes_jour.items() %}<li><b>{{ prep_nom_matiere(m) }}</b> : {% for r in liste %}<a href="{{ url_for('prep_resume', rid=r.id) }}">{{ r.titre }}</a> <span class="aide">({{ r.domaine }})</span>{% if not loop.last %} · {% endif %}{% endfor %}</li>{% endfor %}</ul>{% endif %}
+{% elif vue == 'semaine' %}
+{% for dj, js in semaine %}
+<h3><a href="{{ url_for('prep_planif', classe=cl.id, vue='jour', date=dj.isoformat()) }}">{{ JOURS_LIB[dj.weekday()] }} {{ dj.strftime('%d/%m/%Y') }}</a></h3>
+<div class="tw"><table class="t"><thead><tr><th>Horaire</th><th>Matière</th><th>Activité</th><th>Fiche</th></tr></thead><tbody>
+{% for c in js %}<tr><td>{{ c.horaire }}</td><td>{{ 'Vie de la classe' if c.matiere == 'dg' else prep_nom_matiere(c.matiere) }}</td><td>{{ c.sous_matiere or c.libelle }} <span class="aide">{{ c.duree }}</span></td><td>{% if c.fiche_id and not c.fiche_id.startswith('mes-') %}<a href="{{ url_for('prep_fiche', fid=c.fiche_id) }}">{{ c.fiche_titre }}</a>{% else %}{{ c.fiche_titre }}{% endif %}{% if c.modifie %} <span class="badge ok">modifié</span>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endfor %}
+<h3>Résumés de la semaine</h3>
+{% if resumes_sem %}<p class="aide">« L'essentiel à retenir » rattaché aux SA / unités des fiches de la semaine (règle, méthode, exemple, 3 exercices corrigés ; version élève à imprimer).</p>
+<ul>{% for m, liste in resumes_sem.items() %}<li><b>{{ prep_nom_matiere(m) }}</b> : {% for r in liste %}<a href="{{ url_for('prep_resume', rid=r.id) }}">{{ r.titre }}</a> <a class="aide" href="{{ url_for('prep_resume_pdf', rid=r.id, eleve=1) }}">(élève)</a>{% if not loop.last %} · {% endif %}{% endfor %}</li>{% endfor %}</ul>
+{% else %}<p class="aide">Aucun résumé rattaché aux fiches de cette semaine — voir l'onglet <a href="{{ url_for('prep_resumes', cours=cl.niveau) }}">Résumés</a>.</p>{% endif %}
+{% else %}
+<h3>Mois {{ d.strftime('%m/%Y') }}</h3>
+{% if ligne %}<div class="tw"><table class="t"><thead><tr><th>Matière (planification annuelle)</th><th>Contenu du mois</th></tr></thead><tbody>
+{% for k, lib in cols %}{% if ligne[k] %}<tr><td>{{ lib }}</td><td>{{ ligne[k] }}</td></tr>{% endif %}{% endfor %}</tbody></table></div>{% endif %}
+{% if pm %}<p class="aide">Planification mensuelle de la classe enregistrée (modifiable dans le tableau synoptique).</p>{% endif %}
+{% if resumes_mois %}<h3>Résumés du mois (progression annuelle)</h3>
+{% for m, liste in resumes_mois.items() %}<p><b>{{ prep_nom_matiere(m) }}</b></p><ul>{% for r in liste %}<li>{{ (r.ancres or [{}])[0].libelle }} — <a href="{{ url_for('prep_resume', rid=r.id) }}">{{ r.titre }}</a> <span class="aide">({{ r.domaine }})</span></li>{% endfor %}</ul>{% endfor %}{% endif %}
+{% for s, fs in semaine_resume %}
+<h3><a href="{{ url_for('prep_planif', classe=cl.id, vue='semaine', date=s.isoformat()) }}">Semaine du {{ s.strftime('%d/%m') }}</a></h3>
+<ul>{% for m, liste in fs.items() %}<li><b>{{ prep_nom_matiere(m) }}</b> : {% for f in liste[:6] %}<a href="{{ url_for('prep_fiche', fid=f.id) }}">{{ f.titre }}</a>{% if not loop.last %} · {% endif %}{% endfor %}{% if liste|length > 6 %} … ({{ liste|length }}){% endif %}</li>{% else %}<li class="aide">La planification ne cite pas encore de SA, d'unité ou de dossier pour cette semaine.</li>{% endfor %}</ul>
+{% endfor %}
+{% endif %}
+{% endif %}
+{% endblock %}

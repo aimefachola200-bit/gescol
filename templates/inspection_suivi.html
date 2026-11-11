@@ -1,0 +1,17 @@
+{# v1.27 — bilan du suivi des recommandations et des visites #}
+{% extends "base.html" %}{% block titre %}Bilan du suivi — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<h2 style="margin:0">Bilan du suivi — {{ annee }}</h2>
+<div class="tuiles" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin:10px 0">
+<div class="carte"><b>{{ s.visites }}</b><br>visite(s) de classe{% if s.moyenne is not none %} — moyenne {{ s.moyenne }} / 20 ({{ appreciation(s.moyenne) }}){% endif %}</div>
+<div class="carte"><b>{{ s.total }}</b><br>recommandation(s){% if s.taux is not none %} — {{ s.taux }} % réalisées{% endif %}</div>
+{% for st, n in s.par.items() %}<div class="carte"><b>{{ n }}</b><br>{{ st }}</div>{% endfor %}
+</div>
+<h3>Recommandations échues non réalisées</h3>
+<div class="tw"><table class="t" aria-label="Recommandations échues"><thead><tr><th>Destinataire</th><th>Recommandation</th><th>Échéance</th><th>Responsable</th><th>Statut</th></tr></thead><tbody>
+{% for x in s.echues %}<tr><td>{{ x.destinataire }}</td><td>{{ x.recommandation }}</td><td>{{ jj(x.echeance) }}</td><td>{{ x.responsable or '' }}</td><td>{{ icone('alerte') }} {{ x.statut }}</td></tr>
+{% else %}<tr><td colspan="5" class="aide">Aucune recommandation échue.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

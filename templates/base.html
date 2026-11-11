@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block titre %}SCOLARIS{% endblock %} – {{ ECOLE.sigle }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ VERSION }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='sombre.css') }}?v={{ VERSION }}">
+<script src="{{ url_for('static', filename='theme.js') }}?v={{ VERSION }}"></script>
+<script src="{{ url_for('static', filename='cachets.js') }}?v={{ VERSION }}" defer></script>
+<script src="{{ url_for('static', filename='scolaris.js') }}?v={{ VERSION }}" defer></script>
+<script src="{{ url_for('static', filename='choix.js') }}?v={{ VERSION }}" defer></script>
+{% if g.user %}<script src="{{ url_for('referentiel_js') }}" defer></script>{% endif %}
+<link rel="manifest" href="{{ url_for('ens_manifeste') if PORTAIL_ENSEIGNANT is defined and PORTAIL_ENSEIGNANT() else url_for('manifeste') }}">
+<meta name="theme-color" content="#1F4E79">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="{{ NOM_APPLI }}">
+<link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/scolaris-icone.svg') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+</head>
+<body>
+{% set ep = request.endpoint or '' %}
+{% if g.user %}
+{% macro lien(endpoint, texte, actif, ico='') %}{% if ep_existe(endpoint) %}<a href="{{ url_for(endpoint) }}" class="{{ 'actif' if actif }}">{% if ico %}<span class="ico" aria-hidden="true">{{ icone(ico) }}</span>{% endif %}{{ texte }}</a>{% endif %}{% endmacro %}
+{% macro groupe(cle, titre, actif, ico) %}<details class="groupe-l {{ 'actif' if actif }}" data-g="{{ cle }}" {{ 'open' if actif }}><summary><span class="ico" aria-hidden="true">{{ icone(ico) }}</span>{{ titre }}</summary><div class="sous">{{ caller() }}</div></details>{% endmacro %}
+<div class="app">
+<aside id="lateral" class="lateral" aria-label="Menu principal">
+  <a class="marque" href="{{ url_for('accueil') }}"><img class="logo-img" src="{{ url_for('static', filename='icons/scolaris-icone.svg') }}" alt="" width="34" height="34"><span>{{ NOM_APPLI }}<small title="{{ ECOLE.devise or '' }}">{{ ECOLE.sigle or ECOLE.nom }}</small></span>{% if ECOLE.id %}<img class="logo-ecole-entete" src="{{ url_for('ecole_logo', eid=ECOLE.id) }}" alt="" width="30" height="30" onerror="this.remove()" style="margin-left:6px;border-radius:50%;object-fit:contain">{% endif %}</a>
+  {% if JURIDICTION and not ECOLE_COURANTE %}
+  {# CS / DDEMP : aucune école ouverte tant que l'utilisateur n'en a pas choisi une (a_integration) #}
+  <div class="choix-ecole"><span class="aide">École ouverte</span><br><b style="font-size:13px">Aucune école ouverte</b>
+    {% if ep_existe('jur_ecoles_modules') %}<br><a href="{{ url_for('jur_ecoles_modules') }}" style="font-size:12px">Choisir une école</a>{% endif %}</div>
+  {% elif ECOLES|length > 1 or (JURIDICTION and ECOLES) %}
+  <form method="post" action="" class="choix-ecole" onsubmit="this.action='/ecoles/'+this.e.value+'/choisir'">
+    <label for="choix-ecole" class="aide">{{ 'École ouverte' if JURIDICTION else 'École' }}</label>
+    <select id="choix-ecole" name="e" onchange="this.form.requestSubmit()">{% for e in ECOLES %}<option value="{{ e.id }}" {{ 'selected' if ECOLE_COURANTE and e.id==ECOLE_COURANTE.id }}>{{ e.nom }}</option>{% endfor %}</select>
+    <input type="hidden" name="suivant" value="{{ request.path }}">
+    {% if JURIDICTION and ep_existe('jur_ecole_fermer') %}<button type="submit" class="btn sec petit" style="margin-top:4px;font-size:11px;padding:1px 7px" formaction="{{ url_for('jur_ecole_fermer') }}" onclick="this.form.onsubmit=null">Fermer l'école</button>{% endif %}
+  </form>{% endif %}
+  <nav id="menu">
+    <button type="button" class="btn-theme" data-theme-btn>◐ Auto</button>
+    {% if MENU_ENSEIGNANT is defined and MENU_ENSEIGNANT() %}{% include "_menu_enseignant.html" %}{# v1.14 : SCOLARIS Enseignant #}
+    {% elif JURIDICTION %}{% include "_menu_juridiction.html" %}{% else %}
+    {% set ENS = g.user.role == 'enseignant' %}{# périmètre de l'enseignant : ses classes, hors domaine du directeur (m_perimetre_enseignant) #}
+    {% if peut('synoptique') and ep_existe('synoptique_accueil') %}{{ lien('synoptique_accueil', "Tableau synoptique de l'école", ep.startswith('synoptique'), 'ecole') }}{% endif %}
+    {% if not ENS %}{{ lien('accueil', 'Tableau de bord', ep=='accueil', 'accueil') }}{% endif %}
+    {% if PUBLIQUE %}{% if g.user.role in ('fondateur','admin','directeur') %}{{ lien('directeur_tableau', 'Tableau de bord du directeur', ep.startswith('directeur_tableau'), 'graphique') }}{% endif %}
+    {% elif g.user.role in ('fondateur','admin') %}{{ lien('fondateur_tableau', 'Tableau du fondateur', ep.startswith('fondateur'), 'graphique') }}{% endif %}
+    {% if ENS and ep_existe('ma_classe') %}{{ lien('ma_classe', 'Ma classe', ep.startswith('ma_classe'), 'ecole') }}{% endif %}
+    {% if ENS %}{{ lien('espace_enseignant', 'Mon espace (mes classes, ma signature)', ep=='espace_enseignant', 'etoile') }}{% endif %}
+    {% if g.user.role != 'observateur' %}{{ lien('listes_classe', 'Listes de classe', ep.startswith('listes_classe'), 'liste') }}{% endif %}{# v2.3.3 : accès rapide #}
+    {% call groupe('sco', 'Scolarité', ep.startswith('eleve') or ep.startswith('classe') or ep.startswith('appel') or ep.startswith('absences') or ep.startswith('registre') or ep.startswith('releve') or ep.startswith('calendrier') or ep.startswith('affichage'), 'groupe') %}
+      {{ lien('eleves', 'Élèves de mes classes' if ENS else 'Élèves et inscriptions', ep.startswith('eleve')) }}
+      {{ lien('classes', 'Mes classes' if ENS else 'Classes', ep.startswith('classe')) }}
+      {% if peut('appel') %}{{ lien('appel_accueil', "Registre d'appel (journalier)", ep in ('appel_accueil','appel_classe')) }}
+      {{ lien('appel_stats', 'Absences (statistiques)', ep=='appel_stats') }}{% endif %}
+      {% if peut('registre') %}{{ lien('registre_accueil', 'Registre de présence', ep.startswith('registre')) }}
+      {{ lien('releve_mensuel', 'Relevés mensuels de présence', ep.startswith('releve')) }}
+      {{ lien('calendrier_scolaire', 'Calendrier (jours de classe)', ep.startswith('calendrier_scolaire') or ep.startswith('calendrier_jour')) }}{% endif %}
+      {% if ep_existe('calendrier_officiel') %}{{ lien('calendrier_officiel', 'Calendrier scolaire officiel (MEMP)', ep.startswith('calendrier_officiel')) }}{% endif %}
+      {% if peut('affichage') %}{{ lien('affichage_accueil', "Tableau d'affichage", ep.startswith('affichage')) }}{% endif %}
+    {% endcall %}
+    {% call groupe('eval', 'Évaluations', ep.startswith('notes') or ep.startswith('eval') or ep.startswith('epreuves') or ep.startswith('themes_up') or ep in ('resultats','matieres') or ep.startswith('bilan') or ep.startswith('honneur') or ep.startswith('synthese') or ep.startswith('orientation'), 'modifier') %}
+      {% if peut('evaluations') %}{{ lien('eval_accueil', 'Saisie des notes (évaluations)', ep.startswith('eval_') and ep not in ('eval_statistiques','eval_analyse')) }}
+      {{ lien('eval_statistiques', 'Statistiques', ep=='eval_statistiques') }}
+      {{ lien('eval_analyse', 'Analyse et rapport', ep=='eval_analyse') }}
+      {{ lien('honneur_accueil', "Tableau d'honneur", ep.startswith('honneur')) }}
+      {% if peut('notes') %}{{ lien('orientation_accueil', 'Orientation des élèves', ep.startswith('orientation')) }}{% endif %}
+      {{ lien('bilan_annuel', 'Bilan annuel et décision', ep.startswith('bilan')) }}{% endif %}
+      {% if peut('epreuves') and ep_existe('epreuves_accueil') %}{{ lien('epreuves_accueil', "Comité d'évaluation, épreuves et grilles", ep.startswith('epreuves')) }}{% endif %}
+      {% if peut('notes') %}{{ lien('notes_accueil', 'Notes par période (bulletins)', ep.startswith('notes') or ep=='resultats') }}{% endif %}
+      {% if peut('synthese') %}{{ lien('synthese_accueil', 'Synthèse École / UP / CS', ep.startswith('synthese')) }}{% endif %}
+      {% if ep_existe('themes_up') %}{{ lien('themes_up', "Thèmes d'UP, conférences et formations", ep.startswith('themes_up')) }}{% endif %}
+      {% if peut('uascep') and ep_existe('uascep') %}{{ lien('uascep', "Bureaux de l'UASCEP", ep.startswith('uascep')) }}{% endif %}
+      {{ lien('matieres', 'Matières et domaines', ep=='matieres') }}
+    {% endcall %}
+    {% if peut('sport') and ep_existe('sport_accueil') %}{# v1.25 : sport scolaire (UASCEP) #}
+    {% call groupe('sport', 'Sport scolaire (UASCEP)', ep.startswith('sport') or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'sport'), 'trophee') %}
+      {{ lien('sport_accueil', 'Accueil du sport scolaire', ep=='sport_accueil') }}
+      <a href="{{ url_for('reg_page', gcle='sport', rcle='licences') }}">Licences des élèves</a>
+      {{ lien('sport_competitions', 'Compétitions, calendriers, résultats', ep.startswith('sport_comp') or ep in ('sport_equipe', 'sport_match')) }}
+      {{ lien('sport_palmares', 'Palmarès et diplômes', ep.startswith('sport_palmares')) }}
+      {{ lien('sport_records', 'Records', ep=='sport_records') }}
+      {% if peut('uascep') and ep_existe('uascep') %}{{ lien('uascep', "Bureaux de l'UASCEP", ep.startswith('uascep')) }}{% endif %}
+    {% endcall %}{% endif %}
+    {% if not ENS %}{{ lien('annonces_accueil', 'Annonces au personnel' ~ (' (' ~ annonces_non_lues() ~ ')' if annonces_non_lues is defined and annonces_non_lues() else ''), ep.startswith('annonces'), 'annonce') }}{% endif %}
+    {% if peut('notes_service') and ep_existe('liaison_boite') and not ENS %}{# v1.26 : communication et alertes ; santé, cantine, inclusion #}
+    {% call groupe('liaison', 'Communication et alertes', ep.startswith('liaison_') or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'communication'), 'annonce') %}
+      {{ lien('liaison_boite', 'Boîte de réception', ep=='liaison_boite') }}
+      <a href="{{ url_for('reg_page', gcle='communication', rcle='notes') }}">Notes, circulaires et convocations</a>
+      <a href="{{ url_for('reg_page', gcle='communication', rcle='echeances') }}">Échéances et rappels</a>
+      {{ lien('liaison_alertes', 'Alertes', ep=='liaison_alertes') }}
+      <a href="{{ url_for('reg_page', gcle='communication', rcle='messages') }}">Messages aux parents</a>
+      <a href="{{ url_for('reg_page', gcle='communication', rcle='agenda') }}">Agenda partagé</a>
+      {% if ep_existe('territoire_courrier_recu') %}<a href="{{ url_for('reg_page', gcle='communication', rcle='courrier') }}">Courrier administratif</a>
+      {{ lien('territoire_courrier_recu', 'Courrier reçu', ep.startswith('territoire_courrier')) }}{% endif %}
+    {% endcall %}{% endif %}
+    {% if peut('territoire') and ep_existe('territoire_ecole') and not ENS %}{# v2.3 : territoire et suivi administratif #}
+    {% set JUR = EDITION in ('cs', 'ddemp') %}{% call groupe('territ', 'Territoire et suivi', (ep.startswith('territoire_') and not ep.startswith('territoire_courrier')) or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') in ('territoire', 'presences', 'discipline')), 'structure') %}
+      <a href="{{ url_for('reg_page', gcle='territoire', rcle='rentree') }}">Fiche statistique de rentrée</a>
+      {% if JUR %}{{ lien('territoire_rentree_suivi', 'Suivi des fiches de rentrée', ep=='territoire_rentree_suivi') }}{% endif %}
+      {% if not JUR or g.ecole %}{{ lien('territoire_ecole', "Fiche signalétique de l'école", ep=='territoire_ecole') }}{% endif %}
+      {{ lien('territoire_presence_appel', 'Présence du personnel', ep.startswith('territoire_presence') or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'presences')) }}
+      {% if not JUR or g.ecole %}<a href="{{ url_for('reg_page', gcle='discipline', rcle='incidents') }}">Incidents de discipline</a>{% endif %}
+      {{ lien('territoire_arbre', 'Référentiel des structures', ep=='territoire_arbre') }}
+      {% if JUR and peut('territoire_national') %}{{ lien('territoire_national', 'Niveau national', ep=='territoire_national') }}{% endif %}
+    {% endcall %}{% endif %}
+    {% if peut('sante_scolaire') and ep_existe('sante_scolaire_absences') %}
+    {% call groupe('santesc', 'Santé, cantine et inclusion', ep.startswith('sante_scolaire') or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'sante'), 'sante') %}
+      <a href="{{ url_for('reg_page', gcle='sante', rcle='visites') }}">Visites médicales</a>
+      <a href="{{ url_for('reg_page', gcle='sante', rcle='infirmerie') }}">Infirmerie et incidents</a>
+      <a href="{{ url_for('reg_page', gcle='sante', rcle='cantine') }}">Cantine : journal des repas</a>
+      <a href="{{ url_for('reg_page', gcle='sante', rcle='stocks') }}">Cantine : stocks</a>
+      <a href="{{ url_for('reg_page', gcle='sante', rcle='besoins') }}">Élèves à besoins spécifiques</a>
+      <a href="{{ url_for('reg_page', gcle='sante', rcle='filles') }}">Scolarisation des filles</a>
+      {{ lien('sante_scolaire_absences', 'Absences et décrochage', ep=='sante_scolaire_absences') }}
+    {% endcall %}{% endif %}
+    {% if peut('secondaire') and ep_existe('sec_synoptique') and a_secondaire() %}{# v2.4 : établissement secondaire (visible si l'école a des classes de 6ème à Tle) #}
+    {% call groupe('secondaire', 'Établissement secondaire', ep.startswith('sec_') or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'sec'), 'ecole') %}
+      {{ lien('sec_synoptique', 'Tableau synoptique', ep=='sec_synoptique') }}
+      <a href="{{ url_for('reg_page', gcle='sec', rcle='etablissement') }}">Identité de l'établissement</a>
+      <a href="{{ url_for('reg_page', gcle='sec', rcle='programme') }}">Programme et coefficients</a>
+      <a href="{{ url_for('reg_page', gcle='sec', rcle='professeurs') }}">Professeurs</a>
+      <a href="{{ url_for('reg_page', gcle='sec', rcle='conseils') }}">Conseils de classe</a>
+      <a href="{{ url_for('reg_page', gcle='sec', rcle='sanctions') }}">Discipline et sanctions</a>
+      <a href="{{ url_for('reg_page', gcle='sec', rcle='emploi') }}">Emplois du temps</a>
+      <a href="{{ url_for('reg_page', gcle='sec', rcle='centres') }}">Examens : centres</a>
+      <a href="{{ url_for('reg_page', gcle='sec', rcle='candidats') }}">Examens : candidats (BEPC, BAC)</a>
+      {{ lien('sec_examens_stats', 'Examens : statistiques', ep=='sec_examens_stats') }}
+      <a href="{{ url_for('reg_page', gcle='sec', rcle='filieres') }}">Technique : filières</a>
+      <a href="{{ url_for('reg_page', gcle='sec', rcle='ateliers') }}">Technique : ateliers</a>
+      <a href="{{ url_for('reg_page', gcle='sec', rcle='stages') }}">Technique : stages</a>
+    {% endcall %}{% endif %}
+    {% if peut('inspection_ped') and ep_existe('inspection_suivi') and not ENS %}{# v1.27 : inspection, patrimoine et matériel, examens #}
+    {% call groupe('inspec', 'Inspection et formation', ep.startswith('inspection_') or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'inspection'), 'inspection') %}
+      <a href="{{ url_for('reg_page', gcle='inspection', rcle='visites') }}">Visites de classe (grille APC)</a>
+      <a href="{{ url_for('reg_page', gcle='inspection', rcle='recommandations') }}">Suivi des recommandations</a>
+      {{ lien('inspection_suivi', 'Bilan du suivi', ep=='inspection_suivi') }}
+      <a href="{{ url_for('reg_page', gcle='inspection', rcle='plans') }}">Plans de formation</a>
+      <a href="{{ url_for('reg_page', gcle='inspection', rcle='animations') }}">Animations pédagogiques</a>
+    {% endcall %}{% endif %}
+    {% if peut('patrimoine_materiel') and ep_existe('patrimoine_pvs_reprendre') and not ENS %}
+    {% call groupe('patmat', 'Patrimoine et matériel', ep.startswith('patrimoine_pvs') or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'patrimoine'), 'patrimoine') %}
+      <a href="{{ url_for('reg_page', gcle='patrimoine', rcle='batiments') }}">Bâtiments et salles</a>
+      <a href="{{ url_for('reg_page', gcle='patrimoine', rcle='tables') }}">Tables-bancs</a>
+      <a href="{{ url_for('reg_page', gcle='patrimoine', rcle='manuels') }}">Manuels scolaires</a>
+      <a href="{{ url_for('reg_page', gcle='patrimoine', rcle='materiel') }}">Matériel didactique et sportif</a>
+      <a href="{{ url_for('reg_page', gcle='patrimoine', rcle='besoins') }}">Besoins exprimés</a>
+      <a href="{{ url_for('reg_page', gcle='patrimoine', rcle='dotations') }}">Dotations reçues</a>
+      {{ lien('patrimoine_pvs_reprendre', "Reprendre l'inventaire", ep=='patrimoine_pvs_reprendre') }}
+    {% endcall %}{% endif %}
+    {% if peut('examens_pvs') and ep_existe('examens_session') and not ENS %}
+    {% call groupe('examc', 'Examens et concours', ep.startswith('examen') or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'examens'), 'examen') %}
+      {% if not SECONDAIRE %}{{ lien('examens_session', 'Session CEP', ep=='examens_session') }}{% endif %}
+      {% if ep_existe('examens_cep2027') and not SECONDAIRE %}{{ lien('examens_cep2027', 'CEP — centres et salles', ep.startswith('examens_cep2027') or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'examens' and request.view_args.get('rcle') == 'salles')) }}{% endif %}
+      <a href="{{ url_for('reg_page', gcle='examens', rcle='candidats') }}">Candidats</a>
+      {{ lien('examens_notes', 'Saisie des notes', ep=='examens_notes') }}
+      {{ lien('examens_deliberation', 'Délibération et résultats', ep=='examens_deliberation') }}
+      {{ lien('examen_blanc', 'Examen blanc du CEP', ep.startswith('examen_blanc') or ep.startswith('cep_blanc')) }}
+      <a href="{{ url_for('reg_page', gcle='examens', rcle='concours') }}">Concours scolaires</a>
+    {% endcall %}{% endif %}
+    {% if peut('pilotage') and ep_existe('pilotage') and not ENS %}{{ lien('pilotage', 'Tableau de bord du pilotage', ep.startswith('pilotage'), 'progression') }}{% endif %}
+    {% if peut('preparation') and ep_existe('prep_accueil') and not SECONDAIRE %}{# v1.18 : préparation de classe (programmes, guides, fiches APC) #}
+    {% call groupe('prep', 'Préparation de classe', ep.startswith('prep_'), 'note') %}
+      {{ lien('prep_accueil', 'Cette semaine (planification et fiches)', ep=='prep_accueil') }}
+      {{ lien('prep_programmes', 'Programmes et progressions', ep.startswith('prep_programme')) }}
+      {{ lien('prep_guides', 'Guides pédagogiques', ep.startswith('prep_guide')) }}
+      {{ lien('prep_fiches', 'Fiches de préparation (bibliothèque)', ep.startswith('prep_fiche')) }}
+      {{ lien('prep_preparer', 'Préparer une fiche', ep=='prep_preparer') }}
+      {{ lien('prep_mes_fiches', 'Mes fiches' if ENS else 'Fiches des enseignants', ep.startswith('prep_ma') or ep=='prep_mes_fiches') }}
+      {{ lien('prep_resumes', 'Résumés — l’essentiel à retenir', ep in ('prep_resumes', 'prep_resume')) }}
+      {{ lien('prep_evaluations', 'Évaluations et épreuves (banque)', ep.startswith('prep_epreuve') or ep in ('prep_evaluations', 'prep_organigramme')) }}
+      {{ lien('prep_planif', 'Planification et classeurs de fiches', ep.startswith('prep_planif')) }}
+      {{ lien('prep_baremes_eps', 'Barèmes EPS proposés', ep=='prep_baremes_eps') }}
+      {{ lien('prep_manquants', 'Fiches et guides manquants', ep=='prep_manquants') }}
+    {% endcall %}{% endif %}
+    {% if peut('cep') and (not ENS or (classes_enseignant_cm2 is defined and classes_enseignant_cm2())) and not SECONDAIRE %}
+    {% call groupe('cep', 'Examens (CEP)', ep.startswith('cep') or ep.startswith('carte'), 'diplome') %}
+      {{ lien('cep_accueil', "Fiches d'inscription au CEP", ep.startswith('cep_fiche') or ep=='cep_accueil') }}
+      {{ lien('carte_editeur', 'Carte scolaire du candidat', ep.startswith('carte')) }}
+      {% if ep_existe('examens_cep2027') and not SECONDAIRE and not ENS and not (peut('examens_pvs') and ep_existe('examens_session')) %}{{ lien('examens_cep2027', 'Centre et salles du CEP', ep.startswith('examens_cep2027')) }}{% endif %}
+      {% if not (peut('examens_pvs') and ep_existe('examens_session') and ep_existe('examen_blanc') and peut('examen_blanc') and not ENS) %}{{ lien('cep_blanc_accueil', 'Examen blanc du CEP', ep.startswith('cep_blanc')) }}{% endif %}
+    {% endcall %}{% endif %}
+    {% if peut('cantine') %}
+    {% call groupe('cant', 'Cantine', ep.startswith('cantine') or ep.startswith('stock'), 'cantine') %}
+      {{ lien('cantine_accueil', 'Paiements de cantine', ep in ('cantine_accueil','cantine_classe')) }}
+      {{ lien('cantine_recap', 'Récapitulatifs', ep=='cantine_recap') }}
+      {% if ENS and PUBLIQUE %}{{ lien('cantine_impayes', 'Impayés de cantine', ep=='cantine_impayes') }}{% endif %}
+      {% if not ENS %}{{ lien('cantine_config', 'Configuration (montants)', ep=='cantine_config') }}{% endif %}
+      {% if (peut('stock') or ENS) and ep_existe('stock_accueil') %}{{ lien('stock_accueil', 'Vivres et stock' ~ (' (consultation)' if ENS else ''), ep.startswith('stock')) }}{% endif %}
+    {% endcall %}{% endif %}
+    {% if not ENS and (peut('paiements') or peut('tresorerie') or peut('paie') or (PUBLIQUE and (peut('cantine') or peut('carriere') or peut('depenses')))) %}
+    {% call groupe('fin', 'Finances', ep.startswith('paiement') or ep.startswith('stock') or ep=='impayes' or ep.startswith('tresorerie') or ep.startswith('paie') or ep.startswith('personnel') or ep=='bulletin_paie_pdf' or ep=='livre_paie' or ep.startswith('depense') or ep.startswith('recette') or ep.startswith('carriere') or ep=='cantine_impayes' or ep.startswith('cep_frais'), 'argent') %}
+      {% if PUBLIQUE %}
+      {% if peut('cantine') %}{{ lien('cantine_accueil', 'Paiements de cantine', ep in ('cantine_accueil','cantine_classe')) }}
+      {{ lien('cantine_impayes', 'Impayés de cantine', ep=='cantine_impayes') }}{% endif %}
+      {% if peut('stock') and ep_existe('stock_accueil') %}{{ lien('stock_accueil', 'Vivres et stock de la cantine', ep.startswith('stock')) }}{% endif %}
+      {% if peut('depenses') %}{{ lien('depenses_accueil', 'Dépenses (fonds de cantine…)', ep.startswith('depense')) }}
+      {{ lien('recettes_accueil', 'Subventions et recettes', ep.startswith('recette')) }}
+      {% if not SECONDAIRE %}{{ lien('cep_frais', 'Frais de dossier CEP', ep.startswith('cep_frais')) }}{% endif %}{% endif %}
+      {% if peut('paiements') %}{{ lien('paiements_en_ligne', 'Paiements en ligne (facultatif)', ep=='paiements_en_ligne') }}{% endif %}
+      {% else %}
+      {% if peut('paiements') %}{{ lien('paiements', 'Paiements de scolarité', ep in ('paiements','paiement_nouveau')) }}
+      {{ lien('impayes', 'Impayés', ep=='impayes') }}
+      {{ lien('paiements_en_ligne', 'Paiements en ligne', ep=='paiements_en_ligne') }}{% endif %}
+      {% endif %}
+      {% if peut('tresorerie') %}{{ lien('tresorerie', 'Trésorerie', ep=='tresorerie') }}
+      {{ lien('tresorerie_bilan', 'Bilan et budget', ep in ('tresorerie_bilan','tresorerie_budget')) }}{% endif %}
+      {% if PUBLIQUE %}
+      {% if peut('carriere') %}{{ lien('personnel', 'Personnel', ep.startswith('personnel')) }}
+      {{ lien('carriere_accueil', 'Gestion de carrière des enseignants', ep.startswith('carriere')) }}{% endif %}
+      {% elif peut('paie') %}{{ lien('personnel', 'Personnel', ep.startswith('personnel')) }}
+      {{ lien('paie_accueil', 'Paie', ep in ('paie_accueil','paie_mois')) }}{% endif %}
+    {% endcall %}{% endif %}
+    {% if PUBLIQUE %}
+    {% call groupe('vie', "Vie de l'école", ep.startswith('maitre_semaine') or ep.startswith('visite') or ep.startswith('patrimoine') or ep.startswith('recensement') or ep.startswith('docs_enseignant') or ep.startswith('rapports'), 'ecole') %}
+      {% if peut('recensement') and not ENS %}{{ lien('recensement_accueil', "Carte d'identité de l'école (recensement, rapports)", ep.startswith('recensement')) }}{% endif %}
+      {% if ENS and ep_existe('carriere_moi_fiche') %}{{ lien('carriere_moi_fiche', 'Ma fiche de carrière', ep.startswith('carriere')) }}{% endif %}
+      {% if peut('maitre_semaine') %}{{ lien('maitre_semaine_accueil', 'Maître de semaine (journal)', ep.startswith('maitre_semaine')) }}{% endif %}
+      {% if peut('visites') %}{{ lien('visites_accueil', "Visites de classe et d'école", ep.startswith('visite')) }}{% endif %}
+      {% if peut('patrimoine') %}{{ lien('patrimoine_accueil', 'Patrimoine et ressources' ~ (' (consultation)' if ENS else ''), ep.startswith('patrimoine')) }}{% endif %}
+      {% if peut('docs_enseignant') %}{{ lien('docs_enseignant_accueil', "Documents de l'enseignant", ep.startswith('docs_enseignant')) }}{% endif %}
+    {% endcall %}
+    {% endif %}
+    {% if peut('communication') or peut('parents') %}
+    {% set nb = messages_non_lus() + whatsapp_en_attente() %}
+    {% call groupe('par', 'Parents' ~ (' (' ~ nb ~ ')' if nb else ''), ep in ('communication','parents_liste'), 'courrier') %}
+      {% if peut('communication') %}{{ lien('communication', 'Messages et WhatsApp', ep=='communication') }}{% endif %}
+      {% if peut('parents') %}{{ lien('parents_liste', 'Comptes parents', ep=='parents_liste') }}{% endif %}
+      {% if peut('eleves') %}{{ lien('espace_eleves_acces', 'Comptes élèves (mes classes)' if ENS else 'Comptes élèves', ep=='espace_eleves_acces') }}{% endif %}
+    {% endcall %}{% endif %}
+    {% if ep_existe('groupes_whatsapp') and groupes_whatsapp_autorise() %}{{ lien('groupes_whatsapp', 'Groupes WhatsApp (enseignants, personnel)', ep.startswith('groupes_whatsapp'), 'message') }}{% endif %}
+    {% if peut('donnees') %}
+    {% call groupe('don', 'Données', ep.startswith('donnees') or ep.startswith('educmaster') or ep.startswith('conversion') or ep.startswith('transmission'), 'transmission') %}
+      {{ lien('transmission_accueil', 'Transmission à la circonscription', ep.startswith('transmission')) }}
+      {% if SECONDAIRE and ep_existe('sec_examens_saisie') %}{{ lien('sec_examens_saisie', 'Résultats aux examens (BEPC, BAC)', ep=='sec_examens_saisie') }}{% endif %}
+      {% if peut('synchronisation') %}{{ lien('sync_page', 'Synchronisation avec la circonscription', ep.startswith('sync_')) }}{% endif %}
+      {{ lien('donnees_accueil', 'Import / export', ep.startswith('donnees')) }}
+      {{ lien('educmaster_accueil', 'EducMaster (maternelle, primaire, secondaire)', ep.startswith('educmaster')) }}
+      {{ lien('conversion_pdf', 'Conversion PDF → Excel / CSV', ep.startswith('conversion')) }}
+    {% endcall %}{% endif %}
+    {% if peut('ecoles') and not peut('parametres') %}{{ lien('ecoles', 'Mon école (fiche, cachet)', ep.startswith('ecole'), 'ecole') }}{% endif %}
+    {% if peut('secretariat') %}
+    {% call groupe('sec', 'Secrétariat', ep in ('courrier','archives'), 'classeur') %}
+      {{ lien('courrier', 'Courrier', ep=='courrier') }}
+      {{ lien('archives', 'Archives', ep=='archives') }}
+    {% endcall %}{% endif %}
+    {% if peut('parametres') %}
+    {% call groupe('adm', 'Administration', ep in ('utilisateurs','journal_page','parametres','en_ligne_page','demandes_ecoles','reglages_messages','reglages_paiement_en_ligne','paie_parametres','affectations') or ep.startswith('ecole'), 'reglages') %}
+      {{ lien('ecoles', 'Écoles (ajout, modification, suppression)', ep.startswith('ecole')) }}
+      {{ lien('parametres', "Paramètres généraux", ep=='parametres') }}
+      {{ lien('en_ligne_page', 'Mise en ligne et sauvegardes', ep=='en_ligne_page') }}
+      {{ lien('utilisateurs', 'Utilisateurs et affectations', ep in ('utilisateurs','affectations')) }}
+      {{ lien('reglages_paiement_en_ligne', 'Paiement en ligne', ep=='reglages_paiement_en_ligne') }}
+      {{ lien('reglages_messages', 'WhatsApp et SMS (parents, directeurs, enseignants)', ep=='reglages_messages') }}
+      {{ lien('paie_parametres', 'Paramètres de paie', ep=='paie_parametres') }}
+      {{ lien('demandes_ecoles', 'Écoles, CS et DDEMP candidates', ep.startswith('demandes')) }}
+      {{ lien('journal_page', "Journal d'activité", ep=='journal_page') }}
+    {% endcall %}{% endif %}
+    {{ lien('verifier', 'Vérifier un document', ep=='verifier', 'coche') }}
+{{ lien('guide_utilisation', "Guide d'utilisation", ep=='guide_utilisation', 'info') }}
+    {% endif %}
+  </nav>
+  <div class="lateral-pied aide">SCOLARIS {{ VERSION }}<br>Conception : {{ CONCEPTEUR }}</div>
+</aside>
+<div id="voile" class="voile" hidden></div>
+<div class="zone">
+<header class="barre-haut">
+  <button id="btn-menu" class="btn-menu" type="button" aria-expanded="false" aria-controls="lateral" aria-label="Ouvrir le menu">{{ icone('menu') }}</button>
+  {% if JURIDICTION and PAGE_ECOLE is defined and PAGE_ECOLE and ECOLE_COURANTE %}
+  <div class="bh-titre"><strong>{{ JUR.nom if JUR and JUR.nom else NOM_APPLI }}</strong><span class="aide">École ouverte : <b>{{ ECOLE_COURANTE.nom }}</b> · {{ ANNEE }}</span></div>
+  {% else %}
+  <div class="bh-titre"><strong>{{ ECOLE.nom }}</strong><span class="aide">{% if ECOLE.cs %}CS {{ ECOLE.cs }} · {% endif %}{{ ANNEE }}</span></div>
+  {% endif %}
+  <div class="bh-user"><button type="button" class="btn-theme" data-theme-btn>◐ Auto</button>{{ g.user.nom }} <span class="badge">{{ ROLES[g.role_reel if g.get('role_reel') else g.user.role] }}</span> · {% set _nd = (mdp_demandes_attente()|length) if mdp_demandes_attente is defined else 0 %}{% if _nd %}<a href="{{ url_for('utilisateurs') }}" title="Demandes « mot de passe oublié » en attente">{{ icone('cle') }} {{ _nd }}</a> · {% endif %}<a href="{{ url_for('mon_compte') }}">Compte</a>{% if acces_gestion is defined and acces_gestion() %} · <a href="{{ url_for('acces_comptes') }}">Codes d'accès</a>{% endif %} · <a href="{{ url_for('logout') }}">Déconnexion</a></div>
+</header>
+{% elif g.get('parent') %}
+<header class="top parent">
+  <a class="marque" href="{{ url_for('parent_accueil') }}">SCOLARIS · Espace parents</a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu" onclick="var n=document.getElementById('menu');var o=n.classList.toggle('ouvert');this.setAttribute('aria-expanded',o)">{{ icone('menu') }} Menu</button>
+  <nav id="menu">
+    <button type="button" class="btn-theme" data-theme-btn>◐ Auto</button>
+    <a href="{{ url_for('parent_accueil') }}" class="{{ 'actif' if ep in ('parent_accueil','parent_enfant','parent_payer') }}">Mes enfants</a>
+    <a href="{{ url_for('parent_messages') }}" class="{{ 'actif' if ep=='parent_messages' }}">Messages</a>
+    <a href="{{ url_for('installer') }}" class="{{ 'actif' if ep=='installer' }}">Installer l'application</a>
+    <div class="user">{{ g.parent.nom }} · <a href="{{ url_for('parent_mdp') }}">Mot de passe</a> · <a href="{{ url_for('parent_logout') }}">Déconnexion</a></div>
+  </nav>
+</header>
+{% else %}
+<header class="top">
+  <a class="marque" href="{{ url_for('login') }}">SCOLARIS</a>
+  <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu" onclick="var n=document.getElementById('menu');var o=n.classList.toggle('ouvert');this.setAttribute('aria-expanded',o)">{{ icone('menu') }} Menu</button>
+  <nav id="menu">
+    <button type="button" class="btn-theme" data-theme-btn>◐ Auto</button>
+    <a href="{{ url_for('login') }}" class="{{ 'actif' if ep=='login' }}">Connexion personnel</a>
+    <a href="{{ url_for('parent_login') }}" class="{{ 'actif' if ep=='parent_login' }}">Espace parents</a>
+    {% if ep_existe('eleve_login') %}<a href="{{ url_for('eleve_login') }}" class="{{ 'actif' if ep=='eleve_login' }}">Espace élève</a>{% endif %}
+    <a href="{{ url_for('rejoindre') }}" class="{{ 'actif' if ep=='rejoindre' }}">Inscrire mon école</a>
+    <a href="{{ url_for('verifier') }}" class="{{ 'actif' if ep=='verifier' }}">Vérifier un document</a>
+    <a href="{{ url_for('installer') }}" class="{{ 'actif' if ep=='installer' }}">Installer l'application</a>
+  </nav>
+</header>
+{% endif %}
+{% if g.user %}
+<a id="file-attente" class="bandeau attente" href="#" hidden title="Saisies faites sans connexion : touchez pour les envoyer maintenant">{{ icone('sablier') }} <b class="fa-n">0</b> saisie(s) gardée(s) sur cet appareil, en attente d'envoi au serveur — toucher pour envoyer</a>
+{% if MAJ %}<div id="bandeau-maj" class="bandeau maj" hidden data-depot="{{ MAJ.depot }}" data-version="{{ VERSION }}" data-fichier="{{ MAJ.fichier }}">
+  <span>{{ icone('nouveau') }} Nouvelle version <b class="maj-v"></b> de SCOLARIS disponible (installée : {{ VERSION }}). Installez-la par-dessus l'ancienne : vos données sont conservées.</span>
+  <a class="btn petit maj-lien" href="#" target="_blank" rel="noopener">Télécharger la mise à jour</a>
+  <button class="btn sec petit maj-plus-tard" type="button">Plus tard</button>
+</div>{% endif %}
+{% endif %}
+<div id="bandeau-install" class="bandeau" hidden>
+  <span>Installez SCOLARIS sur cet appareil pour l'ouvrir comme une application.</span>
+  <button class="btn petit" type="button" id="btn-install">Installer</button>
+  <button class="btn sec petit" type="button" onclick="document.getElementById('bandeau-install').hidden=true;try{localStorage.setItem('scolaris-install-ignore','1')}catch(e){}">Plus tard</button>
+</div>
+<main {% if g.user %}class="travail"{% endif %}>
+  {% if acces_bandeau is defined %}{% set _ab = acces_bandeau() %}{% if _ab is not none %}<div class="flash warning">{{ icone('verrou') }} Votre compte n'a pas encore son <b>code d'accès personnel</b> : {% if _ab > 0 %}encore {{ _ab }} jour(s) avant le blocage.{% else %}délai écoulé.{% endif %} <a href="{{ url_for('acces_page') }}"><b>Demander / saisir mon code</b></a>{% if acces_gestion() %} · <a href="{{ url_for('acces_comptes') }}">codes de tous les comptes</a>{% endif %}</div>{% endif %}{% endif %}
+  {% if ep not in ('login', 'accueil', 'parent_accueil', 'eleve_accueil', '') %}<div class="retour-ligne no-print"><button type="button" class="btn-retour" onclick="scolarisRetour('{{ url_for('accueil') if g.user else (url_for('parent_accueil') if g.get('parent') else url_for('login')) }}')" title="Revenir à la page précédente" aria-label="Revenir à la page précédente">← Retour</button><a class="btn-retour sec" href="{{ url_for('accueil') if g.user else (url_for('parent_accueil') if g.get('parent') else url_for('login')) }}" title="Page d'accueil" aria-label="Page d'accueil">{{ icone('accueil') }} Accueil</a></div>{% endif %}
+  {% if rappel_sauvegarde is defined %}{% set _rs = rappel_sauvegarde() %}{% if _rs %}<div class="flash warning noprint" role="status">{{ icone('archives') }} {% if _rs.jours is none %}Aucune sauvegarde n'a encore été copiée hors de cet appareil.{% else %}Dernière sauvegarde copiée hors de cet appareil il y a {{ _rs.jours }} jours.{% endif %} Une panne ou une perte de l'appareil effacerait les données. <a href="{{ url_for('sauvegarde_un_clic') }}"><b>Télécharger une sauvegarde maintenant</b></a> puis gardez-la sur une clé USB · <a href="{{ url_for('en_ligne_page') }}">réglages</a></div>{% endif %}{% endif %}
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+  {% endwith %}
+  {% if EXPORT_BARRE %}<div class="export-barre no-print" role="toolbar" aria-label="Télécharger ou imprimer cette page">
+    <a class="btn petit" href="{{ EXPORT_BARRE.pdf }}" data-telechargement="pdf">{{ icone('document') }} Télécharger PDF</a>
+    <a class="btn petit" href="{{ EXPORT_BARRE.word }}" data-telechargement="docx">{{ icone('texte') }} Télécharger Word</a>
+    <button type="button" class="btn sec petit" onclick="scolarisImprimer()">{{ icone('imprimer') }} Imprimer</button></div>{% endif %}
+  {% block contenu %}{% endblock %}
+  <footer class="credit">SCOLARIS {{ VERSION }} · Conception : {{ CONCEPTEUR }}</footer>
+</main>
+{% if g.user %}</div></div>{% endif %}
+<script>
+/* v2.2 — impression et téléchargements, y compris dans les applications Android (navigateur intégré) */
+(function(){
+  var pont = window.ScolarisAutonome || window.ScolarisAndroid || null;
+  var natif = window.print ? window.print.bind(window) : null;
+  window.scolarisImprimer = function(){
+    if (pont && pont.imprimer) { try { pont.imprimer(document.title || 'SCOLARIS'); return; } catch (e) {} }
+    var b = document.querySelector('.export-barre [data-telechargement="pdf"]');
+    if (pont && b) { location.href = b.href; return; }       // pas d'impression possible : le PDF à la place
+    if (natif) natif();
+  };
+  if (pont) { window.print = window.scolarisImprimer; }
+  /* Fichier reçu par JavaScript (formulaire « POST », blob) : enregistré par l'application Android */
+  function nomDe(r, defaut){
+    var cd = r.headers.get('Content-Disposition') || '', m = /filename\*=UTF-8''([^;]+)/i.exec(cd);
+    if (m) { try { return decodeURIComponent(m[1]); } catch (e) {} }
+    m = /filename="?([^";]+)"?/i.exec(cd); return m ? m[1] : defaut;
+  }
+  function enregistrerBlob(blob, nom){
+    var lecteur = new FileReader();
+    lecteur.onload = function(){ var b64 = String(lecteur.result).split(',')[1] || '';
+      if (pont && pont.enregistrerFichier) pont.enregistrerFichier(nom, blob.type || 'application/octet-stream', b64);
+      else { var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nom; document.body.appendChild(a); a.click(); a.remove(); } };
+    lecteur.readAsDataURL(blob);
+  }
+  window.scolarisGarderBlob = enregistrerBlob;
+  var FICHIERS_POST = /(\.pdf|\/pdf|\.xlsx|\.docx|\.zip)(\?|$|\/)|\/cachets|\/transmissions\/envoi|\/docs-enseignant\/|\/educmaster\/notes|telecharger-maintenant/;
+  if (pont && pont.enregistrerFichier) {
+    /* le navigateur d'Android ne sait pas télécharger la réponse d'un formulaire envoyé (POST) : on l'envoie nous-mêmes */
+    document.addEventListener('submit', function(ev){
+      var f = ev.target; if (!f || (f.method || '').toLowerCase() !== 'post' || f.dataset.natif === '1' || ev.defaultPrevented) return;
+      if (f.querySelector('input[type=file]')) return;          // envoi de fichiers : formulaire normal
+      var cible = f.getAttribute('action') || location.pathname;
+      if (f.dataset.fichier !== '1' && !FICHIERS_POST.test(cible)) return;   // seulement les formulaires qui renvoient un fichier
+      ev.preventDefault();
+      var donnees = new FormData(f); if (ev.submitter && ev.submitter.name) donnees.append(ev.submitter.name, ev.submitter.value || '');
+      fetch(f.action || location.href, {method: 'POST', body: donnees, credentials: 'same-origin', headers: {'X-Scolaris-Fetch': '1'}}).then(function(r){
+        var cd = r.headers.get('Content-Disposition') || '', ct = (r.headers.get('Content-Type') || '').toLowerCase();
+        if (/attachment/i.test(cd) || (ct && ct.indexOf('text/html') < 0 && ct.indexOf('json') < 0)) {
+          return r.blob().then(function(b){ enregistrerBlob(b, nomDe(r, 'document')); });
+        }
+        if (ct.indexOf('json') >= 0) return r.json().then(function(j){ if (j && j.redirection) location.href = j.redirection; else location.reload(); });
+        if (r.redirected) { location.href = r.url; return; }
+        return r.text().then(function(t){ document.open(); document.write(t); document.close(); });
+      }).catch(function(){ f.dataset.natif = '1'; f.submit(); });
+    }, false);
+  }
+  /* Android : le clavier ne cache plus le champ en cours de saisie */
+  if (pont) document.addEventListener('focusin', function(ev){
+    var t = ev.target; if (!t || !/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+    setTimeout(function(){ try { t.scrollIntoView({block: 'center', behavior: 'smooth'}); } catch (e) { t.scrollIntoView(); } }, 350);
+  });
+  /* Téléchargement groupé : fiches / résumés cochés */
+  document.addEventListener('change', function(ev){
+    var t = ev.target; if (!t.classList) return;
+    if (t.classList.contains('lot-tout')) { document.querySelectorAll('.lot-case').forEach(function(c){ c.checked = t.checked; }); }
+    if (!t.classList.contains('lot-case') && !t.classList.contains('lot-tout')) return;
+    var ids = Array.prototype.map.call(document.querySelectorAll('.lot-case:checked'), function(c){ return c.value; });
+    document.querySelectorAll('.lot-telechargement a[data-fmt]').forEach(function(a){
+      if (!a.dataset.base) a.dataset.base = a.getAttribute('href');
+      if (!ids.length) { a.setAttribute('href', a.dataset.base); return; }
+      var u = new URL(a.dataset.base, location.href), garder = new URLSearchParams();
+      ['classe','eleve'].forEach(function(k){ if (u.searchParams.get(k)) garder.set(k, u.searchParams.get(k)); });
+      garder.set('ids', ids.join(','));
+      a.setAttribute('href', u.pathname + '?' + garder.toString());
+    });
+    document.querySelectorAll('.lot-compte').forEach(function(s){ s.textContent = ids.length ? ids.length + ' choisi(s)' : ''; });
+  });
+})();
+/* Bouton « ← Retour » : page précédente de l'application, sinon l'accueil */
+function scolarisRetour(accueil){
+  var meme = false; try { meme = !!document.referrer && new URL(document.referrer).origin === location.origin; } catch (e) {}
+  if (meme && history.length > 1) history.back(); else location.href = accueil;
+}
+</script>
+<script>
+(function(){
+  if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1')){
+    navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(){});
+  }
+  var invite=null, b=document.getElementById('bandeau-install');
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault(); invite=e; window.scolarisInvite=e;
+    var ignore=false; try{ignore=localStorage.getItem('scolaris-install-ignore')==='1'}catch(_){}
+    if(!ignore) b.hidden=false;
+    document.dispatchEvent(new Event('scolaris-installable'));
+  });
+  document.getElementById('btn-install').addEventListener('click',function(){
+    if(!invite) return; invite.prompt(); invite.userChoice.finally(function(){invite=null;b.hidden=true;});
+  });
+  window.addEventListener('appinstalled',function(){b.hidden=true;});
+})();
+</script>
+</body>
+</html>

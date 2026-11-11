@@ -1,0 +1,35 @@
+{% extends "base.html" %}{% block titre %}{{ 'Modifier une activité' if a else 'Ajouter une activité' }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ 'Modifier une activité' if a else 'Ajouter une activité du RAP' }}</h1>
+  <p class="sous">Suivi ou encadrement de directeur, séance d'UP, formation groupée ou conférence, concertation, autre activité.</p></div>
+  <a class="btn sec" href="{{ url_for('jur_cp_activites', cs=cs_id if JUR_NIVEAU == 'ddemp' else None) }}">← Journal</a></div>
+<form method="post" class="carte">
+  {% if JUR_NIVEAU == 'ddemp' %}<input type="hidden" name="cs" value="{{ cs_id }}">{% endif %}
+  <div class="grille-id">
+    <div><label for="categorie">Nature de l'activité *</label><select id="categorie" name="categorie" required>
+      {% for k, l in CATEGORIES.items() %}<option value="{{ k }}" {{ 'selected' if v.categorie == k }}>{{ l }}</option>{% endfor %}</select></div>
+    <div><label for="acteur">Acteur *</label><select id="acteur" name="acteur">
+      {% for x in acteurs %}<option value="{{ x.cle }}" {{ 'selected' if v.acteur == x.cle }}>{{ x.lib }}{% if x.nom %} – {{ x.nom }}{% endif %}</option>{% endfor %}
+      <option value="commune" {{ 'selected' if v.acteur == 'commune' }}>Toute la CS (C/CS et tous les CP)</option></select></div>
+    <div><label for="statut">Statut</label><select id="statut" name="statut">
+      {% for k, l in STATUTS.items() %}<option value="{{ k }}" {{ 'selected' if v.statut == k }}>{{ l }}</option>{% endfor %}</select></div>
+    <div><label for="cycle">Cycle concerné</label><select id="cycle" name="cycle"><option value="">EP et EM / non précisé</option>
+      <option value="EP" {{ 'selected' if v.cycle == 'EP' }}>EP (primaire)</option><option value="EM" {{ 'selected' if v.cycle == 'EM' }}>EM (maternelle)</option></select></div>
+    <div><label for="date_debut">Date (ou début) *</label><input id="date_debut" name="date_debut" type="date" required value="{{ v.date_debut or '' }}"></div>
+    <div><label for="date_fin">Date de fin</label><input id="date_fin" name="date_fin" type="date" value="{{ v.date_fin or '' }}"></div>
+    <div><label for="ecole_id">École concernée</label><select id="ecole_id" name="ecole_id"><option value="">— aucune / plusieurs —</option>
+      {% for e in ecoles %}<option value="{{ e.id }}" {{ 'selected' if (v.ecole_id or 0)|int == e.id }}>{{ e.nom }} ({{ e.type }}){% if e.zone_nom %} – {{ e.zone_nom }}{% endif %}</option>{% endfor %}</select></div>
+    <div><label for="lieu">Lieu</label><input id="lieu" name="lieu" maxlength="150" value="{{ v.lieu or '' }}" placeholder="ex. Locaux de la CS, EPP Le Plateau"></div>
+    <div><label for="nb">Nombre (suivis groupés)</label><input id="nb" name="nb" type="number" min="1" max="999" value="{{ v.nb or 1 }}"></div>
+    <div><label for="participants">Participants</label><input id="participants" name="participants" maxlength="300" value="{{ v.participants or '' }}" placeholder="ex. CCS, CP et directeurs"></div>
+    <div><label for="b_em">Bénéficiaires EM (formations)</label><input id="b_em" name="beneficiaires_em" type="number" min="0" value="{{ v.beneficiaires_em if v.beneficiaires_em is not none else '' }}"></div>
+    <div><label for="b_ep">Bénéficiaires EP (formations)</label><input id="b_ep" name="beneficiaires_ep" type="number" min="0" value="{{ v.beneficiaires_ep if v.beneficiaires_ep is not none else '' }}"></div>
+  </div>
+  <label for="designation">Désignation de l'activité</label>
+  <textarea id="designation" name="designation" rows="2" style="width:100%" maxlength="600">{{ v.designation or '' }}</textarea>
+  <label for="obs">Observations / résultats</label>
+  <textarea id="obs" name="observations" rows="3" style="width:100%">{{ v.observations or '' }}</textarea>
+  <p class="aide">« Toute la CS » convient aux séances d'UP, formations et concertations qui réunissent le CCS et tous les CP : elles comptent alors pour chaque ligne du bilan (et une seule fois au total).</p>
+  <div class="actions"><button class="btn vert">{{ icone('enregistrer') }} Enregistrer</button>{% if not a %}<button class="btn sec" name="suite" value="nouvelle">{{ icone('enregistrer') }} Enregistrer et ajouter une autre</button>{% endif %}</div>
+</form>
+{% endblock %}

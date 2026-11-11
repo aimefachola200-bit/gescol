@@ -1,0 +1,46 @@
+{# v1.25 — Tableau de bord du pilotage (école, zone, CS, DDEMP) : indicateurs, comparaison entre années, graphiques #}
+{% extends "base.html" %}{% block titre %}Tableau de bord du pilotage{% endblock %}
+{% block contenu %}
+<style>
+.jsvg{display:block;max-width:820px;font-family:inherit}
+.jsvg .lb{font-size:11.5px;fill:#344054}.jsvg .lb2{font-size:12.5px;fill:#344054;font-weight:600}
+.jsvg .vl{font-size:10.5px;fill:#475467}.jsvg .lg{font-size:11px;fill:#475467}
+.jsvg .gr{stroke:#EAECF0;stroke-width:1}.jsvg .ref{stroke:#1D2939;stroke-width:1.2;stroke-dasharray:4 3}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),1fr));gap:8px;margin:10px 0}
+.kpi{background:#fff;border:1px solid var(--bord);border-radius:10px;padding:10px}.kpi b{font-size:20px;display:block}.kpi small{color:var(--gris)}
+.ok{color:#067647}.ko{color:#B42318}
+</style>
+<div class="entete"><div><h1>{{ icone('progression') }} Tableau de bord du pilotage</h1>
+<p class="sous">{{ res.nb_ecoles }} école(s) · année {{ annee }}{% if comparer %} · comparée à {{ comparer }}{% endif %}{% if not JUR %} · données de l'école{% endif %}</p></div>
+<div class="actions"><a class="btn sec petit" href="{{ url_for('pilotage_pdf', annee=annee, comparer=comparer or None, par=par, **flt) }}">{{ icone('document') }} PDF signé (QR)</a>
+<a class="btn sec petit" href="{{ url_for('pilotage_xlsx', annee=annee, comparer=comparer or None, par=par, **flt) }}">{{ icone('graphique') }} Excel</a></div></div>
+{% include "_onglets_groupe.html" %}
+<form method="get" class="actions" style="margin-bottom:8px">
+<label>Année <select name="annee">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+<label>Comparer avec <select name="comparer"><option value="">—</option>{% for a in annees %}<option {{ 'selected' if a == comparer }}>{{ a }}</option>{% endfor %}</select></label>
+{% if JUR %}<label>Regrouper par <select name="par"><option value="zone" {{ 'selected' if par == 'zone' }}>Zone pédagogique</option><option value="cs" {{ 'selected' if par == 'cs' }}>Circonscription</option><option value="ecole" {{ 'selected' if par == 'ecole' }}>École</option></select></label>
+{% if cs|length > 1 %}<label>CS <select name="cs_id"><option value="">Toutes</option>{% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if flt.cs_id == c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+{% if zones %}<label>Zone <select name="zone_id"><option value="">Toutes</option>{% for z in zones %}<option value="{{ z.id }}" {{ 'selected' if flt.zone_id == z.id }}>{{ z.nom }}</option>{% endfor %}</select></label>{% endif %}
+<label>Secteur <select name="secteur"><option value="">Tous</option><option value="public" {{ 'selected' if flt.secteur == 'public' }}>Public</option><option value="prive" {{ 'selected' if flt.secteur == 'prive' }}>Privé</option></select></label>
+<label>Type <select name="type"><option value="">Tous</option><option value="EP" {{ 'selected' if flt.type == 'EP' }}>Primaire</option><option value="EM" {{ 'selected' if flt.type == 'EM' }}>Maternelle</option></select></label>{% endif %}
+<button class="btn sec petit">Afficher</button></form>
+{% if not JUR %}<div class="actions aide" style="margin-bottom:6px">Instantanés enregistrés (comparaisons) : {{ instantanes|join(', ') or 'aucun' }}.
+<form method="post" action="{{ url_for('pilotage_instantane') }}" style="display:inline"><input type="hidden" name="annee" value="{{ annee }}"><button class="btn sec petit">{{ icone('epingle') }} Enregistrer l'instantané {{ annee }}</button></form>
+{% if comparer and comparer in instantanes %}<form method="post" action="{{ url_for('pilotage_instantane_supprimer') }}" style="display:inline" onsubmit="return confirm('Supprimer l\'instantané {{ comparer }} ?')"><input type="hidden" name="annee" value="{{ comparer }}"><button class="btn sec petit">{{ icone('reinitialiser') }} Supprimer l'instantané {{ comparer }}</button></form>{% endif %}
+{% if comparer and not comp %}<span>Pas d'instantané pour {{ comparer }} : la comparaison sera possible après l'avoir enregistré cette année-là.</span>{% endif %}</div>{% endif %}
+<div class="kpis">{% for lib, v, c, u, s in kpi[:12] %}{% set d = ecart(v, c, s) %}<div class="kpi"><small>{{ lib }}</small><b>{{ fmt(v, u) }}</b>{% if comp %}<small>{{ comparer }} : {{ fmt(c, u) }} <span class="{{ d[1] }}">{{ d[0] }}</span></small>{% endif %}</div>{% endfor %}</div>
+<div class="tw"><table class="t" aria-label="Indicateurs"><thead><tr><th>Indicateur</th><th>{{ annee }}</th>{% if comp %}<th>{{ comparer }}</th><th>Écart</th>{% endif %}</tr></thead><tbody>
+{% for lib, v, c, u, s in kpi %}{% set d = ecart(v, c, s) %}<tr><td>{{ lib }}</td><td><b>{{ fmt(v, u) }}</b></td>{% if comp %}<td>{{ fmt(c, u) }}</td><td class="{{ d[1] }}">{{ d[0] }}</td>{% endif %}</tr>{% endfor %}</tbody></table></div>
+{% for t, svg in charts.items() %}{% if svg %}<div class="carte"><h3>{{ t }}</h3>{{ svg }}</div>{% endif %}{% endfor %}
+{% if res.groupes %}<h3>Par {{ 'école' if par == 'ecole' else 'circonscription' if par == 'cs' else 'zone pédagogique' }}</h3>
+<div class="tw"><table class="t"><thead><tr><th>Entité</th><th>Écoles</th><th>Élèves</th><th>G</th><th>F</th><th>% F</th><th>Classes</th><th>Él./classe</th><th>Enseignants</th><th>Él./maître</th><th>Manque</th><th>CEP %</th><th>CEP G</th><th>CEP F</th><th>Réussite éval.</th><th>Abandons</th><th>Licences</th></tr></thead><tbody>
+{% for n, i in res.groupes %}<tr><td>{{ n }}</td><td>{{ i.ecoles }}</td><td>{{ i.t }}</td><td>{{ i.g }}</td><td>{{ i.f }}</td><td>{{ fmt(i.pct_f, ' %') }}</td><td>{{ i.classes }}</td><td>{{ fmt(i.moy_classe) }}</td><td>{{ i.ens.t }}</td><td>{{ fmt(i.ens.ratio) }}</td><td>{{ i.ens.manque }}</td><td>{{ fmt(i.cep.taux, ' %') }}</td><td>{{ fmt(i.cep.taux_g, ' %') }}</td><td>{{ fmt(i.cep.taux_f, ' %') }}</td><td>{{ fmt((i.eval_derniere or {}).taux, ' %') }}</td><td>{{ i.abandons }}</td><td>{{ i.licences }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+{% if res.ind.pil.evaluations %}<h3>Réussite aux évaluations</h3><div class="tw"><table class="t"><thead><tr><th>Évaluation</th><th>Classes</th><th>Composés</th><th>Réussis</th><th>Taux</th><th>Taux G</th><th>Taux F</th></tr></thead><tbody>
+{% for e in res.ind.pil.evaluations %}<tr><td>{{ e.libelle or (TYPES_EVAL.get(e.type, e.type) ~ ' ' ~ e.numero) }}</td><td>{{ e.classes }}</td><td>{{ e.composes }}</td><td>{{ e.reussis }}</td><td><b>{{ fmt(e.taux, ' %') }}</b></td><td>{{ fmt(e.taux_g, ' %') }}</td><td>{{ fmt(e.taux_f, ' %') }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+{% if res.niveaux %}<h3>Réussite par cours</h3><div class="tw"><table class="t"><thead><tr><th>Cours</th><th>Évaluation</th><th>Composés</th><th>Réussis</th><th>Taux</th></tr></thead><tbody>{% for d in res.niveaux %}<tr><td>{{ d.niveau }}</td><td>{{ d.libelle }}</td><td>{{ d.c }}</td><td>{{ d.r }}</td><td>{{ fmt(d.taux, ' %') }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+{% if res.classes %}<h3>Effectifs par classe</h3><div class="tw"><table class="t"><thead><tr><th>Classe</th><th>Cours</th><th>G</th><th>F</th><th>Total</th><th>Redoublants</th><th>Titulaire</th></tr></thead><tbody>{% for c in res.classes %}<tr><td>{{ c.nom }}</td><td>{{ c.niveau }}</td><td>{{ c.g }}</td><td>{{ c.f }}</td><td>{{ c.g + c.f }}</td><td>{{ c.red }}</td><td>{{ c.titulaire }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+{% if eb %}<div class="carte" style="margin-top:10px"><h3 style="margin-top:0">{{ icone('examen') }} Examen blanc du CEP — {{ annee }}</h3>
+<p>Ont composé : <b>{{ eb.ebComposes }}</b> · seuil atteint : <b>{{ eb.ebAdmis }}</b> · taux de réussite : <b>{{ fmt(eb.ebTaux, ' %') }}</b> — <a href="{{ url_for('examen_blanc', session=annee) }}">détail par centre</a></p>
+<div class="tw"><table class="t" aria-label="Examen blanc par école"><thead><tr><th>École de provenance</th><th>Ont composé</th><th>Seuil atteint</th><th>Taux</th></tr></thead><tbody>
+{% for e, v in eb.ecoles|dictsort %}<tr><td>{{ e }}</td><td>{{ v.ebComposes }}</td><td>{{ v.ebAdmis }}</td><td>{{ fmt(v.ebTaux, ' %') }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
+{% endblock %}

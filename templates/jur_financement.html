@@ -1,0 +1,50 @@
+{% extends "base.html" %}{% block titre %}Financement des écoles{% endblock %}
+{% block contenu %}
+{% set T = fin.total %}{% set B = fin.budget %}
+<div class="entete">
+  <div><h1>Financement des écoles</h1>
+    <p class="sous">Subventions de l'État et recettes, cotisations de cantine, frais de dossier CEP, dépenses et solde par école, par zone pédagogique{% if DDEMP %} et par circonscription{% endif %} · année scolaire {{ annee }}.</p></div>
+  <div class="actions">
+    <form method="get" class="actions" style="display:inline-flex;gap:6px"><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option value="{{ a }}" {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></form>
+    <a class="btn sec" href="{{ url_for('jur_financement', annee=annee, export='xlsx') }}">Excel</a>
+    <a class="btn" href="{{ url_for('jur_financement', annee=annee, export='pdf') }}" target="_blank">PDF</a>
+  </div>
+</div>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Subventions de l'État</div><div class="v">{{ milliers(T.subventions) }} F</div></div>
+  <div class="kpi"><div class="l">Cotisations de cantine ({{ milliers(T.beneficiaires) }} bénéficiaires)</div><div class="v">{{ milliers(T.cantine) }} F</div></div>
+  <div class="kpi"><div class="l">Dépenses</div><div class="v">{{ milliers(T.depenses) }} F</div></div>
+  <div class="kpi"><div class="l">Solde (écoles ouvertes)</div><div class="v">{{ milliers(T.solde) }} F</div></div>
+  <div class="kpi"><div class="l">Budget prévu : entrées / sorties{% if ep_existe('tresorerie_budget') %} · <a href="{{ url_for('tresorerie_budget') }}">saisir</a>{% endif %}</div><div class="v">{{ milliers(B.entree) }} / {{ milliers(B.sortie) }} F</div></div>
+</div>
+<div class="tw"><table class="t">
+  <thead><tr><th>École</th><th>Secteur</th><th>Source</th><th class="num">Subventions de l'État</th><th class="num">Autres recettes</th><th class="num">Cotisations de cantine</th><th class="num">Bénéf.</th><th class="num">Frais CEP</th><th class="num">Dépenses</th><th class="num">Solde</th></tr></thead>
+  <tbody>
+  {% for r in fin.rangees %}{% set d = r.d %}
+  {% if r.genre == 'ecole' %}
+  <tr><td>{{ r.n }}. {{ r.libelle }}</td><td>{{ 'Public' if d.secteur == 'public' else 'Privé' }}</td>
+    <td>{% if d.source == 'locale' %}<span class="badge ok">école ouverte</span>{% elif d.source == 'transmission' %}<span class="badge">transmission</span>{% else %}<span class="aide">aucune donnée</span>{% endif %}</td>
+    <td class="num">{{ milliers(d.subventions) }}</td><td class="num">{{ milliers(d.autres) }}</td><td class="num">{{ milliers(d.cantine) }}</td><td class="num">{{ milliers(d.beneficiaires) }}</td>
+    <td class="num">{{ milliers(d.cep) }}</td><td class="num">{{ milliers(d.depenses) }}</td><td class="num"><b>{{ milliers(d.solde) }}</b></td></tr>
+  {% else %}
+  <tr style="background:{{ '#EEF3FA' if r.genre == 'zone' else '#D9E4F2' }}"><td><b>{{ r.libelle }}</b></td><td>{{ d.nb_ecoles }} école(s)</td><td>{{ d.nb_locales }} ouverte(s) / {{ d.nb_transmission }} transm.</td>
+    <td class="num"><b>{{ milliers(d.subventions) }}</b></td><td class="num"><b>{{ milliers(d.autres) }}</b></td><td class="num"><b>{{ milliers(d.cantine) }}</b></td><td class="num">{{ milliers(d.beneficiaires) }}</td>
+    <td class="num"><b>{{ milliers(d.cep) }}</b></td><td class="num"><b>{{ milliers(d.depenses) }}</b></td><td class="num"><b>{{ milliers(d.solde) }}</b></td></tr>
+  {% endif %}
+  {% else %}<tr><td colspan="10" class="aide">Aucune école dans la juridiction.</td></tr>{% endfor %}
+  </tbody>
+  <tfoot><tr><th>TOTAL GÉNÉRAL</th><th>{{ T.nb_ecoles }} école(s)</th><th>{{ T.nb_locales }} ouverte(s) / {{ T.nb_transmission }} transm.</th>
+    <th class="num">{{ milliers(T.subventions) }}</th><th class="num">{{ milliers(T.autres) }}</th><th class="num">{{ milliers(T.cantine) }}</th><th class="num">{{ milliers(T.beneficiaires) }}</th>
+    <th class="num">{{ milliers(T.cep) }}</th><th class="num">{{ milliers(T.depenses) }}</th><th class="num">{{ milliers(T.solde) }}</th></tr></tfoot>
+</table></div>
+{% if B.lignes %}
+<section class="carte" style="margin-top:12px"><h2>Budget prévu {{ annee }}</h2>
+  <div class="tw"><table class="t compact"><tr><th>Type</th><th>Catégorie</th><th class="num">Montant prévu</th></tr>
+  {% for b in B.lignes %}<tr><td>{{ 'Entrée' if b.type == 'entree' else 'Sortie' }}</td><td>{{ b.categorie }}</td><td class="num">{{ milliers(b.montant) }}</td></tr>{% endfor %}
+  <tr><th colspan="2">Total entrées / sorties</th><th class="num">{{ milliers(B.entree) }} / {{ milliers(B.sortie) }}</th></tr></table></div>
+</section>
+{% endif %}
+<p class="aide"><b>Source « école ouverte »</b> : montants saisis dans les modules de l'école (Finances de l'école : subventions et recettes, cotisations de cantine,
+  frais de dossier CEP, dépenses ; solde = solde d'ouverture + recettes − dépenses). <b>Source « transmission »</b> : section cantine du paquet transmis par l'école
+  (cotisations de cantine de l'année et bénéficiaires) ; subventions et dépenses inconnues (—). Le budget prévu est celui de « Bilan et budget » (une prévision par année).</p>
+{% endblock %}

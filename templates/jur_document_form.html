@@ -1,0 +1,60 @@
+{% extends "base.html" %}{% block titre %}{{ d.nom }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ d.nom }}</h1><p class="sous">{{ d.desc }}</p></div>
+<div class="actions"><a class="btn sec" target="_blank" href="{{ url_for('jur_document_vierge', doc=doc) }}">PDF vierge</a>
+<a class="btn sec" href="{{ url_for('jur_documents') }}">← Documents</a></div></div>
+
+<section class="carte">
+  <h2>1. Personne concernée</h2>
+  <form method="get" class="filtres">
+    {% if JUR_NIVEAU=='ddemp' %}<label>Circonscription<br><select name="cs" onchange="this.form.submit()"><option value="">Toutes</option>
+      {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if f.get('cs')|int(0)==c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+    <label>École<br><select name="ecole" onchange="this.form.submit()"><option value="">Toutes</option>
+      <option value="-1" {{ 'selected' if f.get('ecole')=='-1' }}>Agents de la {{ 'circonscription' if JUR_NIVEAU=='cs' else 'DDEMP' }}</option>
+      {% for e in ecoles %}<option value="{{ e.id }}" {{ 'selected' if f.get('ecole')|int(0)==e.id }}>{{ e.nom }}</option>{% endfor %}</select></label>
+    <label>Recherche (nom, NIP, matricule)<br><input name="q" value="{{ f.get('q') or '' }}"></label>
+    {% if sig_code %}<input type="hidden" name="sig" value="{{ sig_code }}">{% endif %}
+    <label>Personne ({{ nb }}{{ ' — 400 premières affichées' if nb > 400 else '' }})<br>
+      <select name="p" onchange="this.form.submit()" style="max-width:420px"><option value="">— choisir (ou saisir à la main ci-dessous) —</option>
+        {% for x in liste %}<option value="{{ x.cle }}" {{ 'selected' if p and p.cle==x.cle }}>{{ x.nom }} {{ x.prenoms }} — {{ x.ecole_nom or x.poste or 'agent' }}{% if x.nip %} (NIP {{ x.nip }}){% endif %}</option>{% endfor %}
+      </select></label>
+    <button class="btn sec">Afficher</button>
+  </form>
+  {% if p %}<p class="aide">Données reprises : {{ p.nom }} {{ p.prenoms }} · {{ p.fonction or p.poste or '' }} · {{ p.ecole_nom or 'agent de la structure' }}{% if p.cs_nom %} · CS {{ p.cs_nom }}{% endif %}. Complétez ou corrigez les champs avant l'impression.</p>
+  {% elif not liste %}<p class="aide">Aucun personnel reçu : les écoles transmettent leur personnel dans leur paquet de transmission. Vous pouvez saisir les champs à la main.</p>{% endif %}
+  {% if d.famille == 'jur' and 'resp' in d.sig %}
+  <form method="get" class="filtres">
+    {% for k in ('cs','ecole','q','p') %}{% if f.get(k) %}<input type="hidden" name="{{ k }}" value="{{ f.get(k) }}">{% endif %}{% endfor %}
+    <label>Signataire<br><select name="sig" onchange="this.form.submit()">
+      {% for code, lib in signataires %}<option value="{{ code }}" {{ 'selected' if code==sig_code }}>{{ lib }}</option>{% endfor %}</select></label>
+  </form>{% endif %}
+</section>
+
+<form method="post" action="{{ url_for('jur_document_pdf', doc=doc) }}" target="_blank" class="carte">
+  <h2>2. Contenu du document</h2>
+  <input type="hidden" name="p" value="{{ p.cle if p else '' }}"><input type="hidden" name="sig" value="{{ sig_code }}">
+  {% for titre, cles in sections %}
+  <h3>{{ titre }}</h3>
+  <div class="grille-id">
+  {% for k in cles %}{% set lib, typ = CHAMPS[k] %}
+    <div><label for="f_{{ k }}">{{ lib }}</label>
+    {% if typ == 'civ' %}<select id="f_{{ k }}" name="{{ k }}"><option value="">Mr ou Mme (à compléter)</option>{% for o in ('Mr','Mme','Mlle') %}<option {{ 'selected' if v.get(k)==o }}>{{ o }}</option>{% endfor %}</select>
+    {% elif typ == 'genre' %}<select id="f_{{ k }}" name="{{ k }}"><option value="M" {{ 'selected' if v.get(k)!='F' }}>Homme (« Je soussigné »)</option><option value="F" {{ 'selected' if v.get(k)=='F' }}>Femme (« Je soussignée »)</option></select>
+    {% elif typ == 'dir' %}<select id="f_{{ k }}" name="{{ k }}"><option value="">—</option>{% for o in ('Directeur','Directrice') %}<option {{ 'selected' if v.get(k)==o }}>{{ o }}</option>{% endfor %}</select>
+    {% elif typ == 'titre_travail' %}<select id="f_{{ k }}" name="{{ k }}">{% for o in ('ATTESTATION DE TRAVAIL','CERTIFICAT DE TRAVAIL') %}<option {{ 'selected' if v.get(k)==o }}>{{ o }}</option>{% endfor %}</select>
+    {% elif typ == 'type_ecole' %}<select id="f_{{ k }}" name="{{ k }}"><option value="">Ne rien barrer</option><option value="EP" {{ 'selected' if v.get(k)=='EP' }}>École primaire (barrer « maternelle »)</option><option value="EM" {{ 'selected' if v.get(k)=='EM' }}>École maternelle (barrer « primaire »)</option></select>
+    {% elif typ == 'qualite' %}<select id="f_{{ k }}" name="{{ k }}"><option value="">Aucune case cochée</option>{% for o, l in QUALITES.items() %}<option value="{{ o }}" {{ 'selected' if v.get(k)==o }}>{{ l }}</option>{% endfor %}</select>
+    {% else %}<input id="f_{{ k }}" name="{{ k }}" value="{{ v.get(k, '') }}" maxlength="300" {% if typ=='date' %}placeholder="jj/mm/aaaa" pattern="\d{2}/\d{2}/\d{4}"{% endif %}>{% endif %}
+    </div>
+  {% endfor %}
+  </div>
+  {% endfor %}
+  {% if d.famille == 'jur' and 'resp' in d.sig %}
+  <p><label><input type="checkbox" name="signer" value="1" checked> Apposer le cachet et la signature numériques du signataire</label></p>{% endif %}
+  <p class="aide">« Aperçu » produit un brouillon non enregistré. « Enregistrer et imprimer » inscrit le document au registre ({{ v.ref }}), lui attribue un code de vérification (QR) et le garde dans l'historique pour réimpression.</p>
+  <div class="actions">
+    <button class="btn sec" name="action" value="apercu">Aperçu (brouillon)</button>
+    <button class="btn" name="action" value="enregistrer">Enregistrer et imprimer</button>
+  </div>
+</form>
+{% endblock %}

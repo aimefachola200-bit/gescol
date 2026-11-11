@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% block titre %}Emploi du temps — maternelle{% endblock %}
+{% block contenu %}{% set onglet = 'maternelle' %}{% include "_prep_onglets.html" %}
+<nav class="onglets" aria-label="Rubriques de l'école maternelle">
+  <a href="{{ url_for('mat_accueil', section=c.section) }}">Progression et planification</a>
+  <a class="actif" href="{{ url_for('mat_edt', section=c.section) }}">Emploi du temps</a>
+  <a href="{{ url_for('mat_grilles', section=c.section) }}">Grilles d'observation</a>
+  <a href="{{ url_for('mat_reperes', section=c.section) }}">Je retiens (éducateur)</a>
+</nav>
+<form method="get" class="mat-filtres"><label>Section <select name="section" onchange="this.form.submit()">{% for s in M.sections %}<option value="{{ s.code }}" {{ 'selected' if s.code == c.section }}>{{ s.nom }}</option>{% endfor %}</select></label><noscript><button class="btn sec petit">Afficher</button></noscript>
+<a class="btn petit" target="_blank" href="{{ url_for('mat_edt_pdf', section=c.section) }}">{{ icone('document') }} PDF</a></form>
+{% if e %}
+<h2>Emploi du temps — {{ 'section des petits' if c.section == 'petits' else 'section des grands' }}{% if e.propose %} <span class="badge att">proposé</span>{% endif %}</h2>
+<div class="tw"><table class="t"><thead><tr><th>Heure</th>{% for j in JOURS %}<th>{{ j }}</th>{% endfor %}</tr></thead><tbody>
+{% for l in e.lignes %}<tr><td>{{ l[0] }}</td>{% if l[2:]|select|list|length == 0 %}<td colspan="5">{{ l[1] }}</td>{% else %}{% for j in range(5) %}<td>{{ l[1 + j] if l[1 + j] != '' else l[1] }}</td>{% endfor %}{% endif %}</tr>{% endfor %}
+</tbody></table></div>
+{% if e.note %}<p>{{ e.note }}</p>{% endif %}
+<p class="aide">Source : {{ e.source }}</p>
+{% else %}<p class="aide">Pas d'emploi du temps pour cette section.</p>{% endif %}
+{% endblock %}

@@ -1,0 +1,16 @@
+{# v2.3 — appel du personnel (un jour) #}
+{% extends "base.html" %}{% block titre %}Appel du personnel — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<h2 style="margin:0">Appel du {{ jj(jour) }}</h2>
+<form method="get" class="filtres" style="margin:8px 0"><label for="date">Jour</label><input type="date" id="date" name="date" value="{{ jour }}" onchange="this.form.submit()"></form>
+{% if not agents %}<p class="aide">Aucun agent actif : ajoutez le personnel d'abord.</p>{% else %}
+<form method="post"><input type="hidden" name="date" value="{{ jour }}">
+<div class="tw"><table class="t" aria-label="Appel du personnel"><thead><tr><th>Agent</th><th>Fonction</th>{% for s in statuts %}<th>{{ s }}</th>{% endfor %}<th>Motif</th></tr></thead><tbody>
+{% for a in agents %}{% set i = loop.index0 %}{% set d = deja.get(a) %}<tr><td><b>{{ a }}</b></td><td>{{ fonctions.get(a, '') }}</td>
+{% for s in statuts %}<td style="text-align:center"><input type="radio" name="s{{ i }}" value="{{ s }}" aria-label="{{ a }} : {{ s }}" {{ 'checked' if (d and d.statut == s) or (not d and s == 'Présent') }} {{ 'disabled' if not peut_ec }}></td>{% endfor %}
+<td><input name="m{{ i }}" value="{{ d.motif if d else '' }}" maxlength="300" aria-label="Motif pour {{ a }}" {{ 'disabled' if not peut_ec }}></td></tr>{% endfor %}
+</tbody></table></div>
+{% if peut_ec %}<button class="btn">{{ icone('enregistrer') }} Enregistrer l'appel</button>{% endif %}</form>{% endif %}
+{% endblock %}

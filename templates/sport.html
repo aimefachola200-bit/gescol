@@ -1,0 +1,191 @@
+{# v1.25 — Sport scolaire (UASCEP) : accueil, compétitions, compétition (équipes, calendrier, classement, performances,
+   résultats, documents), records, palmarès, paramètres #}
+{% extends "base.html" %}{% block titre %}Sport scolaire{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone('trophee') }} Sport scolaire (UASCEP)</h1><p class="sous">{{ G.sous_titre }}</p></div>
+{% if saisons is defined and vue in ('accueil', 'competitions', 'palmares') %}<form method="get" class="actions"><label>Saison <select name="saison" onchange="this.form.submit()">{% for s in saisons %}<option {{ 'selected' if s == saison }}>{{ s }}</option>{% endfor %}</select></label><noscript><button class="btn sec petit">OK</button></noscript></form>{% endif %}</div>
+{% set ep_actif = {'accueil': 'sport_accueil', 'competitions': 'sport_competitions', 'competition': 'sport_competitions', 'records': 'sport_records', 'palmares': 'sport_palmares', 'parametres': 'sport_parametres'}[vue] %}
+{% include "_onglets_groupe.html" %}
+
+{% if vue == 'accueil' %}
+<div class="tw"><table class="t" aria-label="Chiffres de la saison"><thead><tr><th>Licences</th><th>Garçons</th><th>Filles</th><th>Aptes</th><th>Compétitions</th><th>Matchs programmés</th><th>Matchs joués</th></tr></thead>
+<tbody><tr><td><b>{{ lic.n or 0 }}</b></td><td>{{ lic.g or 0 }}</td><td>{{ lic.f or 0 }}</td><td>{{ lic.aptes or 0 }}</td><td>{{ cs|length }}</td><td>{{ nb_m.n or 0 }}</td><td>{{ nb_m.joues or 0 }}</td></tr></tbody></table></div>
+<div class="actions" style="margin:8px 0"><a class="btn petit" href="{{ url_for('reg_page', gcle='sport', rcle='licences', annee=saison) }}">{{ icone('licence') }} Licences</a>
+<a class="btn petit" href="{{ url_for('sport_competitions', saison=saison) }}">{{ icone('ajouter') }} Compétitions</a>
+<a class="btn sec petit" href="{{ url_for('sport_palmares', saison=saison) }}">{{ icone('medaille') }} Palmarès</a>
+<a class="btn sec petit" href="{{ url_for('sport_palmares_pdf', saison=saison) }}">{{ icone('document') }} Palmarès (PDF signé)</a></div>
+{% if par_cat %}<h3>Licences par catégorie</h3><div class="tw"><table class="t"><thead><tr><th>Catégorie</th><th>Licences</th><th>dont filles</th></tr></thead><tbody>{% for x in par_cat %}<tr><td>{{ x.cat }}</td><td>{{ x.n }}</td><td>{{ x.f or 0 }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+{% if par_disc %}<h3>Licences par discipline</h3><p>{% for d, n in par_disc %}<span class="badge">{{ d }} : {{ n }}</span> {% endfor %}</p>{% endif %}
+<h3>Compétitions de la saison {{ saison }}</h3>
+<div class="tw"><table class="t"><thead><tr><th>Compétition</th><th>Niveau</th><th>Entité</th><th>Formule</th><th>Dates</th><th>Statut</th><th>Podium</th></tr></thead><tbody>
+{% for c in cs %}<tr><td><a href="{{ url_for('sport_competition', cid=c.id) }}">{{ c.intitule }}</a></td><td>{{ NIV_LIB[c.niveau] }}</td><td>{{ c.entite_lib or c.entite }}</td><td>{{ FORMULE_LIB[c.formule] }}</td><td>{{ jj(c.date_debut) }}{% if c.date_fin %} → {{ jj(c.date_fin) }}{% endif %}</td><td>{{ c.statut }}</td>
+<td>{% for r, n, e, d in podium(c)[:3] %}{{ r }}. {{ n }}{% if not loop.last %} · {% endif %}{% endfor %}</td></tr>
+{% else %}<tr><td colspan="7" class="aide">Aucune compétition pour la saison {{ saison }}.</td></tr>{% endfor %}</tbody></table></div>
+
+{% elif vue == 'competitions' %}
+<div class="actions" style="margin-bottom:6px"><a class="btn sec petit" href="{{ url_for('sport_xlsx', saison=saison) }}">Excel (classeur commun)</a>
+{% if niveaux_ecr %}<form method="post" enctype="multipart/form-data" action="{{ url_for('sport_import', saison=saison) }}" style="display:inline"><label class="btn sec petit" style="cursor:pointer">Importer (classeur commun)<input type="file" name="fichier" accept=".xlsx" hidden onchange="this.form.submit()"></label></form>{% endif %}</div>
+<form method="get" class="actions" style="margin-bottom:8px"><input type="hidden" name="saison" value="{{ saison }}"><label>Niveau <select name="niveau" onchange="this.form.submit()"><option value="">Tous</option>{% for n, l in niveaux %}<option value="{{ n }}" {{ 'selected' if n == niveau }}>{{ l }}</option>{% endfor %}</select></label></form>
+<div class="tw"><table class="t" aria-label="Compétitions"><thead><tr><th>Compétition</th><th>Niveau</th><th>Entité</th><th>Discipline</th><th>Catégorie</th><th>Genre</th><th>Formule</th><th>Dates</th><th>Lieu</th><th>Statut</th><th></th></tr></thead><tbody>
+{% for c in cs %}<tr><td><a href="{{ url_for('sport_competition', cid=c.id) }}">{{ c.intitule }}</a></td><td>{{ NIV_LIB[c.niveau] }}</td><td>{{ c.entite_lib or c.entite }}</td><td>{{ c.discipline }}</td><td>{{ c.categorie }}</td><td>{{ c.genre }}</td><td>{{ FORMULE_LIB[c.formule] }}</td><td>{{ jj(c.date_debut) }}{% if c.date_fin %} → {{ jj(c.date_fin) }}{% endif %}</td><td>{{ c.lieu }}</td><td>{{ c.statut }}</td>
+<td style="white-space:nowrap">{% if c.niveau in niveaux_ecr %}<a class="btn sec petit" href="{{ url_for('sport_competitions', saison=saison, modifier=c.id) }}#form-c">{{ icone('modifier') }}</a>
+<form method="post" action="{{ url_for('sport_competition_supprimer', cid=c.id) }}" style="display:inline" onsubmit="return confirm('Supprimer la compétition, ses équipes et ses matchs ?')"><button class="btn sec petit" aria-label="Supprimer">{{ icone('supprimer') }}</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="11" class="aide">Aucune compétition.</td></tr>{% endfor %}</tbody></table></div>
+{% if niveaux_ecr %}{% set e = edit or {} %}
+<form id="form-c" method="post" class="carte" style="margin-top:10px"><input type="hidden" name="id" value="{{ e.id or '' }}"><input type="hidden" name="saison" value="{{ saison }}">
+<h3>{{ 'Modifier la compétition' if e.id else (icone('ajouter') ~ ' Nouvelle compétition') }}</h3>
+<div class="grille-form" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:8px 12px">
+<label>Niveau <select name="niveau" id="sp-niv">{% for n, l in niveaux if n in niveaux_ecr %}<option value="{{ n }}" {{ 'selected' if e.niveau == n }}>{{ l }}</option>{% endfor %}</select></label>
+<label>Entité <select name="entite" id="sp-ent">{% for n, l in niveaux if n in niveaux_ecr %}{% for k, lib, i in ents[n] %}<option value="{{ k }}" data-n="{{ n }}" {{ 'selected' if e.entite == k and e.niveau == n }}>{{ lib }}</option>{% endfor %}{% endfor %}</select></label>
+<label>Intitulé <input name="intitule" value="{{ e.intitule or '' }}" placeholder="Championnat de football minimes garçons"></label>
+<label>Discipline * <input name="discipline" list="sp-disc" value="{{ e.discipline or '' }}" required><datalist id="sp-disc">{% for d in DISCIPLINES %}<option value="{{ d }}">{% endfor %}</datalist></label>
+<label>Catégorie <input name="categorie" list="sp-cat" value="{{ e.categorie or '' }}"><datalist id="sp-cat">{% for d in CATEGORIES %}<option value="{{ d }}">{% endfor %}</datalist></label>
+<label>Genre <select name="genre"><option value=""></option>{% for x in GENRES %}<option {{ 'selected' if e.genre == x }}>{{ x }}</option>{% endfor %}</select></label>
+<label style="grid-column:1/-1">Formule <select name="formule">{% for k, l in FORMULES %}<option value="{{ k }}" {{ 'selected' if e.formule == k }}>{{ l }}</option>{% endfor %}</select></label>
+<label>Nombre de poules <input name="nb_poules" inputmode="numeric" value="{{ e.nb_poules or 1 }}"></label>
+<label>Qualifiés par poule <input name="qualifies_poule" inputmode="numeric" value="{{ e.qualifies_poule or 2 }}"></label>
+<label>Qualifiés pour le niveau supérieur <input name="qualifies_sup" inputmode="numeric" value="{{ e.qualifies_sup if e.qualifies_sup is not none else 1 }}"></label>
+<label>Points : victoire / nul / défaite <span style="display:flex;gap:4px"><input name="pts_victoire" size="2" value="{{ e.pts_victoire if e.pts_victoire is not none else 3 }}"><input name="pts_nul" size="2" value="{{ e.pts_nul if e.pts_nul is not none else 1 }}"><input name="pts_defaite" size="2" value="{{ e.pts_defaite or 0 }}"></span></label>
+<label>Score d'un forfait <input name="score_forfait" size="2" value="{{ e.score_forfait or 3 }}"></label>
+<label>Début <input type="date" name="date_debut" value="{{ e.date_debut or '' }}"></label><label>Fin <input type="date" name="date_fin" value="{{ e.date_fin or '' }}"></label>
+<label>Lieu / site <input name="lieu" value="{{ e.lieu or '' }}"></label><label>Organisateur <input name="organisateur" value="{{ e.organisateur or '' }}"></label>
+<label>Statut <select name="statut">{% for x in STATUTS %}<option {{ 'selected' if e.statut == x }}>{{ x }}</option>{% endfor %}</select></label>
+<label style="grid-column:1/-1">Règlement particulier <textarea name="reglement" rows="2">{{ e.reglement or '' }}</textarea></label>
+<label style="grid-column:1/-1">Observations <textarea name="observations" rows="2">{{ e.observations or '' }}</textarea></label></div>
+<p><button class="btn">Enregistrer</button>{% if e.id %} <a class="btn sec" href="{{ url_for('sport_competitions', saison=saison) }}">Annuler</a>{% endif %}</p></form>
+<script>(function(){var n=document.getElementById('sp-niv'),s=document.getElementById('sp-ent');if(!n||!s)return;function f(){var v=n.value,p=null;Array.prototype.forEach.call(s.options,function(o){var ok=o.dataset.n===v;o.hidden=!ok;o.disabled=!ok;if(ok&&!p)p=o;});if(s.selectedOptions[0]&&s.selectedOptions[0].disabled&&p)p.selected=true;}n.addEventListener('change',f);f();})();</script>
+{% endif %}
+
+{% elif vue == 'competition' %}
+<p><a href="{{ url_for('sport_competitions', saison=c.saison) }}">← Compétitions {{ c.saison }}</a></p>
+<h2 style="margin:4px 0">{{ c.intitule }}</h2>
+<p class="aide">{{ NIV_LIB[c.niveau] }} : {{ c.entite_lib or c.entite }} · {{ c.discipline }} {{ c.categorie }} {{ c.genre }} · {{ FORMULE_LIB[c.formule] }} · {{ jj(c.date_debut) }}{% if c.date_fin %} → {{ jj(c.date_fin) }}{% endif %}{% if c.lieu %} · {{ c.lieu }}{% endif %} · <b>{{ c.statut }}</b></p>
+<nav class="onglets" aria-label="Compétition">{% for k, l in ([('perfs', 'Épreuves et performances')] if ind else [('equipes', 'Équipes (' ~ eqs|length ~ ')'), ('calendrier', 'Tirage, calendrier et feuilles de match'), ('classement', 'Classement')]) + [('resultats', 'Résultats, qualifiés et diplômes')] %}<a class="{{ 'actif' if onglet == k }}" href="{{ url_for('sport_competition', cid=c.id, onglet=k) }}">{{ l }}</a>{% endfor %}</nav>
+
+{% if onglet == 'equipes' %}
+<div class="tw"><table class="t" aria-label="Équipes"><thead><tr><th>Équipe</th><th>École</th><th>Poule</th><th>Tête de série</th><th>Encadreur</th><th>Contact</th><th>G</th><th>F</th><th>Origine</th><th></th></tr></thead><tbody>
+{% for e in eqs %}<tr><td>{{ e.nom }}</td><td>{{ e.ecole }}</td><td>{{ e.poule }}</td><td>{{ icone('etoile') if e.tete_serie }}</td><td>{{ e.encadreur }}</td><td>{{ e.contact }}</td><td>{{ e.effectif_g or '' }}</td><td>{{ e.effectif_f or '' }}</td><td>{{ e.origine or '' }}</td>
+<td style="white-space:nowrap">{% if peut_c %}<a class="btn sec petit" href="{{ url_for('sport_competition', cid=c.id, onglet='equipes', equipe=e.id) }}#form-e">{{ icone('modifier') }}</a><form method="post" action="{{ url_for('sport_equipe_supprimer', cid=c.id, eid=e.id) }}" style="display:inline" onsubmit="return confirm('Supprimer l\'équipe et ses matchs ?')"><button class="btn sec petit" aria-label="Supprimer">{{ icone('supprimer') }}</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="10" class="aide">Aucune équipe engagée.</td></tr>{% endfor %}</tbody></table></div>
+{% if peut_c %}
+<div class="actions" style="margin:8px 0">
+{% if engagements %}<form method="post" action="{{ url_for('sport_equipes_importer', cid=c.id) }}" style="display:inline"><input type="hidden" name="source" value="engagements"><button class="btn sec petit">{{ icone('telecharger') }} Reprendre les fiches d'engagement UASCEP ({{ engagements|length }})</button></form>{% endif %}
+{% for b in bas %}<form method="post" action="{{ url_for('sport_equipes_importer', cid=c.id) }}" style="display:inline"><input type="hidden" name="source" value="competition:{{ b.id }}"><button class="btn sec petit">{{ icone('telecharger') }} Qualifiés de « {{ b.intitule }} » ({{ b.entite_lib or b.entite }})</button></form>{% endfor %}
+</div>
+{% set e = edit_e or {} %}
+<form id="form-e" method="post" action="{{ url_for('sport_equipe', cid=c.id, eid=e.id or 0) }}" class="carte"><h3>{{ 'Modifier l\'équipe' if e.id else (icone('ajouter') ~ ' Engager une équipe') }}</h3>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:8px 12px">
+<label>Nom de l'équipe <input name="nom" value="{{ e.nom or '' }}"></label><label>École <input name="ecole" value="{{ e.ecole or '' }}"></label>
+<label>Poule <input name="poule" size="3" value="{{ e.poule or '' }}"></label><label><input type="checkbox" name="tete_serie" value="1" {{ 'checked' if e.tete_serie }}> Tête de série</label>
+<label>Encadreur <input name="encadreur" value="{{ e.encadreur or '' }}"></label><label>Contact <input name="contact" value="{{ e.contact or '' }}"></label>
+<label>Capitaine <input name="capitaine" value="{{ e.capitaine or '' }}"></label><label>Provenance <input name="origine" value="{{ e.origine or '' }}"></label>
+<label>Joueurs G <input name="effectif_g" inputmode="numeric" value="{{ e.effectif_g if e.effectif_g is not none else '' }}"></label><label>Joueuses F <input name="effectif_f" inputmode="numeric" value="{{ e.effectif_f if e.effectif_f is not none else '' }}"></label>
+<label style="grid-column:1/-1">Joueurs (noms, n° de licence) <textarea name="joueurs" rows="2">{{ e.joueurs or '' }}</textarea></label></div>
+<p><button class="btn">Enregistrer</button>{% if e.id %} <a class="btn sec" href="{{ url_for('sport_competition', cid=c.id, onglet='equipes') }}">Annuler</a>{% endif %}</p></form>
+{% endif %}
+
+{% elif onglet == 'calendrier' %}
+{% if peut_c %}<div class="actions" style="margin:6px 0">
+<form method="post" action="{{ url_for('sport_tirage', cid=c.id) }}" style="display:inline" onsubmit="return confirm('Faire le tirage au sort et générer le calendrier ?')"><label class="aide"><input type="checkbox" name="forcer" value="1"> refaire (efface les résultats)</label> <button class="btn petit">{{ icone('tirage') }} Tirage au sort et calendrier</button></form>
+{% if c.formule in ('poules', 'elimination') %}<form method="post" action="{{ url_for('sport_phase_suivante', cid=c.id) }}" style="display:inline"><button class="btn sec petit">{{ icone('suivant') }} {{ 'Créer la phase finale / tour suivant' if c.formule == 'poules' else 'Tour suivant' }}</button></form>{% endif %}
+<a class="btn sec petit" href="{{ url_for('sport_doc', cid=c.id, doc='calendrier') }}">{{ icone('document') }} Calendrier (PDF signé)</a>
+<form method="post" action="{{ url_for('sport_calendrier_reinitialiser', cid=c.id) }}" style="display:inline" onsubmit="return confirm('Effacer le calendrier et tous les résultats ?')"><button class="btn sec petit">{{ icone('reinitialiser') }} Réinitialiser</button></form>
+</div>{% else %}<p><a class="btn sec petit" href="{{ url_for('sport_doc', cid=c.id, doc='calendrier') }}">{{ icone('document') }} Calendrier (PDF)</a></p>{% endif %}
+{% if tirages %}<details><summary class="aide">Tirages effectués ({{ tirages|length }})</summary>{% for t in tirages %}<p class="aide">{{ t.fait_le }} — {{ t.fait_par }}<br>{{ t.resultat|replace('\n', ' · ') }}</p>{% endfor %}</details>{% endif %}
+<div class="tw"><table class="t" aria-label="Matchs"><thead><tr><th>Tour</th><th>Poule</th><th>Date</th><th>Heure</th><th>Terrain</th><th>Équipe A</th><th>Score</th><th>Équipe B</th><th>Arbitre</th><th></th></tr></thead><tbody>
+{% for m in ms %}{% set r = res(m) %}<tr><td>{{ m.tour }}</td><td>{{ m.poule }}</td><td>{{ jj(m.date) }}</td><td>{{ m.heure or '' }}</td><td>{{ m.terrain or '' }}</td><td>{{ lib_eq(m.equipe_a) }}</td>
+<td style="white-space:nowrap">{% if r[2] %}<b>{{ r[0] }} – {{ r[1] }}</b>{% if m.tab_a is not none %} <span class="aide">(t.a.b. {{ m.tab_a }}–{{ m.tab_b }})</span>{% endif %}{% if m.forfait %} <span class="aide">forfait {{ m.forfait }}</span>{% endif %}{% else %}…{% endif %}</td>
+<td>{{ lib_eq(m.equipe_b) }}</td><td>{{ m.arbitre or '' }}</td>
+<td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('sport_feuille_pdf', cid=c.id, mid=m.id) }}" title="Feuille de match">{{ icone('document') }}</a>{% if peut_c %} <a class="btn sec petit" href="{{ url_for('sport_competition', cid=c.id, onglet='calendrier', match=m.id) }}#form-m" aria-label="Saisir le résultat">{{ icone('modifier') }}</a><form method="post" action="{{ url_for('sport_match_supprimer', cid=c.id, mid=m.id) }}" style="display:inline" onsubmit="return confirm('Supprimer le match ?')"><button class="btn sec petit" aria-label="Supprimer">{{ icone('supprimer') }}</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="10" class="aide">Aucun match : engagez les équipes puis faites le tirage au sort.</td></tr>{% endfor %}</tbody></table></div>
+{% if peut_c %}{% set m = edit_m or {} %}
+<form id="form-m" method="post" action="{{ url_for('sport_match', cid=c.id, mid=m.id or 0) }}" class="carte" style="margin-top:10px">
+<h3>{% if m.id %}Feuille de match : {{ lib_eq(m.equipe_a) }} – {{ lib_eq(m.equipe_b) }} ({{ m.tour }}){% else %}{{ icone('ajouter') }} Ajouter une rencontre{% endif %}</h3>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr));gap:8px 12px">
+{% if not m.id %}<label>Équipe A <select name="equipe_a">{% for e in eqs %}<option value="{{ e.id }}">{{ e.nom }}</option>{% endfor %}</select></label>
+<label>Équipe B <select name="equipe_b">{% for e in eqs %}<option value="{{ e.id }}">{{ e.nom }}</option>{% endfor %}</select></label>
+<label>Phase <select name="phase"><option value="poule">Poule / championnat</option><option value="elimination">Élimination</option></select></label>
+<label>Tour <input name="tour" value="Rencontre"></label><label>Poule <input name="poule" size="3"></label>{% endif %}
+<label>Date <input type="date" name="date" value="{{ m.date or '' }}"></label><label>Heure <input type="time" name="heure" value="{{ m.heure or '' }}"></label>
+<label>Terrain <input name="terrain" value="{{ m.terrain or '' }}"></label>
+<label>Score A <input name="score_a" inputmode="numeric" value="{{ m.score_a if m.score_a is not none else '' }}"></label><label>Score B <input name="score_b" inputmode="numeric" value="{{ m.score_b if m.score_b is not none else '' }}"></label>
+<label>Tirs au but A <input name="tab_a" inputmode="numeric" value="{{ m.tab_a if m.tab_a is not none else '' }}"></label><label>Tirs au but B <input name="tab_b" inputmode="numeric" value="{{ m.tab_b if m.tab_b is not none else '' }}"></label>
+<label>Forfait <select name="forfait"><option value=""></option><option value="A" {{ 'selected' if m.forfait == 'A' }}>Équipe A</option><option value="B" {{ 'selected' if m.forfait == 'B' }}>Équipe B</option><option value="AB" {{ 'selected' if m.forfait == 'AB' }}>Les deux</option></select></label>
+<label>Buteurs / marqueurs A <input name="buteurs_a" value="{{ m.buteurs_a or '' }}"></label><label>Buteurs / marqueurs B <input name="buteurs_b" value="{{ m.buteurs_b or '' }}"></label>
+<label>Cartons jaunes A <input name="jaunes_a" inputmode="numeric" value="{{ m.jaunes_a if m.jaunes_a is not none else '' }}"></label><label>Cartons jaunes B <input name="jaunes_b" inputmode="numeric" value="{{ m.jaunes_b if m.jaunes_b is not none else '' }}"></label>
+<label>Cartons rouges A <input name="rouges_a" inputmode="numeric" value="{{ m.rouges_a if m.rouges_a is not none else '' }}"></label><label>Cartons rouges B <input name="rouges_b" inputmode="numeric" value="{{ m.rouges_b if m.rouges_b is not none else '' }}"></label>
+<label>Arbitre central <input name="arbitre" value="{{ m.arbitre or '' }}"></label><label>Arbitres assistants / juges <input name="assesseurs" value="{{ m.assesseurs or '' }}"></label>
+<label>Délégué / commissaire <input name="delegue" value="{{ m.delegue or '' }}"></label>
+<label style="grid-column:1/-1">Observations (incidents, réserves) <textarea name="observations" rows="2">{{ m.observations or '' }}</textarea></label></div>
+<p><button class="btn">Enregistrer</button>{% if m.id %} <a class="btn sec" href="{{ url_for('sport_competition', cid=c.id, onglet='calendrier') }}">Annuler</a>{% endif %}</p></form>{% endif %}
+
+{% elif onglet == 'classement' %}
+<p><a class="btn sec petit" href="{{ url_for('sport_doc', cid=c.id, doc='classement') }}">{{ icone('document') }} Classement (PDF signé)</a></p>
+{% for p, lignes in cl.items() %}{% if p %}<h3>Poule {{ p }}</h3>{% endif %}
+<div class="tw"><table class="t" aria-label="Classement {{ p }}"><thead><tr><th>Rang</th><th>Équipe</th><th>École</th><th>J</th><th>G</th><th>N</th><th>P</th><th>BP</th><th>BC</th><th>Diff.</th><th>Pts</th><th>Fair-play</th></tr></thead><tbody>
+{% for l in lignes %}<tr><td>{{ l.rang }}</td><td><b>{{ l.nom }}</b></td><td>{{ l.ecole }}</td><td>{{ l.j }}</td><td>{{ l.g }}</td><td>{{ l.n }}</td><td>{{ l.p }}</td><td>{{ l.bp }}</td><td>{{ l.bc }}</td><td>{{ l.diff }}</td><td><b>{{ l.pts }}</b></td><td>{{ l.fp }}</td></tr>{% endfor %}</tbody></table></div>
+{% else %}<p class="aide">Pas de classement (pas encore de matchs de poule ou de championnat).</p>{% endfor %}
+<p class="aide">Départage des ex aequo : points, confrontations directes (points, différence, buts marqués), différence générale, buts marqués, fair-play (jaunes + 3 × rouges).</p>
+{% for t, mm in tours %}<h3>{{ t }}</h3><ul>{% for m in mm %}{% set r = res(m) %}<li>{{ lib_eq(m.equipe_a) }} {% if r[2] %}<b>{{ r[0] }} – {{ r[1] }}</b>{% if m.tab_a is not none %} (t.a.b. {{ m.tab_a }}–{{ m.tab_b }}){% endif %}{% else %}–{% endif %} {{ lib_eq(m.equipe_b) }}</li>{% endfor %}</ul>{% endfor %}
+
+{% elif onglet == 'perfs' %}
+<p class="actions"><a class="btn sec petit" href="{{ url_for('sport_doc', cid=c.id, doc='classement') }}">{{ icone('document') }} Classements par épreuve (PDF signé)</a></p>
+{% for (ep, sx, ca), ps in rp.items() %}<h3>{{ ep }} {{ {'M': 'garçons', 'F': 'filles'}.get(sx, '') }} {{ ca }}</h3>
+<div class="tw"><table class="t"><thead><tr><th>Rang</th><th>Nom et prénoms</th><th>École</th><th>Série</th><th>Licence</th><th>Performance</th><th></th></tr></thead><tbody>
+{% for p in ps %}<tr><td>{{ p.rang or 'NC' }}</td><td>{{ p.nom }} {{ p.prenoms or '' }}{% if est_record(p, rec) %} <span class="badge" title="Record">{{ icone('medaille') }} record</span>{% endif %}</td><td>{{ p.ecole or '' }}</td><td>{{ p.serie or '' }}</td><td>{{ p.licence or '' }}</td><td><b>{{ p.performance or '' }}</b></td>
+<td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('sport_diplomes', cid=c.id, type='participation', perf=p.id) }}" title="Diplôme">{{ icone('diplome') }}</a>{% if peut_c %} <a class="btn sec petit" href="{{ url_for('sport_competition', cid=c.id, onglet='perfs', perf=p.id) }}#form-p">{{ icone('modifier') }}</a><form method="post" action="{{ url_for('sport_perf_supprimer', cid=c.id, pid=p.id) }}" style="display:inline" onsubmit="return confirm('Supprimer ?')"><button class="btn sec petit" aria-label="Supprimer">{{ icone('supprimer') }}</button></form>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+{% else %}<p class="aide">Aucune performance saisie.</p>{% endfor %}
+{% if peut_c %}
+<form method="post" action="{{ url_for('sport_perfs_licencies', cid=c.id) }}" class="actions" style="margin:8px 0"><label>Inscrire les licenciés aptes ({{ c.categorie or 'toutes catégories' }}{{ ', ' ~ c.genre if c.genre }}) à l'épreuve <input name="epreuve" list="sp-ep" size="16"></label><button class="btn sec petit">{{ icone('telecharger') }} Inscrire</button></form>
+{% set p = edit_p or {} %}
+<form id="form-p" method="post" action="{{ url_for('sport_perf', cid=c.id, pid=p.id or 0) }}" class="carte"><h3>{{ 'Modifier' if p.id else (icone('ajouter') ~ ' Ajouter') }} une performance</h3>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr));gap:8px 12px">
+<label>Épreuve * <input name="epreuve" list="sp-ep" value="{{ p.epreuve or '' }}" required><datalist id="sp-ep">{% for k in EPREUVES %}<option value="{{ k }}">{% endfor %}</datalist></label>
+<label>Série / poule <input name="serie" value="{{ p.serie or '' }}"></label><label>Nom * <input name="nom" value="{{ p.nom or '' }}" required></label><label>Prénoms <input name="prenoms" value="{{ p.prenoms or '' }}"></label>
+<label>Sexe <select name="sexe"><option value=""></option><option {{ 'selected' if p.sexe == 'M' }}>M</option><option {{ 'selected' if p.sexe == 'F' }}>F</option></select></label>
+<label>Catégorie <input name="categorie" list="sp-cat2" value="{{ p.categorie or c.categorie or '' }}"><datalist id="sp-cat2">{% for x in CATEGORIES %}<option value="{{ x }}">{% endfor %}</datalist></label>
+<label>École <input name="ecole" value="{{ p.ecole or '' }}"></label><label>N° de licence <input name="licence" value="{{ p.licence or '' }}"></label>
+<label>Performance <input name="performance" value="{{ p.performance or '' }}" placeholder="9''8 · 3,45 m · 17 pts"></label>
+<label style="grid-column:1/-1">Observations <input name="observations" value="{{ p.observations or '' }}"></label></div>
+<p class="aide">Temps : 9''8 ou 9,8 (secondes), 1'12''5 ; distances : 3,45 m ou 3 m 45 ; jury : points. Le classement est automatique (plus court pour les courses, plus long pour les sauts et lancers, plus de points pour les concours).</p>
+<p><button class="btn">Enregistrer</button>{% if p.id %} <a class="btn sec" href="{{ url_for('sport_competition', cid=c.id, onglet='perfs') }}">Annuler</a>{% endif %}</p></form>{% endif %}
+
+{% elif onglet == 'resultats' %}
+<h3>Podium</h3>
+<div class="tw"><table class="t"><thead><tr><th>Rang</th><th>Équipe / athlète</th><th>École</th><th>Détail</th></tr></thead><tbody>{% for r, n, e, d in podium %}<tr><td>{{ r }}</td><td><b>{{ n }}</b></td><td>{{ e }}</td><td>{{ d }}</td></tr>{% else %}<tr><td colspan="4" class="aide">Résultats non encore disponibles.</td></tr>{% endfor %}</tbody></table></div>
+{% if final and not ind %}<details><summary>Classement final complet</summary><ol>{% for r, n, e, d in final %}<li>{{ n }}{% if e and e != n %} ({{ e }}){% endif %} — {{ d }}</li>{% endfor %}</ol></details>{% endif %}
+<h3>Qualifié(s) pour le niveau supérieur ({{ c.qualifies_sup or 0 }})</h3>
+<ul>{% for r, n, e, d in qual %}<li>{{ r }}. {{ n }}{% if e and e != n %} ({{ e }}){% endif %}{% if d and ind %} — {{ d }}{% endif %}</li>{% else %}<li class="aide">Aucun qualifié.</li>{% endfor %}</ul>
+<div class="actions" style="margin:8px 0">
+<a class="btn sec petit" href="{{ url_for('sport_doc', cid=c.id, doc='resultats') }}">{{ icone('document') }} Résultats officiels (PDF signé)</a>
+<a class="btn sec petit" href="{{ url_for('sport_diplomes', cid=c.id, type='laureats') }}">{{ icone('diplome') }} Diplômes des lauréats</a>
+<a class="btn sec petit" href="{{ url_for('sport_diplomes', cid=c.id, type='participation') }}">{{ icone('diplome') }} Diplômes de participation</a>
+{% if peut_c %}<form method="post" action="{{ url_for('sport_publier', cid=c.id) }}" style="display:inline"><label class="aide"><input type="checkbox" name="terminer" value="1" {{ 'checked' if c.statut != 'Terminée' }}> clôturer (Terminée)</label> <button class="btn petit">{{ icone('livre') }} Publier dans la saison UASCEP</button></form>{% endif %}
+</div>
+{% if peut_c and cibles and qual %}<form method="post" action="{{ url_for('sport_qualifier', cid=c.id) }}" class="actions"><label>Inscrire les qualifiés dans <select name="cible">{% for x in cibles %}<option value="{{ x.id }}">{{ x.intitule }} — {{ x.entite_lib or x.entite }}</option>{% endfor %}</select></label><button class="btn sec petit">{{ icone('importer') }} Qualifier</button></form>{% endif %}
+<p class="aide">La publication reporte la compétition (participants, équipes, podium, qualifiés) dans « Calendrier, compétitions et résultats » du bureau UASCEP — {{ NIV_LIB[c.niveau] }} : {{ c.entite_lib or c.entite }}, donc dans le rapport de fin de saison sportive.</p>
+{% endif %}
+
+{% elif vue == 'records' %}
+<div class="tw"><table class="t" aria-label="Records"><thead><tr><th>Épreuve</th><th>Sexe</th><th>Catégorie</th><th>Record</th><th>Détenteur</th><th>École</th><th>Saison</th><th>Compétition</th></tr></thead><tbody>
+{% for (ep, sx, ca), p in rec.items() %}<tr><td>{{ ep }}</td><td>{{ sx }}</td><td>{{ ca }}</td><td><b>{{ p.performance }}</b></td><td>{{ p.nom }} {{ p.prenoms or '' }}</td><td>{{ p.ecole or '' }}</td><td>{{ p.saison }}</td><td>{{ p.intitule }} ({{ NIV_LIB[p.niveau] }})</td></tr>
+{% else %}<tr><td colspan="8" class="aide">Aucune performance enregistrée.</td></tr>{% endfor %}</tbody></table></div>
+
+{% elif vue == 'palmares' %}
+<p><a class="btn sec petit" href="{{ url_for('sport_palmares_pdf', saison=saison) }}">{{ icone('document') }} Palmarès (PDF signé)</a></p>
+{% for c, pod, qual in pal %}<h3><a href="{{ url_for('sport_competition', cid=c.id, onglet='resultats') }}">{{ c.intitule }}</a> <span class="aide">— {{ NIV_LIB[c.niveau] }} : {{ c.entite_lib or c.entite }} · {{ c.statut }}</span></h3>
+<ul>{% for r, n, e, d in pod %}<li>{{ icone('medaille') if r == 1 else icone('medaille') if r == 2 else icone('medaille') }} {{ n }}{% if e and e != n %} ({{ e }}){% endif %}{% if d %} — {{ d }}{% endif %}</li>{% else %}<li class="aide">Pas encore de résultats.</li>{% endfor %}</ul>
+{% if qual %}<p class="aide">Qualifiés : {% for r, n, e, d in qual %}{{ n }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+{% else %}<p class="aide">Aucune compétition pour la saison {{ saison }}.</p>{% endfor %}
+
+{% elif vue == 'parametres' %}
+<form method="post" class="carte"><h3>Catégories d'âge</h3><p class="aide">Âge atteint dans l'année civile du début de saison (saison 2026-2027 : élève né(e) en 2016 = 10 ans).</p>
+<div class="tw"><table class="t"><thead><tr><th>Catégorie</th><th>Âges (de-à)</th></tr></thead><tbody>{% for nom, a, b in bornes %}<tr><td>{{ nom }}</td><td><input name="cat_{{ nom }}" value="{{ a }}-{{ b }}" size="6" {{ 'disabled' if not peut_c }}></td></tr>{% endfor %}</tbody></table></div>
+{% if peut_c %}<p><label><input type="checkbox" name="recalculer" value="1"> recalculer la catégorie de toutes les licences</label></p>
+<p><button class="btn">Enregistrer</button> <button class="btn sec" name="reinitialiser" value="1" onclick="return confirm('Revenir aux catégories par défaut ?')">{{ icone('reinitialiser') }} Réinitialiser</button></p>{% endif %}</form>
+{% if peut_c and (not JURIDICTION or ECOLE_COURANTE) %}<form method="post" action="{{ url_for('sport_licences_eleves') }}" class="carte"><h3>Créer les licences depuis la liste des élèves</h3>
+<p class="aide">Une licence par élève inscrit (classes cochées ; toutes si aucune) ; numéro et catégorie automatiques ; aptitude « Non examiné » jusqu'à la visite médicale.</p>
+<input type="hidden" name="annee" value="{{ saison }}"><p>{% for cl in G.liste('classes') %}<label style="display:inline-flex;gap:4px;margin-right:10px"><input type="checkbox" name="classes" value="{{ cl }}"> {{ cl }}</label>{% else %}<span class="aide">Aucune classe.</span>{% endfor %}</p>
+<p><button class="btn">{{ icone('telecharger') }} Créer les licences</button></p></form>{% endif %}
+{% endif %}
+{% endblock %}

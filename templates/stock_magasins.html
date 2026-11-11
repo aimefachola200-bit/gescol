@@ -1,0 +1,55 @@
+{% extends "base.html" %}{% block titre %}Petit et grand magasin{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Petit et grand magasin</h1>
+  <p class="sous">Le grand magasin garde le stock ; le petit magasin reçoit chaque semaine le prélèvement (ration × effectif moyen × {{ JOURS }} jours) ; le reste retourne au grand magasin</p></div>
+</div>
+{% include "stock_onglets.html" %}
+{% set sous = 'accueil' %}{% include "stock_mag_barre.html" %}
+
+{% if sans_ration and modifiable %}<div class="flash warning">Rations manquantes pour : {{ sans_ration|join(', ') }}. <a href="{{ url_for('stock_mag_rations', proposer=1) }}">Renseigner les rations</a> (valeurs proposées pour maïs, haricot, riz, huile, sel).</div>{% endif %}
+{% if ignores %}<div class="flash info">Non gérés ici (unité non convertible en kg) : {{ ignores|join(', ') }}.</div>{% endif %}
+
+<div class="carte">
+  <h2>Grand magasin <span class="aide">— stock actuel en kg</span></h2>
+  <div class="tw"><table class="t compact"><thead><tr><th>Vivre</th><th class="c">Ration (g / élève / jour)</th><th class="c">Stock (kg)</th></tr></thead><tbody>
+  {% for v in grand %}<tr><td><b>{{ v.nom }}</b></td><td class="c">{{ qte(v.ration_g) if v.ration_g else '—' }}</td><td class="c"><b>{{ qte(v.stock_kg) }}</b></td></tr>
+  {% else %}<tr><td colspan="3" class="aide">Aucun vivre actif : ajoutez les vivres dans l'onglet « Vivres ».</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+
+<div class="carte">
+  <h2>Petit magasin {% if ouverte %}<span class="aide">— semaine du {{ ouverte.debut[8:10] }}/{{ ouverte.debut[5:7] }}/{{ ouverte.debut[:4] }}</span>{% endif %}</h2>
+  {% if petit %}
+  <div class="tw"><table class="t compact"><thead><tr><th>Vivre</th><th class="c">Prélevé (kg)</th><th class="c">Consommé (kg)</th><th class="c">Reste (kg)</th></tr></thead><tbody>
+  {% for l in petit.lignes %}<tr><td><b>{{ l.nom }}</b></td><td class="c">{{ qte(l.preleve) }}</td><td class="c">{{ qte(l.consomme) }}</td>
+    <td class="c"><b>{{ qte(l.reste) }}</b>{% if l.manque %} <span class="aide">(manque {{ qte(l.manque) }})</span>{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>
+  <p class="actions"><a class="btn petit" href="{{ url_for('stock_mag_semaine', sid=ouverte.id) }}">Saisir les jours de cantine</a></p>
+  {% else %}<p class="aide">Aucune semaine ouverte : prélevez le petit magasin de la semaine ci-dessous.</p>{% endif %}
+</div>
+
+{% if modifiable %}
+<form method="post" action="{{ url_for('stock_mag_semaine_nouvelle') }}" class="carte f">
+  <h2>Prélever le petit magasin d'une semaine</h2>
+  <div class="ligne">
+    <div><label for="pm-d">Semaine (un jour quelconque)</label><input id="pm-d" type="date" name="debut" value="{{ prochain }}" required></div>
+    <div><label for="pm-g">Garçons (moyenne par jour)</label><input id="pm-g" name="garcons" inputmode="numeric" value="{{ prop_g }}" required></div>
+    <div><label for="pm-f">Filles (moyenne par jour)</label><input id="pm-f" name="filles" inputmode="numeric" value="{{ prop_f }}" required></div>
+  </div>
+  <p class="aide">Effectif proposé d'après : {{ prop_source }}. Quantité de chaque vivre = ration × effectif × {{ JOURS }} jours. Si une semaine précédente est encore ouverte, son reste retourne d'abord au grand magasin.</p>
+  <p class="actions"><button class="btn vert">Prélever pour la semaine</button></p>
+</form>
+{% endif %}
+
+<div class="carte">
+  <h2>Semaines de {{ annee }}</h2>
+  <div class="tw"><table class="t compact"><thead><tr><th>Semaine du</th><th class="c">Effectif moyen</th><th>Statut</th><th></th></tr></thead><tbody>
+  {% for s in semaines %}<tr><td>{{ s.debut[8:10] }}/{{ s.debut[5:7] }}/{{ s.debut[:4] }}</td><td class="c">{{ s.garcons + s.filles }}</td>
+    <td>{{ 'clôturée' if s.statut == 'cloturee' else 'ouverte' }}</td>
+    <td class="actions"><a class="btn sec petit" href="{{ url_for('stock_mag_semaine', sid=s.id) }}">Ouvrir</a>
+      <a class="btn sec petit" target="_blank" href="{{ url_for('stock_mag_cahier_pdf', sid=s.id) }}">Cahier des menus (PDF)</a></td></tr>
+  {% else %}<tr><td colspan="4" class="aide">Aucune semaine prélevée cette année.</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% endblock %}

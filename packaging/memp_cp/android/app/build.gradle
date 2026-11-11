@@ -1,0 +1,54 @@
+// Application CP (MEMP) pour Android : l'application web complète est embarquée dans l'APK (assets/www) et
+// fonctionne sans Internet. Les données restent sur le téléphone (base de l'application), comme dans le navigateur.
+// Le contenu de assets/www est recopié par le flux GitHub « Fabriquer MEMP CP » depuis le dépôt de l'application.
+plugins {
+    id "com.android.application"
+}
+
+def cleFichier = System.getenv("SCOLARIS_KEYSTORE") ?: "../../../android_autonome/app/scolaris-signature.keystore"
+def cleMdp = System.getenv("SCOLARIS_KEYSTORE_PASSWORD") ?: ""
+def cleAlias = System.getenv("SCOLARIS_KEY_ALIAS") ?: "scolaris"
+def cleAliasMdp = System.getenv("SCOLARIS_KEY_PASSWORD") ?: cleMdp
+
+android {
+    namespace "bj.memp.cp"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId System.getenv("MEMP_APP_ID") ?: "bj.memp.cp"
+        manifestPlaceholders = [appNom: System.getenv("MEMP_APP_NOM") ?: "MEMP CP"]
+        minSdk 24
+        targetSdk 34
+        versionCode((System.getenv("MEMP_VERSION_CODE") ?: "1").toInteger())
+        versionName System.getenv("MEMP_VERSION_NOM") ?: "1.0"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(cleFichier)
+            storePassword cleMdp
+            keyAlias cleAlias
+            keyPassword cleAliasMdp
+            enableV1Signing true
+            enableV2Signing true
+            enableV3Signing true
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}

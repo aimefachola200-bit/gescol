@@ -1,0 +1,57 @@
+{# v2.0 — synchronisation entre niveaux (protocole commun : outils/sync/spec.md) #}
+{% extends "base.html" %}{% block titre %}Synchronisation{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone('echanger', 26) }} Synchronisation</h1>
+<p class="sous">{{ em.nom }} — niveau {{ em.niveau }}{% if em.code %} · code {{ em.code }}{% endif %} · clé de l'appareil {{ em.cle[:8] }}… — les données passent au niveau supérieur et en reviennent, en ligne ou par fichier (clé USB, WhatsApp, e-mail).</p></div>
+{% if est_hub %}<div class="actions"><a class="btn sec petit" href="{{ url_for('sync_entites') }}">{{ icone('groupe') }} Entités inscrites et codes QR</a></div>{% endif %}</div>
+{% if note_t %}<div class="flash warning">Transmission non jointe au paquet : {{ note_t }}</div>{% endif %}
+{% if est_client and c %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Niveau supérieur</div><div class="v" style="font-size:16px">{{ c.hub_nom or (c.adresse or 'par fichier') }}</div><div class="d">{% if c.adresse %}{{ c.adresse }}{% else %}aucune adresse : échanges par fichier{% endif %}{% if c.hub_cle %} · clé {{ c.hub_cle[:8] }}…{% endif %}</div></div>
+  <div class="kpi"><div class="l">Dernier envoi</div><div class="v" style="font-size:16px">{{ c.dernier_envoi or 'jamais' }}</div><div class="d">accusé jusqu'au n° {{ c.accuse_seq }}</div></div>
+  <div class="kpi"><div class="l">Dernière réception</div><div class="v" style="font-size:16px">{{ c.derniere_reception or 'jamais' }}</div><div class="d">reçu jusqu'au n° {{ c.desc_seq }}</div></div>
+  <div class="kpi"><div class="l">En attente d'envoi</div><div class="v">{{ attente.values()|sum }}</div><div class="d">{% for k, n in attente.items() %}{{ k }} : {{ n }}{% if not loop.last %} · {% endif %}{% else %}rien à envoyer{% endfor %}</div></div>
+</div>
+{% if c.dernier_message %}<p class="aide">Dernier message : {{ c.dernier_message }}</p>{% endif %}
+<div class="grille2">
+<div class="carte"><h2 style="margin-top:0">Synchroniser</h2>
+  <form method="post" class="actions"><input type="hidden" name="action" value="synchroniser"><button class="btn">{{ icone('actualiser') }} Synchroniser maintenant</button>
+    <label style="align-self:center"><input type="checkbox" name="complet" value="1"> envoi complet</label></form>
+  <p class="aide">Envoie les changements puis reçoit les notes de service, circulaires, convocations et versions proposées.</p>
+  <h3>Par fichier</h3>
+  <div class="actions"><a class="btn sec" href="{{ url_for('sync_fichier') }}">{{ icone('telecharger') }} Préparer le fichier à remettre</a>
+  <a class="btn sec petit" href="{{ url_for('sync_fichier', complet=1) }}">fichier complet</a></div>
+  <form method="post" enctype="multipart/form-data" class="f" style="margin-top:8px"><input type="hidden" name="action" value="importer">
+    <label for="fs">Importer le fichier reçu du niveau supérieur (.scsync)</label><input id="fs" type="file" name="fichier" accept=".scsync,application/gzip" required>
+    <div class="actions" style="margin-top:6px"><button class="btn sec">{{ icone('importer') }} Importer</button></div></form>
+</div>
+<div class="carte"><h2 style="margin-top:0">Rejoindre le niveau supérieur</h2>
+  <form method="post" class="f"><input type="hidden" name="action" value="rejoindre">
+    <label for="ln">Lien d'inscription (texte du code QR « memp-sync:1?… »)</label><input id="ln" name="lien" placeholder="memp-sync:1?u=…&c=…" autocomplete="off">
+    <p class="aide">ou bien :</p>
+    <label for="ad">Adresse de l'application de la {{ 'DDEMP' if est_hub else 'circonscription' }}</label><input id="ad" name="adresse" value="{{ c.adresse or '' }}" placeholder="https://cs-pobe.scolaris.bj">
+    <label for="cd">Code d'accès</label><input id="cd" name="code" value="{{ c.code or '' }}" autocomplete="off">
+    <div class="actions" style="margin-top:8px"><button class="btn sec">Enregistrer</button></div></form>
+  {% if c.hub_cle %}<form method="post" style="margin-top:6px"><input type="hidden" name="action" value="oublier_cle"><button class="btn sec petit" onclick="return confirm('Effacer la clé enregistrée du niveau supérieur ?')">Effacer la clé du niveau supérieur</button></form>{% endif %}
+</div></div>
+{% elif est_hub %}
+<div class="carte"><h2 style="margin-top:0">Importer un fichier</h2>
+  <form method="post" enctype="multipart/form-data" class="f"><input type="hidden" name="action" value="importer">
+    <label for="fs2">Fichier .scsync remis par une école ou une CS</label><input id="fs2" type="file" name="fichier" accept=".scsync,application/gzip" required>
+    <div class="actions" style="margin-top:6px"><button class="btn sec">{{ icone('importer') }} Importer</button></div></form></div>
+{% endif %}
+{% if est_hub and est_client %}<div class="carte"><h2 style="margin-top:0">Fichiers des écoles</h2>
+  <form method="post" enctype="multipart/form-data" class="f"><input type="hidden" name="action" value="importer">
+    <label for="fs3">Fichier .scsync remis par une école</label><input id="fs3" type="file" name="fichier" accept=".scsync,application/gzip" required>
+    <div class="actions" style="margin-top:6px"><button class="btn sec">{{ icone('importer') }} Importer</button></div></form>
+  <p class="aide">Les fichiers à remettre aux écoles se préparent dans « Entités inscrites ».</p></div>{% endif %}
+{% if conflits %}<h2>Conflits à revoir</h2>
+<div class="tw"><table class="t" aria-label="Conflits"><thead><tr><th>Date</th><th>Élément</th><th>Rubrique</th><th>Valeur ici</th><th>Valeur reçue</th><th>Retenue</th><th></th></tr></thead><tbody>
+{% for x in conflits %}<tr><td>{{ x.quand }}</td><td>{{ LIBELLES.get(x.type, x.type) }}</td><td>{{ x.champ }}</td><td>{{ x.valeur_locale }}</td><td>{{ x.valeur_recue }} <small>({{ x.source }})</small></td><td>{{ x.retenue }}</td>
+<td style="white-space:nowrap"><form method="post" style="display:inline"><input type="hidden" name="action" value="conflit"><input type="hidden" name="cid" value="{{ x.id }}"><button class="btn sec petit" name="garder" value="locale">Garder la valeur d'ici</button> <button class="btn sec petit" name="garder" value="recue">Garder la valeur reçue</button></form></td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+<h2>Historique</h2>
+{% if hist %}<div class="tw"><table class="t" aria-label="Historique"><thead><tr><th>Date</th><th>Sens</th><th>Mode</th><th>Avec</th><th class="num">Éléments</th><th>État</th><th>Message</th></tr></thead><tbody>
+{% for h in hist %}<tr><td>{{ h.quand }}</td><td>{{ 'envoi' if h.sens == 'montant' else 'réception' if h.sens == 'descendant' else h.sens }}</td><td>{{ 'en ligne' if h.mode == 'en_ligne' else h.mode }}</td><td>{{ h.partenaire or '' }}</td><td class="num">{{ h.nb }}</td><td>{% if h.statut == 'ok' %}<span class="badge ok">ok</span>{% else %}<span class="badge att">erreur</span>{% endif %}</td><td>{{ h.message }}</td></tr>{% endfor %}
+</tbody></table></div>{% else %}<p class="aide">Aucun échange pour le moment.</p>{% endif %}
+{% endblock %}

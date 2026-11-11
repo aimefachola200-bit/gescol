@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% block titre %}Comptes parents{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Comptes parents</h1><p class="sous">{{ lst|length }} compte(s) · {{ sans }} élève(s) inscrit(s) sans accès parent</p></div>
+  <a class="btn sec" href="{{ url_for('communication') }}">Messages et WhatsApp</a>
+</div>
+<div class="carte">
+  <b>Créer les accès d'une classe entière</b>
+  <p class="aide" style="margin:4px 0 10px">Un compte est créé pour chaque parent qui a un numéro de téléphone sur la fiche de l'élève. Les frères et sœurs sont regroupés sur le même compte. Vous obtenez ensuite les identifiants à envoyer par WhatsApp.</p>
+  <form method="post" class="filtres" onsubmit="return this.cid.value!==''" id="f-classe">
+    <select name="cid" id="cid" required onchange="document.getElementById('f-classe').action='{{ url_for('acces_parents_classe', cid=0) }}'.replace('/0', '/'+this.value)">
+      <option value="">— choisir une classe —</option>
+      {% for c in classes_select() %}<option value="{{ c.id }}">{{ c.nom }}</option>{% endfor %}
+    </select>
+    <button class="btn">Créer les accès</button>
+  </form>
+</div>
+<form class="filtres"><input name="q" value="{{ rech }}" placeholder="Nom du parent, téléphone ou nom de l'enfant" style="min-width:300px"><button class="btn sec">Rechercher</button></form>
+<div class="tw"><table class="t">
+  <tr><th>Parent</th><th>Identifiant (téléphone)</th><th>Enfant(s)</th><th>Dernière connexion</th><th>État</th><th></th></tr>
+  {% for p in lst %}
+  <tr><td><b>{{ p.nom }}</b>{% if p.email %}<br><span class="gris">{{ p.email }}</span>{% endif %}</td>
+    <td>{{ affiche_tel(p.telephone) }}</td><td>{{ p.enfants or '—' }}</td>
+    <td>{{ date_fr(p.dernier_acces) if p.dernier_acces else 'jamais' }}</td>
+    <td>{% if not p.actif %}<span class="badge ko">désactivé</span>{% elif p.doit_changer_mdp %}<span class="badge att">mot de passe provisoire</span>{% else %}<span class="badge ok">actif</span>{% endif %}</td>
+    <td class="num"><form method="post" action="{{ url_for('parent_action', pid=p.id) }}" class="actions" style="justify-content:flex-end">
+      <button class="btn sec petit" name="action" value="reinit">Nouveau mot de passe</button>
+      <button class="btn sec petit" name="action" value="basculer">{{ 'Désactiver' if p.actif else 'Réactiver' }}</button></form></td></tr>
+  {% else %}<tr><td colspan="6" class="gris">Aucun compte parent. Ouvrez la fiche d'un élève et cliquez sur « Créer l'accès parent », ou créez les accès d'une classe ci-dessus.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% block titre %}Historique du maître de semaine{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Historique et recherche</h1>
+  <p class="sous">Journal des activités de l'école tenu par les maîtres de semaine</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('maitre_semaine_accueil') }}">← Semaine en cours</a></div>
+</div>
+
+<form method="get" class="filtres carte">
+  <label>Rechercher<br><input name="q" value="{{ f.q }}" placeholder="incident, nom, visite…" maxlength="80"></label>
+  <label>Maître de semaine<br><select name="maitre"><option value="">Tous</option>
+    {% for p in pers %}<option value="{{ p.id }}" {{ 'selected' if f.maitre == p.id }}>{{ nom_complet(p) }}</option>{% endfor %}</select></label>
+  <label>Du<br><input type="date" name="du" value="{{ f.du }}"></label>
+  <label>Au<br><input type="date" name="au" value="{{ f.au }}"></label>
+  <button class="btn">Filtrer</button>
+  <a class="btn sec" href="{{ url_for('maitre_semaine_historique') }}">Effacer</a>
+</form>
+
+{% if f.q %}
+<div class="carte">
+  <h2>Résultats pour « {{ f.q }} » ({{ resultats|length }})</h2>
+  {% if resultats %}
+  <div class="tw"><table class="t compact"><thead><tr><th>Date</th><th>Maître de semaine</th><th>Extrait</th><th></th></tr></thead><tbody>
+  {% for r in resultats %}
+  <tr><td>{{ date_longue(r.d) }}</td><td>{{ r.j.maitre_nom or '—' }}</td><td>{{ r.extrait }}</td>
+    <td><a class="btn sec petit" href="{{ url_for('maitre_semaine_journal', date=r.j.date) }}">Ouvrir</a></td></tr>
+  {% endfor %}</tbody></table></div>
+  {% else %}<p class="aide">Aucune journée ne correspond à cette recherche.</p>{% endif %}
+</div>
+{% endif %}
+
+<div class="carte">
+  <h2>Semaines ({{ semaines|length }})</h2>
+  {% if semaines %}
+  <div class="tw"><table class="t compact"><thead><tr><th>Semaine</th><th>Maître de semaine</th><th class="c">Jours renseignés</th><th class="c">Visés</th><th class="c">Incidents</th><th class="c">Absences élèves</th><th></th></tr></thead><tbody>
+  {% for s in semaines %}
+  <tr><td>du {{ s.lundi.strftime('%d/%m/%Y') }}</td><td>{{ s.nom or '—' }}</td><td class="c">{{ s.n }}</td>
+    <td class="c">{% if s.n and s.vises == s.n %}<span class="badge ok">{{ s.vises }}</span>{% else %}{{ s.vises }}{% endif %}</td>
+    <td class="c">{{ s.incidents }}</td><td class="c">{{ s.abs }}</td>
+    <td class="actions"><a class="btn sec petit" href="{{ url_for('maitre_semaine_semaine', semaine=s.lundi.isoformat()) }}">Voir</a>
+      <a class="btn sec petit" href="{{ url_for('maitre_semaine_rapport_pdf', semaine=s.lundi.isoformat()) }}" target="_blank">PDF</a></td></tr>
+  {% endfor %}</tbody></table></div>
+  {% else %}<p class="aide">Aucune semaine enregistrée pour ces critères. Commencez par le <a href="{{ url_for('maitre_semaine_planning') }}">planning</a> ou le <a href="{{ url_for('maitre_semaine_journal') }}">journal du jour</a>.</p>{% endif %}
+</div>
+{% endblock %}

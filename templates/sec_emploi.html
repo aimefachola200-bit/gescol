@@ -1,0 +1,14 @@
+{# v2.4 — grille d'emploi du temps d'une classe (jours en colonnes, créneaux en lignes), conflits signalés #}
+{% extends "base.html" %}{% block titre %}Grille d'emploi du temps — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<h2 style="margin:0">Grille d'emploi du temps</h2>
+<form method="get" class="filtres actions" style="margin:6px 0 10px"><label>Classe <select name="classe" onchange="this.form.submit()">{% for c in classes %}<option {{ 'selected' if c == classe }}>{{ c }}</option>{% endfor %}</select></label>
+<a class="btn sec petit" href="{{ url_for('reg_page', gcle='sec', rcle='emploi') }}">{{ icone('modifier') }} Saisir les créneaux</a></form>
+{% if nb_conflits %}<div class="flash warning">{{ icone('alerte') }} {{ nb_conflits }} créneau(x) en conflit (même professeur, salle ou classe au même moment) — repérés en rouge.</div>{% endif %}
+{% if horaires %}<div class="tw"><table class="t" aria-label="Emploi du temps de {{ classe }}"><thead><tr><th>Horaire</th>{% for j in jours %}<th>{{ j }}</th>{% endfor %}</tr></thead><tbody>
+{% for h in horaires %}<tr><td><b>{{ h[0] }} – {{ h[1] }}</b></td>{% for j in jours %}{% set x = case.get((j, h)) %}<td{% if x and conflits.get(x.id) %} style="background:#fde8e8" title="{{ conflits[x.id]|join(' ; ') }}"{% endif %}>{% if x %}<b>{{ x.matiere }}</b><br>{{ x.professeur }}{% if x.salle %}<br><small>{{ x.salle }}</small>{% endif %}{% endif %}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table></div>
+{% else %}<p class="aide">Aucun créneau enregistré — ajoutez-les dans « Emplois du temps ».</p>{% endif %}
+{% endblock %}

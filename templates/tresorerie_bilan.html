@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% block titre %}Bilan financier{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Bilan financier – {{ ANNEE }}</h1><p class="sous">Entrées et sorties par mois, et comparaison avec le budget prévu.</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('tresorerie') }}">Journal de caisse</a>
+    {% if g.user.role in ('admin','directeur') %}<a class="btn" href="{{ url_for('tresorerie_budget') }}">Saisir le budget</a>{% endif %}</div>
+</div>
+<div class="grille">
+  <div class="kpi"><div class="l">Entrées de l'année</div><div class="v vert">{{ fcfa(tot_e) }}</div></div>
+  <div class="kpi"><div class="l">Sorties de l'année</div><div class="v rouge">{{ fcfa(tot_s) }}</div></div>
+  <div class="kpi"><div class="l">Résultat</div><div class="v {{ 'rouge' if tot_e - tot_s < 0 else 'vert' }}">{{ fcfa(tot_e - tot_s) }}</div></div>
+  <div class="kpi"><div class="l">Scolarité attendue</div><div class="v">{{ fcfa(attendu) }}</div><div class="d">élèves inscrits × frais de leur classe</div></div>
+</div>
+<h2>Par mois</h2>
+<div class="tw"><table class="t">
+  <tr><th>Mois</th><th class="num">Entrées</th><th class="num">Sorties</th><th class="num">Solde du mois</th><th style="width:38%"></th></tr>
+  {% for m in mois %}
+  <tr><td><a href="{{ url_for('tresorerie', mois=m.cle) }}">{{ m.nom }} {{ m.cle[:4] }}</a></td>
+    <td class="num">{{ fcfa(m.entrees) if m.entrees else '—' }}</td><td class="num">{{ fcfa(m.sorties) if m.sorties else '—' }}</td>
+    <td class="num {{ 'rouge' if m.entrees - m.sorties < 0 }}">{{ fcfa(m.entrees - m.sorties) if (m.entrees or m.sorties) else '—' }}</td>
+    <td><div class="barre" title="Entrées"><i style="width:{{ (100 * m.entrees / maxi)|round(1) }}%;background:#1B7F3B"></i></div>
+        <div class="barre" style="margin-top:3px" title="Sorties"><i style="width:{{ (100 * m.sorties / maxi)|round(1) }}%;background:#B42318"></i></div></td></tr>
+  {% endfor %}
+</table></div>
+<p class="aide"><span style="color:#1B7F3B">■</span> entrées · <span style="color:#B42318">■</span> sorties</p>
+<div class="grille2">
+{% for typ, titre in [('entree', 'Recettes par catégorie'), ('sortie', 'Dépenses par catégorie')] %}
+  <div><h2>{{ titre }}</h2>
+  <div class="tw"><table class="t">
+    <tr><th>Catégorie</th><th class="num">Réalisé</th><th class="num">Budget</th><th class="num">Écart</th></tr>
+    {% for cat in categories[typ] %}{% set r = par_cat[typ].get(cat, 0) %}{% set b = budget.get((typ, cat), 0) %}
+    {% if r or b %}<tr><td>{{ cat }}</td><td class="num">{{ fcfa(r) }}</td><td class="num">{{ fcfa(b) if b else '—' }}</td>
+      <td class="num {{ ('rouge' if (typ=='sortie' and r > b) or (typ=='entree' and r < b) else 'vert') if b else '' }}">{{ fcfa(r - b) if b else '' }}</td></tr>{% endif %}
+    {% endfor %}
+  </table></div></div>
+{% endfor %}
+</div>
+{% endblock %}

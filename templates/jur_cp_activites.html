@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% block titre %}Journal des activités pédagogiques{% endblock %}
+{% block contenu %}
+{% set CSP = cs_id if JUR_NIVEAU == 'ddemp' else None %}
+<div class="entete"><div><h1>Journal des activités du RAP</h1>
+  <p class="sous">{{ PERIODES[periode][0] }} ({{ PERIODES[periode][1] }}) · {{ annee }} · suivis des directeurs, séances d'UP, formations groupées et conférences, concertations, autres activités. Les visites de classe et d'école se saisissent dans « Visites d'école et de classe ».</p></div>
+  <div class="actions">
+    {% if saisie %}<a class="btn" href="{{ url_for('jur_cp_activite_form', cs=CSP) }}">+ Ajouter une activité</a>{% endif %}
+    <a class="btn sec" href="{{ url_for('jur_cp_activites_xlsx', annee=annee, periode=periode, cs=CSP) }}">⇩ Télécharger (Excel)</a>
+    <a class="btn sec" href="{{ url_for('jur_cp_accueil', annee=annee, cs=CSP) }}">← Conseillers pédagogiques</a></div></div>
+
+<form method="get" class="filtres carte">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  <label>Période<br><select name="periode" onchange="this.form.submit()">{% for k, p in PERIODES.items() %}<option value="{{ k }}" {{ 'selected' if k == periode }}>{{ p[0] }}</option>{% endfor %}</select></label>
+  <label>Nature<br><select name="categorie" onchange="this.form.submit()"><option value="">Toutes</option>{% for k, l in CATEGORIES.items() %}<option value="{{ k }}" {{ 'selected' if k == categorie }}>{{ l }}</option>{% endfor %}</select></label>
+  {% if JUR_NIVEAU == 'ddemp' %}<label>Circonscription<br><select name="cs" onchange="this.form.submit()">{% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if cs_id == c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+</form>
+
+<div class="carte"><div class="tw"><table class="t compact">
+  <tr><th>Date</th><th>Acteur</th><th>Nature</th><th>Désignation</th><th>Lieu</th><th>Participants</th><th class="num">Nb</th><th>Statut</th>{% if saisie %}<th></th>{% endif %}</tr>
+  {% for a in acts %}
+  <tr><td style="white-space:nowrap">{{ date_fr(a.date_debut) }}{% if a.date_fin and a.date_fin != a.date_debut %}<br><span class="aide">→ {{ date_fr(a.date_fin) }}</span>{% endif %}</td>
+    <td>{% if a.commune %}<b>Toute la CS</b>{% elif a.zone_id %}{{ lib_zone(a.zone_nom) }}{% if a.cp_nom %}<br><span class="aide">{{ a.cp_nom }}</span>{% endif %}{% else %}C/CS{% endif %}</td>
+    <td>{{ CATEGORIES.get(a.categorie, a.categorie) }}{% if a.cycle %} · {{ a.cycle }}{% endif %}</td>
+    <td>{{ a.designation or '' }}</td><td>{{ a.lieu or a.ecole_nom or '' }}</td><td>{{ a.participants or '' }}</td>
+    <td class="num">{{ a.nb }}</td><td>{{ STATUTS.get(a.statut, a.statut) }}</td>
+    {% if saisie %}<td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('jur_cp_activite_form', aid=a.id) }}">Modifier</a>
+      <form method="post" action="{{ url_for('jur_cp_activite_supprimer', aid=a.id) }}" style="display:inline"><button class="btn danger petit" data-confirmer="Supprimer cette activité ?">✕</button></form></td>{% endif %}</tr>
+  {% else %}
+  <tr><td colspan="9" class="gris">Aucune activité pour cette période.{% if saisie %} <a href="{{ url_for('jur_cp_activite_form', cs=CSP) }}">Ajouter une activité</a>.{% endif %}</td></tr>
+  {% endfor %}
+</table></div></div>
+
+{% if saisie %}
+<form method="post" action="{{ url_for('jur_cp_activites_import') }}" enctype="multipart/form-data" class="carte">
+  {% if CSP %}<input type="hidden" name="cs" value="{{ CSP }}">{% endif %}
+  <h2>{{ icone('dossier') }} Charger des activités (Excel)</h2>
+  <p class="aide">Le classeur « Télécharger (Excel) » sert de modèle : une ligne par activité (acteur : « C/CS », « CP Zone 1 »… ou « commune » pour une activité de toute la CS ; date au format JJ/MM/AAAA). Les lignes sont ajoutées au journal.</p>
+  <input type="file" name="fichier" accept=".xlsx" required> <button class="btn sec">Charger</button>
+</form>
+{% endif %}
+{% endblock %}

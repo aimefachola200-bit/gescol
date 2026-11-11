@@ -1,0 +1,13 @@
+{# v1.33 — historique des versions d'un élément partagé #}
+{% extends "base.html" %}{% block titre %}Historique des versions{% endblock %}
+{% block contenu %}
+<p class="aide"><a href="{{ url_for('partage_accueil') }}">← Versions partagées de l'école</a>{% if url %} · <a href="{{ url }}">ouvrir l'élément</a>{% endif %}</p>
+<h1>{{ icone('horloge', 24) }} Historique — {{ T.libelle }}</h1>
+<p class="sous">{{ versions[0].titre if versions else cle }} — {{ versions|length }} version(s), de la plus récente à la plus ancienne.</p>
+{% if versions %}<div class="tw"><table class="t" aria-label="Versions"><thead><tr><th>Date</th><th>Auteur</th><th>Note</th><th>État</th><th></th></tr></thead><tbody>
+{% for v in versions %}<tr><td>{{ v.cree_le }}{% if loop.first %} <span class="badge ok">actuelle</span>{% endif %}</td><td>{{ v.auteur_nom or '?' }}</td><td>{{ v.note or '' }}</td>
+<td>{% if v.proposee %}<span class="badge ok">proposée le {{ v.proposee_le }}</span>{% endif %}{% if v.origine and v.origine != 'ecole' %}<span class="badge att">reçue ({{ v.origine }})</span>{% endif %}</td>
+<td style="white-space:nowrap">{% if peut_gerer and not loop.first %}<form method="post" style="display:inline" onsubmit="return confirm('Rétablir cette version pour toute l\'école ?')"><input type="hidden" name="version" value="{{ v.id }}"><button class="btn sec petit" name="action" value="restaurer">{{ icone('reinitialiser') }} Rétablir</button></form>{% endif %}
+{% if peut_proposer %}<form method="post" style="display:inline"><input type="hidden" name="version" value="{{ v.id }}">{% if v.proposee %}<button class="btn sec petit" name="action" value="retirer">Retirer la proposition</button>{% else %}<button class="btn sec petit" name="action" value="proposer">{{ icone('envoyer') }} Proposer à la CS / DDEMP</button>{% endif %}</form>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>{% else %}<p>Aucune version.</p>{% endif %}
+{% endblock %}

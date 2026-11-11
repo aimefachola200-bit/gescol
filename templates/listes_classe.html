@@ -1,0 +1,67 @@
+{% extends "base.html" %}{% block titre %}Listes de classe{% endblock %}
+{% block contenu %}
+{# v2.3.3 — Listes de classe (accès rapide, lecture seule) : cours → classe → liste des élèves #}
+<div class="entete">
+  <div><h1>Listes de classe</h1>
+    <p class="sous">{% if x.ecole %}{{ x.ecole.nom }} · {% endif %}année scolaire {{ ANNEE }} — consultation, téléchargement et impression (les inscriptions se font dans « Élèves et inscriptions »)</p></div>
+  {% if x.cours and x.choisies %}<div class="actions no-print">
+    <a class="btn" href="{{ url_for('listes_classe_pdf', **args) }}" data-telechargement="pdf">{{ icone('document') }} Télécharger PDF</a>
+    {% if educmaster %}<a class="btn sec" href="{{ url_for('listes_classe_educmaster', **args) }}" data-telechargement="xlsx" title="Modèle officiel des élèves par classe : à charger tel quel sur la plateforme EducMaster">{{ icone('classeur') }} Excel EducMaster (importation)</a>{% endif %}
+    <a class="btn sec" href="{{ url_for('listes_classe_xlsx', **args) }}" data-telechargement="xlsx">{{ icone('classeur') }} Excel liste de classe (lisible)</a>
+    <button type="button" class="btn sec" onclick="if(window.scolarisImprimer){scolarisImprimer()}else{window.print()}">{{ icone('imprimer') }} Imprimer</button>
+  </div>{% endif %}
+</div>
+
+{% if juridiction %}
+<div class="no-print" style="margin:6px 0 10px">
+  {% if not x.ecoles %}<div class="flash info">Aucune école de votre périmètre n'a encore de liste d'élèves dans cette application (les listes nominatives viennent des écoles ouvertes ici).</div>
+  {% else %}<form class="filtres"><label>École
+    <select name="ecole" onchange="this.form.submit()"><option value="">— Choisissez une école —</option>
+      {% for e in x.ecoles %}<option value="{{ e.id }}" {{ 'selected' if x.ecole and e.id == x.ecole.id }}>{{ e.nom }}</option>{% endfor %}</select></label>
+    <noscript><button class="btn sec">Afficher</button></noscript></form>{% endif %}
+</div>{% endif %}
+
+{% if x.ecole %}
+  {% if not x.classes %}<div class="flash info">{% if g.user.role == 'enseignant' %}Aucune classe ne vous est encore affectée : demandez au directeur de vous affecter à vos classes.{% else %}Aucune classe n'est encore créée dans cette école.{% endif %}</div>
+  {% else %}
+  <div class="raccourcis no-print" aria-label="Cours" style="margin-bottom:10px">
+    {% for n in x.cours_dispo %}<a href="{{ url_for('listes_classe', cours=n, ecole=(x.ecole.id if juridiction else None)) }}" class="{{ 'actif' if n == x.cours }}" {% if n == x.cours %}aria-current="true"{% endif %}>
+      <span class="ico" aria-hidden="true">{{ icone('liste', 22) }}</span><b>{{ n }}</b><span class="d">{{ x.par_cours[n] }} élève(s)</span></a>{% endfor %}
+  </div>
+  {% if x.cours %}
+  <form class="filtres no-print">
+    {% if juridiction %}<input type="hidden" name="ecole" value="{{ x.ecole.id }}">{% endif %}
+    <input type="hidden" name="cours" value="{{ x.cours }}">
+    <label>Classe <select name="classe" onchange="this.form.submit()">
+      {% if x.du_cours|length > 1 %}<option value="">Toutes les classes du {{ x.cours }}</option>{% endif %}
+      {% for c in x.du_cours %}<option value="{{ c.id }}" {{ 'selected' if c.id == x.classe }}>{{ c.nom }} ({{ c.effectif }})</option>{% endfor %}</select></label>
+    <input name="q" value="{{ x.rech }}" placeholder="Rechercher : nom, prénom, matricule, parent" style="min-width:240px" aria-label="Rechercher">
+    <label>Trier par <select name="tri">{% for k, l in TRIS.items() if k != 'classe' or x.plusieurs %}<option value="{{ k }}" {{ 'selected' if k == x.tri }}>{{ l }}</option>{% endfor %}</select></label>
+    <button class="btn sec">{{ icone('rechercher') }} Afficher</button>
+  </form>
+
+  {% if notes_em %}<div class="no-print" style="margin:4px 0 8px"><span class="aide">Notes vers EducMaster (modèle officiel, toutes les évaluations de la classe) :</span>
+    {% for c in notes_em %}<a class="btn sec petit" href="{{ url_for('educmaster_modele_notes_rempli', cid=c.id) }}" data-telechargement="xlsx">{{ icone('classeur') }} Excel EducMaster (notes) — {{ c.nom }}</a> {% endfor %}</div>{% endif %}
+  <h2 style="margin-top:6px">{{ titre_liste }}</h2>
+  <p class="sous">
+    {% if x.classe is not none and x.choisies|length == 1 and x.choisies[0].titulaire_nom %}Titulaire : {{ x.choisies[0].titulaire_nom }} · {% endif %}
+    Effectif : <b>{{ x.compte.t }}</b> — garçons : <b>{{ x.compte.g }}</b>, filles : <b>{{ x.compte.f }}</b>{% if x.rech %} (recherche « {{ x.rech }} »){% endif %}</p>
+  <div class="tw"><table class="t" id="liste-classe">
+    <tr>{% for h in entetes %}<th>{{ h }}</th>{% endfor %}</tr>
+    {% for e in x.eleves %}<tr>
+      <td class="c">{{ loop.index }}</td>
+      <td>{% if not juridiction or (g.ecole and g.ecole.id == x.ecole.id) %}<a href="{{ url_for('eleve_detail', eid=e.id) }}"><b>{{ e.nom|upper }}</b></a>{% else %}<form method="post" action="{{ url_for('ecole_choisir', eid=x.ecole.id) }}" style="display:inline"><input type="hidden" name="suivant" value="{{ url_for('eleve_detail', eid=e.id) }}"><button class="lien" type="submit" title="Ouvrir l'école et la fiche de l'élève" style="background:none;border:0;padding:0;color:inherit;text-decoration:underline;cursor:pointer"><b>{{ e.nom|upper }}</b></button></form>{% endif %}</td>
+      <td>{{ e.prenoms }}</td>
+      {% if x.plusieurs %}<td>{{ e.classe_nom }}</td>{% endif %}
+      <td class="c">{{ e.sexe }}</td>
+      <td>{{ date_fr(e.date_naissance) if e.date_naissance else '' }}{% if e.date_naissance and e.lieu_naissance %} à {% endif %}{{ e.lieu_naissance or '' }}{% if not e.date_naissance and not e.lieu_naissance %}—{% endif %}</td>
+      <td>{{ e.matricule or '' }}{% if e.matricule and e.matricule_educmaster %} / {% endif %}{{ e.matricule_educmaster or '' }}{% if not e.matricule and not e.matricule_educmaster %}—{% endif %}</td>
+      <td><span class="badge {{ 'att' if e.redoublant else 'ok' }}">{{ 'Redoublant' if e.redoublant else 'Nouveau' }}</span></td>
+      <td>{{ e.parent_nom or '' }} <span class="gris">{{ e.parent_telephone or e.parent_whatsapp or '' }}</span></td>
+    </tr>{% else %}<tr><td colspan="{{ entetes|length }}" class="gris">Aucun élève {{ 'trouvé pour cette recherche' if x.rech else 'inscrit dans cette sélection' }}.</td></tr>{% endfor %}
+    {% if x.eleves %}<tr><th colspan="{{ entetes|length }}" style="text-align:left">Total : {{ x.compte.t }} élève(s) — garçons : {{ x.compte.g }}, filles : {{ x.compte.f }}</th></tr>{% endif %}
+  </table></div>
+  {% else %}<p class="aide">Choisissez un cours ci-dessus pour afficher ses listes de classe.</p>{% endif %}
+  {% endif %}
+{% endif %}
+{% endblock %}

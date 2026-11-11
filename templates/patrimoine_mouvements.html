@@ -1,0 +1,44 @@
+{% extends "base.html" %}{% block titre %}Patrimoine – mouvements{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Mouvements du patrimoine</h1>
+  <p class="sous">Entrées (dotations, achats, dons), sorties (prêts, transferts) et réformes (matériel hors d'usage)</p></div>
+</div>
+{% include "patrimoine_onglets.html" %}
+
+<form method="post" class="carte">
+  <h2>Nouveau mouvement</h2>
+  {% if objets %}
+  <div class="ligne">
+    <div><label for="mo">Article</label><select id="mo" name="objet" required><option value="">— choisir —</option>
+      {% for grp in objets|groupby('groupe') %}<optgroup label="{{ grp.grouper }}">
+        {% for o in grp.list %}<option value="{{ o.val }}" {{ 'selected' if pre == o.val }}>{{ o.lib }} — stock {{ o.quantite }}</option>{% endfor %}</optgroup>{% endfor %}
+    </select></div>
+    <div><label for="ms">Sens</label><select id="ms" name="sens" required>{% for k, lib in SENS.items() %}<option value="{{ k }}">{{ lib }}</option>{% endfor %}</select></div>
+    <div><label for="mq">Quantité</label><input id="mq" name="quantite" inputmode="numeric" required></div>
+    <div><label for="md">Date</label><input id="md" type="date" name="date" value="{{ aujourdhui }}" max="{{ aujourdhui }}" required></div>
+    <div><label for="mm">Motif</label><input id="mm" name="motif" maxlength="300" placeholder="dotation de l'État, casse, prêt…"></div>
+    <div><label for="mr">Référence (bon, PV…)</label><input id="mr" name="reference" maxlength="120"></div>
+  </div>
+  <p class="actions"><button class="btn vert">Enregistrer le mouvement</button></p>
+  <p class="aide">Une entrée augmente le stock de l'article, une sortie ou une réforme le diminue. Pour un nouvel article, créez-le d'abord dans Mobilier ou Matériel didactique avec sa quantité initiale.</p>
+  {% else %}
+  <p class="aide">Aucun article : enregistrez d'abord le <a href="{{ url_for('patrimoine_mobilier') }}">mobilier</a> ou le <a href="{{ url_for('patrimoine_didactique') }}">matériel didactique</a>.</p>
+  {% endif %}
+</form>
+
+<form method="get" class="filtres">
+  <label>Sens<br><select name="sens"><option value="">Tous</option>{% for k, lib in SENS.items() %}<option value="{{ k }}" {{ 'selected' if f.sens == k }}>{{ lib }}</option>{% endfor %}</select></label>
+  <label>Du<br><input type="date" name="du" value="{{ f.du }}"></label>
+  <label>Au<br><input type="date" name="au" value="{{ f.au }}"></label>
+  <button class="btn">Filtrer</button>
+</form>
+{% if liste %}
+<div class="tw"><table class="t compact"><thead><tr><th>Date</th><th>Sens</th><th>Article</th><th class="c">Quantité</th><th>Motif</th><th>Référence</th><th>Saisi par</th><th></th></tr></thead><tbody>
+{% for m in liste %}
+<tr><td>{{ date_fr(m.date) }}</td><td><span class="badge {{ {'entree':'ok','sortie':'att','reforme':'ko'}[m.sens] }}">{{ SENS[m.sens] }}</span></td>
+  <td>{{ m.designation }}</td><td class="c">{{ m.quantite }}</td><td>{{ m.motif or '' }}</td><td>{{ m.reference or '' }}</td><td>{{ m.saisi_nom or '' }}</td>
+  <td><form method="post" action="{{ url_for('patrimoine_mouvement_annuler', mid=m.id) }}"><button class="btn sec petit" data-confirmer="Annuler ce mouvement et rétablir le stock ?">Annuler</button></form></td></tr>
+{% endfor %}</tbody></table></div>
+{% else %}<div class="carte">Aucun mouvement enregistré.</div>{% endif %}
+{% endblock %}

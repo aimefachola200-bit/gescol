@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% block titre %}Modifier une opération de caisse{% endblock %}
+{% block contenu %}
+<h1>{{ icone('modifier') }} Modifier une opération du journal de caisse</h1>
+<div class="carte" style="max-width:640px">
+<form method="post" class="f">
+  <div class="ligne">
+    <div><label for="ct-ty">Type</label><select id="ct-ty" name="type" onchange="ctMaj()"><option value="entree" {{ 'selected' if t.type == 'entree' }}>Entrée</option><option value="sortie" {{ 'selected' if t.type == 'sortie' }}>Sortie</option></select></div>
+    <div><label for="ct-c">Catégorie</label><select id="ct-c" name="categorie"></select></div>
+  </div>
+  <label for="ct-l">Libellé *</label><input id="ct-l" name="libelle" required value="{{ t.libelle }}">
+  <div class="ligne">
+    <div><label for="ct-m">Montant (FCFA) *</label><input id="ct-m" name="montant" inputmode="numeric" required value="{{ t.montant }}"></div>
+    <div><label for="ct-d">Date *</label><input id="ct-d" type="date" name="date" required value="{{ t.date }}"></div>
+  </div>
+  <div class="ligne">
+    <div><label for="ct-mo">Mode</label><select id="ct-mo" name="mode"><option value="">—</option>{% for k, v in MODES.items() %}<option value="{{ k }}" {{ 'selected' if t.mode == k }}>{{ v }}</option>{% endfor %}</select></div>
+    <div><label for="ct-r">Référence / pièce</label><input id="ct-r" name="reference" value="{{ t.reference or '' }}"></div>
+  </div>
+  <div class="actions"><button class="btn">Enregistrer la modification</button><a class="btn sec" href="{{ url_for('tresorerie', mois=t.date[:7]) }}">Annuler</a></div>
+</form>
+</div>
+<script>
+var CATS = {{ cats|tojson }}, CUR = {{ t.categorie|tojson }};
+function ctMaj(){ var s=document.getElementById('ct-c'), ty=document.getElementById('ct-ty').value, l=(CATS[ty]||[]).slice();
+  if (CUR && l.indexOf(CUR)<0) l.unshift(CUR);
+  s.innerHTML = l.map(function(c){ return '<option'+(c===CUR?' selected':'')+'>'+c.replace(/</g,'&lt;')+'</option>'; }).join(''); }
+ctMaj();
+</script>
+{% endblock %}

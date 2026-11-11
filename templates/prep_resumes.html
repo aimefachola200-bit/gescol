@@ -1,0 +1,76 @@
+{# v1.19 — Résumés « l'essentiel à retenir » : liste filtrable, PDF enseignant / élève par lot #}
+{% extends "base.html" %}{% block titre %}Résumés — l'essentiel à retenir{% endblock %}
+{% block contenu %}{% set onglet = 'resumes' %}{% include "_prep_onglets.html" %}
+<h2>Résumés — l'essentiel à retenir</h2>
+<p class="aide">Pour chaque notion : la règle, la méthode, un exemple et trois exercices corrigés. Version <b>enseignant</b> (avec le corrigé) et version <b>élève</b> à imprimer (sans les réponses). Rédaction originale SCOLARIS, à valider par le conseiller pédagogique.</p>
+<form method="get" class="filtres" style="margin:10px 0" aria-label="Filtre des résumés">
+  <label>Collection <select name="col" onchange="this.form.submit()"><option value="">Toutes</option>{% for c, l in COLLECTIONS %}<option value="{{ c }}" {{ 'selected' if c == col }}>{{ l }}</option>{% endfor %}</select></label>
+  <label>Cours <select name="cours" onchange="this.form.submit()"><option value="">Tous</option>{% for c in COURS %}<option value="{{ c }}" {{ 'selected' if c == cours }}>{{ PREP_COURS_LIB[c] }}</option>{% endfor %}</select></label>
+  <label>Matière <select name="matiere" onchange="this.form.submit()"><option value="">Toutes</option>{% for m in MATS %}<option value="{{ m }}" {{ 'selected' if m == mat }}>{{ prep_nom_matiere(m) }}</option>{% if m == 'es' %}<option value="emc" {{ 'selected' if mat == 'emc' }}>— dont Éducation morale et civique</option>{% endif %}{% endfor %}</select></label>
+  <label>Domaine <select name="domaine" onchange="this.form.submit()"><option value="">Tous</option>{% for d in DOMS %}<option value="{{ d }}" {{ 'selected' if d == dom }}>{{ d }}</option>{% endfor %}</select></label>
+  <noscript><button class="btn sec petit">Afficher</button></noscript>
+</form>
+<details class="carte" style="margin:8px 0" {{ 'open' if not (col or cours or mat or dom) }}><summary><b>Résumés par cours et par matière</b></summary>
+<div class="tw"><table class="t" aria-label="Nombre de résumés par cours et par matière"><thead><tr><th>Cours</th>{% for m in MATS_RES %}<th>{{ prep_nom_matiere(m) }}</th>{% endfor %}<th>Total</th></tr></thead><tbody>
+{% for c in COURS_RES %}<tr><td><a href="{{ url_for('prep_resumes', cours=c) }}">{{ PREP_COURS_LIB[c] }}</a></td>{% for m in MATS_RES %}<td>{% if table[(c, m)] %}<a href="{{ url_for('prep_resumes', cours=c, matiere=m) }}">{{ table[(c, m)] }}</a>{% else %}<span class="badge">0</span>{% endif %}</td>{% endfor %}<td><b>{% set ns = namespace(t=0) %}{% for m in MATS_RES %}{% set ns.t = ns.t + table[(c, m)] %}{% endfor %}{{ ns.t }}</b></td></tr>{% endfor %}
+</tbody></table></div>
+<p class="aide">Chaque résumé est rattaché à son cours, sa matière et sa SA / unité : la planification (vue semaine) affiche les « résumés de la semaine » à côté des fiches. Résumés conçus selon le programme — à valider par le conseiller pédagogique.</p>
+</details>
+{% if tse %}<details class="carte" style="margin:8px 0" {{ 'open' if not (col or cours or mat or dom) }}><summary><b>Un résumé pour chaque séance de la progression</b></summary>
+<div class="tw"><table class="t" aria-label="Séances de la progression couvertes par un résumé"><thead><tr><th>Cours</th>{% for m in MATS_RES %}<th>{{ prep_nom_matiere(m) }}<br><span class="aide">résumés · séances couvertes</span></th>{% endfor %}</tr></thead><tbody>
+{% for c in COURS_RES %}<tr><td>{{ PREP_COURS_LIB[c] }}</td>{% for m in MATS_RES %}{% set e = (tse.get(c) or {}).get(m) %}<td>{% if e %}<a href="{{ url_for('prep_resumes', cours=c, matiere=m, seances=1, vue='progression') }}">{{ e.resumes }}</a> · {{ e.couvertes }} / {{ e.seances }}{% else %}·{% endif %}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table></div>
+<p class="aide">Chaque séance de la progression annuelle (fiches du corpus et séances prévues par les programmes) a son résumé : je retiens, méthode, exemple, vocabulaire et trois exercices corrigés ; un résumé regroupe au plus trois séances consécutives sur la même notion. Les séances prévues sans fiche ont reçu une fiche APC conçue. Le résumé s'affiche sur la fiche de la séance et dans la planification (jour, semaine, mois).</p>
+</details>{% endif %}
+<details class="carte" style="margin:8px 0"><summary><b>Français et Mathématiques : résumés par cours et par domaine</b></summary>
+<div class="tw"><table class="t" aria-label="Résumés par cours et par domaine"><thead><tr><th>Cours</th>{% for d in OUTILS_FR %}<th>{{ d }}</th>{% endfor %}{% for d in DOMAINES_MA %}<th>Maths — {{ d }}</th>{% endfor %}</tr></thead><tbody>
+{% for c in COURS_RES %}<tr><td>{{ PREP_COURS_LIB[c] }}</td>{% for d in OUTILS_FR %}<td>{% set k = tdom.get((c, 'francais', d), 0) %}{% if k %}<a href="{{ url_for('prep_resumes', cours=c, matiere='francais', domaine=d) }}">{{ k }}</a>{% else %}·{% endif %}</td>{% endfor %}{% for d in DOMAINES_MA %}<td>{% set k = tdom.get((c, 'maths', d), 0) %}{% if k %}<a href="{{ url_for('prep_resumes', cours=c, matiere='maths', domaine=d) }}">{{ k }}</a>{% else %}·{% endif %}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table></div>
+<p class="aide">Français : outils de la langue (grammaire, conjugaison, orthographe, vocabulaire ; sons et graphies et structures de la langue au CI / CP), lecture et expression écrite. Mathématiques : numération et arithmétique, mesures, géométrie, résolution de problèmes. Chaque résumé est rattaché à son unité, sa leçon ou son dossier / SA / séances et placé dans le mois de la progression annuelle.</p>
+</details>
+<details class="carte" style="margin:8px 0"><summary><b>Éducation sociale (dont morale et civisme) et EST : SA couvertes par cours</b></summary>
+<div class="tw"><table class="t" aria-label="SA couvertes"><thead><tr><th>Cours</th><th>Éducation sociale : SA couvertes</th><th>Résumés</th><th>dont morale et civisme</th><th>EST : SA couvertes</th><th>Résumés</th></tr></thead><tbody>
+{% for c in COURS_RES %}{% set e = (tsa.get(c) or {}).get('es') or {} %}{% set t = (tsa.get(c) or {}).get('est') or {} %}<tr><td>{{ PREP_COURS_LIB[c] }}</td>
+<td>{{ (e.couvertes or [])|length }} / {{ (e.sa or [])|length }}{% if c == 'CI' %} <span class="badge" title="Pas de programme d'Éducation sociale du CI dans le corpus : titres de SA tirés des résumés">titres à vérifier</span>{% endif %}</td><td><a href="{{ url_for('prep_resumes', cours=c, matiere='es') }}">{{ e.resumes or 0 }}</a></td><td><a href="{{ url_for('prep_resumes', cours=c, matiere='emc') }}">{{ e.emc or 0 }}</a></td>
+<td>{{ (t.couvertes or [])|length }} / {{ (t.sa or [])|length }}</td><td><a href="{{ url_for('prep_resumes', cours=c, matiere='est') }}">{{ t.resumes or 0 }}</a></td></tr>{% endfor %}
+</tbody></table></div>
+<p class="aide">Chaque SA du programme (ou des fiches quand le programme manque) a au moins un résumé : notions essentielles, vocabulaire, je retiens, petite évaluation corrigée ; en morale et civisme, une situation de la vie courante et « je m'engage ». Faits civiques vérifiés (sources indiquées sur chaque résumé).</p>
+</details>
+{% if cours and mat in ('francais', 'maths', 'es', 'est', 'eps', 'ea', 'emc') %}<nav class="onglets" aria-label="Présentation"><a class="{{ 'actif' if vue == 'progression' }}" href="{{ url_for('prep_resumes', cours=cours, matiere=mat, domaine=dom or None, vue='progression') }}">Dans l'ordre de la progression</a><a class="{{ 'actif' if vue == 'domaines' }}" href="{{ url_for('prep_resumes', cours=cours, matiere=mat, domaine=dom or None, vue='domaines') }}">Par domaine</a></nav>{% endif %}
+{% if n %}
+<div class="actions" style="margin:6px 0 12px">
+  <a class="btn petit" href="{{ url_for('prep_resumes_pdf', col=col, cours=cours, matiere=mat, domaine=dom) }}">PDF enseignant ({{ n }})</a>
+  <a class="btn sec petit" href="{{ url_for('prep_resumes_pdf', col=col, cours=cours, matiere=mat, domaine=dom, eleve=1) }}">PDF élève à imprimer</a>
+  {% if cours and mat and mat != 'emc' %}<a class="btn petit" href="{{ url_for('prep_resumes_pdf', cours=cours, matiere=mat, seances=1) }}">Cahier de résumés (séances)</a>
+  <a class="btn sec petit" href="{{ url_for('prep_resumes_pdf', cours=cours, matiere=mat, seances=1, eleve=1) }}">Cahier élève</a>
+  {% if seul %}<a class="btn sec petit" href="{{ url_for('prep_resumes', cours=cours, matiere=mat, vue=vue) }}">Tous les résumés</a>{% else %}<a class="btn sec petit" href="{{ url_for('prep_resumes', cours=cours, matiere=mat, seances=1, vue=vue) }}">Résumés de séance seulement</a>{% endif %}{% endif %}
+</div>
+{% set qs = request.query_string.decode() %}
+<div class="carte lot-telechargement no-print">
+  <b>Télécharger directement</b> — les résumés cochés, ou tous ceux du choix ({{ n }}{{ ', limité à 300' if n > 300 }}) :
+  <a class="btn petit" href="{{ url_for('prep_resumes_lot', fmt='pdf') }}{{ '?' ~ qs if qs else '' }}" data-fmt="pdf">{{ icone('document') }} PDF</a>
+  <a class="btn petit" href="{{ url_for('prep_resumes_lot', fmt='docx') }}{{ '?' ~ qs if qs else '' }}" data-fmt="docx">{{ icone('texte') }} Word</a>
+  <a class="btn sec petit" href="{{ url_for('prep_resumes_lot', fmt='zip') }}{{ '?' ~ qs if qs else '' }}" data-fmt="zip">{{ icone('archives') }} ZIP (un Word par résumé)</a>
+  <a class="btn sec petit" href="{{ url_for('prep_resumes_lot', fmt='pdf') }}?{{ qs ~ '&' if qs else '' }}eleve=1" data-fmt="pdf" data-eleve="1">PDF élève</a>
+  <span class="aide lot-compte"></span>
+</div>
+{% if sas %}<p class="aide">Livret d'une SA (PDF) : {% for n in sas %}<a href="{{ url_for('prep_resumes_pdf', cours=cours, matiere=mat, sa=n) }}">SA {{ n }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+{% endif %}
+{% if vue == 'progression' and progression %}
+{% for t, mois in progression %}<h3>Trimestre {{ t }}</h3>
+{% for m, reps in mois %}<div class="tw"><table class="t" aria-label="{{ m }}"><thead><tr><th style="width:22%">{{ m }}</th><th>Résumé</th><th style="width:18%">Domaine</th><th style="width:1%"></th></tr></thead><tbody>
+{% for rep, rs in reps %}{% for r in rs %}<tr><td>{% if loop.first %}<b>{{ rep }}</b>{% endif %}</td><td><a href="{{ url_for('prep_resume', rid=r.id) }}">{{ r.titre }}</a>{% set a = (r.ancres or [{}])[0] %}{% if a.seance_titre and a.seance_titre != r.titre %} <span class="aide">· séance « {{ a.seance_titre }} »</span>{% endif %}{% if r.seance_resume and r.ancres|length > 1 %} <span class="aide">· {{ r.ancres|length }} séances</span>{% endif %}{% if r.a_verifier %} <span class="badge">à vérifier</span>{% endif %}</td><td>{{ r.domaine }}</td>
+<td style="white-space:nowrap"><input type="checkbox" class="lot-case no-print" value="{{ r.id }}" aria-label="Choisir {{ r.titre }}"> <a class="btn sec petit" href="{{ url_for('prep_resume_pdf', rid=r.id, telecharger=1) }}" title="Télécharger en PDF">PDF</a> <a class="btn sec petit" href="{{ url_for('prep_resume_docx', rid=r.id) }}" title="Télécharger en Word">Word</a> <a class="btn sec petit" href="{{ url_for('prep_resume_pdf', rid=r.id, eleve=1, telecharger=1) }}" title="Version élève (PDF)">Élève</a></td></tr>{% endfor %}{% endfor %}
+</tbody></table></div>{% endfor %}{% endfor %}
+{% else %}
+{% for k in ordre %}{% set collection, c = k %}
+<h3>{{ collection }} — {{ PREP_COURS_LIB[c] }}</h3>
+{% for d, rs in groupes[k].items() %}
+<div class="tw"><table class="t"><thead><tr><th>{{ d }}</th><th style="width:1%"></th></tr></thead><tbody>
+{% for r in rs %}<tr><td><a href="{{ url_for('prep_resume', rid=r.id) }}">{{ r.titre }}</a>{% if r.etape %} <span class="aide">· {{ r.etape }}</span>{% endif %}{% if collection == 'Révision CEP' %} <span class="aide">· {{ prep_nom_matiere(r.matiere) }}</span>{% endif %}</td>
+<td style="white-space:nowrap"><input type="checkbox" class="lot-case no-print" value="{{ r.id }}" aria-label="Choisir {{ r.titre }}"> <a class="btn sec petit" href="{{ url_for('prep_resume_pdf', rid=r.id, telecharger=1) }}" title="Télécharger en PDF">PDF</a> <a class="btn sec petit" href="{{ url_for('prep_resume_docx', rid=r.id) }}" title="Télécharger en Word">Word</a> <a class="btn sec petit" href="{{ url_for('prep_resume_pdf', rid=r.id, eleve=1, telecharger=1) }}" title="Version élève (PDF)">Élève</a></td></tr>{% endfor %}
+</tbody></table></div>
+{% endfor %}
+{% else %}<div class="carte"><p class="aide">Aucun résumé pour ce choix.</p></div>{% endfor %}
+{% endif %}
+{% endblock %}

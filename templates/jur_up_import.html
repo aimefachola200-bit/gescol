@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block titre %}Importer les UP{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Importer les unités pédagogiques (Excel)</h1>
+  <p class="sous">Une ligne par activité (les lignes d'une même UP répètent son nom) ; une UP sans activité = une ligne sans date ni thème. Les UP existantes (même nom{% if JUR_NIVEAU == 'ddemp' %}, même CS{% endif %}) sont mises à jour, les activités déjà présentes (même date, même thème) ne sont pas dupliquées.</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_up_import', modele=1) }}">⇩ Modèle Excel</a><a class="btn sec" href="{{ url_for('jur_up') }}">← Unités pédagogiques</a></div></div>
+<form method="post" enctype="multipart/form-data" class="carte">
+  <div class="grille-id">
+    <div><label for="fichier">Fichier Excel (.xlsx) *</label><input id="fichier" type="file" name="fichier" accept=".xlsx,.csv" required></div>
+    {% if JUR_NIVEAU == 'ddemp' %}<div><label for="cs_id">Circonscription par défaut (si la colonne est vide)</label>
+      <select id="cs_id" name="cs_id"><option value="">— lire la colonne « Circonscription » —</option>{% for c in cs %}<option value="{{ c.id }}">{{ c.nom }}</option>{% endfor %}</select></div>{% endif %}
+    <div><label for="annee">Année scolaire des activités sans date</label><select id="annee" name="annee">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></div>
+  </div>
+  <p class="aide">Colonnes reconnues : {% if JUR_NIVEAU == 'ddemp' %}Circonscription, {% endif %}Zone pédagogique, UP, École siège, RUP (nom et prénoms), Téléphone RUP, Co-RUP (nom et prénoms), Téléphone Co-RUP, Nombre d'écoles, Date, Thème, Type, Prévue (oui/non), Exécutée (oui/non), Participants, Taux de participation (%), Observations. Le fichier « Excel » exporté depuis la page des UP (feuille « Activités ») se réimporte tel quel.</p>
+  <div class="actions"><button class="btn">Importer</button></div>
+</form>
+{% endblock %}

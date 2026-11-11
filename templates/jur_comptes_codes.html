@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% block titre %}Codes d'accès{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Codes d'accès – {{ 'nouveau compte' if nouveau else 'mot de passe réinitialisé' }}</h1>
+    <p class="sous">{{ lignes|length }} code(s) provisoire(s). Ils ne seront plus affichés : imprimez la fiche maintenant et remettez-la au titulaire.</p></div>
+  <div class="actions">
+    <form method="post" action="{{ url_for('jur_comptes_codes_pdf') }}" target="_blank" style="display:inline">
+      {% for u, je, mdp in lignes %}<input type="hidden" name="uid" value="{{ u.id }}"><input type="hidden" name="mdp" value="{{ mdp }}">{% endfor %}
+      <button class="btn">Codes d'accès (PDF)</button>
+    </form>
+    {% for u, je, mdp in lignes %}{% if u.role == 'enseignant' and peut('parametres') %}<a class="btn sec" href="{{ url_for('affectations', uid=u.id) }}">Affecter à ses classes</a>{% endif %}{% endfor %}
+    <a class="btn sec" href="{{ url_for('jur_comptes') }}">Terminé</a>
+  </div>
+</div>
+<p class="aide">Adresse de connexion : <b>{{ url }}{{ url_for('login') }}</b></p>
+<div class="tw"><table class="t">
+  <tr><th>N°</th><th>Nom et prénoms</th><th>Rôle</th><th>École</th><th>Identifiant</th><th>Mot de passe provisoire</th></tr>
+  {% for u, je, mdp in lignes %}
+  <tr><td>{{ loop.index }}</td><td><b>{{ u.nom }}</b></td><td>{{ ROLES[u.role] }}</td><td>{{ je.nom if je else '—' }}</td><td>{{ u.identifiant }}</td>
+    <td style="font-family:Consolas,monospace;font-size:16px;letter-spacing:.12em">{{ mdp }}</td></tr>
+  {% endfor %}
+</table></div>
+<p class="aide">À sa première connexion, le titulaire doit choisir son propre mot de passe (8 caractères au moins).</p>
+{% endblock %}

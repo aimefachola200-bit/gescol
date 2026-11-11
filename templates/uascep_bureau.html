@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block titre %}Bureau de l'UASCEP{% endblock %}
+{% block contenu %}
+<p><a href="{{ url_for('uascep', onglet=b.niveau, entite=b.entite) }}">← Bureaux de l'UASCEP</a></p>
+<h1>Bureau — {{ NIV_LIB[b.niveau] }} : {{ b.entite_lib or b.entite }}</h1>
+<form method="post" class="carte">
+<label>Libellé de l'entité <input name="entite_lib" value="{{ b.entite_lib or '' }}"></label>
+<label>Date d'élection <input type="date" name="date_election" value="{{ b.date_election or '' }}"></label>
+<label>Durée du mandat (ans) <input name="duree" value="{{ b.duree or 2 }}" size="3"></label>
+<label>Date de fin de mandat (calculée si vide) <input type="date" name="date_fin" value="{{ b.date_fin or '' }}"></label>
+<label>Date d'installation <input type="date" name="date_installation" value="{{ b.date_installation or '' }}"></label>
+<label>Date de l'assemblée générale <input type="date" name="ag_date" value="{{ b.ag_date or '' }}"></label>
+<label>Lieu de l'assemblée générale <input name="ag_lieu" value="{{ b.ag_lieu or '' }}"></label>
+<label>PV (référence) <input name="pv" value="{{ b.pv or '' }}"></label>
+<label>Observations <textarea name="observations" rows="2">{{ b.observations or '' }}</textarea></label>
+<p><button class="btn">Enregistrer</button></p></form>
+{% endblock %}

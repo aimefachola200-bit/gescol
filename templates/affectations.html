@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% block titre %}Affectations{% endblock %}
+{% block contenu %}
+<h1>École et classes de {{ u.nom }}</h1>
+<p class="sous">{{ ROLES[u.role] }} · identifiant {{ u.identifiant }}</p>
+<form method="post" class="f carte" data-coches>
+  <label for="eco">École de rattachement</label>
+  <select id="eco" name="ecole_id" style="max-width:420px"><option value="">Toutes les écoles (administration, fondateur)</option>
+    {% for e in ecoles_toutes %}<option value="{{ e.id }}" {{ 'selected' if u.ecole_id==e.id }}>{{ e.nom }}</option>{% endfor %}</select>
+  {% if u.role == 'enseignant' %}
+  <h2>Classes tenues <span class="aide">(<span class="nb-coches">0</span> cochée(s))</span></h2>
+  <p class="aide">Primaire : cochez la classe (titulaire, toutes les matières). Secondaire : cochez les matières enseignées dans chaque classe. Un enseignant ne voit que ses classes pour la saisie des notes et le registre.</p>
+  <div class="actions" style="margin-bottom:8px"><button class="btn sec petit" data-cocher="1">Tout cocher</button><button class="btn sec petit" data-cocher="0">Tout décocher</button></div>
+  <div class="tw"><table class="t compact">
+  {% for c in classes %}
+    <tr><td><label style="margin:0"><input type="checkbox" name="aff" value="{{ c.id }}:" {{ 'checked' if (c.id, None) in actuelles }}> <b>{{ c.nom }}</b></label><span class="aide"> {{ c.niveau }} · {{ c.ecole_nom or '' }}</span></td>
+    <td>{% if c.niveau in ['6ème','5ème','4ème','3ème','2nde','1ère','Tle'] %}
+      {% for m in mats %}<label style="display:inline-block;font-weight:400;margin:2px 10px 2px 0"><input type="checkbox" name="aff" value="{{ c.id }}:{{ m.id }}" {{ 'checked' if (c.id, m.id) in actuelles }}> {{ m.nom }}</label>{% endfor %}
+    {% endif %}</td></tr>
+  {% endfor %}
+  </table></div>
+  {% else %}<p class="aide">Les affectations de classes concernent les comptes « enseignant ».</p>{% endif %}
+  <div class="actions" style="margin-top:12px"><button class="btn">Enregistrer</button><a class="btn sec" href="{{ url_for('utilisateurs') }}">Retour</a></div>
+</form>
+{% endblock %}

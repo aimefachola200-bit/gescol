@@ -1,0 +1,26 @@
+{% extends "espace_eleve_base.html" %}{% block titre %}Accueil{% endblock %}
+{% block contenu %}
+<div class="ee-salut">
+  {% if a_photo %}<img class="ee-photo" src="{{ url_for('eleve_ma_photo') }}" alt="Ma photo">
+  {% else %}<div class="ee-photo vide">Pas de<br>photo</div>{% endif %}
+  <div>
+    <h1 style="margin:0">Bonjour {{ e.prenoms }} {{ e.nom }}</h1>
+    <p class="sous" style="margin:4px 0 0">{{ cl.nom if cl else 'Classe non renseignée' }} · matricule {{ e.matricule }} · année scolaire {{ ANNEE }}</p>
+    <p class="aide" style="margin:2px 0 0">{{ ECOLE.nom }}{% if e.dernier_acces %} · dernière connexion : {{ date_fr(e.dernier_acces[:10]) }} à {{ e.dernier_acces[11:16] }}{% endif %}</p>
+  </div>
+</div>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Bulletins publiés</div><div class="v">{{ nb_pub }}</div>
+    <div class="d">{{ 'à consulter dans « Résultats »' if nb_pub else "aucun pour l'instant" }}</div></div>
+  <div class="kpi"><div class="l">Absences (appel journalier)</div><div class="v {{ 'rouge' if nb_abs }}">{{ nb_abs }}</div>
+    <div class="d">{{ nb_ret }} retard(s) depuis la rentrée</div></div>
+  <div class="kpi"><div class="l">Demi-journées d'absence</div><div class="v {{ 'rouge' if nb_demi }}">{{ nb_demi }}</div>
+    <div class="d">registre de présence</div></div>
+</div>
+<div class="ee-tuiles">
+  <a href="{{ url_for('eleve_resultats') }}"><b>Résultats et bulletins</b>Tes moyennes, ton rang et tes bulletins PDF publiés par l'école.</a>
+  <a href="{{ url_for('eleve_absences') }}"><b>Absences et retards</b>Le détail de tes absences depuis la rentrée.</a>
+  <a href="{{ url_for('eleve_carte') }}"><b>Ma carte scolaire</b>Tes informations et ta carte d'élève à imprimer.</a>
+  <a href="{{ url_for('eleve_mdp') }}"><b>Mot de passe</b>Changer ton mot de passe.</a>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{# v2.3 — suivi des fiches statistiques de rentrée (CS / DDEMP) : statuts, validations, renvois #}
+{% extends "base.html" %}{% block titre %}Suivi des fiches de rentrée — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<h2 style="margin:0">Fiches statistiques de rentrée {{ annee }}</h2>
+<form method="get" class="filtres" style="margin:8px 0"><label for="annee">Année scolaire</label>
+<select id="annee" name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></form>
+<p class="aide">Circuit : l'école remplit et transmet → la CS valide (ou renvoie avec un motif) → la DDEMP valide puis clôture. Les décisions descendent vers l'école à la synchronisation.</p>
+<div class="grille indicateurs">{% for s, n in compte.items() %}<div class="kpi"><div class="l">{{ s }}</div><div class="v">{{ n }}</div></div>{% endfor %}<div class="kpi"><div class="l">Non reçues</div><div class="v">{{ manquantes|length }}</div></div></div>
+<div class="tw"><table class="t" aria-label="Fiches de rentrée"><thead><tr><th>École</th><th>Statut</th><th>Transmise le</th><th>Effectif (G / F / T)</th><th>Classes ouvertes (simples / jumelées / multigrades) · autorisées</th><th>Enseignants (manquants)</th><th>Salles</th><th>Eau · latrines · électricité</th><th>Décision</th><th></th></tr></thead><tbody>
+{% for x in rows %}<tr><td><b>{{ x.entite }}</b></td><td>{{ statut_de(x) }}{% if x.motifRenvoi and statut_de(x) == 'Renvoyée' %}<br><span class="aide">{{ x.motifRenvoi }}</span>{% endif %}</td><td>{{ jj(x.dateTransmission) }}</td>
+<td>{{ x.effG or 0 }} / {{ x.effF or 0 }} / {{ x.effT or 0 }}</td><td>{{ x.classes or '' }}{% if x.classesSimples is not none or x.classesJumelees or x.classesMultigrades %} ({{ x.classesSimples or 0 }} / {{ x.classesJumelees or 0 }} / {{ x.classesMultigrades or 0 }}){% endif %}{% if x.classesAutorisees is not none %} · {{ x.classesAutorisees }}{% if x.classes is not none and x.classes != x.classesAutorisees %} <span class="aide">(écart {{ '%+d'|format(x.classes - x.classesAutorisees) }})</span>{% endif %}{% endif %}</td><td>{{ x.ensPoste or "" }}{% if x.ensManquants %} ({{ x.ensManquants }}){% endif %}</td><td>{{ x.salles or "" }}</td>
+<td>{{ x.pointEau or '—' }} · {{ x.latrines or '—' }} · {{ x.electricite or '—' }}</td><td>{{ x.validePar or '' }} {{ jj(x.dateValidation) }}</td>
+<td style="white-space:nowrap">{% for st, lib in transitions(x) %}<form method="post" action="{{ url_for('territoire_rentree_decider', rid=x.id) }}" style="display:inline"><input type="hidden" name="statut" value="{{ st }}"><button class="btn petit">{{ icone('valider') }} {{ lib }}</button></form> {% endfor %}
+{% if renvoi_possible(x) %}<details style="display:inline-block"><summary class="btn sec petit">Renvoyer</summary><form method="post" action="{{ url_for('territoire_rentree_decider', rid=x.id) }}"><input type="hidden" name="statut" value="Renvoyée"><label for="motif{{ x.id }}">Motif du renvoi</label><textarea id="motif{{ x.id }}" name="motif" rows="2" required maxlength="600"></textarea><button class="btn sec petit">Renvoyer à l'école</button></form></details>{% endif %}</td></tr>
+{% else %}<tr><td colspan="10" class="aide">Aucune fiche reçue pour {{ annee }}.</td></tr>{% endfor %}
+</tbody></table></div>
+{% if manquantes %}<h3>Écoles sans fiche reçue ({{ manquantes|length }})</h3>
+<p class="aide">Valeurs reprises de la dernière transmission de l'école (source et date) en attendant sa fiche.</p>
+<div class="tw"><table class="t" aria-label="Écoles sans fiche"><thead><tr><th>École</th><th>Effectif (G / F / T)</th><th>Classes ouvertes (simples / jumelées / multigrades)</th><th>Source</th></tr></thead><tbody>
+{% for e in manquantes %}<tr><td>{{ e.nom }}</td>{% if e.transmis %}<td>{{ e.transmis.g }} / {{ e.transmis.f }} / {{ e.transmis.t }}</td><td>{{ e.transmis.classes }} ({{ e.transmis.simples or 0 }} / {{ e.transmis.jumelees or 0 }} / {{ e.transmis.multigrades or 0 }})</td><td>{{ e.transmis.source }}, {{ jj(e.transmis.maj) }}</td>{% else %}<td colspan="3" class="aide">Aucune donnée transmise</td>{% endif %}</tr>{% endfor %}
+</tbody></table></div>{% endif %}
+{% endblock %}

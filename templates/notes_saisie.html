@@ -1,0 +1,92 @@
+{% extends "base.html" %}{% block titre %}Notes {{ cl.nom }}{% endblock %}
+{% block contenu %}
+{% set mat = cl.cycle == 'maternelle' %}
+<div class="entete">
+  <div><h1>{{ 'Évaluations' if mat else 'Notes' }} – {{ cl.nom }} – {{ per }}</h1>
+  <p class="sous">{{ cl.niveau }} · {{ eleves|length }} élève(s) ·
+    {% if mat %}appréciation par domaine : A = acquis, ECA = en cours d'acquisition, NA = non acquis
+    {% elif cl.cycle == 'primaire' %}règle des 2/3 (les matières marquées * n'y comptent pas)
+    {% elif cl.niveau in ['6ème','5ème'] %}moyenne simple (coefficients non appliqués en 6ème/5ème)
+    {% else %}moyenne pondérée par les coefficients{% endif %}</p></div>
+  <div class="actions">
+    {% for p2 in PERIODES %}<a class="btn {{ '' if loop.index==p else 'sec' }} petit" href="{{ url_for('notes_saisie', cid=cl.id, p=loop.index) }}">{{ p2 }}</a>{% endfor %}
+    <a class="btn sec" href="{{ url_for('resultats', cid=cl.id, p=p) }}">Voir les résultats</a>
+  </div>
+</div>
+{% if mat %}
+<p class="aide">Choisissez l'appréciation de chaque domaine. « D » = dispensé. La colonne Observation apparaît sur le livret remis aux parents.</p>
+{% else %}
+<p class="aide">Pour chaque matière : <b>note principale</b> (inférieure à 20) puis, dans la petite case <b>P</b>, la <b>note de performance</b> (0 à 2), accordée seulement à partir de 10 ; la note retenue est leur somme, 20 au plus (19 → performance 1 au plus). <span style="color:#B42318;font-weight:700">Case rouge</span> : note principale ≥ 20 (20/20 seulement avec la performance), performance avec une note inférieure à 10, performance supérieure à 2 ou somme supérieure à 20 — elle n'est pas enregistrée. <b>D</b> = dispensé ; vide = matière pas encore évaluée. Entrée passe à la case suivante. L'observation apparaît sur le bulletin.</p>
+<style>.np{display:inline-flex;gap:2px;align-items:center}.np input.n{width:48px}.np input.perf{width:34px;font-size:12px;background:#F5F8FF;border-style:dashed}
+input.err{outline:2px solid #B42318!important;background:#FEE4E2!important;color:#B42318;font-weight:700}</style>
+{% endif %}
+{% if not eleves %}<div class="carte">Aucun élève inscrit dans cette classe.</div>{% else %}
+<form method="post" id="grille">
+<div class="tw"><table class="t saisie">
+  <tr><th class="sticky">Élève</th>
+    {% for m in matieres %}<th class="v c" title="{{ m.nom }}">{{ m.nom }}{{ ' *' if m.mode_calcul=='exclu_2_3' and cl.cycle=='primaire' else '' }}{% if cl.cycle=='secondaire' and cl.niveau not in ['6ème','5ème'] %} (×{{ '%g'|format(m.coefficient) }}){% endif %}</th>{% endfor %}
+    {% if mat %}<th>Bilan</th>{% else %}<th class="c">Moy.</th><th class="c">Rang</th><th>Décision</th>{% endif %}
+    <th>Observation</th></tr>
+  {% for e in eleves %}{% set r = res[e.id] %}
+  <tr><td class="sticky" style="white-space:nowrap"><b>{{ e.nom }}</b> {{ e.prenoms }}</td>
+    {% for m in matieres %}{% set n = notes.get((e.id, m.id)) %}
+      {% if mat %}
+      {% set v = ('D' if n and n.dispense else (n.appreciation if n and n.appreciation else '')) %}
+      <td class="c"><select name="n_{{ e.id }}_{{ m.id }}" class="appr appr-{{ v or 'vide' }}" aria-label="{{ e.nom }} – {{ m.nom }}">
+        <option value="" {{ 'selected' if not v }}>—</option>
+        {% for k in APPRECIATIONS %}<option value="{{ k }}" {{ 'selected' if v==k }}>{{ k }}</option>{% endfor %}
+        <option value="D" {{ 'selected' if v=='D' }}>D</option>
+      </select></td>
+      {% else %}
+      {% set np = afficher_np(n.valeur, n.performance if n and 'performance' in n.keys() else none) if n and not n.dispense else ('', '') %}
+      {% set v = 'D' if n and n.dispense else np[0] %}
+      <td class="c"><span class="np"><input name="n_{{ e.id }}_{{ m.id }}" value="{{ v }}" inputmode="decimal" autocomplete="off" aria-label="{{ e.nom }} – {{ m.nom }} : note principale"
+        class="n {{ 'disp' if v=='D' else ('bas' if n and n.valeur is not none and n.valeur < 10 else '') }}"><input name="p_{{ e.id }}_{{ m.id }}" value="{{ np[1] }}" class="perf" inputmode="decimal" maxlength="4" placeholder="P" autocomplete="off" title="Note de performance (0 à 2)" aria-label="{{ e.nom }} – {{ m.nom }} : note de performance"></span></td>
+      {% endif %}
+    {% endfor %}
+    {% if mat %}
+    <td style="white-space:nowrap">{% if r.details.evalues %}<span class="badge {{ 'ok' if r.admis else 'att' }}">{{ r.decision }}</span>{% endif %}</td>
+    {% else %}
+    <td class="c"><b>{{ '%.2f'|format(r.moyenne) if r.moyenne is not none else '—' }}</b></td>
+    <td class="c">{{ r.rang or '—' }}</td>
+    <td>{% if r.moyenne is not none %}<span class="badge {{ 'ok' if r.admis else 'ko' }}">{{ r.decision }}</span>{% endif %}</td>
+    {% endif %}
+    <td><input name="obs_{{ e.id }}" value="{{ r.details.observation or '' }}" maxlength="600" class="obs" placeholder="ex. Élève travailleur, doit soigner l'écriture" aria-label="Observation {{ e.nom }}"></td></tr>
+  {% endfor %}
+</table></div>
+<p class="actions" style="margin-top:14px"><button class="btn">Enregistrer</button>
+  {% if not mat %}<span class="aide">Moyenne de classe : {{ '%.2f'|format(stats.moyenne_classe) if stats.moyenne_classe is not none else '—' }}</span>{% endif %}</p>
+</form>
+<script>{{ garde_js|safe }}</script>
+<script>
+(function(){
+  function verifier(el){
+    var box=el.closest('.np'); if(!box) return;
+    var a=box.querySelector('input.n'), b=box.querySelector('input.perf'), r=GardeNotes.lire(a.value,b.value);
+    a.classList.toggle('err',!!r.errN); b.classList.toggle('err',!!r.errP); a.title=r.msg||''; b.title=r.msg||'Note de performance (0 à 2)';
+    a.style.outline='';
+  }
+  [].slice.call(document.querySelectorAll('#grille .np input')).forEach(function(el){ el.addEventListener('input',function(){verifier(el)}); verifier(el); });
+  document.getElementById('grille').addEventListener('submit',function(ev){
+    var n=document.querySelectorAll('#grille input.err').length;
+    if(n && !window.confirm(n+' case(s) en rouge ne seront pas enregistrées. Continuer ?')) ev.preventDefault();
+  });
+  var ins=[].slice.call(document.querySelectorAll('#grille input[name^="n_"], #grille select[name^="n_"]'));
+  ins.forEach(function(el,i){
+    el.addEventListener('keydown',function(ev){if(ev.key==='Enter'){ev.preventDefault();var n=ins[i+1];if(n){n.focus();if(n.select)n.select();}}});
+    if(el.tagName==='SELECT'){el.addEventListener('change',function(){el.className='appr appr-'+(el.value||'vide')});return;}
+    el.addEventListener('input',function(){
+      var v=el.value.trim().replace(',','.'),f=parseFloat(v);
+      el.classList.toggle('disp',v.toUpperCase()==='D');
+      el.classList.toggle('bas',v!==''&&!isNaN(f)&&f<10);
+      verifier(el);
+    });
+  });
+  var modifie=false;document.getElementById('grille').addEventListener('input',function(){modifie=true});
+  document.getElementById('grille').addEventListener('change',function(){modifie=true});
+  document.getElementById('grille').addEventListener('submit',function(){modifie=false});
+  window.addEventListener('beforeunload',function(e){if(modifie){e.preventDefault();e.returnValue='';}});
+})();
+</script>
+{% endif %}
+{% endblock %}

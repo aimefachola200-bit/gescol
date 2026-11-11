@@ -1,0 +1,42 @@
+{% extends "base.html" %}{% block titre %}{{ f.titre }}{% endblock %}
+{% block contenu %}{% set onglet = 'mes' if propre else 'fiches' %}{% include "_prep_onglets.html" %}
+{% set cid = ((request.args.get('classe') or '')|int) or none %}
+<section class="carte prep-fiche">
+  <div class="entete"><div><h2 style="margin:0">{{ f.titre }}</h2>
+    <p class="sous">{{ prep_nom_matiere(f.matiere) }} · {{ PREP_COURS_LIB.get(f.cours, f.cours) }}{% if f.sous_matiere %} · {{ f.sous_matiere }}{% endif %}{% if f.unite %} · {{ f.unite }}{% endif %}{% if f.sa %} · SA {{ f.sa }}{% endif %}{% if f.seance %} · séance {{ f.seance }}{% endif %}{% if f.duree %} · {{ f.duree }}{% endif %}{% if propre and f.date_seance %} · séance du {{ f.date_seance }}{% endif %}</p>
+    {% if f.programme_id and ep_existe('prep_programme') %}<p class="sous"><span class="badge-vigueur">Programme en vigueur : mesures correctives</span> <a href="{{ url_for('prep_programme', pid=f.programme_id) }}">SA {{ f.sa }} — {{ f.intitule }}</a>{% if f.sequence_mc %} · séquence {{ f.sequence_mc }} : {{ f.sequence_mc_titre }}{% endif %}</p>{% elif f.hors_programme %}<p class="sous"><span class="badge att">{{ f.hors_programme }}</span></p>{% endif %}
+    {% if f.domaine_nom %}<p class="sous">{{ f.domaine_code }} — {{ f.domaine_nom }} · {{ f.mois }}, semaine {{ f.semaine }}{% if f.mention %} · <span class="badge att">{{ f.mention }}</span>{% endif %}</p>{% endif %}</div>
+    <div class="actions">
+      {% if propre %}
+      <a class="btn petit" href="{{ url_for('prep_ma_fiche_pdf', mid=f.id) }}">{{ icone('document') }} PDF</a>
+      <a class="btn sec petit" href="{{ url_for('prep_ma_fiche_doc', mid=f.id) }}">Word</a>
+      {% if auteur %}<a class="btn sec petit" href="{{ url_for('prep_ma_fiche', mid=f.id, modifier=1) }}">{{ icone('modifier') }} Modifier</a>
+      <form method="post" action="{{ url_for('prep_ma_fiche_dupliquer', mid=f.id) }}" style="display:inline"><button class="btn sec petit">⧉ Dupliquer</button></form>
+      {% if ep_existe('prep_ma_fiche_partager') %}<form method="post" action="{{ url_for('prep_ma_fiche_partager', mid=f.id) }}" style="display:inline"><button class="btn sec petit">{{ icone('echanger') }} {{ 'Ne plus partager' if f.partagee else "Partager avec l'école" }}</button></form>{% endif %}
+      <form method="post" action="{{ url_for('prep_ma_fiche_supprimer', mid=f.id) }}" style="display:inline" onsubmit="return confirm('Supprimer cette fiche ?')"><button class="btn danger petit">Supprimer</button></form>{% elif ep_existe('prep_ma_fiche_copier') and g.user.role == 'enseignant' %}
+      <form method="post" action="{{ url_for('prep_ma_fiche_copier', mid=f.id) }}" style="display:inline"><button class="btn sec petit">{{ icone('dupliquer') }} Copier dans mes fiches</button></form>{% endif %}
+      {% if ep_existe('partage_historique') %}<a class="btn sec petit" href="{{ url_for('partage_historique', t='fiche', cle=f.id|string) }}">{{ icone('horloge') }} Historique</a>{% endif %}
+      {% if f.partagee %}<span class="badge ok">partagée avec l'école</span>{% endif %}
+      {% else %}
+      <a class="btn petit" href="{{ url_for('prep_fiche_pdf', fid=f.id, classe=cid) }}">{{ icone('document') }} PDF</a>
+      <a class="btn sec petit" href="{{ url_for('prep_fiche_doc', fid=f.id, classe=cid) }}">Word</a>
+      {% if classes %}<a class="btn sec petit" href="{{ url_for('prep_preparer', depuis=f.id, classe=cid) }}">{{ icone('modifier') }} Adapter pour ma classe</a>{% endif %}
+      {% endif %}
+    </div></div>
+  {% if f.mention %}<div class="flash warning">{{ f.mention }}</div>{% endif %}
+  {% if f.intitule and f.intitule != f.titre %}<p><b>Intitulé :</b> {{ f.intitule }}</p>{% endif %}
+  {% if f.manuel %}<p class="aide"><b>Manuel officiel :</b> {{ f.manuel.titre }} — {% if f.manuel.fiche %}fiche n° {{ f.manuel.fiche }} « {{ f.manuel.fiche_titre }} »{% if f.manuel.page %}, p. {{ f.manuel.page }}{% endif %}{% elif f.manuel.texte %}texte n° {{ f.manuel.texte }} « {{ f.manuel.texte_titre }} »{% if f.manuel.page %}, p. {{ f.manuel.page }}{% endif %}{% else %}dossier {{ f.manuel.dossier }}{% if f.manuel.dossier_titre %} « {{ f.manuel.dossier_titre }} »{% endif %}{% if f.manuel.sa %}, SA {{ f.manuel.dossier }}.{{ f.manuel.sa }}{% if f.manuel.sa_titre %} « {{ f.manuel.sa_titre }} »{% endif %}{% endif %}{% if f.manuel.pages %} — pages {{ f.manuel.pages }}{% endif %}{% endif %}</p>{% endif %}
+  {% if f.manuel_unite %}<p class="aide"><b>Textes du manuel pour l'unité {{ f.manuel_unite.unite }} :</b> {% for t in f.manuel_unite.textes %}n° {{ t.n }} « {{ t.titre }} »{% if t.page %} (p. {{ t.page }}){% endif %}{% if not loop.last %} ; {% endif %}{% endfor %}</p>{% endif %}
+  {% if f.activite_preliminaire %}<p class="aide"><b>{{ f.activite_preliminaire }}</b></p>{% endif %}
+  {% if f.mesure_corrective %}<div class="flash">{{ f.mesure_corrective }}</div>{% endif %}
+  <dl class="prep-dl">{% for k, lib in CHAMPS %}{% if k in ('cd','ct','contenus','objectifs','strategies','materiel') and f[k] %}<dt>{{ lib }}</dt><dd>{{ f[k]|prep_txt }}</dd>{% endif %}{% endfor %}</dl>
+  <h3>Déroulement</h3>
+  <div class="tw"><table class="t prep-deroul"><thead><tr><th>Phases / étapes</th><th>Activités de l'enseignant(e) et des apprenant(e)s</th><th>Résultats attendus</th></tr></thead>
+  <tbody>{% for l in f.deroulement or [] %}<tr><td><b>{{ l[0]|prep_txt }}</b></td><td>{{ (l[1] if l|length > 1 else '')|prep_txt }}</td><td>{{ (l[2] if l|length > 2 else '')|prep_txt }}</td></tr>{% endfor %}</tbody></table></div>
+  {% for k, lib in CHAMPS %}{% if k in ('evaluation','projection','je_retiens','observations') and f[k] %}<h3>{{ lib }}</h3><p>{{ f[k]|prep_txt }}</p>{% endif %}{% endfor %}
+  {% if resumes %}<h3>Résumé de la séance — l'essentiel à retenir</h3>
+  <ul>{% for r in resumes %}<li><a href="{{ url_for('prep_resume', rid=r.id) }}">{{ r.titre }}</a> <span class="aide">({{ r.domaine }}{% if not r.seance_resume %} · résumé de la SA{% endif %})</span>
+    <a class="btn sec petit" href="{{ url_for('prep_resume_pdf', rid=r.id) }}">PDF</a> <a class="btn sec petit" href="{{ url_for('prep_resume_pdf', rid=r.id, eleve=1) }}">Élève</a></li>{% endfor %}</ul>{% endif %}
+  {% if f.source and not propre %}<p class="aide">Source : {{ f.source }}</p>{% endif %}
+</section>
+{% endblock %}

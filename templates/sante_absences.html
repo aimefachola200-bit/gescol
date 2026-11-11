@@ -1,0 +1,15 @@
+{# v1.26 — absences des 30 derniers jours (appel) et alertes de décrochage #}
+{% extends "base.html" %}{% block titre %}Absences et décrochage — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<h2 style="margin:0">Absences des 30 derniers jours</h2>
+<form method="get" class="filtres actions" style="margin:6px 0 10px"><label>Seuil d'alerte (demi-journées) <input name="seuil" type="number" min="1" value="{{ seuil }}" style="width:5em"></label><button class="btn sec petit">OK</button></form>
+<p class="aide">Tirées du registre d'appel (une journée d'absence = 2 demi-journées). « Créer la fiche » préremplit une fiche de signalement (statut Signalé).</p>
+<div class="tw"><table class="t" aria-label="Absences"><thead><tr><th>Élève</th><th>Sexe</th><th>Classe</th><th>Demi-journées</th><th>État</th><th></th></tr></thead><tbody>
+{% for e in eleves %}<tr><td>{{ e.nom }} {{ e.prenoms }}</td><td>{{ e.sexe }}</td><td>{{ e.classe }}</td><td>{{ e.absences }}</td>
+<td>{% if e.absences >= seuil %}{{ icone('alerte') }} <b>Alerte</b>{% endif %}</td>
+<td>{% if peut_ecrire and e.absences >= seuil %}<form method="post" style="display:inline"><input type="hidden" name="eleve" value="{{ e.id }}"><input type="hidden" name="seuil" value="{{ seuil }}"><button class="btn sec petit">{{ icone('ajouter') }} Créer la fiche</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="6" class="aide">Aucune absence enregistrée ces 30 derniers jours.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

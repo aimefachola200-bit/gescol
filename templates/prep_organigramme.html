@@ -1,0 +1,14 @@
+{# v1.21 — Organigramme des épreuves (INFRE) #}
+{% extends "base.html" %}{% block titre %}Organigramme des épreuves (INFRE){% endblock %}
+{% block contenu %}{% set onglet = 'evaluations' %}{% include "_prep_onglets.html" %}
+<h2>Organigramme des épreuves (INFRE)</h2>
+<p class="aide">Relevé dans les épreuves standardisées de l'INFRE / Service de la recherche en éducation (CE1 2016, CE2 2015, CM1-CM2 2014). Chaque épreuve indique COURS, PÉRIODE et DURÉE, puis une mise en contexte, la tâche (« Tu es invité à … »), le support et la consigne en items numérotés (a, b, c). Périodes : premier, deuxième, troisième trimestre, fin d'année. Le CI et le CP (sans modèle INFRE) suivent l'organigramme du CE1, avec des durées et des items adaptés. Les évaluations mensuelles reprennent les cinq épreuves écrites ; les examens blancs du CEP (CM2) : expression écrite, compréhension de l'écrit, dictée, mathématique, EST et ES (durées indicatives, à vérifier dans le calendrier officiel du CEP).</p>
+{% for c, lignes in org.items() %}
+<h3>{{ c }}</h3>
+<div class="tw"><table class="t"><thead><tr><th>Ordre</th><th>Épreuve</th><th>Durée</th><th>Structure</th></tr></thead><tbody>
+{% for d, du, s in lignes %}<tr><td>{{ loop.index }}</td><td>{{ d }}</td><td>{{ du }}</td><td>{{ s }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endfor %}
+<h3>Calendrier des évaluations</h3>
+<ul>{% for p in PERIODES %}<li>{{ p[1] }} — {{ TYPES[p[2]] }}</li>{% endfor %}</ul>
+{% endblock %}

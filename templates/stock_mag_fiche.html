@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% block titre %}Fiche de stock{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Fiche de stock{% if v %} — {{ v.nom }}{% endif %}</h1><p class="sous">Date, stock initial, entrée dotation, stock disponible, sortie, stock restant (kg) — {{ annee }}</p></div>
+  {% if v %}<div class="actions">
+    <a class="btn sec petit" target="_blank" href="{{ url_for('stock_mag_fiche_pdf', vivre=v.id, annee=annee) }}">{{ icone('document') }} Télécharger PDF</a>
+    <a class="btn sec petit" href="{{ url_for('stock_mag_fiche_xlsx', vivre=v.id, annee=annee) }}">{{ icone('telecharger') }} Excel</a></div>{% endif %}
+</div>
+{% include "stock_onglets.html" %}
+{% set sous = 'fiche' %}{% include "stock_mag_barre.html" %}
+<form method="get" class="filtres">
+  <label>Vivre<br><select name="vivre" onchange="this.form.submit()">{% for x in liste %}<option value="{{ x.id }}" {{ 'selected' if v and x.id == v.id }}>{{ x.nom }}</option>{% endfor %}</select></label>
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option value="{{ a }}" {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+</form>
+<div class="carte"><div class="tw"><table class="t compact"><thead><tr><th>Date</th><th class="c">Stock initial (kg)</th><th class="c">Entrée dotation (kg)</th><th class="c">Stock disponible (kg)</th><th class="c">Sortie (kg)</th><th class="c">Stock restant (kg)</th><th>Réf</th><th>Observations</th></tr></thead><tbody>
+  {% for l in lignes %}<tr><td>{{ l[0][8:10] }}/{{ l[0][5:7] }}/{{ l[0][:4] }}</td><td class="c">{{ qte(l[1]) }}</td><td class="c">{{ qte(l[2]) if l[2] else '' }}</td><td class="c">{{ qte(l[3]) }}</td><td class="c">{{ qte(l[4]) if l[4] else '' }}</td><td class="c"><b>{{ qte(l[5]) }}</b></td><td>{{ l[6] }}</td><td>{{ l[7] }}</td></tr>
+  {% else %}<tr><td colspan="8" class="aide">Aucun mouvement cette année.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

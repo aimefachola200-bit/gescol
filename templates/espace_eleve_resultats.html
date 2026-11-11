@@ -1,0 +1,51 @@
+{% extends "espace_eleve_base.html" %}{% block titre %}Résultats{% endblock %}
+{% block contenu %}
+{% set cyc = cl.cycle if cl else '' %}
+<h1>Résultats et bulletins</h1>
+<p class="sous">{{ e.prenoms }} {{ e.nom }} · {{ cl.nom if cl else '' }} · {{ ANNEE }} — seuls les résultats publiés par l'école apparaissent ici.</p>
+
+<h2>{{ 'Livrets' if cyc=='maternelle' else 'Bulletins' }} par période</h2>
+{% if bulletins %}
+<div class="tw"><table class="t">
+  <tr><th>Période</th>{% if cyc != 'maternelle' %}<th class="num">Moyenne</th><th>Rang</th><th>Mention</th>{% endif %}
+    <th>{{ 'Bilan' if cyc=='maternelle' else 'Décision' }}</th><th>Observation</th><th></th></tr>
+  {% for n, per, r, st in bulletins %}
+  <tr><td>{{ per }}</td>
+    {% if cyc != 'maternelle' %}<td class="num"><b>{{ '%.2f'|format(r.moyenne) if r.moyenne is not none else '—' }}</b></td>
+    <td>{{ r.rang_texte }}</td><td>{{ r.mention }}</td>{% endif %}
+    <td><span class="badge {{ 'ok' if r.admis else 'ko' }}">{{ r.decision }}</span></td>
+    <td class="aide">{{ r.details.observation or '' }}</td>
+    <td class="num"><a class="btn sec petit" target="_blank" href="{{ url_for('eleve_bulletin', p=n) }}">{{ 'Livret' if cyc=='maternelle' else 'Bulletin' }} PDF</a></td></tr>
+  {% endfor %}
+</table></div>
+{% else %}<div class="carte gris">Aucun bulletin n'a encore été publié par l'école pour cette année.</div>{% endif %}
+
+<h2>Évaluations</h2>
+{% if evals %}
+{% for x in evals %}{% set ev, l = x.ev, x.l %}
+<div class="carte" style="margin-bottom:14px">
+  <div class="entete" style="margin-bottom:6px">
+    <div><h3 style="margin:0">{{ ev.libelle }}</h3>{% if ev.date %}<span class="aide">{{ date_fr(ev.date) }}</span>{% endif %}</div>
+    <div>{% if not l.compose %}<span class="badge att">Absent(e)</span>
+      {% else %}<span class="badge {{ 'ok' if l.maitrise else 'ko' }}">{{ l.decision }}</span>{% endif %}</div>
+  </div>
+  {% if l.compose %}
+  <div class="tw"><table class="t compact">
+    <tr><th>{{ 'Domaine' if cyc=='maternelle' else 'Matière' }}</th><th class="num">{{ 'Appréciation' if cyc=='maternelle' else 'Note /20' }}</th></tr>
+    {% for m in x.matieres %}
+    <tr><td>{{ m.nom }}</td>
+      <td class="num">{% if m.id in l.dispenses %}<span class="gris">dispensé(e)</span>
+        {% elif cyc=='maternelle' %}{{ l.appreciations.get(m.id, '—') }}
+        {% elif l.notes.get(m.id) is not none %}<b class="{{ 'rouge' if l.notes[m.id] < 10 }}">{{ ('%.2f'|format(l.notes[m.id])).replace('.', ',') }}</b>
+        {% else %}—{% endif %}</td></tr>
+    {% endfor %}
+  </table></div>
+  {% if cyc != 'maternelle' %}
+  <p class="aide" style="margin:8px 0 0">Moyenne : <b>{{ ('%.2f'|format(l.moyenne)).replace('.', ',') if l.moyenne is not none else '—' }}</b>
+    · rang {{ l.rang_texte }} sur {{ l.effectif }}
+    {% if cyc=='primaire' %} · {{ l.reussies }} matière(s) à 10/20 ou plus (seuil de maîtrise : {{ l.seuil }}){% else %} · mention {{ l.mention }}{% endif %}</p>
+  {% endif %}{% endif %}
+</div>
+{% endfor %}
+{% else %}<div class="carte gris">Aucune évaluation publiée pour l'instant.</div>{% endif %}
+{% endblock %}

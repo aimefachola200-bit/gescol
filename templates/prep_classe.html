@@ -1,0 +1,40 @@
+{# v2.4.2 — dossier d'un cours : matières, fiches, résumés, évaluations, guides, programmes + recherche unique #}
+{% extends "base.html" %}{% block titre %}{{ lib }} — préparation{% endblock %}
+{% block contenu %}{% set onglet = 'classes' %}{% include "_prep_onglets.html" %}
+<nav class="onglets" aria-label="Classes">{% for c in COURS %}<a class="{{ 'actif' if c == cours }}" href="{{ url_for('prep_classe', cours=c) }}">{{ PREP_COURS_LIB[c] }}</a>{% endfor %}</nav>
+<h2>{{ lib }}{% if mat %} — {{ prep_nom_matiere(mat) }}{% endif %}</h2>
+<form method="get" class="filtres" style="margin:8px 0" aria-label="Recherche dans la classe">
+  {% if mat %}<input type="hidden" name="matiere" value="{{ mat }}">{% endif %}
+  <label>Rechercher <input type="search" name="q" value="{{ q }}" placeholder="titre, thème, unité, séance…" style="min-width:18em"></label>
+  <button class="btn sec petit">Chercher</button>{% if q %} <a class="btn sec petit" href="{{ url_for('prep_classe', cours=cours, matiere=mat or none) }}">Effacer</a>{% endif %}
+</form>
+<p class="actions">
+  <a class="btn {{ 'sec' if mat }} petit" href="{{ url_for('prep_classe', cours=cours, q=q or none) }}">Toutes les matières</a>
+  {% for m, n in mats %}<a class="btn {{ 'sec' if m != mat }} petit" href="{{ url_for('prep_classe', cours=cours, matiere=m, q=q or none) }}">{{ prep_nom_matiere(m) }} <span class="aide">({{ n.fiches }}·{{ n.resumes }}·{{ n.evaluations }})</span></a>{% endfor %}
+</p>
+<p class="aide">Pastilles : fiches · résumés · épreuves. {{ total }} résultat(s){% if q %} pour « {{ q }} »{% endif %}.
+  <a href="{{ url_for('prep_fiches', cours=cours, matiere=mat or none) }}">Liste filtrable des fiches (PDF/Word en lot)</a> ·
+  <a href="{{ url_for('prep_resumes', cours=cours, matiere=mat or none) }}">Résumés (livrets)</a>{% if cours == 'MAT' %} · <a href="{{ url_for('mat_accueil') }}">Classeur de l'école maternelle</a>{% endif %}</p>
+<nav class="onglets" aria-label="Rubriques">{% for k, l in RUBRIQUES %}<a href="#r-{{ k }}">{{ l }} ({{ t[k]|length }})</a>{% endfor %}</nav>
+
+<section id="r-fiches" class="carte"><h3>Fiches de préparation ({{ t.fiches|length }})</h3>
+{% for k, fs in fiches_groupes %}<h4 style="margin:10px 0 4px">{{ k }}</h4>
+<ul class="liste">{% for f in fs %}<li>{% if not mat %}<span class="aide">{{ prep_nom_matiere(f.matiere) }} ·</span> {% endif %}<a href="{{ url_for('prep_fiche', fid=f.id) }}">{{ f.titre }}</a>{% if f.seance %} <span class="aide">· séance {{ f.seance }}</span>{% endif %}{% if f.statut == 'concue' %} <span class="badge att">conçue</span>{% endif %} <a class="btn sec petit" href="{{ url_for('prep_fiche_pdf', fid=f.id, telecharger=1) }}">PDF</a></li>{% endfor %}</ul>
+{% else %}<p class="aide">Aucune fiche pour ce choix.</p>{% endfor %}</section>
+
+<section id="r-resumes" class="carte"><h3>Résumés ({{ t.resumes|length }})</h3>
+{% if t.resumes %}<ul class="liste">{% for r in t.resumes[:200] %}<li>{% if not mat %}<span class="aide">{{ prep_nom_matiere(r.matiere) }} ·</span> {% endif %}<a href="{{ url_for('prep_resume', rid=r.id) }}">{{ r.titre }}</a> <span class="aide">{{ r.domaine }}</span></li>{% endfor %}</ul>
+{% if t.resumes|length > 200 %}<p class="aide">… liste complète : <a href="{{ url_for('prep_resumes', cours=cours, matiere=mat or none) }}">ouvrir les résumés</a></p>{% endif %}{% else %}<p class="aide">Aucun résumé pour ce choix.</p>{% endif %}</section>
+
+<section id="r-evaluations" class="carte"><h3>Évaluations et épreuves ({{ t.evaluations|length }})</h3>
+{% if t.evaluations %}<div class="tw"><table class="t"><thead><tr><th>Période</th><th>Épreuve</th><th>Durée</th><th></th></tr></thead><tbody>
+{% for e in t.evaluations %}<tr><td>{{ e.periode }}</td><td><a href="{{ url_for('prep_epreuve', cle=e.cle) }}">{{ e.discipline }}</a></td><td>{{ e.duree }}</td>
+<td><a class="btn sec petit" href="{{ url_for('prep_epreuve_pdf', cle=e.cle, telecharger=1) }}">Sujet PDF</a> <a class="btn sec petit" href="{{ url_for('prep_epreuve_pdf', cle=e.cle, partie='corrige', telecharger=1) }}">Corrigé PDF</a></td></tr>{% endfor %}
+</tbody></table></div>{% else %}<p class="aide">Aucune épreuve pour ce choix{% if cours == 'MAT' %} (la banque d'épreuves couvre le CI → CM2){% endif %}.</p>{% endif %}</section>
+
+<section id="r-guides" class="carte"><h3>Guides pédagogiques ({{ t.guides|length }})</h3>
+{% if t.guides %}<ul class="liste">{% for x in t.guides %}<li>{% if not mat %}<span class="aide">{{ prep_nom_matiere(x.matiere) }} ·</span> {% endif %}<a href="{{ url_for('prep_guide', gid=x.id) }}">{{ x.titre }}</a> <a class="btn sec petit" href="{{ url_for('prep_guide_pdf', gid=x.id) }}">PDF</a></li>{% endfor %}</ul>{% else %}<p class="aide">Aucun guide pour ce choix.</p>{% endif %}</section>
+
+<section id="r-programmes" class="carte"><h3>Programmes et progressions ({{ t.programmes|length }})</h3>
+{% if t.programmes %}<ul class="liste">{% for p in t.programmes %}<li>{% if not mat %}<span class="aide">{{ prep_nom_matiere(p.matiere) }} ·</span> {% endif %}<a href="{{ url_for('prep_programme', pid=p.id) }}">{{ 'Unité' if p.type == 'unite' else 'SA' }} {{ p.num or '' }} — {{ p.titre }}</a></li>{% endfor %}</ul>{% else %}<p class="aide">Pas de programme détaillé pour ce choix. <a href="{{ url_for('prep_programmes', cours=cours, matiere=mat or none) }}">Planification annuelle du cours</a>.</p>{% endif %}</section>
+{% endblock %}

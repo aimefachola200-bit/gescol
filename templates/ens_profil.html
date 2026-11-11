@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block titre %}Mon profil et mon école{% endblock %}
+{% block contenu %}
+<h1>Mon profil et mon école</h1>
+<p class="sous">Ces renseignements pré-remplissent vos certificats, attestations, bulletins et votre fiche de carrière.</p>
+<form method="post" class="f">
+  {% include "_ens_champs.html" %}
+  <p><button class="btn">Enregistrer</button> <a class="btn sec" href="{{ url_for('ens_tableau') }}">Annuler</a></p>
+</form>
+{% endblock %}

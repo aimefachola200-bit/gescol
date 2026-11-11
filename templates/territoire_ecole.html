@@ -1,0 +1,35 @@
+{# v2.3 — fiche signalétique de l'école : GPS, statut juridique, autorisation / agrément, eau, latrines, électricité, salles #}
+{% extends "base.html" %}{% block titre %}Fiche signalétique — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<h2 style="margin:0">Fiche signalétique de l'école</h2>
+<p class="aide">Ces renseignements sont repris dans la fiche statistique de rentrée. Laissez vides les indicateurs eau / latrines / électricité / salles pour utiliser ceux du patrimoine{% if calc %} (actuellement : {{ calc.salles }} salle(s), {{ calc.latrines }} cabine(s) de latrines, eau : {{ calc.pointEau }}, électricité : {{ calc.electricite }}){% endif %}.</p>
+<form method="post" class="grille-form">
+{% for k, lib in champs %}<div><label for="{{ k }}">{{ lib }}</label>
+{% if k == 'statutJuridique' %}<select id="{{ k }}" name="{{ k }}" {{ 'disabled' if not peut_ec }}><option value="">—</option>{% for o in statuts_jur %}<option {{ 'selected' if s.get(k) == o }}>{{ o }}</option>{% endfor %}</select>
+{% elif k in ('pointEau', 'electricite') %}<select id="{{ k }}" name="{{ k }}" {{ 'disabled' if not peut_ec }}><option value="">(patrimoine)</option>{% for o in ('Oui', 'Non') %}<option {{ 'selected' if s.get(k) == o }}>{{ o }}</option>{% endfor %}</select>
+{% elif k.startswith('date') %}<input type="date" id="{{ k }}" name="{{ k }}" value="{{ s.get(k, '') }}" {{ 'disabled' if not peut_ec }}>
+{% elif k in ('salles', 'latrines') %}<input type="number" min="0" id="{{ k }}" name="{{ k }}" value="{{ s.get(k, '') }}" placeholder="{{ calc.get(k, '') }}" {{ 'disabled' if not peut_ec }}>
+{% else %}<input id="{{ k }}" name="{{ k }}" value="{{ s.get(k, '') }}" maxlength="120" {{ 'inputmode=decimal' if k in ('latitude', 'longitude') }} {{ 'disabled' if not peut_ec }}>{% endif %}</div>{% endfor %}
+{% if peut_ec %}<div><button type="button" class="btn sec" id="position">{{ icone('lieu') }} Position actuelle</button> <span id="position-etat" class="aide"></span></div>
+<div><button class="btn">{{ icone('enregistrer') }} Enregistrer</button></div>{% endif %}
+</form>
+{% if s.get('latitude') not in (none, '') and s.get('longitude') not in (none, '') %}<p><a href="https://www.openstreetmap.org/?mlat={{ s.latitude }}&amp;mlon={{ s.longitude }}#map=16/{{ s.latitude }}/{{ s.longitude }}" target="_blank" rel="noopener">{{ icone('carte') }} Voir sur la carte</a></p>{% endif %}
+{% if prive %}<p class="aide">École privée : l'autorisation d'ouverture et l'agrément sont délivrés par le ministère ; reportez leurs numéros et dates.</p>{% endif %}
+<script>
+(function () {
+  var b = document.getElementById('position'); if (!b) return;
+  b.addEventListener('click', function () {
+    var e = document.getElementById('position-etat');
+    if (!navigator.geolocation) { e.textContent = 'Position non disponible sur cet appareil.'; return; }
+    e.textContent = 'Recherche de la position…';
+    navigator.geolocation.getCurrentPosition(function (p) {
+      document.getElementById('latitude').value = p.coords.latitude.toFixed(6);
+      document.getElementById('longitude').value = p.coords.longitude.toFixed(6);
+      e.textContent = 'Position relevée (précision ' + Math.round(p.coords.accuracy) + ' m) : enregistrez.';
+    }, function () { e.textContent = 'Position refusée ou indisponible.'; }, {enableHighAccuracy: true, timeout: 20000});
+  });
+})();
+</script>
+{% endblock %}

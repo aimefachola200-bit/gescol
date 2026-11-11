@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% block titre %}Registre des attestations{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Registre des attestations et certificats</h1>
+<p class="sous">{{ lignes|length }} document(s) — chaque document enregistré reçoit un numéro d'ordre et un code de vérification.</p></div>
+<div class="actions"><a class="btn sec" href="{{ url_for('jur_document_historique', export='xlsx', **f.to_dict()) }}">Excel</a>
+<a class="btn sec" href="{{ url_for('jur_documents') }}">← Documents</a></div></div>
+<form class="filtres carte" method="get">
+  <label>Année<br><select name="annee">{% for a in ([annee] + annees)|unique %}<option {{ 'selected' if a==annee }}>{{ a }}</option>{% endfor %}<option value="toutes" {{ 'selected' if annee=='toutes' }}>Toutes</option></select></label>
+  <label>Document<br><select name="type"><option value="">Tous</option>{% for k, d in DOCS.items() %}<option value="{{ k }}" {{ 'selected' if f.get('type')==k }}>{{ d.nom }}</option>{% endfor %}</select></label>
+  <label>Recherche<br><input name="q" value="{{ f.get('q') or '' }}" placeholder="nom, référence, code"></label>
+  <button class="btn sec">Filtrer</button>
+</form>
+<div class="tw"><table class="t compact">
+  <tr><th class="num">N°</th><th>Référence</th><th>Document</th><th>Signé</th><th>Code</th><th>Date</th><th>Par</th><th></th></tr>
+  {% for h in lignes %}
+  <tr><td class="num">{{ h.numero or '' }}</td><td>{{ h.ref }}</td><td>{{ h.libelle }}</td>
+    <td>{% if h.signe %}<span class="badge ok">oui</span>{% else %}<span class="badge">non</span>{% endif %}</td>
+    <td>{% if h.code %}<a href="{{ url_for('verifier', code=h.code) }}" target="_blank">{{ h.code }}</a>{% endif %}</td>
+    <td>{{ h.cree_le }}</td><td>{{ h.auteur or '' }}</td>
+    <td><a class="btn sec petit" target="_blank" href="{{ url_for('jur_document_reimprimer', hid=h.id) }}">Réimprimer</a></td></tr>
+  {% else %}<tr><td colspan="8" class="gris">Aucun document pour ces critères.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

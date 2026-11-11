@@ -1,0 +1,27 @@
+instance/
+venv/
+venv-build/
+build/
+dist/
+__pycache__/
+*.pyc
+packaging/android/.gradle/
+packaging/android/app/build/
+packaging/android/build/
+packaging/android_autonome/.gradle/
+packaging/android_autonome/app/build/
+packaging/android_autonome/build/
+packaging/android_autonome/app/src/main/assets/
+packaging/android_autonome/app/src/main/python/*
+!packaging/android_autonome/app/src/main/python/scolaris_android.py
+
+# Clés de signature : jamais dans le dépôt
+*.keystore
+!packaging/android/app/scolaris-signature.keystore
+!packaging/android_autonome/app/scolaris-signature.keystore
+*.jks
+packaging/memp_cp/android/app/src/main/assets/www/
+packaging/memp_cp/windows/www/
+packaging/memp_cp/windows/variante.json
+packaging/memp_cp/windows/dist/
+packaging/memp_cp/windows/build/

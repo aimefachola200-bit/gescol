@@ -1,0 +1,43 @@
+{# Champs du profil et de l'école de l'enseignant (assistant du premier lancement, « Mon profil et mon école ») #}
+<div class="carte">
+  <h2 style="margin-top:0">{{ icone('personne') }} Mon profil</h2>
+  <div class="grille-id">
+    <div><label for="nom">Nom *</label><input id="nom" name="nom" value="{{ f.nom }}" required></div>
+    <div><label for="prenoms">Prénoms *</label><input id="prenoms" name="prenoms" value="{{ f.prenoms }}" required></div>
+    <div><label for="sexe">Sexe *</label><select id="sexe" name="sexe" required><option value=""></option>
+      <option value="M" {{ 'selected' if f.sexe=='M' }}>Masculin</option><option value="F" {{ 'selected' if f.sexe=='F' }}>Féminin</option></select></div>
+    <div><label for="date_naissance">Date de naissance</label><input id="date_naissance" type="date" name="date_naissance" value="{{ f.date_naissance }}"></div>
+    <div><label for="lieu_naissance">Lieu de naissance</label><input id="lieu_naissance" name="lieu_naissance" value="{{ f.lieu_naissance }}"></div>
+    <div><label for="nip">NIP</label><input id="nip" name="nip" value="{{ f.nip }}" inputmode="numeric"></div>
+    <div><label for="matricule">Matricule</label><input id="matricule" name="matricule" value="{{ f.matricule }}"></div>
+    <div><label for="grade">Grade</label><input id="grade" name="grade" value="{{ f.grade }}" placeholder="ex. B1-5"></div>
+    <div><label for="categorie">Catégorie</label><select id="categorie" name="categorie"><option value=""></option>
+      {% for k, c in CATEGORIES %}<option value="{{ k }}" {{ 'selected' if f.categorie==k }}>{{ c }}</option>{% endfor %}</select></div>
+    <div><label for="statut">Statut</label><select id="statut" name="statut"><option value=""></option>
+      {% for c in STATUTS %}<option {{ 'selected' if f.statut==c }}>{{ c }}</option>{% endfor %}</select></div>
+    <div><label for="date_prise_service">Première prise de service</label><input id="date_prise_service" type="date" name="date_prise_service" value="{{ f.date_prise_service }}"></div>
+    <div><label for="date_service_ecole">Prise de service dans l'école</label><input id="date_service_ecole" type="date" name="date_service_ecole" value="{{ f.date_service_ecole }}"></div>
+    <div><label for="diplome_academique">Diplôme académique</label><input id="diplome_academique" name="diplome_academique" value="{{ f.diplome_academique }}" placeholder="ex. BAC D, Licence"></div>
+    <div><label for="diplome_academique_annee">Année</label><input id="diplome_academique_annee" name="diplome_academique_annee" value="{{ f.diplome_academique_annee }}" inputmode="numeric"></div>
+    <div><label for="diplome_pro">Diplôme professionnel</label><select id="diplome_pro" name="diplome_pro">
+      {% for c in DIPLOMES_PRO %}<option value="{{ c }}" {{ 'selected' if f.diplome_pro==c }}>{{ c or '—' }}</option>{% endfor %}</select></div>
+    <div><label for="diplome_pro_annee">Année</label><input id="diplome_pro_annee" name="diplome_pro_annee" value="{{ f.diplome_pro_annee }}" inputmode="numeric"></div>
+    <div><label for="telephone">Téléphone</label><input id="telephone" name="telephone" value="{{ f.telephone }}" inputmode="tel"></div>
+    <div><label for="email">E-mail</label><input id="email" type="email" name="email" value="{{ f.email }}"></div>
+  </div>
+</div>
+<div class="carte">
+  <h2 style="margin-top:0">{{ icone('ecole') }} Mon école</h2>
+  <div class="grille-id">
+    <div><label for="ecole_nom">Nom de l'école *</label><input id="ecole_nom" name="ecole_nom" value="{{ f.ecole_nom }}" required placeholder="ex. EPP Akpakpa Centre"></div>
+    <div><label for="secteur">Secteur *</label><select id="secteur" name="secteur" required>
+      <option value="publique" {{ 'selected' if f.secteur!='privee' }}>Public</option><option value="privee" {{ 'selected' if f.secteur=='privee' }}>Privé</option></select></div>
+    <div><label for="cs">Circonscription scolaire (CS)</label><input id="cs" name="cs" value="{{ f.cs }}"></div>
+    <div><label for="departement">DDEMP (département)</label><input id="departement" name="departement" value="{{ f.departement }}"></div>
+    <div><label for="commune">Commune</label><input id="commune" name="commune" value="{{ f.commune }}"></div>
+    <div><label for="directeur_nom">Directeur / directrice</label><input id="directeur_nom" name="directeur_nom" value="{{ f.directeur_nom }}"></div>
+    <div><label for="directeur_tel">Téléphone du directeur</label><input id="directeur_tel" name="directeur_tel" value="{{ f.directeur_tel }}" inputmode="tel"></div>
+    <div><label for="ecole_telephone">Téléphone de l'école</label><input id="ecole_telephone" name="ecole_telephone" value="{{ f.ecole_telephone }}" inputmode="tel"></div>
+    <div><label for="ccs_nom">Chef de la circonscription (CCS)</label><input id="ccs_nom" name="ccs_nom" value="{{ f.ccs_nom }}"></div>
+  </div>
+</div>

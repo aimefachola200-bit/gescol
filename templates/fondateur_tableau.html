@@ -1,0 +1,68 @@
+{% extends "base.html" %}{% block titre %}Tableau de bord du fondateur{% endblock %}
+{% block contenu %}
+<style>
+.fd-barre{height:10px;border-radius:6px;background:#F2F4F7;overflow:hidden;min-width:80px}
+.fd-barre span{display:block;height:100%;background:#12B76A}
+.fd-barre span.moyen{background:#F79009}.fd-barre span.faible{background:#D92D20}
+.fd-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--gris)}
+.fd-t td.num,.fd-t th.num{white-space:nowrap}
+.fd-leg i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:4px}
+</style>
+<div class="entete">
+  <div><h1>Tableau de bord du fondateur</h1>
+    <p class="sous">Indicateurs consolidés de toutes les écoles actives · année {{ ANNEE }} · situation au {{ date_fr(aujourdhui) }}</p></div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('fondateur_pdf') }}" target="_blank">PDF</a>
+    <a class="btn sec" href="{{ url_for('fondateur_xlsx') }}">Excel</a>
+  </div>
+</div>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Écoles actives</div><div class="v">{{ lignes|length }}</div><div class="d">{{ tot.classes }} classe(s) · {{ tot.enseignants }} enseignant(s) affecté(s)</div></div>
+  <div class="kpi"><div class="l">Élèves inscrits</div><div class="v">{{ tot.eleves }}</div><div class="d">{{ tot.f }} filles · {{ tot.m }} garçons</div></div>
+  <div class="kpi"><div class="l">Encaissé (scolarité)</div><div class="v vert">{{ fcfa(tot.encaisse) }}</div><div class="d">sur {{ fcfa(tot.attendu) }} attendus · {{ ('%.1f'|format(tot.taux)).replace('.', ',') }} %</div></div>
+  <div class="kpi"><div class="l">Impayés</div><div class="v {{ 'rouge' if tot.impaye }}">{{ fcfa(tot.impaye) }}</div><div class="d">{{ tot.nb_impayes }} élève(s) débiteur(s)</div></div>
+  <div class="kpi"><div class="l">Absents aujourd'hui</div><div class="v">{{ tot.absents }}</div><div class="d">{{ tot.appels }}/{{ tot.classes }} classe(s) appelée(s)</div></div>
+</div>
+
+{% if lignes %}
+<div class="tw"><table class="t fd-t">
+  <tr><th>École</th><th class="num">Élèves</th><th class="num">Filles</th><th class="num">Garçons</th><th class="num">Classes</th>
+    <th class="num">Attendu</th><th class="num">Encaissé</th><th class="num">Impayés</th><th>Recouvrement</th>
+    <th class="num">Présents</th><th class="num">Absents</th><th class="num">Appels</th><th class="num">Enseignants</th></tr>
+  {% for l in lignes %}
+  <tr><td><b>{{ l.ecole.nom }}</b>{% if l.ecole.commune %}<br><span class="aide">{{ l.ecole.commune }}</span>{% endif %}</td>
+    <td class="num">{{ l.eleves }}</td><td class="num">{{ l.f }}</td><td class="num">{{ l.m }}</td><td class="num">{{ l.classes }}</td>
+    <td class="num">{{ fcfa(l.attendu) }}</td><td class="num">{{ fcfa(l.encaisse) }}</td>
+    <td class="num {{ 'rouge' if l.impaye }}">{{ fcfa(l.impaye) }}<br><span class="aide">{{ l.nb_impayes }} élève(s)</span></td>
+    <td><div class="fd-barre" role="img" aria-label="{{ l.taux }} % recouvré"><span class="{{ 'faible' if l.taux < 40 else 'moyen' if l.taux < 75 }}" style="width:{{ [l.taux, 100]|min }}%"></span></div>
+      <span class="aide">{{ ('%.1f'|format(l.taux)).replace('.', ',') }} %</span></td>
+    <td class="num">{{ l.presents }}</td><td class="num">{{ l.absents }}</td><td class="num">{{ l.appels }}/{{ l.classes }}</td><td class="num">{{ l.enseignants }}</td></tr>
+  {% endfor %}
+  <tr style="font-weight:700;background:#F5F9FD"><td>TOTAL</td><td class="num">{{ tot.eleves }}</td><td class="num">{{ tot.f }}</td><td class="num">{{ tot.m }}</td><td class="num">{{ tot.classes }}</td>
+    <td class="num">{{ fcfa(tot.attendu) }}</td><td class="num">{{ fcfa(tot.encaisse) }}</td><td class="num">{{ fcfa(tot.impaye) }}</td>
+    <td>{{ ('%.1f'|format(tot.taux)).replace('.', ',') }} %</td><td class="num">{{ tot.presents }}</td><td class="num">{{ tot.absents }}</td>
+    <td class="num">{{ tot.appels }}/{{ tot.classes }}</td><td class="num">{{ tot.enseignants }}</td></tr>
+</table></div>
+
+{# Effectifs filles / garçons par école : SVG simple, sans bibliothèque #}
+{% set maxi = [lignes|map(attribute='eleves')|max, 1]|max %}
+{% set hl = 30 %}
+<h2>Effectifs par école</h2>
+<div class="carte">
+  <div class="fd-leg"><span><i style="background:#C11574"></i>Filles</span><span><i style="background:#2E6DA4"></i>Garçons</span></div>
+  <svg viewBox="0 0 640 {{ lignes|length * hl + 10 }}" width="100%" role="img" aria-label="Effectifs filles et garçons par école" style="max-width:760px;margin-top:8px">
+    {% for l in lignes %}{% set y = loop.index0 * hl + 5 %}
+    {% set wf = 330 * l.f / maxi %}{% set wm = 330 * l.m / maxi %}
+    <text x="0" y="{{ y + 15 }}" font-size="12" fill="#344054">{{ l.ecole.sigle or l.ecole.nom[:22] }}</text>
+    <rect x="170" y="{{ y + 3 }}" width="{{ wf }}" height="18" fill="#C11574"></rect>
+    <rect x="{{ 170 + wf }}" y="{{ y + 3 }}" width="{{ wm }}" height="18" fill="#2E6DA4"></rect>
+    <text x="{{ 176 + wf + wm }}" y="{{ y + 16 }}" font-size="12" fill="#344054">{{ l.eleves }} ({{ l.f }} F / {{ l.m }} G)</text>
+    {% endfor %}
+  </svg>
+</div>
+<p class="aide">Attendu = frais de scolarité de la classe × élèves inscrits ; encaissé = paiements non annulés de l'année ; impayés = reste dû des élèves inscrits.
+  Présents / absents : appel journalier et registre de présence du jour.</p>
+{% else %}
+<div class="carte gris">Aucune école active.</div>
+{% endif %}
+{% endblock %}

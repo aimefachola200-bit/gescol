@@ -1,0 +1,5 @@
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<form method="get" class="filtres actions" style="margin:6px 0 10px"><label>Session <select name="session" onchange="this.form.submit()">{% for x in sessions %}<option {{ 'selected' if x == s }}>{{ x }}</option>{% endfor %}</select></label>
+{% if centres is defined and centres %}<label>Centre <select name="centre" onchange="this.form.submit()"><option value="">Tous</option>{% for x in centres %}<option {{ 'selected' if x == centre }}>{{ x }}</option>{% endfor %}</select></label>{% endif %}
+<label>Autre session <input name="session" placeholder="CEP 2027" size="10"></label><button class="btn sec petit">OK</button></form>

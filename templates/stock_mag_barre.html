@@ -1,0 +1,7 @@
+{# sous-onglets du petit et du grand magasin (variable sous) #}
+<div class="onglets" style="margin:-4px 0 12px">
+  <a class="{{ 'actif' if sous == 'accueil' }}" href="{{ url_for('stock_mag_accueil', annee=annee) }}">Magasins et semaines</a>
+  <a class="{{ 'actif' if sous == 'bilan' }}" href="{{ url_for('stock_mag_bilan', annee=annee) }}">Bilans (jour, semaine, mois, année)</a>
+  <a class="{{ 'actif' if sous == 'fiche' }}" href="{{ url_for('stock_mag_fiche', annee=annee) }}">Fiche de stock par vivre</a>
+  {% if modifiable %}<a class="{{ 'actif' if sous == 'rations' }}" href="{{ url_for('stock_mag_rations') }}">Rations par élève</a>{% endif %}
+</div>

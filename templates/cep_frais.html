@@ -1,0 +1,59 @@
+{% extends "base.html" %}{% block titre %}Frais de dossier CEP{% endblock %}
+{% block contenu %}
+<style>
+.cepf td input[type=date]{width:150px;padding:4px 6px}
+.cepf tr.paye td{background:#ECFDF3}
+</style>
+<div class="entete">
+  <div><h1>Frais de dépôt de dossier du CEP – {{ ANNEE }}</h1>
+  <p class="sous">Candidats = élèves inscrits en CM2. Cochez les candidats qui ont payé (date du paiement) puis enregistrez.</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('cep_frais_pdf') }}" target="_blank">Liste PDF (tous)</a>
+    <a class="btn sec" href="{{ url_for('cep_frais_pdf', filtre='payes') }}" target="_blank">PDF – ont payé</a>
+    <a class="btn sec" href="{{ url_for('cep_frais_pdf', filtre='impayes') }}" target="_blank">PDF – n'ont pas payé</a>
+  </div>
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Montant par candidat</div><div class="v">{{ milliers(p.montant_cep) if p.montant_cep else '—' }}</div><div class="d">FCFA</div></div>
+  <div class="kpi"><div class="l">Candidats</div><div class="v">{{ d.nb }}</div><div class="d">dont {{ d.filles }} filles</div></div>
+  <div class="kpi"><div class="l">Ont payé</div><div class="v vert">{{ d.payes }}</div><div class="d">non payé : {{ d.nb - d.payes }}</div></div>
+  <div class="kpi"><div class="l">Total encaissé</div><div class="v">{{ milliers(d.total) }}</div><div class="d">FCFA</div></div>
+</div>
+
+<form method="post" class="f carte" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+  <input type="hidden" name="action" value="montant">
+  <div><label for="c-mt">Montant du dossier par candidat (FCFA), fixé par l'école</label>
+    <input id="c-mt" name="montant_cep" inputmode="numeric" value="{{ p.montant_cep or '' }}" required placeholder="ex. 2 000" style="width:180px"></div>
+  <button class="btn sec">Enregistrer le montant</button>
+  <span class="aide">Un changement de montant ne modifie pas les paiements déjà enregistrés.</span>
+</form>
+
+{% if not d.nb %}
+<div class="carte">Aucun candidat : aucun élève n'est inscrit dans une classe de CM2 de l'école.</div>
+{% elif not p.montant_cep %}
+<div class="flash warning">Fixez d'abord le montant du dossier par candidat pour pouvoir enregistrer les paiements.</div>
+{% endif %}
+
+{% if d.nb %}
+<form method="post" data-coches>
+  <input type="hidden" name="action" value="paiements">
+  {% for gr in d.groupes if gr.eleves %}
+  <h2>{{ gr.c.nom }} <span class="aide">({{ gr.eleves|length }} candidat(s))</span></h2>
+  <div class="tw"><table class="t cepf">
+    <thead><tr><th>N°</th><th>Nom et prénoms</th><th class="c">Sexe</th><th class="c">Payé</th><th>Date du paiement</th><th class="num">Montant</th></tr></thead>
+    <tbody>{% for x in gr.eleves %}
+    <tr class="{{ 'paye' if x.p }}"><td>{{ loop.index }}</td><td>{{ x.e.nom }} {{ x.e.prenoms }}</td><td class="c">{{ x.e.sexe }}</td>
+      <td class="c"><input type="checkbox" name="p_{{ x.e.id }}" value="1" {{ 'checked' if x.p }} aria-label="Payé : {{ x.e.nom }} {{ x.e.prenoms }}"></td>
+      <td><input type="date" name="d_{{ x.e.id }}" value="{{ x.p.date if x.p else aujourdhui }}" max="{{ aujourdhui }}" aria-label="Date du paiement"></td>
+      <td class="num">{{ milliers(x.p.montant) if x.p else '' }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% endfor %}
+  <p class="actions"><button class="btn sec petit" type="button" data-cocher="1">Tout cocher</button>
+    <button class="btn sec petit" type="button" data-cocher="0">Tout décocher</button>
+    <button class="btn vert" {{ 'disabled' if not p.montant_cep }}>Enregistrer les paiements</button></p>
+  <p class="aide">Case cochée = frais payé à la date indiquée (par défaut aujourd'hui). Décocher une case retire le paiement. Ces frais comptent dans les fonds reçus et dans la trésorerie.</p>
+</form>
+{% endif %}
+{% endblock %}

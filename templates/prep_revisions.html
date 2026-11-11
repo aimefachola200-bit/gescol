@@ -1,0 +1,36 @@
+{# v1.31 — Cahiers de révision des disciplines d'éveil (ES, EST) : CM1 et CM2 (classe d'examen) #}
+{% extends "base.html" %}{% block titre %}Révisions d'éveil{% if rv %} — {{ rv.cours }}{% endif %}{% endblock %}
+{% block contenu %}{% set onglet = 'revisions' %}{% include "_prep_onglets.html" %}
+<p class="aide">Cahiers originaux organisés selon la progression : je retiens, questions-réponses du type CEP, schéma, exercices corrigés, puis sujets type CEP avec barème et corrigé. Impression en Times New Roman 14 pt.</p>
+<div class="actions" style="margin:6px 0 12px">{% for x in revisions %}<a class="btn {{ '' if rv and rv.id == x.id else 'sec' }} petit" href="{{ url_for('prep_revision', rid=x.id) }}">{{ x.cours }}</a>{% endfor %}</div>
+{% if not rv %}
+<div class="tw"><table class="t"><thead><tr><th>Cours</th><th>Cahier</th><th>Sections</th><th>Sujets</th><th>Télécharger</th></tr></thead><tbody>
+{% for x in revisions %}<tr><td>{{ x.cours }}</td><td><a href="{{ url_for('prep_revision', rid=x.id) }}">{{ x.titre }}</a></td><td>{{ x.sections|length }}</td><td>{{ x.sujets|length }}</td>
+<td><a class="btn petit" href="{{ url_for('prep_revision_pdf', rid=x.id) }}">PDF enseignant</a> <a class="btn sec petit" href="{{ url_for('prep_revision_pdf', rid=x.id, eleve=1) }}">PDF élève</a></td></tr>{% endfor %}
+</tbody></table></div>
+{% else %}
+<div class="actions" style="margin:4px 0 10px">
+  <a class="btn petit" href="{{ url_for('prep_revision_pdf', rid=rv.id, eleve=1 if eleve else None) }}">{{ icone('document') }} Cahier complet (PDF {{ 'élève' if eleve else 'enseignant' }})</a>
+  <a class="btn sec petit" href="{{ url_for('prep_revision_pdf', rid=rv.id, partie='es', eleve=1 if eleve else None) }}">Éducation sociale</a>
+  <a class="btn sec petit" href="{{ url_for('prep_revision_pdf', rid=rv.id, partie='est', eleve=1 if eleve else None) }}">EST</a>
+  {% if eleve %}<a class="btn sec petit" href="{{ url_for('prep_revision', rid=rv.id) }}">Version enseignant</a>{% else %}<a class="btn sec petit" href="{{ url_for('prep_revision', rid=rv.id, eleve=1) }}">Version élève</a>{% endif %}
+</div>
+<h2>{{ rv.titre }}</h2><p>{{ rv.intro }}</p>
+{% for m, lib in [('es', 'Éducation sociale'), ('est', 'Éducation scientifique et technologique')] %}
+<h2>{{ lib }}</h2>
+{% for x in rv.sections if x.matiere == m %}
+<article class="carte" style="margin-bottom:10px"><h3>SA {{ x.sa }} — {{ x.titre }}</h3>
+  <div style="background:#EEF4FB;border:1px solid #1F4E79;border-radius:6px;padding:8px 10px;margin:6px 0"><b>Je retiens</b><br>{{ x.je_retiens }}</div>
+  <h4>Questions-réponses du type CEP</h4><ol>{% for qr in x.qr %}<li>{{ qr.q }}{% if not eleve %}<br><i style="color:#067647">{{ qr.r }}</i>{% endif %}</li>{% endfor %}</ol>
+  <h4>Schéma à savoir reproduire</h4><p>{{ x.schema }}</p>
+  <h4>Exercices</h4><ol>{% for e in x.exercices %}<li>{{ e.q }}{% if not eleve %}<br><i style="color:#067647">Corrigé : {{ e.r }}</i>{% endif %}</li>{% endfor %}</ol>
+</article>{% endfor %}{% endfor %}
+<h2>Sujets type CEP</h2>
+{% for sj in rv.sujets %}<article class="carte" style="margin-bottom:10px"><h3>{{ sj.titre }} — /{{ sj.total }}</h3>
+  <p><b>Contexte.</b> {{ sj.contexte }}</p><p><b>Tâche.</b> {{ sj.tache }}</p>
+  {% for c in sj.consignes %}<h4>{{ c.titre }} ({{ c.questions|sum(attribute='pts') }} pts)</h4><ol>{% for q in c.questions %}<li>{{ q.q }} <span class="aide">({{ q.pts }} pts)</span>{% if not eleve %}<br><i style="color:#067647">Corrigé : {{ q.r }}</i>{% endif %}</li>{% endfor %}</ol>{% endfor %}
+  <a class="btn petit" href="{{ url_for('prep_revision_pdf', rid=rv.id, sujet=loop.index, eleve=1 if eleve else None) }}">PDF de ce sujet</a>
+</article>{% endfor %}
+{% if not eleve %}<p class="aide"><b>Sources :</b> {{ rv.sources|join(' ; ') }} — faits institutionnels vérifiés le {{ rv.date_faits }}.</p><p class="aide">{{ rv.mention }}</p>{% endif %}
+{% endif %}
+{% endblock %}

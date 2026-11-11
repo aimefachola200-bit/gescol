@@ -1,0 +1,12 @@
+{# Édition publique : liste du personnel avec les renseignements de carrière (inclus par personnel.html) #}
+<div class="tw"><table class="t">
+  <tr><th>Matricule</th><th>NIP</th><th>Nom et prénoms</th><th>Catégorie</th><th>Fonction</th><th>Grade</th><th>Téléphone</th><th>Compte lié</th><th>Dossier</th><th></th></tr>
+  {% for p in lst %}
+  <tr style="{{ 'opacity:.55' if not p.actif }}"><td>{{ p.matricule }}</td><td>{{ p.nip or '' }}</td><td><b>{{ p.nom }}</b> {{ p.prenoms }}</td>
+    <td>{{ p.categorie_lib }}</td><td>{{ p.fonction }}</td><td>{{ p.grade or '' }}</td><td>{{ affiche_tel(p.telephone) if p.telephone else '' }}</td>
+    <td>{{ 'oui' if p.user_id else '—' }}</td>
+    <td>{% if p.incomplet %}<span class="badge att" title="{{ p.manquants|join(', ') }}">incomplet</span>{% else %}<span class="badge ok">complet</span>{% endif %}</td>
+    <td class="num" style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('carriere_fiche', pid=p.id) }}">Carrière</a>
+      <a class="btn sec petit" href="{{ url_for('personnel_form', pid=p.id) }}">Modifier</a></td></tr>
+  {% else %}<tr><td colspan="10" class="gris">Aucune fiche. Ajoutez les enseignants et le personnel de l'école.</td></tr>{% endfor %}
+</table></div>

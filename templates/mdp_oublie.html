@@ -1,0 +1,46 @@
+{% extends "base.html" %}{% block titre %}Mot de passe oublié{% endblock %}
+{% block contenu %}
+<div class="login carte" style="max-width:520px">
+  <h1>{{ icone('cle') }} Mot de passe oublié</h1>
+  {% if etape == 'ident' %}
+  <p class="sous">Indiquez votre identifiant de connexion.</p>
+  <form method="post" class="f">
+    <label for="mo-id">Identifiant</label><input id="mo-id" name="identifiant" required autofocus autocomplete="username">
+    <p><button class="btn" style="width:100%">Continuer</button></p>
+  </form>
+  {% elif etape == 'nouveau' %}
+  <p class="sous">Réponse correcte. Choisissez votre nouveau mot de passe.</p>
+  <form method="post" class="f">
+    <input type="hidden" name="identifiant" value="{{ ident }}"><input type="hidden" name="action" value="nouveau">
+    <label for="mo-n1">Nouveau mot de passe (8 caractères minimum)</label><input id="mo-n1" type="password" name="nouveau" required minlength="8" autocomplete="new-password">
+    <label for="mo-n2">Confirmation</label><input id="mo-n2" type="password" name="confirmation" required minlength="8" autocomplete="new-password">
+    <p><button class="btn" style="width:100%">Enregistrer le nouveau mot de passe</button></p>
+  </form>
+  {% elif etape == 'envoyee' %}
+  <p>Votre demande est enregistrée. L'administrateur (ou le directeur) la voit dans <b>Administration → Utilisateurs</b> et vous remettra un mot de passe provisoire ; vous en choisirez un nouveau à la connexion.</p>
+  {% if wa %}<p><a class="btn sec" href="{{ wa }}" target="_blank" rel="noopener">{{ icone('message') }} Prévenir l'école par WhatsApp</a></p>{% endif %}
+  {% else %}
+  <p class="sous">Identifiant : <b>{{ ident }}</b> · <a href="{{ url_for('mdp_oublie') }}">changer</a></p>
+  {% if question %}
+  <h2 style="font-size:1.05em">1. Répondre à ma question de secours</h2>
+  <form method="post" class="f">
+    <input type="hidden" name="identifiant" value="{{ ident }}"><input type="hidden" name="action" value="repondre">
+    <label for="mo-rep">{{ question }}</label><input id="mo-rep" name="reponse" required autocomplete="off">
+    <p><button class="btn" style="width:100%">Vérifier ma réponse</button></p>
+  </form>
+  <h2 style="font-size:1.05em">2. Ou demander un mot de passe provisoire</h2>
+  {% else %}
+  <p class="aide">Aucune question de secours n'est enregistrée pour ce compte (on la définit dans « Mon compte »). Demandez un mot de passe provisoire à l'administrateur :</p>
+  {% endif %}
+  <form method="post" class="f">
+    <input type="hidden" name="identifiant" value="{{ ident }}"><input type="hidden" name="action" value="demande">
+    <label for="mo-nom">Nom et prénoms</label><input id="mo-nom" name="nom" maxlength="120">
+    <label for="mo-tel">Téléphone / WhatsApp (pour vous joindre)</label><input id="mo-tel" name="contact" maxlength="60" inputmode="tel">
+    <label for="mo-msg">Message (facultatif)</label><textarea id="mo-msg" name="message" rows="2" maxlength="500"></textarea>
+    <p><button class="btn sec" style="width:100%">Envoyer la demande à l'administrateur</button></p>
+  </form>
+  {% if wa %}<p><a class="btn sec" href="{{ wa }}" target="_blank" rel="noopener">{{ icone('message') }} Écrire à l'école par WhatsApp</a></p>{% endif %}
+  {% endif %}
+  <p class="aide"><a href="{{ url_for('login') }}">← Retour à la connexion</a></p>
+</div>
+{% endblock %}

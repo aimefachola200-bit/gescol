@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% block titre %}Codes d'accès des comptes{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone('verrou') }} Codes d'accès des comptes</h1>
+  <p class="sous">{{ appli }} · installation {{ installation }} · {{ lignes|selectattr('ok')|list|length }} compte(s) autorisé(s) sur {{ lignes|length }}</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('acces_page') }}">Mon code</a></div>
+</div>
+{% if manquants %}
+<div class="carte">
+  <p><b>{{ manquants|length }}</b> compte(s) sans code d'accès.{% if reste > 0 %} Délai restant : <b>{{ reste }} jour(s)</b>.{% else %} <b class="rouge">Délai écoulé : ces comptes sont bloqués.</b>{% endif %}
+  Envoyez toutes les demandes d'un coup à Maître Aimé FACHOLA, puis collez ci-dessous la réponse reçue (une ligne par compte).</p>
+  <pre id="demandes" style="white-space:pre-wrap;background:#F2F4F7;border-radius:8px;padding:10px 12px;font-size:13px;max-height:240px;overflow:auto">{{ manquants|join('\n') }}</pre>
+  <div class="actions">
+    <a class="btn wa" href="{{ lien_wa }}" target="_blank" rel="noopener">{{ icone('message') }} Envoyer les demandes par WhatsApp</a>
+    <button type="button" class="btn sec" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('demandes').textContent).then(function(){SCOLARIS.toast('Demandes copiées.')})">{{ icone('presse_papiers') }} Copier les demandes</button>
+  </div>
+  <form method="post" class="f" style="margin-top:12px">
+    <label for="codes">Codes reçus (lignes « compte : CODE »)</label>
+    <textarea id="codes" name="codes" rows="6" required spellcheck="false" placeholder="directeur : XXXXX-XXXXX-…&#10;enseignant : XXXXX-XXXXX-…"></textarea>
+    <button class="btn">Enregistrer les codes</button>
+  </form>
+</div>
+{% endif %}
+<div class="tw"><table class="t compact">
+  <tr><th>Compte</th><th>Nom</th><th>Rôle</th><th>Code d'accès</th></tr>
+  {% for x in lignes %}<tr><td><b>{{ x.c.identifiant }}</b></td><td>{{ x.c.nom }}</td><td>{{ ROLES.get(x.c.role, x.c.role) }}</td>
+    <td>{% if x.ok %}<span class="badge ok">autorisé</span>{% else %}<span class="badge ko">à demander</span>{% endif %}</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{# v1.25 — Logo de l'UASCEP d'une entité : texte du haut, définition du sigle, texte du bas, couleurs, ou logo importé #}
+{% extends "base.html" %}{% block titre %}Logo UASCEP{% endblock %}
+{% block contenu %}
+<p><a href="{{ url_for('uascep', onglet=niveau, entite=entite) }}">← Bureau {{ NIV_LIB[niveau] }} : {{ lib }}</a></p>
+<div class="entete"><div><h1>Logo de l'UASCEP</h1><p class="sous">{{ NIV_LIB[niveau] }} : {{ lib }} — logo placé sur tous les documents du bureau et du sport scolaire</p></div>
+<div class="actions"><a class="btn sec petit" href="{{ url_for('uascep_logo_fichier', niveau=niveau, entite=entite, fmt='svg') }}">Télécharger le SVG</a>
+<a class="btn sec petit" href="{{ url_for('uascep_logo_fichier', niveau=niveau, entite=entite, fmt='png') }}">Télécharger le PNG (800 × 800)</a></div></div>
+<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start">
+<div class="carte" style="text-align:center"><div id="logo-apercu" aria-label="Aperçu du logo">{% if img %}<img src="{{ img }}" alt="Logo importé" style="max-width:260px;max-height:260px">{% else %}{{ svg|safe }}{% endif %}</div>
+{% if img %}<p class="aide">Logo importé (il remplace le dessin).</p>{% endif %}</div>
+{% if peut_ecrire %}
+<form method="post" enctype="multipart/form-data" class="carte" style="flex:1;min-width:min(100%,300px)">
+<label>Texte du haut <input name="haut" id="lg-haut" value="{{ p.haut }}" maxlength="20"></label>
+<label>Définition du sigle (sous « {{ p.haut }} ») <input name="definition" id="lg-def" value="{{ p.definition }}"></label>
+<label>Texte du bas <input name="bas" id="lg-bas" value="{{ p.bas }}" placeholder="{{ bas_defaut }}"></label>
+<div style="display:flex;gap:12px;flex-wrap:wrap">
+<label>Anneau <input type="color" name="c1" id="lg-c1" value="{{ p.c1 }}"></label>
+<label>Lettres et filets <input type="color" name="c2" id="lg-c2" value="{{ p.c2 }}"></label>
+<label>Piste <input type="color" name="c3" id="lg-c3" value="{{ p.c3 }}"></label></div>
+<label>Importer un logo personnalisé (PNG ou JPEG, 400 Ko au plus) <input type="file" name="logo_fichier" accept="image/png,image/jpeg"></label>
+{% if img %}<label><input type="checkbox" name="retirer_image" value="1"> Retirer le logo importé (revenir au dessin)</label>{% endif %}
+<p class="actions"><button class="btn">Enregistrer</button>
+<button class="btn sec" name="reinitialiser" value="1" onclick="return confirm('Revenir au logo par défaut ?')">Réinitialiser</button></p>
+<p class="aide">Par défaut : « {{ defaut.haut }} », « {{ defaut.definition }} », bas « {{ bas_defaut }} ».</p>
+</form>
+<script>
+(function(){var ap=document.getElementById('logo-apercu');if(!ap||ap.querySelector('img'))return;
+function maj(){var s=ap.querySelector('svg');if(!s)return;var t=s.querySelectorAll('textPath');
+ var h=document.getElementById('lg-haut').value,b=document.getElementById('lg-bas').value,d=document.getElementById('lg-def').value;
+ var c1=document.getElementById('lg-c1').value,c2=document.getElementById('lg-c2').value,c3=document.getElementById('lg-c3').value;
+ if(t[0])t[0].textContent=h; if(t[2])t[2].textContent=b;
+ if(t[1]){t[1].textContent='';d.split(/\s+/).filter(Boolean).forEach(function(m,i){if(i)t[1].appendChild(document.createTextNode(' '));
+  var petit=/^(des|de|du|et|la|le|les|d|l|à|au|aux|en)$/i.test(m.replace(/['’]/g,''));var M=m.toUpperCase();
+  if(petit){t[1].appendChild(document.createTextNode(M));return;}
+  var sp=document.createElementNS('http://www.w3.org/2000/svg','tspan');sp.setAttribute('fill',c2);sp.setAttribute('font-weight','900');sp.textContent=M.charAt(0);
+  t[1].appendChild(sp);t[1].appendChild(document.createTextNode(M.slice(1)));});}
+ var cs=s.querySelectorAll('circle');if(cs[0])cs[0].setAttribute('fill',c1);if(cs[1])cs[1].setAttribute('stroke',c2);if(cs[2])cs[2].setAttribute('stroke',c2);
+ s.querySelectorAll('circle[r="7"]').forEach(function(c){c.setAttribute('fill',c2);});
+ var p=s.querySelectorAll('g path');if(p[0])p[0].setAttribute('stroke',c3);if(p[1])p[1].setAttribute('stroke',c3);}
+['lg-haut','lg-bas','lg-def','lg-c1','lg-c2','lg-c3'].forEach(function(i){var e=document.getElementById(i);if(e)e.addEventListener('input',maj);});})();
+</script>
+{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{# v2.3 — arbre des structures administratives (référentiel modifiable comme des données) #}
+{% extends "base.html" %}{% block titre %}Arbre des structures — {{ G.titre }}{% endblock %}
+{% macro branche(n) %}<li><b>{{ n.x.nom }}</b>{% if n.x.sigle %} ({{ n.x.sigle }}){% endif %} <span class="aide">{{ n.x.type or '' }}{% if n.x.responsable %} · {{ n.x.responsable }}{% endif %}{% if n.x.active == 'Non' %} · inactive{% endif %}</span>
+{% if n.enfants %}<ul>{% for e in n.enfants %}{{ branche(e) }}{% endfor %}</ul>{% endif %}</li>{% endmacro %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<h2 style="margin:0">Arbre des structures administratives</h2>
+<p class="aide">Ministère → directions → DDEMP → services → circonscriptions scolaires → divisions. Les structures se saisissent dans l'onglet « Référentiel des structures » (rattachement à une structure déjà saisie).</p>
+{% if arbre %}<ul class="arbre">{% for n in arbre %}{{ branche(n) }}{% endfor %}</ul>
+{% else %}<p class="aide">Aucune structure saisie.</p>
+{% if jur and peut_ecrire %}<form method="post"><button class="btn">{{ icone('ajouter') }} Créer le départ de l'arbre (ministère, cette structure et ses services)</button></form>{% endif %}{% endif %}
+<p><a class="btn sec" href="{{ url_for('reg_page', gcle='territoire', rcle='structures') }}">{{ icone('modifier') }} Modifier le référentiel</a></p>
+{% endblock %}

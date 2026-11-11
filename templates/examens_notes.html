@@ -1,0 +1,16 @@
+{# v1.27 — saisie des notes du CEP (absent : ABS) #}
+{% extends "base.html" %}{% block titre %}Notes — {{ G.titre }}{% endblock %}
+{% block contenu %}
+{% include "_examens_entete.html" %}
+<div class="entete" style="margin-bottom:6px"><div><h2 style="margin:0">Saisie des notes — {{ s }}{{ ' — ' ~ centre if centre }}</h2><p class="aide">Une note par épreuve ; un absent s'écrit « ABS ». Feuille Excel « Notes » : N° de table · Nom · Prénoms · Sexe · École · une colonne par épreuve.</p></div>
+<div class="actions"><a class="btn sec petit" href="{{ url_for('examens_notes_xlsx', session=s, centre=centre or None) }}">{{ icone('graphique') }} Excel « Notes »</a>
+{% if peut_ecrire %}<form method="post" enctype="multipart/form-data" action="{{ url_for('examens_notes_import', session=s) }}" style="display:inline"><label class="btn sec petit" style="cursor:pointer">{{ icone('importer') }} Importer les notes<input type="file" name="fichier" accept=".xlsx" hidden onchange="this.form.submit()"></label></form>{% endif %}</div></div>
+{% if not epreuves %}<p class="flash warning">Aucune épreuve pour cette session : créez-les dans l'onglet Session CEP.</p>{% endif %}
+<form method="post"><input type="hidden" name="session" value="{{ s }}"><input type="hidden" name="centre" value="{{ centre }}">
+<div class="tw"><table class="t" aria-label="Notes"><thead><tr><th>N° de table</th><th>Candidat</th><th>S</th><th>École</th>{% for e in epreuves %}<th title="coef. {{ '%g' % (e.coefficient or 1) }}, sur {{ '%g' % (e.bareme or 20) }}">{{ e.epreuve }}</th>{% endfor %}</tr></thead><tbody>
+{% for c in cands %}<tr><td>{{ c.numeroTable or '' }}</td><td>{{ c.nom }} {{ c.prenoms or '' }}{% if c.statut and c.statut != 'Inscrit' %} <span class="aide">({{ c.statut }})</span>{% endif %}</td><td>{{ c.sexe or '' }}</td><td>{{ c.entite or '' }}</td>
+{% for e in epreuves %}{% set v = c.n.get(e.id|string) %}<td><input name="n_{{ c.id }}_{{ e.id }}" value="{{ '' if v is none else (('%g' % v)|replace('.', ',') if v is number else v) }}" size="4" inputmode="decimal" {{ 'disabled' if not peut_ecrire }} aria-label="{{ e.epreuve }} — {{ c.nom }}"></td>{% endfor %}</tr>
+{% else %}<tr><td colspan="30" class="aide">Aucun candidat.</td></tr>{% endfor %}
+</tbody></table></div>
+{% if peut_ecrire and cands and epreuves %}<p><button class="btn">{{ icone('enregistrer') }} Enregistrer les notes</button></p>{% endif %}</form>
+{% endblock %}

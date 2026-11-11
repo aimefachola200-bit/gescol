@@ -1,0 +1,34 @@
+{# Affichage en lecture d'une fiche (vue_lecture de m_recensement / m_rapports) #}
+{% macro style() %}
+<style>
+.jv-sec{margin-bottom:14px}
+.jv-sec h3{background:#FFF7C2;border:1px solid #E5D36A;padding:5px 8px;font-size:14px;margin:0 0 6px}
+.jv-ch{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:2px 18px;font-size:13px}
+.jv-ch div{border-bottom:1px dotted #D0D5DD;padding:2px 0}
+.jv-ch .n{color:#1F4E79;font-weight:700;margin-right:4px}
+.jv-ch .v{color:#0B3A8C;font-weight:600}
+table.jv-t{border-collapse:collapse;font-size:11.5px;margin:6px 0}
+table.jv-t th{background:#EEF2F6;border:1px solid #98A2B3;padding:3px;font-weight:600;text-align:center}
+table.jv-t td{border:1px solid #D0D5DD;padding:2px 4px;text-align:center;color:#0B3A8C}
+table.jv-t td.l{text-align:left;color:#101828;background:#F9FAFB;min-width:120px}
+table.jv-t td.g{background:#948A85}
+table.jv-t tr.b td{font-weight:700}
+</style>
+{% endmacro %}
+{% macro fiche(vue) %}
+{% for s in vue %}<section class="jv-sec carte">
+  <h3>{{ s.titre }}</h3>
+  {% if s.champs %}<div class="jv-ch">{% for num, lib, val in s.champs %}<div>{% if num %}<span class="n">{{ num }}</span>{% endif %}{{ lib }} : <span class="v">{{ val if val != '' else '—' }}</span></div>{% endfor %}</div>{% endif %}
+  {% for t in s.tableaux %}<div class="tw"><table class="jv-t">
+    {% for ligne in t.entete %}<tr>{% for c in ligne %}<th colspan="{{ c.cs }}" rowspan="{{ c.rs }}">{{ c.txt }}</th>{% endfor %}</tr>{% endfor %}
+    {% for l in t.lignes %}<tr class="{{ 'b' if l.st == 'b' }}"><td class="l">{{ l.lib }}</td>{% for c in l.cells %}{% if c is none %}<td class="g"></td>{% else %}<td>{{ c }}</td>{% endif %}{% endfor %}</tr>
+    {% else %}<tr><td class="l" colspan="{{ t.colonnes|length + 1 }}">Aucune ligne renseignée.</td></tr>{% endfor %}
+  </table></div>{% endfor %}
+</section>{% endfor %}
+{% endmacro %}
+{% macro controles(liste) %}
+{% if liste %}<div class="flash warning"><b>Contrôles de cohérence ({{ liste|length }})</b><ul style="margin:4px 0 0 18px">
+  {% for niv, m in liste[:80] %}<li style="color:{{ '#B42318' if niv == 'danger' else '#B54708' }}">{{ m }}</li>{% endfor %}
+  {% if liste|length > 80 %}<li>… et {{ liste|length - 80 }} autre(s) (voir l'export Excel, feuille « Contrôles »).</li>{% endif %}</ul></div>
+{% else %}<div class="flash success">Aucune incohérence détectée.</div>{% endif %}
+{% endmacro %}

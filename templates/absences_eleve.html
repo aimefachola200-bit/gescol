@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block titre %}Absences {{ e.prenoms }}{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Absences – {{ e.nom }} {{ e.prenoms }}</h1><p class="sous">{{ tot.absent }} absence(s) dont {{ tot.justifie }} justifiée(s) · {{ tot.retard }} retard(s) depuis la rentrée</p></div>
+  <a class="btn sec" href="{{ url_for('eleve_detail', eid=e.id) }}">← Fiche de l'élève</a>
+</div>
+<div class="tw"><table class="t">
+  <tr><th>Date</th><th>Type</th><th>Motif et justification</th></tr>
+  {% for a in lst %}
+  <tr><td>{{ date_longue(a.date) }}</td><td>{{ 'Absence' if a.statut=='absent' else 'Retard' }}</td>
+    <td><form method="post" class="filtres" style="margin:0"><input type="hidden" name="id" value="{{ a.id }}">
+      <input name="motif" value="{{ a.motif or '' }}" placeholder="Motif" style="min-width:200px">
+      <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="justifie" {{ 'checked' if a.justifie }}> Justifiée</label>
+      <button class="btn sec petit">Enregistrer</button></form></td></tr>
+  {% else %}<tr><td colspan="3" class="gris">Aucune absence cette année.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

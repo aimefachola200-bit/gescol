@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block titre %}Directeurs des écoles{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone('personne') }} Directeurs des écoles</h1><p class="sous">Titre, nom et prénoms, téléphones — saisis en un seul tableau, pour toutes les écoles</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_saisie') }}">← Saisie manuelle</a></div></div>
+{% if JUR_NIVEAU=='ddemp' %}<form method="get" class="filtres"><label for="sd-cs">Circonscription<br><select id="sd-cs" name="cs" onchange="this.form.submit()"><option value="">Toutes</option>
+  {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if cs_id == c.id }}>{{ c.nom }}</option>{% endfor %}</select></label></form>{% endif %}
+<form method="post"><div class="tw"><table class="t">
+  <tr><th>École</th><th>Zone</th><th>Titre</th><th>Nom et prénoms du directeur / de la directrice</th><th>Téléphone du directeur</th><th>Téléphone de l'école</th></tr>
+  {% for e in ecoles %}<tr><td>{{ e.nom }}</td><td>{{ e.zone_nom or '' }}</td>
+    <td><select name="titre_{{ e.id }}" aria-label="Titre"><option value=""></option>{% for t in ('Le Directeur', 'La Directrice') %}<option {{ 'selected' if e.directeur_titre == t }}>{{ t }}</option>{% endfor %}</select></td>
+    <td><input name="nom_{{ e.id }}" value="{{ e.directeur_nom or '' }}" aria-label="Directeur de {{ e.nom }}" style="width:100%"></td>
+    <td><input name="tel_{{ e.id }}" value="{{ e.directeur_tel or '' }}" aria-label="Téléphone du directeur"></td>
+    <td><input name="telecole_{{ e.id }}" value="{{ e.telephone or '' }}" aria-label="Téléphone de l'école"></td></tr>{% endfor %}
+</table></div>
+<div class="actions" style="margin-top:8px"><button class="btn vert">{{ icone('enregistrer') }} Enregistrer les directeurs</button></div></form>
+{% endblock %}

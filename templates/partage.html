@@ -1,0 +1,13 @@
+{# v1.33 — versions partagées de l'école (épreuves, fiches, résumés) #}
+{% extends "base.html" %}{% block titre %}Versions partagées de l'école{% endblock %}
+{% block contenu %}{% if ep_existe('prep_accueil') %}{% set onglet = 'partage' %}{% include "_prep_onglets.html" %}{% endif %}
+<div class="entete"><div><h1>{{ icone('echanger', 26) }} Versions partagées de l'école</h1>
+<p class="sous">Épreuves modifiées, fiches de préparation partagées et résumés adaptés : tous les comptes de l'école voient la même version. Chaque enregistrement est gardé (auteur, date) : on peut revenir à une version précédente ou la proposer à la CS / DDEMP.</p></div></div>
+<form method="get" class="filtres"><label>Type <select name="type" onchange="this.form.submit()"><option value="">Tous</option>{% for k, T in TYPES.items() %}<option value="{{ k }}" {{ 'selected' if k == t }}>{{ T.libelle }}</option>{% endfor %}</select></label></form>
+{% if rows %}<div class="tw"><table class="t" aria-label="Versions"><thead><tr><th>Type</th><th>Élément</th><th>Dernière version</th><th>Auteur</th><th>Versions</th><th></th></tr></thead><tbody>
+{% for r in rows %}<tr><td>{{ TYPES[r.type].libelle if r.type in TYPES else r.type }}</td><td>{% if r.url %}<a href="{{ r.url }}">{{ r.titre or r.cle }}</a>{% else %}{{ r.titre or r.cle }}{% endif %}{% if r.proposee %} <span class="badge ok">proposée</span>{% endif %}</td>
+<td>{{ r.cree_le }}</td><td>{{ r.auteur_nom or '' }}</td><td class="num">{{ r.n }}</td><td><a class="btn sec petit" href="{{ url_for('partage_historique', t=r.type, cle=r.cle) }}">{{ icone('horloge') }} Historique</a></td></tr>{% endfor %}
+</tbody></table></div>{% else %}<div class="carte"><p>Aucune version enregistrée pour le moment. Modifiez une épreuve, partagez une fiche ou adaptez un résumé : la version apparaît ici.</p></div>{% endif %}
+{% if proposees %}<h2>Proposées au niveau supérieur</h2><ul>{% for p in proposees %}<li>{{ TYPES[p.type].libelle if p.type in TYPES else p.type }} — {{ p.titre or p.cle }} ({{ p.auteur_nom or '?' }}, {{ p.proposee_le }})</li>{% endfor %}</ul>{% endif %}
+{% if recues %}<h2>Reçues de la CS / DDEMP</h2><ul>{% for p in recues %}<li>{{ TYPES[p.type].libelle if p.type in TYPES else p.type }} — <a href="{{ url_for('partage_historique', t=p.type, cle=p.cle) }}">{{ p.titre or p.cle }}</a> ({{ p.origine }}, {{ p.cree_le }})</li>{% endfor %}</ul>{% endif %}
+{% endblock %}

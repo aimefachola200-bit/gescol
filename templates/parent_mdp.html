@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block titre %}Mot de passe{% endblock %}
+{% block contenu %}
+<div class="login carte">
+  <h1>Votre mot de passe</h1>
+  <p class="sous">{% if g.parent.doit_changer_mdp %}Bienvenue ! Choisissez un mot de passe personnel pour remplacer le code provisoire.{% else %}Modifier votre mot de passe.{% endif %}</p>
+  <form method="post" class="f">
+    <label>Mot de passe actuel{{ ' (code reçu)' if g.parent.doit_changer_mdp }}</label><input type="password" name="ancien" required autocomplete="current-password">
+    <label>Nouveau mot de passe (6 caractères minimum)</label><input type="password" name="nouveau" required minlength="6" autocomplete="new-password">
+    <label>Confirmation</label><input type="password" name="confirmation" required minlength="6" autocomplete="new-password">
+    <p><button class="btn" style="width:100%">Enregistrer</button></p>
+  </form>
+</div>
+{% endblock %}

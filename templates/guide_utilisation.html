@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% block titre %}Guide d'utilisation{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Guide d'utilisation</h1><p class="sous">Chaque partie de {{ NOM_APPLI }} en quelques étapes simples.</p></div>
+<div class="actions"><a class="btn petit" href="{{ url_for('guide_pdf', role=role or None) }}">{{ icone('document') }} LISEZ-MOI (PDF)</a></div></div>
+<form method="get" class="filtres" style="margin:8px 0" aria-label="Filtrer le guide">
+  <label>Je suis <select name="role" onchange="this.form.submit()">{% for k, l in roles %}<option value="{{ '' if k == 'tous' else k }}" {{ 'selected' if (role or 'tous') == k }}>{{ l }}</option>{% endfor %}</select></label>
+  <label>Rechercher <input type="search" id="guide-recherche" placeholder="mot à chercher (bulletin, logo, sauvegarde…)" autocomplete="off"></label>
+</form>
+<div id="guide">
+{% for s in sections %}
+<section class="carte guide-rub" id="{{ s.id }}">
+  <h2 style="margin-top:0">{{ s.titre }}</h2>
+  <p class="aide">Pour : {% for r in s.roles %}{{ lib[r] }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+  {% if s.intro %}<p>{{ texte(s.intro, NOM_APPLI) }}</p>{% endif %}
+  <ol>{% for e in s.etapes %}<li>{{ texte(e, NOM_APPLI) }}</li>{% endfor %}</ol>
+  {% for c in s.conseils or [] %}<p class="aide"><b>Conseil :</b> {{ texte(c, NOM_APPLI) }}</p>{% endfor %}
+</section>
+{% endfor %}
+<section class="carte guide-rub" id="faq"><h2 style="margin-top:0">Questions fréquentes et dépannage</h2>
+{% for qq, r in faq %}<p><b>{{ qq }}</b><br>{{ r }}</p>{% endfor %}</section>
+</div>
+<p id="guide-vide" class="aide" hidden>Aucune rubrique ne contient ce mot.</p>
+<script>
+(function(){var i=document.getElementById('guide-recherche'),v=document.getElementById('guide-vide');
+function norm(t){return (t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+i.addEventListener('input',function(){var m=norm(i.value.trim()),n=0;document.querySelectorAll('.guide-rub').forEach(function(s){var ok=!m||norm(s.textContent).indexOf(m)>=0;s.hidden=!ok;if(ok)n++;});v.hidden=n>0;});})();
+</script>
+{% endblock %}

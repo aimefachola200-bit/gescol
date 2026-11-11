@@ -1,0 +1,49 @@
+{# v1.19 — un résumé : vue enseignant (corrigé) ou élève (?eleve=1, sans les réponses), imprimable #}
+{% extends "base.html" %}{% block titre %}{{ r.titre }}{% endblock %}
+{% block contenu %}{% set onglet = 'resumes' %}{% include "_prep_onglets.html" %}
+<p class="aide"><a href="{{ url_for('prep_resumes', cours=r.cours, matiere=r.matiere) }}">← {{ prep_nom_matiere(r.matiere) }} — {{ PREP_COURS_LIB[r.cours] }}</a> · {{ r.domaine }}{% if r.sous_domaine %} ({{ r.sous_domaine }}){% endif %}{% if r.etape %} · {{ r.etape }}{% endif %}</p>
+{% if r.a_verifier %}<div class="flash warning">Titre de séance / de SA à vérifier avec le programme officiel (séance ajoutée faute de programme détaillé dans le corpus).</div>{% endif %}
+{% if r.ancres %}<p class="aide">Progression : {% if r.trimestre %}trimestre {{ r.trimestre }} · {{ r.mois }} · {% endif %}{% for a in r.ancres %}{{ a.libelle }}{% if a.seance_titre and a.seance_titre != r.titre %} (« {{ a.seance_titre }} »){% endif %}{% if not loop.last %} ; {% endif %}{% endfor %}</p>{% endif %}
+<div class="actions" style="margin:6px 0 10px">
+  {% if eleve %}<a class="btn sec petit" href="{{ url_for('prep_resume', rid=r.id) }}">Version enseignant</a>{% else %}<a class="btn sec petit" href="{{ url_for('prep_resume', rid=r.id, eleve=1) }}">Version élève</a>{% endif %}
+  <a class="btn petit" href="{{ url_for('prep_resume_pdf', rid=r.id, eleve=1 if eleve else None) }}">PDF {{ 'élève' if eleve else 'enseignant' }}</a>
+  {% if peut_adapter and ep_existe('prep_resume_modifier') and not original %}<a class="btn sec petit" href="{{ url_for('prep_resume_modifier', rid=r.id) }}">{{ icone('modifier') }} Adapter pour l'école</a>{% endif %}
+  {% if r._local %}{% if original %}<a class="btn sec petit" href="{{ url_for('prep_resume', rid=r.id) }}">Voir la version de l'école</a>{% else %}<a class="btn sec petit" href="{{ url_for('prep_resume', rid=r.id, original=1) }}">Voir l'original</a>{% if peut_adapter %}<form method="post" action="{{ url_for('prep_resume_original', rid=r.id) }}" style="display:inline"><button class="btn sec petit">Revenir à l'original</button></form>{% endif %}{% endif %}{% endif %}
+  {% if ep_existe('partage_historique') %}<a class="btn sec petit" href="{{ url_for('partage_historique', t='resume', cle=r.id) }}">{{ icone('horloge') }} Historique</a>{% endif %}
+</div>
+{% if r._local and not original %}<p class="alerte info">Version adaptée par l'école, enregistrée le {{ r._maj }} — partagée par tous les comptes de l'école.</p>{% endif %}
+<article class="carte resume" aria-labelledby="titre-resume">
+  <h2 id="titre-resume">{{ r.titre }}</h2>
+  {% if r.lecture %}{# v1.31 : texte de lecture du manuel officiel #}
+  {% if r.manuel_note %}<p class="aide">{{ r.manuel_note }}</p>{% endif %}
+  <div class="resume-regle" style="background:#EEF4FB;border:1px solid #1F4E79;border-radius:6px;padding:8px 10px;margin:8px 0"><b>Ce que dit le texte</b><br>{{ r.regle }}</div>
+  <h3>Personnages et informations clés</h3><p>{{ r.methode }}</p>
+  {% if r.vocabulaire %}<h3>Vocabulaire</h3><p>{{ r.vocabulaire|join(' — ') }}</p>{% endif %}
+  <h3>Le message du texte</h3><p>{{ r.exemple }}</p>
+  {% if r.actualisation %}<h3>Et aujourd'hui ?</h3><p>{{ r.actualisation }}</p>{% endif %}
+  <h3>Questions de compréhension</h3>
+  {% elif r.je_retiens %}{# v1.27.1 : Éducation sociale (dont morale et civisme) et EST #}
+  {% if r.situation %}<h3>Situation de la vie courante</h3><p>{{ r.situation }}</p>{% endif %}
+  <h3>{{ 'Valeur ou règle de vie' if r.emc else 'Notions essentielles' }}</h3><p>{{ r.regle }}</p>
+  {% if r.vocabulaire %}<h3>Vocabulaire</h3><ul>{% for v in r.vocabulaire %}<li>{{ v }}</li>{% endfor %}</ul>{% endif %}
+  <div class="resume-regle" style="background:#EEF4FB;border:1px solid #1F4E79;border-radius:6px;padding:8px 10px;margin:8px 0"><b>Je retiens</b><br>{{ r.je_retiens }}</div>
+  {% if r.engagement %}<div style="border:1px dashed #067647;border-radius:6px;padding:8px 10px;margin:8px 0"><b>Je m'engage</b><br>{{ r.engagement }}</div>{% endif %}
+  <h3>Méthode</h3><p>{{ r.methode }}</p>
+  <h3>Exemple</h3><p>{{ r.exemple }}</p>
+  {% for a in r.ancres or [] if a.seances %}<p class="aide">{{ a.libelle }} — séances : {{ a.seances|join(' · ') }}</p>{% endfor %}
+  <h3>Exercices — petite évaluation</h3>
+  {% else %}
+  <div class="resume-regle" style="background:#EEF4FB;border:1px solid #1F4E79;border-radius:6px;padding:8px 10px;margin:8px 0"><b>Je retiens</b><br>{{ r.regle }}</div>
+  {% if r.methode %}<h3>Méthode</h3><p>{{ r.methode }}</p>{% endif %}
+  <h3>Exemple</h3><p>{{ r.exemple }}</p>
+  {% if r.vocabulaire %}<h3>Vocabulaire</h3><p>{{ r.vocabulaire|join(' — ') }}</p>{% endif %}
+  <h3>Exercices</h3>
+  {% endif %}
+  <ol>{% for e in r.exercices %}<li>{{ e.q }}{% if eleve %}<div style="border-bottom:1px dotted #98A2B3;height:1.6em"></div>{% else %}<br><i style="color:#067647">Réponse : {{ e.r }}</i>{% endif %}</li>{% endfor %}</ol>
+  {% if r.sources and not eleve %}<p class="aide"><b>Sources :</b> {{ r.sources|join(' ; ') }}</p>{% endif %}
+  {% if not eleve %}<p class="aide">{{ r.mention }}</p>{% endif %}
+</article>
+{% set sr = (r.ancres if r.seance_resume else []) + (r.seances_rattachees or []) %}
+{% if sr and not eleve %}<p class="aide noprint"><b>Séance(s) de la progression :</b> {% for a in sr %}{% if a.fiche %}<a href="{{ url_for('prep_fiche', fid=a.fiche) }}">{{ a.libelle }}{% if a.seance_titre and a.seance_titre != r.titre %} — « {{ a.seance_titre }} »{% endif %}</a>{% else %}{{ a.libelle }}{% endif %}{% if not loop.last %} ; {% endif %}{% endfor %}</p>{% endif %}
+<p class="aide noprint">{% if prec %}<a href="{{ url_for('prep_resume', rid=prec.id, eleve=1 if eleve else None) }}">← {{ prec.titre }}</a>{% endif %}{% if prec and suiv %} · {% endif %}{% if suiv %}<a href="{{ url_for('prep_resume', rid=suiv.id, eleve=1 if eleve else None) }}">{{ suiv.titre }} →</a>{% endif %}</p>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block titre %}{{ 'Mes fiches' if g.user.role == 'enseignant' else 'Fiches des enseignants' }}{% if partagees %}<h2>Fiches partagées par mes collègues</h2>
+<div class="tw"><table class="t" aria-label="Fiches partagées"><thead><tr><th>Classe</th><th>Matière</th><th>Titre</th><th>Enseignant(e)</th><th>Modifiée</th><th></th></tr></thead>
+<tbody>{% for r in partagees %}<tr><td>{{ r.classe_nom or '' }}</td><td>{{ prep_nom_matiere(r.matiere) }}</td><td><a href="{{ url_for('prep_ma_fiche', mid=r.id) }}">{{ r.titre }}</a></td><td>{{ r.auteur or '' }}</td><td>{{ (r.maj_le or '')[:16] }}</td>
+<td class="actions"><a class="btn sec petit" href="{{ url_for('prep_ma_fiche_pdf', mid=r.id) }}">PDF</a> <form method="post" action="{{ url_for('prep_ma_fiche_copier', mid=r.id) }}" style="display:inline"><button class="btn sec petit">{{ icone('dupliquer') }} Copier</button></form></td></tr>{% endfor %}</tbody></table></div>{% endif %}
+{% endblock %}
+{% block contenu %}{% set onglet = 'mes' %}{% include "_prep_onglets.html" %}
+<h2>{{ 'Mes fiches de préparation' if g.user.role == 'enseignant' else "Fiches de préparation de l'école" }}</h2>
+{% if rows %}
+<div class="tw"><table class="t">
+  <thead><tr><th>Date</th><th>Classe</th><th>Matière</th><th>Titre</th>{% if g.user.role != 'enseignant' %}<th>Enseignant(e)</th>{% endif %}<th>Modifiée</th><th></th></tr></thead>
+  <tbody>{% for r in rows %}<tr>
+    <td>{{ r.date_seance or '—' }}</td><td>{{ r.classe_nom or '' }}</td><td>{{ prep_nom_matiere(r.matiere) }}</td>
+    <td><a href="{{ url_for('prep_ma_fiche', mid=r.id) }}">{{ r.titre }}</a>{% if r.partagee %} <span class="badge ok">partagée</span>{% endif %}</td>{% if g.user.role != 'enseignant' %}<td>{{ r.auteur or '' }}</td>{% endif %}
+    <td>{{ (r.maj_le or '')[:16] }}</td>
+    <td class="actions"><a class="btn sec petit" href="{{ url_for('prep_ma_fiche_pdf', mid=r.id) }}">PDF</a> <a class="btn sec petit" href="{{ url_for('prep_ma_fiche_doc', mid=r.id) }}">Word</a>{% if r.user_id == g.user.id %} <a class="btn sec petit" href="{{ url_for('prep_ma_fiche', mid=r.id, modifier=1) }}">{{ icone('modifier') }}</a>{% endif %}</td>
+  </tr>{% endfor %}</tbody></table></div>
+{% else %}<div class="carte"><p class="aide">Aucune fiche préparée pour l'instant. <a href="{{ url_for('prep_preparer') }}">Préparer une fiche</a> (vierge, d'après un modèle) ou <a href="{{ url_for('prep_fiches') }}">adapter une fiche de la bibliothèque</a>.</p></div>{% endif %}
+{% if partagees %}<h2>Fiches partagées par mes collègues</h2>
+<div class="tw"><table class="t" aria-label="Fiches partagées"><thead><tr><th>Classe</th><th>Matière</th><th>Titre</th><th>Enseignant(e)</th><th>Modifiée</th><th></th></tr></thead>
+<tbody>{% for r in partagees %}<tr><td>{{ r.classe_nom or '' }}</td><td>{{ prep_nom_matiere(r.matiere) }}</td><td><a href="{{ url_for('prep_ma_fiche', mid=r.id) }}">{{ r.titre }}</a></td><td>{{ r.auteur or '' }}</td><td>{{ (r.maj_le or '')[:16] }}</td>
+<td class="actions"><a class="btn sec petit" href="{{ url_for('prep_ma_fiche_pdf', mid=r.id) }}">PDF</a> <form method="post" action="{{ url_for('prep_ma_fiche_copier', mid=r.id) }}" style="display:inline"><button class="btn sec petit">{{ icone('dupliquer') }} Copier</button></form></td></tr>{% endfor %}</tbody></table></div>{% endif %}
+{% endblock %}

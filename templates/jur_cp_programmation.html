@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% block titre %}Programmation des activités pédagogiques{% endblock %}
+{% block contenu %}
+<style>table.t.prog input{width:64px;text-align:center}table.t.prog th{font-size:12px;vertical-align:bottom}</style>
+{% set CSP = cs_id if JUR_NIVEAU == 'ddemp' else None %}
+<div class="entete"><div><h1>Programmation des activités pédagogiques</h1>
+  <p class="sous">{{ PERIODES[periode][0] }} ({{ PERIODES[periode][1] }}) · {{ annee }} · nombre d'activités programmées pour le CCS et chaque CP. Ces chiffres alimentent les colonnes « Programmées » du bilan.</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_cp_accueil', annee=annee, cs=CSP) }}">← Conseillers pédagogiques</a></div></div>
+
+<form method="get" class="filtres carte">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  <label>Trimestre<br><select name="periode" onchange="this.form.submit()">{% for k, p in PERIODES.items() %}<option value="{{ k }}" {{ 'selected' if k == periode }}>{{ p[0] }} – {{ p[1] }}</option>{% endfor %}</select></label>
+  {% if JUR_NIVEAU == 'ddemp' %}<label>Circonscription<br><select name="cs" onchange="this.form.submit()">{% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if cs_id == c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+</form>
+
+<form method="post" class="carte" id="f-prog">
+  <input type="hidden" name="annee" value="{{ annee }}"><input type="hidden" name="periode" value="{{ periode }}">{% if CSP %}<input type="hidden" name="cs" value="{{ CSP }}">{% endif %}
+  <div class="tw"><table class="t compact prog">
+    <tr><th>Acteurs du RAP</th>{% for k, lib in PROG %}<th>{{ lib }}</th>{% endfor %}</tr>
+    {% for a in acteurs %}
+    <tr><td><b>{{ a.lib }}</b>{% if a.nom %}<br><span class="aide">{{ a.nom }}</span>{% endif %}</td>
+      {% for k, lib in PROG %}<td class="num"><input type="number" min="0" max="9999" name="p_{{ a.cle }}_{{ k }}" value="{{ vals.get(a.cle, {}).get(k) if vals.get(a.cle, {}).get(k) is not none else '' }}" aria-label="{{ a.lib }} – {{ lib }}" {{ 'disabled' if not saisie }}></td>{% endfor %}</tr>
+    {% endfor %}
+  </table></div>
+  <p class="aide">Case vide : le bilan compte les activités programmées du journal (et les séances prévues des UP). Les visites programmées doivent être saisies ici.</p>
+  <div class="actions">
+    {% if saisie %}<button class="btn vert" name="action" value="enregistrer">{{ icone('enregistrer') }} Enregistrer</button>{% endif %}
+    <a class="btn sec" href="{{ url_for('jur_cp_programmation_xlsx', annee=annee, periode=periode, cs=CSP) }}">⇩ Télécharger (Excel)</a>
+    {% if saisie %}<button class="btn danger" name="action" value="reinitialiser" data-confirmer="Effacer toute la programmation de ce trimestre ?">↺ Réinitialiser</button>{% endif %}
+  </div>
+</form>
+{% if saisie %}
+<form method="post" action="{{ url_for('jur_cp_programmation_import') }}" enctype="multipart/form-data" class="carte">
+  <input type="hidden" name="annee" value="{{ annee }}"><input type="hidden" name="periode" value="{{ periode }}">{% if CSP %}<input type="hidden" name="cs" value="{{ CSP }}">{% endif %}
+  <h2>{{ icone('dossier') }} Charger une programmation (Excel)</h2>
+  <p class="aide">Téléchargez le modèle ci-dessus, complétez les cases blanches, puis chargez-le ici.</p>
+  <input type="file" name="fichier" accept=".xlsx" required> <button class="btn sec">Charger</button>
+</form>
+{% endif %}
+{% endblock %}

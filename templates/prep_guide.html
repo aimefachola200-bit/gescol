@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% block titre %}{{ x.titre }}{% endblock %}
+{% block contenu %}{% set onglet = 'guides' %}{% include "_prep_onglets.html" %}
+<p><a href="{{ url_for('prep_guides', matiere=x.matiere) }}">← Guides de {{ prep_nom_matiere(x.matiere) }}</a></p>
+<section class="carte prep-guide">
+  <div class="entete"><div><h2 style="margin:0">{{ x.titre }}</h2><p class="sous">{{ prep_nom_matiere(x.matiere) }} · {{ (x.cours or [])|join(', ') }}</p></div>
+    <div class="actions"><a class="btn petit" href="{{ url_for('prep_guide_pdf', gid=x.id) }}">{{ icone('document') }} Télécharger (PDF)</a></div></div>
+  {% if x.mention %}<div class="flash warning">{{ x.mention }}</div>{% endif %}
+  <div class="prep-contenu">{{ contenu }}</div>
+  <p class="aide">Source : {{ x.source }}</p>
+</section>
+{% endblock %}

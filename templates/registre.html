@@ -1,0 +1,50 @@
+{# v1.25 — page générique d'un registre (moteur registres.py) : onglets du module, filtres, tableau à en-têtes fixes,
+   ajouter / modifier / supprimer / réinitialiser, Excel (export, modèle, import), PDF signé (QR) #}
+{% extends "base.html" %}{% block titre %}{{ r.titre }} — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) if G.ico }} {{ G.titre }}</h1>{% if G.sous_titre %}<p class="sous">{{ G.sous_titre }}</p>{% endif %}</div></div>
+{% include "_onglets_groupe.html" %}
+<div class="entete" style="margin-bottom:6px"><div><h2 style="margin:0">{{ r.titre }}</h2>{% if r.aide %}<p class="aide">{{ r.aide }}</p>{% endif %}</div>
+<div class="actions">
+<a class="btn sec petit" href="{{ url_for('reg_pdf', gcle=G.cle, rcle=r.cle, annee=annee, q=rech or None, **pdf_args) }}">{{ icone('document') }} PDF signé (QR)</a>
+<a class="btn sec petit" href="{{ url_for('reg_xlsx', gcle=G.cle, rcle=r.cle, annee=annee) }}">{{ icone('graphique') }} Excel</a>
+<a class="btn sec petit" href="{{ url_for('reg_modele', gcle=G.cle, rcle=r.cle) }}">Modèle Excel</a>
+{% if peut_ecrire %}<form method="post" enctype="multipart/form-data" action="{{ url_for('reg_import', gcle=G.cle, rcle=r.cle, annee=annee) }}" style="display:inline"><label class="btn sec petit" style="cursor:pointer">{{ icone('importer') }} Importer<input type="file" name="fichier" accept=".xlsx" hidden onchange="this.form.submit()"></label></form>
+{% if lignes %}<form method="post" action="{{ url_for('reg_reinitialiser', gcle=G.cle, rcle=r.cle, annee=annee) }}" style="display:inline" onsubmit="return confirm('Supprimer toutes les lignes de « {{ r.titre }} »{{ ' pour ' ~ annee if r.par_annee }} ?')"><button class="btn sec petit">{{ icone('reinitialiser') }} Réinitialiser</button></form>{% endif %}{% endif %}
+</div></div>
+{% if G.cle == 'sec' %}{% include "sec_barre.html" %}{% endif %}
+<form method="get" class="filtres actions" style="margin:6px 0 10px">
+{% if r.par_annee %}<label>Année <select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>{% endif %}
+{% for k in r.filtres %}{% set t = r.typ[k] %}{% set opts = listes.get(t.split(':', 1)[1]) if ':' in t else [] %}
+<label>{{ r.lib[k] }} <select name="f_{{ k }}" onchange="this.form.submit()"><option value="">Tous</option>{% for o in opts %}<option {{ 'selected' if filtres[k] == o }}>{{ o }}</option>{% endfor %}</select></label>{% endfor %}
+<label>Rechercher <input name="q" value="{{ rech }}" size="14"></label><button class="btn sec petit">OK</button></form>
+{% set cols = r.cols_table() %}{% set cent = (calc[lignes[0].id].keys()|list) if (calc and lignes) else [] %}
+<div class="tw"><table class="t" aria-label="{{ r.titre }}"><thead><tr><th>N°</th>{% for k, l, t in cols %}<th>{{ l }}</th>{% endfor %}{% for c in cent %}<th>{{ c }}</th>{% endfor %}<th></th></tr></thead><tbody>
+{% for x in lignes %}<tr><td>{{ loop.index }}</td>{% for k, l, t in cols %}<td>{{ aff(x, k)|string|truncate(140) }}</td>{% endfor %}{% for c in cent %}<td>{{ calc[x.id][c] }}</td>{% endfor %}
+<td style="white-space:nowrap">{% for dc, (dl, di, _f) in r.fiches.items() %}<a class="btn sec petit" href="{{ url_for('reg_doc_pdf', gcle=G.cle, rcle=r.cle, rid=x.id, doc=dc) }}" title="{{ dl }}" aria-label="{{ dl }}">{{ icone(di) }}</a> {% endfor %}{% if r.actions %}{% for au, al, ai in r.actions(x) %}{% if au.startswith('post:') %}<form method="post" action="{{ au[5:] }}" style="display:inline"><button class="btn sec petit" title="{{ al }}">{{ icone(ai) }} {{ al }}</button></form> {% elif au.startswith('copier:') %}<button type="button" class="btn sec petit" data-copier="{{ au[7:] }}" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.dataset.copier);this.blur()" title="{{ al }}">{{ icone(ai) }} {{ al }}</button> {% else %}<a class="btn sec petit" href="{{ au }}" title="{{ al }}" {% if au.startswith('http') or au.startswith('sms:') %}target="_blank" rel="noopener"{% endif %}>{{ icone(ai) }} {{ al }}</a> {% endif %}{% endfor %}{% endif %}{% if r.fiche %}<a class="btn sec petit" href="{{ url_for('reg_fiche_pdf', gcle=G.cle, rcle=r.cle, rid=x.id) }}" title="Fiche signée">{{ icone('document') }}</a> {% endif %}{% if peut_ecrire %}<a class="btn sec petit" href="{{ url_for('reg_page', gcle=G.cle, rcle=r.cle, annee=annee, modifier=x.id) }}#form-reg" aria-label="Modifier">{{ icone('modifier') }}</a> <a class="btn sec petit" href="{{ url_for('reg_page', gcle=G.cle, rcle=r.cle, annee=annee, dupliquer=x.id) }}#form-reg" aria-label="Dupliquer" title="Dupliquer">⧉</a>
+<form method="post" action="{{ url_for('reg_supprimer', gcle=G.cle, rcle=r.cle, rid=x.id, annee=annee) }}" style="display:inline" onsubmit="return confirm('Supprimer ?')"><button class="btn sec petit" aria-label="Supprimer">{{ icone('supprimer') }}</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="30" class="aide">Rien d'enregistré{{ ' pour ' ~ annee if r.par_annee }}.</td></tr>{% endfor %}
+{% if totaux and lignes %}<tr class="total"><td><b>Total</b></td>{% for k, l, t in cols %}<td><b>{% if k in totaux %}{{ fcfa(totaux[k]) if t == 'montant' else totaux[k] }}{% endif %}</b></td>{% endfor %}{% for c in cent %}<td></td>{% endfor %}<td></td></tr>{% endif %}
+</tbody></table></div>
+<p class="aide">{{ lignes|length }} {{ r.unite }}(s){{ ' · année ' ~ annee if r.par_annee }}.</p>
+{% if peut_ecrire %}{% set e = edit or {} %}
+<form id="form-reg" method="post" action="{{ url_for('reg_enregistrer', gcle=G.cle, rcle=r.cle, rid=e.id or 0, annee=annee) }}" class="carte" style="margin-top:10px">
+<h3>{{ 'Modifier' if e.id else (icone('ajouter') ~ ' Ajouter') }} : {{ r.unite }}</h3>
+<div class="grille-form" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:8px 12px">
+{% for k, l, t in r.champs %}{% set t = t or 'texte' %}{% set ob = ' *' if k == r.oblig else '' %}
+{% if t.startswith('choix:') %}<label>{{ l }}{{ ob }} <select name="{{ k }}"><option value=""></option>{% for o in listes[t[6:]] %}<option {{ 'selected' if e[k] == o }}>{{ o }}</option>{% endfor %}</select></label>
+{% elif t.startswith('liste:') %}<label>{{ l }}{{ ob }} <input name="{{ k }}" list="l-{{ k }}" value="{{ e[k] or '' }}" autocomplete="off"><datalist id="l-{{ k }}">{% for o in listes[t[6:]] %}<option value="{{ o }}">{% endfor %}</datalist></label>
+{% elif t.startswith('multi:') %}<fieldset style="grid-column:1/-1"><legend>{{ l }}</legend>{% set sel = (e[k] or '').split(', ') %}{% for o in listes[t[6:]] %}<label style="display:inline-flex;gap:4px;margin-right:10px;font-weight:400"><input type="checkbox" name="{{ k }}" value="{{ o }}" {{ 'checked' if o in sel }}> {{ o }}</label>{% endfor %}</fieldset>
+{% elif t == 'classe' %}<label>{{ l }}{{ ob }} <input name="{{ k }}" list="l-{{ k }}" value="{{ e[k] or '' }}" autocomplete="off"><datalist id="l-{{ k }}">{% for o in listes.classes %}<option value="{{ o }}">{% endfor %}</datalist></label>
+{% elif t == 'ecole' %}<label>{{ l }}{{ ob }} <input name="{{ k }}" list="l-{{ k }}" value="{{ e[k] or '' }}" autocomplete="off"><datalist id="l-{{ k }}">{% for o in listes.ecoles %}<option value="{{ o }}">{% endfor %}</datalist></label>
+{% elif t == 'eleve' %}<label>{{ l }}{{ ob }} <select name="{{ k }}"><option value="">—</option>{% for i, n in eleves %}<option value="{{ i }}" {{ 'selected' if e[k] == i }}>{{ n }}</option>{% endfor %}</select></label>
+{% elif t == 'oui_non' %}<label>{{ l }}{{ ob }} <select name="{{ k }}"><option value=""></option>{% for o in ('Oui', 'Non') %}<option {{ 'selected' if e[k] == o }}>{{ o }}</option>{% endfor %}</select></label>
+{% elif t == 'long' %}<label style="grid-column:1/-1">{{ l }}{{ ob }} <textarea name="{{ k }}" rows="3">{{ e[k] or '' }}</textarea></label>
+{% elif t == 'date' %}<label>{{ l }}{{ ob }} <input type="date" name="{{ k }}" value="{{ e[k] or '' }}"></label>
+{% elif t == 'heure' %}<label>{{ l }}{{ ob }} <input type="time" name="{{ k }}" value="{{ e[k] or '' }}"></label>
+{% elif t in ('entier', 'montant', 'decimal') %}<label>{{ l }}{{ ob }} <input name="{{ k }}" inputmode="{{ 'decimal' if t == 'decimal' else 'numeric' }}" value="{{ e[k] if e[k] is not none else '' }}"></label>
+{% else %}<label>{{ l }}{{ ob }} <input name="{{ k }}" value="{{ e[k] or '' }}"></label>{% endif %}
+{% endfor %}</div>
+<p style="margin-top:10px"><button class="btn">Enregistrer</button>{% if e.id %} <a class="btn sec" href="{{ url_for('reg_page', gcle=G.cle, rcle=r.cle, annee=annee) }}">Annuler</a>{% endif %}</p></form>
+{% endif %}
+{% endblock %}

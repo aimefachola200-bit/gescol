@@ -1,0 +1,29 @@
+{# v2.4.3 — graphiques du tableau de bord (SVG, couleurs par variables : clair et sombre) #}
+{% set gr = graphiques_accueil() %}
+{% if gr.effectifs or gr.recettes or gr.presences %}
+<div class="grille graphiques" aria-label="Graphiques">
+{% if gr.effectifs %}
+<div class="carte" style="margin:0"><h3 style="margin:0 0 8px">Effectifs par classe</h3>
+  <ul class="barres-h" style="list-style:none;margin:0;padding:0">
+  {% for nom, n in gr.effectifs[:12] %}<li style="display:grid;grid-template-columns:minmax(70px,26%) 1fr 34px;gap:8px;align-items:center;margin:4px 0;font-size:13px">
+    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ nom }}</span>
+    <span class="piste"><i style="display:block;height:10px;border-radius:5px;background:var(--bleu2);width:{{ (100 * n / gr.effectif_max)|round(1) }}%"></i></span>
+    <b class="num">{{ n }}</b></li>{% endfor %}
+  </ul>{% if gr.effectifs|length > 12 %}<p class="aide">Les 12 premières classes ; liste complète ci-dessous.</p>{% endif %}
+</div>{% endif %}
+{% if gr.recettes %}
+<div class="carte" style="margin:0"><h3 style="margin:0 0 8px">Encaissements mensuels ({{ ANNEE }})</h3>
+  <svg viewBox="0 0 100 150" preserveAspectRatio="none" role="img" style="width:100%;height:170px" aria-label="Encaissements par mois, total {{ fcfa(gr.recettes_total) }}">
+    {% for l, v, h, x in gr.recettes %}<rect x="{{ x - 3.6 }}" y="{{ 130 - h }}" width="7.2" height="{{ h }}" rx="1" fill="var(--vert)"><title>{{ l }} : {{ fcfa(v) }}</title></rect>{% endfor %}
+    <line x1="0" y1="130.5" x2="100" y2="130.5" stroke="var(--bord)" stroke-width=".6"/>
+  </svg>
+  <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--gris)">{% for l, v, h, x in gr.recettes %}<span>{{ l }}</span>{% endfor %}</div>
+  <p class="aide" style="margin-top:6px">Total de l'année : <b>{{ fcfa(gr.recettes_total) }}</b></p>
+</div>{% endif %}
+{% if gr.presences %}
+<div class="carte" style="margin:0"><h3 style="margin:0 0 8px">Présences (derniers jours avec appel)</h3>
+  {% for j, t in gr.presences %}<div style="display:grid;grid-template-columns:48px 1fr 48px;gap:8px;align-items:center;margin:4px 0;font-size:13px"><span>{{ j }}</span>
+    <span class="piste"><i style="display:block;height:10px;border-radius:5px;background:{{ 'var(--vert)' if t >= 90 else 'var(--orange)' if t >= 75 else 'var(--rouge)' }};width:{{ t }}%"></i></span><b class="num">{{ t }} %</b></div>{% endfor %}
+</div>{% endif %}
+</div>
+{% endif %}

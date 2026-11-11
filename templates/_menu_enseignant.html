@@ -1,0 +1,52 @@
+{# v1.14 — Menu de SCOLARIS Enseignant (application personnelle et portail /enseignant) — inclus par base.html.
+   Uniquement le périmètre de l'enseignant : aucun module du directeur ni de l'école. #}
+{% set APP_ENS = EDITION == 'enseignant' %}
+{{ lien('ens_tableau', 'Tableau de bord', ep=='ens_tableau', 'accueil') }}
+{{ lien('listes_classe', 'Listes de mes classes', ep.startswith('listes_classe'), 'liste') }}
+{{ lien('annonces_accueil', 'Annonces' ~ (' (' ~ annonces_non_lues() ~ ')' if annonces_non_lues is defined and annonces_non_lues() else ''), ep.startswith('annonces'), 'annonce') }}
+{% call groupe('ens_cl', 'Ma classe', ep.startswith('ma_classe') or ep.startswith('eleve') or ep.startswith('appel') or ep.startswith('registre') or ep.startswith('releve') or ep.startswith('eval') or ep.startswith('notes') or ep in ('resultats','classes','classe_detail','ens_classes'), 'ecole') %}
+  {{ lien('ma_classe', 'Ma classe (suivi du jour)', ep.startswith('ma_classe')) }}
+  {{ lien('eleves', 'Mes élèves', ep.startswith('eleve')) }}
+  {% if APP_ENS %}{{ lien('eleves_import', 'Importer mes élèves (Excel)', ep=='eleves_import') }}
+  {{ lien('ens_classes', 'Mes classes (ajouter, retirer)', ep=='ens_classes') }}{% endif %}
+  {% if peut('appel') %}{{ lien('appel_accueil', "Appel du jour (registre d'appel)", ep in ('appel_accueil','appel_classe')) }}{% endif %}
+  {% if peut('registre') %}{{ lien('registre_accueil', 'Registre de présence', ep.startswith('registre')) }}
+  {{ lien('releve_mensuel', 'Relevés mensuels de présence', ep.startswith('releve')) }}{% endif %}
+  {% if peut('evaluations') %}{{ lien('eval_accueil', 'Notes (évaluations)', ep.startswith('eval_')) }}{% endif %}
+  {% if peut('notes') %}{{ lien('notes_accueil', 'Bulletins (notes par période)', ep.startswith('notes') or ep=='resultats') }}{% endif %}
+{% endcall %}
+{% call groupe('ens_ped', 'Emplois du temps et planifications', ep.startswith('synoptique_edt') or ep.startswith('synoptique_planification'), 'calendrier') %}
+  {{ lien('synoptique_edt', 'Emplois du temps', ep.startswith('synoptique_edt')) }}
+  {{ lien('synoptique_planification', 'Planification annuelle', ep.startswith('synoptique_planification') and not ep.startswith('synoptique_planification_mensuelle')) }}
+  {{ lien('synoptique_planification_mensuelle', 'Planification mensuelle', ep.startswith('synoptique_planification_mensuelle')) }}
+{% endcall %}
+{% if peut('preparation') and ep_existe('prep_accueil') %}{# v1.18 : préparation de classe (programmes, guides, fiches APC) #}
+{% call groupe('prep', 'Préparation de classe', ep.startswith('prep_'), 'note') %}
+  {{ lien('prep_accueil', 'Cette semaine (planification et fiches)', ep=='prep_accueil') }}
+  {{ lien('prep_programmes', 'Programmes et progressions', ep.startswith('prep_programme')) }}
+  {{ lien('prep_guides', 'Guides pédagogiques', ep.startswith('prep_guide')) }}
+  {{ lien('prep_fiches', 'Fiches de préparation (bibliothèque)', ep.startswith('prep_fiche')) }}
+  {{ lien('prep_preparer', 'Préparer une fiche', ep=='prep_preparer') }}
+  {{ lien('prep_mes_fiches', 'Mes fiches', ep.startswith('prep_ma') or ep=='prep_mes_fiches') }}
+  {{ lien('prep_resumes', 'Résumés — l’essentiel à retenir', ep in ('prep_resumes', 'prep_resume')) }}
+  {{ lien('prep_manquants', 'Fiches et guides manquants', ep=='prep_manquants') }}
+{% endcall %}{% endif %}
+{% call groupe('ens_off', 'Textes officiels', ep.startswith('calendrier_officiel') or ep.startswith('synoptique_reglement') or ep.startswith('themes_up'), 'livre') %}
+  {{ lien('calendrier_officiel', 'Calendrier scolaire officiel (MEMP)', ep.startswith('calendrier_officiel')) }}
+  {{ lien('synoptique_reglement', 'Règlement intérieur', ep.startswith('synoptique_reglement')) }}
+  {{ lien('themes_up', "Thèmes d'UP, conférences et formations", ep.startswith('themes_up')) }}
+{% endcall %}
+{% call groupe('ens_doc', 'Documents officiels', ep.startswith('docs_enseignant') or ep=='ens_certificats', 'document') %}
+  {{ lien('ens_certificats', 'Mes certificats et attestations', ep=='ens_certificats') }}
+  {% if peut('docs_enseignant') %}{{ lien('docs_enseignant_accueil', "Documents de l'enseignant (fiches, certificats d'élèves)", ep.startswith('docs_enseignant')) }}{% endif %}
+{% endcall %}
+{% call groupe('ens_car', 'Ma carrière', ep.startswith('carriere') or ep=='ens_profil', 'medaille') %}
+  {% if APP_ENS %}{{ lien('ens_profil', 'Mon profil et mon école', ep=='ens_profil') }}{% endif %}
+  {{ lien('carriere_moi_fiche', 'Ma fiche de carrière', ep.startswith('carriere')) }}
+{% endcall %}
+{% call groupe('ens_cpt', 'Mon compte', ep in ('mon_compte','espace_enseignant'), 'cle') %}
+  {{ lien('mon_compte', 'Mot de passe et question de secours', ep=='mon_compte') }}
+  {{ lien('espace_enseignant', 'Ma signature et mes affectations', ep=='espace_enseignant') }}
+{% endcall %}
+{{ lien('verifier', 'Vérifier un document', ep=='verifier', 'coche') }}
+{{ lien('guide_utilisation', "Guide d'utilisation", ep=='guide_utilisation', 'info') }}

@@ -1,0 +1,210 @@
+{% extends "base.html" %}{% block titre %}{{ 'Bilan annuel' if periode == 'AN' else 'Bilan trimestriel' }} des activités pédagogiques{% endblock %}
+{% block contenu %}
+<style>
+.bil table.t{font-size:12.5px}
+.bil table.t th{font-size:11.5px;text-align:center;vertical-align:middle;background:#E4ECF5}
+.bil table.t td{text-align:center;padding:2px 3px}
+.bil table.t td.acteur{text-align:left;white-space:nowrap}
+.bil table.t input[type=number]{width:54px;text-align:center;padding:2px}
+.bil table.t tr.tot td{background:#F2F6FB;font-weight:700}
+.bil table.t td.calc{background:#F9FAFB;color:#344054}
+.bil h2{margin-top:6px}
+.bil textarea{width:100%}
+.bil .barre{position:sticky;top:0;z-index:5;background:#fff;border:1px solid #D0D5DD;border-radius:10px;padding:8px 10px;margin:8px 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bil .etat{display:inline-block;border-radius:10px;padding:1px 9px;font-size:12px;font-weight:600}
+.bil .etat.valide{background:#ECFDF3;color:#067647}.bil .etat.brouillon{background:#FFFAEB;color:#B54708}.bil .etat.calc{background:#EFF8FF;color:#175CD3}
+.bil table.lst input,.bil table.lst textarea{width:100%}
+</style>
+{% set CSP = cs_id if JUR_NIVEAU == 'ddemp' else None %}
+{% set ZONE = b.niveau == 'zone' %}
+{% set TOT = ([('_tcp', 'TOTAL CP')] if not ZONE else []) + [('_tcs', 'TOTAL ZONE' if ZONE else 'TOTAL CS')] %}
+{% macro n(sec, a, c) %}<input type="number" min="0" max="999999" name="{{ sec }}_{{ a }}_{{ c }}" value="{{ b[sec][a][c] if b[sec][a][c] is not none else '' }}" {{ 'disabled' if not saisie }} aria-label="{{ c }}">{% endmacro %}
+{% macro t(sec, k, c) %}{{ b[sec][k][c] if b[sec][k][c] is not none else '' }}{% endmacro %}
+{% macro p(sec, k, c) %}<td class="calc">{{ pct(b[sec][k][c]) }}</td>{% endmacro %}
+{% macro acteur(a) %}<td class="acteur"><b>{{ a.lib }}</b>{% if a.nom %}<br><span class="aide">{{ a.nom }}</span>{% endif %}</td>{% endmacro %}
+
+<div class="bil">
+<div class="entete"><div><h1>{{ 'Bilan annuel' if periode == 'AN' else 'Bilan trimestriel' }} des activités pédagogiques — {{ 'niveau zone' if ZONE else 'niveau CS' }}</h1>
+  <p class="sous">{{ b.entete.cs and ('Circonscription scolaire de ' ~ b.entete.cs ~ ' · ') }}{{ annee }} · {{ PERIODES[periode][0] }} ({{ PERIODES[periode][1] }}){% if ZONE and b.acteurs %} · {{ b.acteurs[0].lib }}{% if b.acteurs[0].nom %} : {{ b.acteurs[0].nom }}{% endif %}{% endif %}</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_cp_accueil', annee=annee, cs=CSP) }}">← Conseillers pédagogiques</a></div></div>
+
+<form method="get" class="filtres carte">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  <label>Période<br><select name="periode" onchange="this.form.submit()">{% for k, x in PERIODES.items() %}<option value="{{ k }}" {{ 'selected' if k == periode }}>{{ x[0] }}</option>{% endfor %}</select></label>
+  <label>Niveau<br><select name="zone" onchange="this.form.submit()"><option value="">Circonscription (C/CS + tous les CP)</option>
+    {% for z in zones %}<option value="{{ z.id }}" {{ 'selected' if zone_id == z.id }}>{{ lib_zone(z.nom) }}{% if z.cp_nom %} – {{ z.cp_nom }}{% endif %}</option>{% endfor %}</select></label>
+  {% if JUR_NIVEAU == 'ddemp' %}<label>Circonscription<br><select name="cs" onchange="this.form.submit()">{% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if cs_id == c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+</form>
+
+<form method="post" id="f-bilan">
+  <input type="hidden" name="annee" value="{{ annee }}"><input type="hidden" name="periode" value="{{ periode }}">
+  {% if zone_id %}<input type="hidden" name="zone" value="{{ zone_id }}">{% endif %}{% if CSP %}<input type="hidden" name="cs" value="{{ CSP }}">{% endif %}
+  <div class="barre">
+    {% if r %}<span class="etat {{ r.etat }}">{{ 'Validé' if r.etat == 'valide' else 'Brouillon enregistré' }}</span><span class="aide">modifié le {{ r.maj }}</span>
+    {% else %}<span class="etat calc">Calculé automatiquement — non enregistré</span>{% endif %}
+    <span style="flex:1"></span>
+    {% if saisie %}<button class="btn vert" name="action" value="enregistrer">{{ icone('enregistrer') }} Enregistrer</button>
+    <button class="btn" name="action" value="valider" data-confirmer="Valider ce bilan ? (il reste modifiable)">{{ icone('coche') }} Valider</button>
+    <button class="btn sec" name="action" value="pdf" title="Enregistre puis ouvre le PDF">{{ icone('document') }} Enregistrer et PDF</button>{% endif %}
+    <a class="btn sec" href="{{ url_for('jur_cp_bilan_pdf', **retour) }}" target="_blank">⇩ Télécharger (PDF)</a>
+    <a class="btn sec" href="{{ url_for('jur_cp_bilan_xlsx', **retour) }}">⇩ Télécharger (Excel)</a>
+    {% if saisie %}<button type="button" class="btn sec" onclick="document.getElementById('d-charger').open=true;document.getElementById('d-charger').scrollIntoView({behavior:'smooth'})">{{ icone('dossier') }} Charger</button>
+    <button class="btn sec" name="action" value="recalculer" data-confirmer="Recalculer les chiffres à partir des données de l'application ? (les textes, autres activités, problèmes et résultats d'évaluation sont conservés)">⟳ Recalculer</button>
+    <button class="btn danger" name="action" value="reinitialiser" data-confirmer="Réinitialiser ce bilan ? Toutes les saisies seront perdues et les chiffres recalculés.">↺ Réinitialiser</button>
+    {% if r %}<button class="btn danger" name="action" value="supprimer" data-confirmer="Supprimer définitivement ce bilan enregistré ?">✕ Supprimer</button>{% endif %}{% endif %}
+  </div>
+  <p class="aide">Les chiffres sont calculés à partir des écoles et enseignants transmis, des visites du CCS et des CP, des séances d'UP, du journal des activités et de la programmation. Vous pouvez corriger chaque case ; totaux et pourcentages sont recalculés à l'enregistrement. « Recalculer » remet les chiffres à jour après de nouvelles saisies.</p>
+
+  <div class="carte"><h2>En-tête et signature</h2>
+    <div class="grille-id">
+      <div><label for="en_lieu_date">Lieu et date d'établissement</label><input id="en_lieu_date" name="en_lieu_date" maxlength="150" value="{{ b.entete.lieu_date }}" placeholder="ex. Pobè, le 31/12/2026" {{ 'disabled' if not saisie }}></div>
+      <div><label for="en_titre_sig">Signataire (titre)</label><input id="en_titre_sig" name="en_titre_sig" maxlength="150" value="{{ b.entete.titre_sig }}" {{ 'disabled' if not saisie }}></div>
+      <div><label for="en_nom_sig">Signataire (nom)</label><input id="en_nom_sig" name="en_nom_sig" maxlength="150" value="{{ b.entete.nom_sig }}" {{ 'disabled' if not saisie }}></div>
+    </div></div>
+
+  {# ------------------------------------------------------------ 1 #}
+  <div class="carte"><h2>1. Données statistiques sur le réseau d'animation pédagogique</h2>
+  <div class="tw"><table class="t compact">
+    <tr><th rowspan="3">Acteurs du RAP<br>(C/CS et CP)</th><th colspan="6">Taille physique du réseau : nombre d'écoles et de classes / sections</th><th colspan="9">Effectif des enseignants</th><th colspan="3" rowspan="2">Nombre d'UP</th></tr>
+    <tr><th colspan="2">Écoles maternelles</th><th colspan="2">Écoles primaires</th><th colspan="2">Total</th><th colspan="3">Écoles maternelles</th><th colspan="3">Écoles primaires</th><th colspan="3">Total EM + EP</th></tr>
+    <tr><th>Écoles</th><th>Sections</th><th>Écoles</th><th>Classes</th><th>Écoles</th><th>Classes</th><th>H</th><th>F</th><th>Total</th><th>H</th><th>F</th><th>Total</th><th>H</th><th>F</th><th>Total</th><th>EP</th><th>EM</th><th>T</th></tr>
+    {% for a in b.acteurs %}{% set k = a.cle %}
+    <tr>{{ acteur(a) }}<td>{{ n('s1', k, 'em_ecoles') }}</td><td>{{ n('s1', k, 'em_sections') }}</td><td>{{ n('s1', k, 'ep_ecoles') }}</td><td>{{ n('s1', k, 'ep_classes') }}</td>
+      <td class="calc">{{ t('s1', k, 't_ecoles') }}</td><td class="calc">{{ t('s1', k, 't_classes') }}</td>
+      <td>{{ n('s1', k, 'ens_em_h') }}</td><td>{{ n('s1', k, 'ens_em_f') }}</td><td class="calc">{{ t('s1', k, 'ens_em_t') }}</td>
+      <td>{{ n('s1', k, 'ens_ep_h') }}</td><td>{{ n('s1', k, 'ens_ep_f') }}</td><td class="calc">{{ t('s1', k, 'ens_ep_t') }}</td>
+      <td class="calc">{{ t('s1', k, 'ens_h') }}</td><td class="calc">{{ t('s1', k, 'ens_f') }}</td><td class="calc">{{ t('s1', k, 'ens_t') }}</td>
+      <td>{{ n('s1', k, 'up_ep') }}</td><td>{{ n('s1', k, 'up_em') }}</td><td class="calc">{{ t('s1', k, 'up_t') }}</td></tr>
+    {% endfor %}
+    {% for k, lib in TOT %}
+    <tr class="tot"><td class="acteur">{{ lib }}</td>{% for c in ['em_ecoles','em_sections','ep_ecoles','ep_classes','t_ecoles','t_classes','ens_em_h','ens_em_f','ens_em_t','ens_ep_h','ens_ep_f','ens_ep_t','ens_h','ens_f','ens_t','up_ep','up_em','up_t'] %}<td>{{ t('s1', k, c) }}</td>{% endfor %}</tr>
+    {% endfor %}
+  </table></div>
+  {% if not ZONE %}<p class="aide">La ligne C/CS couvre toute la circonscription : le TOTAL CS reprend cette ligne.</p>{% endif %}</div>
+
+  {# ------------------------------------------------------------ 2 #}
+  <div class="carte"><h2>2. Activités pédagogiques menées — synthèse de la période</h2>
+  <div class="tw"><table class="t compact">
+    <tr><th rowspan="3">Acteurs du RAP</th><th colspan="6">2.1 Visites / inspections de classes</th><th colspan="6">2.2 Visites d'écoles</th><th colspan="6">2.3 Suivis / encadrements D/EP D/EM</th><th colspan="4">2.4 Séances d'unité pédagogique</th><th colspan="3">2.5 Formations groupées / conférences</th></tr>
+    <tr>{% for _ in range(3) %}<th colspan="2">Program.</th><th colspan="2">Réalisées</th><th colspan="2">%</th>{% endfor %}<th rowspan="2">Progr.</th><th rowspan="2">Prép.</th><th rowspan="2">Réal.</th><th rowspan="2">%</th><th rowspan="2">Progr.</th><th rowspan="2">Réal.</th><th rowspan="2">%</th></tr>
+    <tr>{% for _ in range(9) %}<th>EM</th><th>Tot</th>{% endfor %}</tr>
+    {% for a in b.acteurs %}{% set k = a.cle %}
+    <tr>{{ acteur(a) }}
+      {% for x in ['vc','ve','su'] %}<td>{{ n('s2', k, x ~ '_prog_em') }}</td><td>{{ n('s2', k, x ~ '_prog_t') }}</td><td>{{ n('s2', k, x ~ '_real_em') }}</td><td>{{ n('s2', k, x ~ '_real_t') }}</td>{{ p('s2', k, x ~ '_pct_em') }}{{ p('s2', k, x ~ '_pct_t') }}{% endfor %}
+      <td>{{ n('s2', k, 'up_prog') }}</td><td>{{ n('s2', k, 'up_prep') }}</td><td>{{ n('s2', k, 'up_real') }}</td>{{ p('s2', k, 'up_pct') }}
+      <td>{{ n('s2', k, 'fo_prog') }}</td><td>{{ n('s2', k, 'fo_real') }}</td>{{ p('s2', k, 'fo_pct') }}</tr>
+    {% endfor %}
+    {% for k, lib in TOT %}
+    <tr class="tot"><td class="acteur">{{ lib }}</td>
+      {% for x in ['vc','ve','su'] %}<td>{{ t('s2', k, x ~ '_prog_em') }}</td><td>{{ t('s2', k, x ~ '_prog_t') }}</td><td>{{ t('s2', k, x ~ '_real_em') }}</td><td>{{ t('s2', k, x ~ '_real_t') }}</td><td>{{ pct(b.s2[k][x ~ '_pct_em']) }}</td><td>{{ pct(b.s2[k][x ~ '_pct_t']) }}</td>{% endfor %}
+      <td>{{ t('s2', k, 'up_prog') }}</td><td>{{ t('s2', k, 'up_prep') }}</td><td>{{ t('s2', k, 'up_real') }}</td><td>{{ pct(b.s2[k].up_pct) }}</td>
+      <td>{{ t('s2', k, 'fo_prog') }}</td><td>{{ t('s2', k, 'fo_real') }}</td><td>{{ pct(b.s2[k].fo_pct) }}</td></tr>
+    {% endfor %}
+  </table></div>
+  <p class="aide">Séances d'UP et formations sont des activités communes du RAP : leur total est le nombre de séances distinctes, non la somme des lignes.</p></div>
+
+  {# ------------------------------------------------------------ 3 #}
+  <div class="carte"><h2>3. Activités de la période (suite)</h2>
+  <div class="grille" style="display:grid;grid-template-columns:minmax(260px,1fr) 3fr;gap:14px;align-items:start">
+    <div class="tw"><table class="t compact">
+      <tr><th rowspan="2">Acteurs du RAP</th><th colspan="3">3.1 Concertations</th></tr><tr><th>Program.</th><th>Réalisées</th><th>%</th></tr>
+      {% for a in b.acteurs %}{% set k = a.cle %}<tr>{{ acteur(a) }}<td>{{ n('s3', k, 'co_prog') }}</td><td>{{ n('s3', k, 'co_real') }}</td>{{ p('s3', k, 'co_pct') }}</tr>{% endfor %}
+      {% for k, lib in TOT %}<tr class="tot"><td class="acteur">{{ lib }}</td><td>{{ t('s3', k, 'co_prog') }}</td><td>{{ t('s3', k, 'co_real') }}</td><td>{{ pct(b.s3[k].co_pct) }}</td></tr>{% endfor %}
+    </table></div>
+    <div><h3 style="margin:0 0 4px">3.2 Autres activités menées au cours de la période</h3>
+      <div class="tw"><table class="t compact lst" id="t-autres">
+        <tr><th style="width:28px">N°</th><th style="width:18%">Lieux</th><th style="width:16%">Périodes</th><th>Désignation des activités menées</th><th style="width:20%">Participants</th><th></th></tr>
+        {% for x in b.autres + [{'lieu':'','periode':'','designation':'','participants':''}] %}
+        <tr><td>{{ loop.index }}</td><td><input name="au_lieu" value="{{ x.lieu }}" maxlength="120" {{ 'disabled' if not saisie }}></td><td><input name="au_periode" value="{{ x.periode }}" maxlength="80" {{ 'disabled' if not saisie }}></td>
+          <td><textarea name="au_designation" rows="1" {{ 'disabled' if not saisie }}>{{ x.designation }}</textarea></td><td><input name="au_participants" value="{{ x.participants }}" maxlength="200" {{ 'disabled' if not saisie }}></td>
+          <td>{% if saisie %}<button type="button" class="btn danger petit" onclick="this.closest('tr').remove()" title="Retirer">✕</button>{% endif %}</td></tr>
+        {% endfor %}
+      </table></div>
+      {% if saisie %}<button type="button" class="btn sec petit" data-ajout="t-autres">+ Ligne</button>{% endif %}
+      <p class="aide">Pré-rempli avec les « autres activités » réalisées du journal ; modifiable.</p></div>
+  </div></div>
+
+  {# ------------------------------------------------------------ 4 #}
+  <div class="carte"><h2>4. Résultats / impact : taux de couverture</h2>
+  <div class="tw"><table class="t compact">
+    <tr><th rowspan="3">Acteurs du RAP</th><th colspan="6">4.1 Visites / inspections de classes</th><th colspan="6">4.2 Visites d'école</th><th colspan="6">4.3 Suivis / encadrements D/EP D/EM</th><th rowspan="2">4.4 UP tenues</th><th colspan="6">4.5 Formations groupées / conférences</th></tr>
+    <tr>{% for _ in range(3) %}<th colspan="2">Base de calcul</th><th colspan="2">Total réalisé</th><th colspan="2">% couverture</th>{% endfor %}<th colspan="2">Bénéficiaires</th><th colspan="2">Base (enseignants)</th><th colspan="2">% couverture</th></tr>
+    <tr>{% for _ in range(9) %}<th>EM</th><th>EM+EP</th>{% endfor %}<th>%</th>{% for _ in range(3) %}<th>EM</th><th>EM+EP</th>{% endfor %}</tr>
+    {% macro ligne4(k, saisir) %}
+      {% for x, cov in [('vc','vc'),('ve','ve'),('su','su')] %}
+        <td>{{ n('s4', k, x ~ '_cible_em') if saisir else t('s4', k, x ~ '_cible_em') }}</td><td>{{ n('s4', k, x ~ '_cible_t') if saisir else t('s4', k, x ~ '_cible_t') }}</td>
+        <td class="calc">{{ t('s2', k, x ~ '_real_em') }}</td><td class="calc">{{ t('s2', k, x ~ '_real_t') }}</td>{{ p('s4', k, cov ~ '_cov_em') }}{{ p('s4', k, cov ~ '_cov_t') }}
+      {% endfor %}
+      {{ p('s4', k, 'up_cov') }}
+      <td>{{ n('s4', k, 'fo_benef_em') if saisir else t('s4', k, 'fo_benef_em') }}</td><td>{{ n('s4', k, 'fo_benef_t') if saisir else t('s4', k, 'fo_benef_t') }}</td>
+      <td>{{ n('s4', k, 'fo_cible_em') if saisir else t('s4', k, 'fo_cible_em') }}</td><td>{{ n('s4', k, 'fo_cible_t') if saisir else t('s4', k, 'fo_cible_t') }}</td>
+      {{ p('s4', k, 'fo_cov_em') }}{{ p('s4', k, 'fo_cov_t') }}
+    {% endmacro %}
+    {% for a in b.acteurs %}<tr>{{ acteur(a) }}{{ ligne4(a.cle, True) }}</tr>{% endfor %}
+    {% for k, lib in TOT %}<tr class="tot"><td class="acteur">{{ lib }}</td>{{ ligne4(k, False) }}</tr>{% endfor %}
+  </table></div>
+  <p class="aide">Bases proposées : 4.1 nombre de sections (EM) et de classes (EM+EP) ; 4.2 et 4.3 nombre d'écoles (directeurs) ; 4.5 nombre d'enseignants. Corrigez-les si votre circonscription retient d'autres bases (ex. directeurs à suivre).</p></div>
+
+  {# ------------------------------------------------------------ 5 #}
+  <div class="carte"><h2>5. Résultats de l'évaluation d'étape n°
+    {% if saisie %}<input name="s5_etape" value="{{ b.s5.etape }}" maxlength="10" style="width:48px" aria-label="Numéro de l'étape">{% else %}{{ b.s5.etape }}{% endif %} : point de l'évaluation</h2>
+  <div class="tw"><table class="t compact">
+    <tr><th rowspan="2">Cours</th><th colspan="3">Inscrits</th><th colspan="3">Ont composé</th><th colspan="3">Maîtrise partielle / seuil non atteint</th><th colspan="3">Maîtrise minimale / seuil atteint</th><th colspan="3">% de réussite</th><th colspan="2">À renforcer</th></tr>
+    <tr>{% for _ in range(5) %}<th>G</th><th>F</th><th>T</th>{% endfor %}<th>Maths</th><th>Français</th></tr>
+    {% for co in COURS + ['TOTAL'] %}{% set r5 = b.s5.lignes[co] %}
+    <tr class="{{ 'tot' if co == 'TOTAL' }}"><td class="acteur"><b>{{ co }}</b></td>
+      {% for x in ['ins','comp','part','min'] %}
+        {% if co == 'TOTAL' or not saisie %}<td>{{ r5[x ~ '_g'] if r5[x ~ '_g'] is not none else '' }}</td><td>{{ r5[x ~ '_f'] if r5[x ~ '_f'] is not none else '' }}</td>
+        {% else %}<td><input type="number" min="0" name="s5_{{ co }}_{{ x }}_g" value="{{ r5[x ~ '_g'] if r5[x ~ '_g'] is not none else '' }}" aria-label="{{ co }} {{ x }} G"></td><td><input type="number" min="0" name="s5_{{ co }}_{{ x }}_f" value="{{ r5[x ~ '_f'] if r5[x ~ '_f'] is not none else '' }}" aria-label="{{ co }} {{ x }} F"></td>{% endif %}
+        <td class="calc">{{ r5[x ~ '_t'] }}</td>
+      {% endfor %}
+      <td class="calc">{{ pct(r5.reu_g) }}</td><td class="calc">{{ pct(r5.reu_f) }}</td><td class="calc">{{ pct(r5.reu_t) }}</td>
+      {% for x in ['renf_math','renf_fr'] %}{% if co == 'TOTAL' or not saisie %}<td>{{ r5[x] if r5[x] is not none else '' }}</td>{% else %}<td><input type="number" min="0" name="s5_{{ co }}_{{ x }}" value="{{ r5[x] if r5[x] is not none else '' }}" aria-label="{{ co }} {{ x }}"></td>{% endif %}{% endfor %}</tr>
+    {% endfor %}
+  </table></div>
+  <p class="aide">Inscrits pré-remplis avec les effectifs transmis par les écoles (CP à CM2). % de réussite = maîtrise minimale ÷ ont composé.</p></div>
+
+  {# ------------------------------------------------------------ 6 #}
+  <div class="carte"><h2>6. Analyse des résultats</h2>
+    {% for k, lib in TEXTES %}
+    <label for="tx_{{ k }}"><b>{{ lib }}</b></label>
+    <textarea id="tx_{{ k }}" name="tx_{{ k }}" rows="3" {{ 'disabled' if not saisie }}>{{ b.textes.get(k, '') }}</textarea>
+    {% endfor %}
+    <p class="aide">Les analyses quantitative, de genre et la conclusion sont proposées d'après les chiffres ; complétez-les ou réécrivez-les.</p>
+    <h3>Problèmes majeurs identifiés et ceux en voie de résolution <span class="aide">(par ordre décroissant d'importance)</span></h3>
+    <div class="tw"><table class="t compact lst" id="t-pb">
+      <tr><th style="width:40px">Ordre</th><th>Désignation des problèmes majeurs identifiés</th><th style="width:90px">Ampleur (%)</th><th>Observations (approches et stratégies appliquées ou envisagées)</th><th></th></tr>
+      {% for x in b.problemes + [{'designation':'','ampleur':'','observations':''}] %}
+      <tr><td>{{ loop.index }}</td><td><textarea name="pb_designation" rows="2" {{ 'disabled' if not saisie }}>{{ x.designation }}</textarea></td>
+        <td><input name="pb_ampleur" value="{{ x.ampleur }}" maxlength="20" placeholder="ex. 40 %" {{ 'disabled' if not saisie }}></td>
+        <td><textarea name="pb_observations" rows="2" {{ 'disabled' if not saisie }}>{{ x.observations }}</textarea></td>
+        <td>{% if saisie %}<button type="button" class="btn danger petit" onclick="this.closest('tr').remove()" title="Retirer">✕</button>{% endif %}</td></tr>
+      {% endfor %}
+    </table></div>
+    {% if saisie %}<button type="button" class="btn sec petit" data-ajout="t-pb">+ Ligne</button>{% endif %}
+  </div>
+
+  {# ------------------------------------------------------------ 7 #}
+  <div class="carte"><h2>7. Commentaires / analyse</h2>
+    <textarea name="commentaires" rows="4" aria-label="Commentaires" {{ 'disabled' if not saisie }}>{{ b.commentaires }}</textarea></div>
+
+  {% if saisie %}<div class="actions" style="margin:12px 0"><button class="btn vert" name="action" value="enregistrer">{{ icone('enregistrer') }} Enregistrer</button>
+    <button class="btn sec" name="action" value="pdf">{{ icone('document') }} Enregistrer et voir le PDF</button></div>{% endif %}
+</form>
+
+{% if saisie %}
+<details class="carte" id="d-charger"><summary><b>{{ icone('dossier') }} Charger un bilan (Excel)</b></summary>
+  <form method="post" action="{{ url_for('jur_cp_bilan_import') }}" enctype="multipart/form-data" style="margin-top:8px">
+    <input type="hidden" name="annee" value="{{ annee }}"><input type="hidden" name="periode" value="{{ periode }}">
+    {% if zone_id %}<input type="hidden" name="zone" value="{{ zone_id }}">{% endif %}{% if CSP %}<input type="hidden" name="cs" value="{{ CSP }}">{% endif %}
+    <p class="aide">Téléchargez d'abord le bilan en Excel (une feuille par tableau), complétez ou corrigez les cases blanches hors ligne, puis chargez le classeur : ses valeurs remplacent celles du bilan.</p>
+    <input type="file" name="fichier" accept=".xlsx" required> <button class="btn sec">Charger</button>
+  </form></details>
+{% endif %}
+</div>
+<script>
+document.querySelectorAll('[data-ajout]').forEach(function(b){b.addEventListener('click',function(){
+  var t=document.getElementById(b.dataset.ajout), l=t.querySelectorAll('tr'), d=l[l.length-1], c=d.cloneNode(true);
+  c.querySelectorAll('input,textarea').forEach(function(x){x.value='';}); c.cells[0].textContent=l.length; d.parentNode.appendChild(c);});});
+</script>
+{% endblock %}

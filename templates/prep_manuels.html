@@ -1,0 +1,27 @@
+{# v1.31 — Manuels officiels : textes de lecture et dossiers de mathématiques rattachés aux séances ; mesures correctives #}
+{% extends "base.html" %}{% block titre %}Manuels officiels{% endblock %}
+{% block contenu %}{% set onglet = 'manuels' %}{% include "_prep_onglets.html" %}
+<p class="aide">Manuels de l'élève des programmes officiels : chaque texte de lecture est rattaché à ses séances et à son résumé ; chaque fiche de mathématiques à son dossier et à sa situation d'apprentissage. Les manuels eux-mêmes ne sont pas reproduits.</p>
+{% for m in manuels %}
+<details class="carte" style="margin-bottom:8px" {% if loop.first %}open{% endif %}><summary><b>{{ m.titre }}</b> — {{ m.cours }} · {{ m.editeur }}{% if m.annee %}, {{ m.annee }}{% endif %}</summary>
+{% if m.description %}<p class="aide">{{ m.description }}</p>{% endif %}
+{% if m.textes %}<div class="tw"><table class="t"><thead><tr><th>N°</th><th>Unité</th><th>Texte</th><th>Page</th><th>Genre</th><th>Résumé</th><th>Séance(s)</th></tr></thead><tbody>
+{% for t in m.textes %}{% set r = lect.get((m.id, t.n)) %}<tr><td>{{ t.n }}</td><td>{{ t.unite or '—' }}</td><td>{{ t.titre }}</td><td>{{ t.page or '—' }}</td><td>{{ t.genre }}</td>
+<td>{% if r %}<a href="{{ url_for('prep_resume', rid=r.id) }}">résumé</a>{% endif %}</td>
+<td>{% for f in seances.get((m.id, t.n), []) %}<a href="{{ url_for('prep_fiche', fid=f.id) }}">{{ f.sous_matiere or 'séance' }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+{% if m.dossiers %}<div class="tw"><table class="t"><thead><tr><th>Dossier</th><th>Situations d'apprentissage (page)</th></tr></thead><tbody>
+{% for d in m.dossiers %}<tr><td>Dossier {{ d.n }}{% if d.titre %} : {{ d.titre }}{% endif %}</td><td>{% for s in d.sa %}SA {{ d.n }}.{{ s.n }}{% if s.titre %} {{ s.titre }}{% endif %}{% if s.page %} (p. {{ s.page }}){% endif %}{% if not loop.last %} ; {% endif %}{% endfor %}</td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+{% if m.fiches_sa %}<div class="tw"><table class="t"><thead><tr><th>SA</th><th>Fiches du cahier (page)</th></tr></thead><tbody>
+{% for d in m.fiches_sa %}<tr><td>SA {{ d.n }}</td><td>{% for s in d.fiches %}fiche {{ s.n }} {{ s.titre }}{% if s.page %} (p. {{ s.page }}){% endif %}{% if not loop.last %} ; {% endif %}{% endfor %}</td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+{% if m.planches %}<div class="tw"><table class="t"><thead><tr><th>Thème</th><th>Planches</th><th>Contenu</th></tr></thead><tbody>
+{% for d in m.planches %}<tr><td>{{ d.theme }}</td><td>{{ d.pages }}</td><td>{{ d.elements }}</td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+</details>{% endfor %}
+{% if mesures %}<h2>Mesures correctives (MEMP, 2011) — application</h2>
+<div class="tw"><table class="t"><thead><tr><th>Champ</th><th>Cours</th><th>Mesure</th><th>Application</th></tr></thead><tbody>
+{% for x in mesures %}<tr><td>{{ prep_nom_matiere(x.matiere) }}</td><td>{{ x.cours|join(', ') }}</td><td><b>{{ x.titre }}</b><br>{{ x.contenu }}</td><td>{{ x.application }}</td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+{% endblock %}

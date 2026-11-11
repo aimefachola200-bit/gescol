@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% block titre %}Mes classes{% endblock %}
+{% block contenu %}
+<h1>Mes classes</h1>
+<p class="sous">{{ ECOLE.nom }} – année scolaire {{ ANNEE }}</p>
+<div class="carte">
+  <table><thead><tr><th>Classe</th><th>Niveau</th><th>Élèves</th><th></th></tr></thead><tbody>
+  {% for c in classes %}<tr><td><b>{{ c.nom }}</b></td><td>{{ c.niveau }}</td><td>{{ c.effectif }}</td>
+    <td class="actions"><a class="btn petit" href="{{ url_for('eleve_form', classe=c.id) }}">+ Élève</a>
+      <a class="btn sec petit" href="{{ url_for('eleves_import') }}">Importer</a>
+      {% if not c.effectif %}<form method="post" style="display:inline" onsubmit="return confirm('Supprimer la classe {{ c.nom }} ?')">
+        <input type="hidden" name="action" value="supprimer"><input type="hidden" name="cid" value="{{ c.id }}">
+        <button class="btn sec petit">{{ icone('supprimer') }} Supprimer</button></form>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="4">Aucune classe.</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+<div class="carte">
+  <h2 style="margin-top:0">Ajouter une classe</h2>
+  <form method="post" class="f filtres"><input type="hidden" name="action" value="ajouter">
+    <label for="nom">Nom</label><input id="nom" name="nom" required placeholder="ex. CM1 B">
+    <label for="niveau">Niveau</label><select id="niveau" name="niveau" required><option value=""></option>{% for n in NIVEAUX %}<option>{{ n }}</option>{% endfor %}</select>
+    <button class="btn">Ajouter</button></form>
+</div>
+{% endblock %}

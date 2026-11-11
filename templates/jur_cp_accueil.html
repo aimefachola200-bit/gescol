@@ -1,0 +1,90 @@
+{% extends "base.html" %}{% block titre %}Conseillers pédagogiques{% endblock %}
+{% block contenu %}
+<style>
+.cp-nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:12px 0}
+.cp-nav a{display:block;border:1px solid #D0D5DD;border-radius:10px;padding:12px 14px;background:#fff;text-decoration:none;color:#1D2939}
+.cp-nav a b{display:block;color:#1F4E79;font-size:15px;margin-bottom:3px}
+.cp-nav a:hover{border-color:#1F4E79;background:#F5F8FC}
+table.t.cp input,table.t.cp select{width:100%;min-width:70px}
+.etat{display:inline-block;border-radius:10px;padding:1px 8px;font-size:12px;font-weight:600}
+.etat.valide{background:#ECFDF3;color:#067647}.etat.brouillon{background:#FFFAEB;color:#B54708}.etat.aucun{background:#F2F4F7;color:#667085}
+</style>
+<div class="entete"><div><h1>Conseillers pédagogiques</h1>
+  <p class="sous">Réseau d'animation pédagogique (RAP) : CCS et CP des zones · programmation, journal des activités, bilans trimestriel et annuel (niveau zone et niveau CS) · année {{ annee }}.</p></div></div>
+
+<form method="get" class="filtres carte">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  {% if JUR_NIVEAU == 'ddemp' %}<label>Circonscription<br><select name="cs" onchange="this.form.submit()">
+    {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if cs_id == c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+  <noscript><button class="btn sec petit">Afficher</button></noscript>
+</form>
+
+{% if not cs_id %}
+<div class="carte">Aucune circonscription configurée : renseignez d'abord <a href="{{ url_for('jur_zones') }}">les circonscriptions et zones pédagogiques</a>.</div>
+{% else %}
+<div class="cp-nav">
+  <a href="{{ url_for('jur_cp_programmation', annee=annee, periode=periode, cs=cs_id if JUR_NIVEAU == 'ddemp' else None) }}"><b>① Programmation</b>Activités programmées par trimestre, pour le CCS et chaque CP (visites, suivis, UP, formations, concertations).</a>
+  <a href="{{ url_for('jur_cp_activites', annee=annee, periode=periode, cs=cs_id if JUR_NIVEAU == 'ddemp' else None) }}"><b>② Journal des activités</b>{{ nb_act }} activité(s) enregistrée(s) : suivis des directeurs, formations, concertations, autres activités.</a>
+  <a href="{{ url_for('jur_visites') }}"><b>③ Visites d'école et de classe</b>Les visites du CCS et des CP saisies dans ce module sont comptées automatiquement dans les bilans.</a>
+  <a href="{{ url_for('jur_cp_bilan', annee=annee, periode=periode, cs=cs_id if JUR_NIVEAU == 'ddemp' else None) }}"><b>④ Bilan de la CS</b>Bilan trimestriel ou annuel des activités pédagogiques, niveau CS, selon le canevas officiel.</a>
+</div>
+
+<div class="carte"><h2>Conseillers pédagogiques par zone</h2>
+  <div class="tw"><table class="t compact cp">
+    <tr><th>Zone</th><th>Écoles</th><th>CP (nom et prénoms)</th><th>Téléphone</th><th>Sexe</th><th>Grade</th><th>E-mail</th><th>Bilan de la zone</th>{% if saisie %}<th></th>{% endif %}</tr>
+    {% for z in zones %}
+    <tr>
+      <td><b>{{ lib_zone(z.nom) }}</b></td>
+      <td class="num">{{ z.ecoles.EP }} EP · {{ z.ecoles.EM }} EM</td>
+      {% if saisie %}
+      <td><input form="f-z{{ z.id }}" name="cp_nom" value="{{ z.cp_nom or '' }}" maxlength="150" aria-label="Nom du CP de {{ z.nom }}"></td>
+      <td><input form="f-z{{ z.id }}" name="cp_telephone" value="{{ z.cp_telephone or '' }}" maxlength="40" aria-label="Téléphone"></td>
+      <td><select form="f-z{{ z.id }}" name="sexe" aria-label="Sexe"><option value=""></option><option value="M" {{ 'selected' if z.fiche.sexe == 'M' }}>M</option><option value="F" {{ 'selected' if z.fiche.sexe == 'F' }}>F</option></select></td>
+      <td><input form="f-z{{ z.id }}" name="grade" value="{{ z.fiche.grade or '' }}" maxlength="60" aria-label="Grade"></td>
+      <td><input form="f-z{{ z.id }}" name="email" type="email" value="{{ z.fiche.email or '' }}" maxlength="120" aria-label="E-mail"></td>
+      {% else %}
+      <td>{{ z.cp_nom or '—' }}</td><td>{{ z.cp_telephone or '—' }}</td><td>{{ z.fiche.sexe or '' }}</td><td>{{ z.fiche.grade or '' }}</td><td>{{ z.fiche.email or '' }}</td>
+      {% endif %}
+      <td><a class="btn sec petit" href="{{ url_for('jur_cp_bilan', annee=annee, periode=periode, zone=z.id, cs=cs_id if JUR_NIVEAU == 'ddemp' else None) }}">Bilan de la zone</a></td>
+      {% if saisie %}<td><form id="f-z{{ z.id }}" method="post" action="{{ url_for('jur_cp_conseiller', zid=z.id, annee=annee) }}"><button class="btn petit">Enregistrer</button></form></td>{% endif %}
+    </tr>
+    {% else %}
+    <tr><td colspan="9" class="gris">Aucune zone pédagogique : <a href="{{ url_for('jur_zones') }}">ajoutez les zones</a> de la circonscription.</td></tr>
+    {% endfor %}
+  </table></div>
+</div>
+
+<div class="carte"><h2>Bilans enregistrés · {{ annee }}</h2>
+  {% set noms = {} %}
+  {% for z in zones %}{% set _ = noms.update({z.id: lib_zone(z.nom)}) %}{% endfor %}
+  <div class="tw"><table class="t compact">
+    <tr><th>Période</th><th>Niveau</th><th>État</th><th>Dernière modification</th><th></th></tr>
+    {% for r in bilans %}
+    <tr><td>{{ PERIODES[r.periode][0] }}</td><td>{{ 'Zone – ' ~ noms.get(r.zone_id, '?') if r.niveau == 'zone' else 'Circonscription (CS)' }}</td>
+      <td><span class="etat {{ r.etat }}">{{ 'Validé' if r.etat == 'valide' else 'Brouillon' }}</span></td><td>{{ r.maj or '' }}</td>
+      <td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('jur_cp_bilan', annee=annee, periode=r.periode, zone=r.zone_id or None, cs=cs_id if JUR_NIVEAU == 'ddemp' else None) }}">Ouvrir</a>
+        <a class="btn sec petit" href="{{ url_for('jur_cp_bilan_pdf', annee=annee, periode=r.periode, zone=r.zone_id or None, cs=cs_id if JUR_NIVEAU == 'ddemp' else None) }}" target="_blank">{{ icone('document') }} PDF</a></td></tr>
+    {% else %}
+    <tr><td colspan="5" class="gris">Aucun bilan enregistré pour {{ annee }} : ouvrez le <a href="{{ url_for('jur_cp_bilan', annee=annee, periode=periode, cs=cs_id if JUR_NIVEAU == 'ddemp' else None) }}">bilan de la CS</a> ou celui d'une zone, vérifiez les chiffres calculés et enregistrez.</td></tr>
+    {% endfor %}
+  </table></div>
+  {% if JUR_NIVEAU == 'cs' %}<p class="aide">Les bilans enregistrés partent avec le prochain envoi à la DDEMP (menu Transmissions).</p>{% endif %}
+</div>
+
+{% if JUR_NIVEAU == 'ddemp' %}
+<div class="carte"><h2>Bilans transmis par les circonscriptions</h2>
+  <div class="tw"><table class="t compact">
+    <tr><th>Circonscription</th><th>Période</th><th>Niveau</th><th>État</th><th>Mis à jour</th><th></th></tr>
+    {% for x in recus %}
+    <tr><td>{{ x.cs_nom }}</td><td>{{ PERIODES.get(x.periode, ('?',))[0] }}</td><td>{{ ('Zone – ' ~ x.zone) if x.niveau == 'zone' else 'CS' }}</td>
+      <td><span class="etat {{ x.etat }}">{{ 'Validé' if x.etat == 'valide' else 'Brouillon' }}</span></td><td>{{ x.maj or '' }}</td>
+      <td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('jur_cp_bilan_pdf', cs=x.cs_id, annee=annee, recu=x.index) }}" target="_blank">{{ icone('document') }} PDF</a>
+        <a class="btn sec petit" href="{{ url_for('jur_cp_bilan_xlsx', cs=x.cs_id, annee=annee, recu=x.index) }}">⇩ Excel</a></td></tr>
+    {% else %}
+    <tr><td colspan="6" class="gris">Aucun bilan reçu pour {{ annee }} (ils arrivent avec les paquets des CS).</td></tr>
+    {% endfor %}
+  </table></div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

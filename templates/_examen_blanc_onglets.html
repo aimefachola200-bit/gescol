@@ -1,0 +1,9 @@
+{# v1.33 — un seul module « Examen blanc du CEP », deux onglets : commun (CS, 9 épreuves) et libre (école, matières au choix) #}
+{% set _eb_commun = ep_existe('examen_blanc') and peut('examen_blanc') and not ENS %}
+{% set _eb_libre = ep_existe('cep_blanc_accueil') and peut('cep') %}
+{% if _eb_commun and _eb_libre %}
+<nav class="onglets noprint" aria-label="Examen blanc" style="margin:4px 0 10px">
+  <a href="{{ url_for('examen_blanc') }}" class="{{ 'actif' if request.endpoint.startswith('examen_blanc') }}" {{ 'aria-current=page' if request.endpoint.startswith('examen_blanc') }}>Examen blanc commun (CS, 9 épreuves)</a>
+  <a href="{{ url_for('cep_blanc_accueil') }}" class="{{ 'actif' if request.endpoint.startswith('cep_blanc') }}" {{ 'aria-current=page' if request.endpoint.startswith('cep_blanc') }}>Examen blanc libre (école)</a>
+</nav>
+{% endif %}

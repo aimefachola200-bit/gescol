@@ -1,0 +1,98 @@
+{% extends "base.html" %}{% block titre %}CEP – candidats et résultats{% endblock %}
+{% block contenu %}
+<style>
+.t tr.g-zone td{background:#EEF3FA;font-weight:600}
+.t tr.g-cs td{background:#D9E4F2;font-weight:700}
+.t tr.g-total td{background:#C9D8EE;font-weight:700}
+.t td.n, .t th.n{text-align:right;white-space:nowrap}
+.barre-taux{background:#EEF2F6;border-radius:4px;height:8px;min-width:80px}
+.barre-taux span{display:block;height:8px;border-radius:4px;background:#1F4E79}
+.barre-taux span.faible{background:#D92D20}
+</style>
+{% set g_ = st.global %}
+<div class="entete"><div><h1>Candidats et résultats au CEP – session {{ st.session }}</h1>
+  <p class="sous">{{ 'Toutes les circonscriptions du département' if DDEMP and not fl.cs_id else ('Écoles de la circonscription' if not DDEMP else 'Circonscription choisie') }} · année {{ st.annee }}</p></div>
+<div class="actions">
+  <a class="btn sec" href="{{ url_for('jur_cep', export='pdf', **args_url(fl)) }}" target="_blank">⎙ PDF (paysage)</a>
+  <a class="btn sec" href="{{ url_for('jur_cep', export='xlsx', **args_url(fl)) }}">⇩ Excel</a>
+  {% if peut('jur_cep') %}<a class="btn" href="{{ url_for('jur_cep_import', annee=fl.annee) }}">⇪ Importer les résultats officiels</a>{% endif %}
+</div></div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Écoles ayant présenté</div><div class="v">{{ g_.nb_presentes }} / {{ g_.nb_ecoles }}</div><div class="d">{{ pct(g_.pct_presentes) }} des écoles primaires</div></div>
+  <div class="kpi"><div class="l">Candidats présentés</div><div class="v">{{ nb(g_.candidats) }}</div><div class="d">{{ nb(g_.candidats_g) }} G · {{ nb(g_.candidats_f) }} F</div></div>
+  <div class="kpi"><div class="l">Admis</div><div class="v">{{ nb(g_.admis) }}</div><div class="d">{{ nb(g_.admis_g) }} G · {{ nb(g_.admis_f) }} F</div></div>
+  <div class="kpi"><div class="l">Taux de réussite</div><div class="v">{{ pct(g_.taux) }}</div><div class="d">G {{ pct(g_.taux_g) }} · F {{ pct(g_.taux_f) }}</div></div>
+</div>
+
+{% with avec_seuil=True %}{% include "jur_cep_filtres.html" %}{% endwith %}
+
+{% if not st.ecoles %}
+<div class="carte"><p><b>Aucune école primaire</b> pour ces critères.</p>
+<p class="aide">Les chiffres du CEP arrivent avec les fichiers de transmission des écoles (menu « Transmissions »). Vous pouvez aussi
+{% if peut('jur_cep') %}<a href="{{ url_for('jur_cep_import', annee=fl.annee) }}">importer les résultats officiels (Excel)</a> ou{% endif %}
+ajouter les écoles dans « Juridiction › Écoles ».</p></div>
+{% else %}
+{% if g_.resultats_incomplets %}<div class="flash warning">Résultats connus pour {{ g_.nb_resultats }} des {{ g_.nb_presentes }} écoles ayant présenté des candidats : les taux portent uniquement sur ces écoles.</div>{% endif %}
+{% if g_.nb_donnees < g_.nb_ecoles %}<p class="aide">{{ g_.nb_ecoles - g_.nb_donnees }} école(s) primaire(s) n'ont transmis aucune donnée du CEP (« non reçu »).</p>{% endif %}
+
+<div class="tw"><table class="t compact">
+  <thead><tr><th rowspan="2">N°</th><th rowspan="2">École</th><th rowspan="2">Secteur</th><th rowspan="2">Écoles ayant présenté</th>
+    <th colspan="3">Candidats présentés</th><th colspan="3">Admis</th><th colspan="3">Taux de réussite</th><th rowspan="2"></th></tr>
+  <tr><th class="n">G</th><th class="n">F</th><th class="n">T</th><th class="n">G</th><th class="n">F</th><th class="n">T</th><th class="n">G</th><th class="n">F</th><th class="n">T</th></tr></thead>
+  <tbody>
+  {% for r in lignes %}{% set d = r.d %}
+  <tr class="g-{{ r.genre }}">
+    <td>{{ r.n or '' }}</td>
+    {% if r.genre == 'ecole' %}
+    <td><a href="{{ url_for('jur_cep_ecole', eid=d.ecole_id, annee=fl.annee) }}">{{ d.nom }}</a>
+      {% if d.corrige %}<span class="badge att" title="Chiffres {{ 'importés' if d.source == 'import' else 'corrigés' }} par la {{ 'DDEMP / CS' if DDEMP else 'circonscription' }}">{{ 'importé' if d.source == 'import' else 'corrigé' }}</span>{% endif %}
+      <br><span class="aide">{{ d.code }}</span></td>
+    <td>{{ JUR_SECTEURS.get(d.secteur, '') }}</td>
+    <td>{% if d.presente %}<span class="badge ok">Oui</span>{% elif d.donnees %}<span class="badge">Non</span>{% else %}<span class="badge att">non reçu</span>{% endif %}</td>
+    {% else %}
+    <td colspan="2">{{ r.libelle }}</td>
+    <td>{{ d.nb_presentes }}/{{ d.nb_ecoles }} <span class="aide">({{ pct(d.pct_presentes) }})</span></td>
+    {% endif %}
+    <td class="n">{{ d.candidats_g }}</td><td class="n">{{ d.candidats_f }}</td><td class="n"><b>{{ d.candidats }}</b></td>
+    <td class="n">{{ nb(d.admis_g) }}</td><td class="n">{{ nb(d.admis_f) }}</td><td class="n"><b>{{ nb(d.admis) }}</b></td>
+    <td class="n">{{ pct(d.taux_g) }}</td><td class="n">{{ pct(d.taux_f) }}</td>
+    <td class="n {{ 'rouge' if d.taux is not none and d.taux < st.seuil_faible }}"><b>{{ pct(d.taux) }}</b></td>
+    <td>{% if r.genre == 'ecole' and peut('jur_cep') %}<a class="btn sec petit" href="{{ url_for('jur_cep_ecole', eid=d.ecole_id, annee=fl.annee) }}">Corriger</a>{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+
+<div class="grille2" style="margin-top:16px">
+  <div class="carte">
+    <h2>Taux de réussite par {{ 'circonscription' if DDEMP else 'zone pédagogique' }}</h2>
+    <div class="tw"><table class="t compact">
+      <tr><th>{{ 'CS' if DDEMP else 'Zone' }}</th><th class="n">Écoles ayant présenté</th><th class="n">Candidats</th><th class="n">Admis</th><th class="n">Taux</th><th>G / F</th></tr>
+      {% for z in (st.cs if DDEMP else st.zones) %}
+      <tr><td>{{ z.cs_nom if DDEMP else z.zone_nom }}</td><td class="n">{{ z.nb_presentes }}/{{ z.nb_ecoles }} ({{ pct(z.pct_presentes) }})</td>
+        <td class="n">{{ z.candidats }}</td><td class="n">{{ nb(z.admis) }}</td>
+        <td class="n"><b>{{ pct(z.taux) }}</b><div class="barre-taux" aria-hidden="true"><span class="{{ 'faible' if z.taux is not none and z.taux < 50 }}" style="width:{{ z.taux or 0 }}%"></span></div></td>
+        <td class="aide">{{ pct(z.taux_g) }} / {{ pct(z.taux_f) }}</td></tr>
+      {% endfor %}
+      <tr class="g-total"><td>Ensemble</td><td class="n">{{ g_.nb_presentes }}/{{ g_.nb_ecoles }} ({{ pct(g_.pct_presentes) }})</td><td class="n">{{ g_.candidats }}</td><td class="n">{{ nb(g_.admis) }}</td><td class="n">{{ pct(g_.taux) }}</td><td>{{ pct(g_.taux_g) }} / {{ pct(g_.taux_f) }}</td></tr>
+    </table></div>
+    {% if DDEMP and st.zones %}<details style="margin-top:8px"><summary>Détail par zone pédagogique</summary>
+      <div class="tw"><table class="t compact"><tr><th>CS</th><th>Zone</th><th class="n">Écoles ayant présenté</th><th class="n">Candidats</th><th class="n">Admis</th><th class="n">Taux</th></tr>
+      {% for z in st.zones %}<tr><td>{{ z.cs_nom }}</td><td>{{ z.zone_nom }}</td><td class="n">{{ z.nb_presentes }}/{{ z.nb_ecoles }}</td><td class="n">{{ z.candidats }}</td><td class="n">{{ nb(z.admis) }}</td><td class="n">{{ pct(z.taux) }}</td></tr>{% endfor %}
+      </table></div></details>{% endif %}
+  </div>
+  <div class="carte">
+    <h2>Écoles à taux élevé (≥ {{ '%g' % st.seuil_eleve }} %, plus de {{ st.effectif_min }} candidats)</h2>
+    {% if st.eleves %}<div class="tw"><table class="t compact"><tr><th>N°</th><th>École</th>{% if DDEMP %}<th>CS</th>{% endif %}<th>Zone</th><th class="n">Candidats</th><th class="n">Taux</th></tr>
+      {% for l in st.eleves %}<tr><td>{{ loop.index }}</td><td><a href="{{ url_for('jur_cep_ecole', eid=l.ecole_id, annee=fl.annee) }}">{{ l.nom }}</a></td>{% if DDEMP %}<td>{{ l.cs_nom }}</td>{% endif %}<td>{{ l.zone_nom }}</td><td class="n">{{ l.candidats }}</td><td class="n vert"><b>{{ pct(l.taux) }}</b></td></tr>{% endfor %}
+    </table></div>{% else %}<p class="gris">Aucune école ne remplit ces deux conditions.</p>{% endif %}
+    <h2 style="margin-top:14px">Écoles ayant moins de {{ st.seuil_faible }} % de réussite</h2>
+    {% if st.faibles %}<div class="tw"><table class="t compact"><tr><th>N°</th><th>École</th>{% if DDEMP %}<th>CS</th>{% endif %}<th>Zone</th><th class="n">Candidats</th><th class="n">Taux</th></tr>
+      {% for l in st.faibles %}<tr><td>{{ loop.index }}</td><td><a href="{{ url_for('jur_cep_ecole', eid=l.ecole_id, annee=fl.annee) }}">{{ l.nom }}</a></td>{% if DDEMP %}<td>{{ l.cs_nom }}</td>{% endif %}<td>{{ l.zone_nom }}</td><td class="n">{{ l.candidats }}</td><td class="n rouge"><b>{{ pct(l.taux) }}</b></td></tr>{% endfor %}
+    </table></div>{% else %}<p class="gris">Aucune école sous {{ st.seuil_faible }} %.</p>{% endif %}
+  </div>
+</div>
+<p class="aide">Taux = admis ÷ candidats des écoles dont les résultats sont connus. Cliquez sur une école pour voir le détail, la liste nominative transmise{% if peut('jur_cep') %} et corriger ses chiffres{% endif %}.</p>
+{% endif %}
+{% endblock %}

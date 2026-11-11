@@ -1,0 +1,17 @@
+{# v2.0 — hub : entités inscrites, codes QR d'inscription, fichiers descendants, nouvelle clé #}
+{% extends "base.html" %}{% block titre %}Entités inscrites{% endblock %}
+{% block contenu %}
+<p class="aide"><a href="{{ url_for('sync_page') }}">← Synchronisation</a></p>
+<h1>{{ icone('groupe', 24) }} Entités inscrites — {{ em.nom }}</h1>
+<p class="sous">Chaque {{ 'école' if em.niveau == 'CS' else 'circonscription' }} rejoint la synchronisation avec son code QR (ou l'adresse {{ adresse }} et son code d'accès, créé dans « Suivi des envois »). Sa clé est enregistrée à son premier envoi.</p>
+{% if adresse.startswith('http://') and not (adresse.startswith('http://127.') or adresse.startswith('http://192.168.') or adresse.startswith('http://10.') or adresse.startswith('http://localhost')) %}<div class="flash warning">L'adresse de cette application est en <b>http</b> : les applications installées depuis Internet (pages https, comme MEMP-CP ou CS Pobè) ne peuvent pas s'y connecter. Mettez l'application en ligne en <b>https</b> (guide EN_LIGNE.md, rubrique « Synchronisation ») ou passez par les fichiers.</div>{% endif %}
+<div class="tw"><table class="t" aria-label="Entités"><thead><tr><th>Entité</th><th>Code</th><th>Dernière réception</th><th class="num">Éléments reçus</th><th>Clé</th><th>Message</th><th></th></tr></thead><tbody>
+{% for l in lignes %}<tr><td><b>{{ l.nom }}</b></td><td>{{ l.code or '' }}</td><td>{{ (l.S.derniere_reception if l.S else '') or 'jamais' }}</td><td class="num">{{ l.S.nb_objets if l.S else 0 }}</td>
+<td>{% if l.S and l.S.cle_publique %}{{ l.S.cle_publique[:8] }}…{% else %}—{% endif %}{% if l.S and l.S.cle_attente %} <span class="badge att">nouvelle clé en attente</span>{% endif %}</td><td>{{ (l.S.dernier_message if l.S else '') or '' }}</td>
+<td style="white-space:nowrap">{% if l.jeton %}<a class="btn sec petit" href="{{ url_for('sync_entites', qr=l.kind ~ ':' ~ l.id) }}#qr-{{ l.kind }}-{{ l.id }}">{{ icone('carte') }} Code QR</a>{% else %}<span class="aide">code d'accès à créer</span>{% endif %}
+<a class="btn sec petit" href="{{ url_for('sync_descendant_fichier', kind=l.kind, rid=l.id) }}">{{ icone('telecharger') }} Fichier pour elle</a>
+{% if l.S and l.S.cle_attente %}<form method="post" style="display:inline" onsubmit="return confirm('Accepter la nouvelle clé de {{ l.nom }} ? Faites-le seulement si elle a changé d\'appareil.')"><input type="hidden" name="cle" value="{{ l.S.cle }}"><button class="btn sec petit" name="action" value="accepter_cle">Accepter la nouvelle clé</button></form>{% endif %}</td></tr>
+{% if l.qr %}<tr id="qr-{{ l.kind }}-{{ l.id }}"><td colspan="7"><div class="ligne" style="gap:14px;align-items:center">{{ l.qr|safe }}<div><b>Inscription de {{ l.nom }}</b><br><span class="aide">Scannez ce code avec le téléphone de l'entité, ou recopiez ce lien dans « Synchronisation › Rejoindre » :</span><br><code style="word-break:break-all">{{ l.lien }}</code></div></div></td></tr>{% endif %}
+{% else %}<tr><td colspan="7">Aucune entité : ajoutez les {{ 'écoles' if em.niveau == 'CS' else 'circonscriptions' }} de la juridiction.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

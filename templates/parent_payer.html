@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% block titre %}Payer la scolarité{% endblock %}
+{% block contenu %}
+<div style="max-width:620px">
+<h1>Payer la scolarité</h1>
+<p class="sous">{{ e.prenoms }} {{ e.nom }} · {{ cl.nom if cl else '' }} · reste à payer <b>{{ fcfa(reste) }}</b></p>
+{% if sandbox %}<div class="flash warning">Mode test : aucun argent réel n'est prélevé.</div>{% endif %}
+<div class="carte">
+<form method="post" class="f" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Redirection vers le paiement…'">
+  <label>Montant à payer (FCFA)</label>
+  <input name="montant" inputmode="numeric" required value="{{ reste }}">
+  <div class="actions" style="margin:6px 0 4px">
+    {% for part in [reste, (reste // 2) if reste >= 2000 else none, (reste // 3) if reste >= 3000 else none] if part %}
+    <button type="button" class="btn sec petit" onclick="this.form.montant.value='{{ part }}'">{{ fcfa(part) }}</button>{% endfor %}
+  </div>
+  <label>Numéro Mobile Money qui paie</label>
+  <input name="telephone" type="tel" inputmode="tel" value="{{ affiche_tel(g.parent.telephone) }}">
+  {% if fournisseurs|length > 1 %}
+  <label>Service de paiement</label>
+  <select name="fournisseur">{% for f in fournisseurs %}<option value="{{ f }}">{{ 'FedaPay' if f=='fedapay' else 'KkiaPay' }}</option>{% endfor %}</select>
+  {% else %}<input type="hidden" name="fournisseur" value="{{ fournisseurs[0] }}">{% endif %}
+  <p class="aide">MTN Mobile Money, Moov Money, Celtiis Cash ou carte bancaire. Le reçu est disponible dans votre espace dès que le paiement est confirmé.</p>
+  <button class="btn" style="width:100%">Continuer vers le paiement</button>
+</form>
+</div>
+<p><a href="{{ url_for('parent_enfant', eid=e.id) }}">Annuler</a></p>
+</div>
+{% endblock %}

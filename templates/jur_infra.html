@@ -1,0 +1,96 @@
+{% extends "base.html" %}{% import "jur_tableau_commun.html" as T with context %}
+{% block titre %}Infrastructures et mobilier{% endblock %}
+{% block contenu %}
+{{ T.styles() }}
+<style>.infra td.ind{background:#fff8e1;font-weight:700}.infra td.def{background:#eaf6ee}.infra td.alerte{color:#b42318;font-weight:700}</style>
+{% macro pc(v) %}{{ ('%.1f'|format(v))|replace('.', ',') ~ ' %' if v is not none else '–' }}{% endmacro %}
+{% macro r(v, d=1) %}{{ (('%.' ~ d ~ 'f')|format(v))|replace('.', ',') if v is not none else '–' }}{% endmacro %}
+{% macro bloc(s, titre) %}
+{% set t = tot[s] %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Fiches reçues</div><div class="v">{{ t.fiches }} <small>/ {{ t.ecoles }}</small></div><div class="d">{{ t.ep }} EP · {{ t.em }} EM</div></div>
+  <div class="kpi"><div class="l">Salles de classe</div><div class="v">{{ t.salles_tot|jur_nb }}</div><div class="d">{{ pc(t.p_def) }} en matériaux définitifs</div></div>
+  <div class="kpi"><div class="l">Élèves par salle</div><div class="v">{{ r(t.el_salle) }}</div><div class="d">{{ t.eleves|jur_nb }} élèves (fiches reçues)</div></div>
+  <div class="kpi"><div class="l">Places assises (EP)</div><div class="v">{{ t.places_ep|jur_nb }}</div><div class="d">déficit : <b>{{ t.deficit_ep|jur_nb }}</b> place(s)</div></div>
+  <div class="kpi"><div class="l">Manuels par élève (EP)</div><div class="v">{{ r(t.man_el.fr, 2) }} <small>/ {{ r(t.man_el.ma, 2) }}</small></div><div class="d">français / maths</div></div>
+</div>
+
+<div class="carte"><h2>1. Salles de classe ({{ titre }})</h2>
+  <div class="tw"><table class="t serre infra">
+    <tr><th>{{ lib }}</th><th class="num">Fiches</th>{% for k, l in SALLES %}<th class="num">{{ l }}</th>{% endfor %}<th class="num">Total*</th><th class="num">Existantes</th><th class="num">Utilisées</th><th class="num">% définitifs</th><th class="num">% mauvais état / précaires</th><th class="num">Élèves</th><th class="num">Élèves par salle</th></tr>
+    {% for g in grp + [tot] %}{% set x = g[s] %}{% if x.ecoles %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td><td class="num">{{ x.fiches }}/{{ x.ecoles }}</td>
+      {% for k, l in SALLES %}<td class="num{{ ' def' if k.startswith('def') }}">{{ x.salles[k] }}</td>{% endfor %}
+      <td class="num"><b>{{ x.salles_tot }}</b></td><td class="num">{{ x.exist }}</td><td class="num">{{ x.util }}</td>
+      <td class="num ind">{{ pc(x.p_def) }}</td><td class="num ind{{ ' alerte' if x.p_mauv and x.p_mauv >= 30 }}">{{ pc(x.p_mauv) }}</td>
+      <td class="num">{{ x.eleves|jur_nb }}</td><td class="num ind{{ ' alerte' if x.el_salle and x.el_salle > 60 }}">{{ r(x.el_salle) }}</td></tr>{% endif %}{% endfor %}
+  </table></div>
+  <p class="aide">* Total hors salles en construction. « Mauvais état / précaires » : définitifs en mauvais état, provisoires, sans mur ni toit. Élèves par salle : élèves ÷ salles utilisées (à défaut, total des salles) ; en rouge au-delà de 60.</p>
+  <div class="tw">{{ courbes[s].salles }}</div>
+</div>
+
+<div class="carte"><h2>2. Commodités ({{ titre }})</h2>
+  {% if source != 'recensement' %}<p class="aide">Les commodités (eau, électricité, latrines, clôture) sont renseignées par la fiche de recensement ; le rapport de rentrée et la fiche de fin d'année ne donnent que le lavage des mains.</p>{% endif %}
+  <div class="tw"><table class="t serre infra">
+    <tr><th rowspan="2">{{ lib }}</th>{% for k, l in COMMODITES %}<th colspan="2" class="grp">{{ l }}</th>{% endfor %}<th rowspan="2" class="num">Blocs / modules de latrines</th><th rowspan="2" class="num">Cabines / isoloirs</th></tr>
+    <tr>{% for _ in COMMODITES %}<th class="num">Écoles</th><th class="num">%</th>{% endfor %}</tr>
+    {% for g in grp + [tot] %}{% set x = g[s] %}{% if x.ecoles %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td>
+      {% for k, l in COMMODITES %}<td class="num">{{ x.com[k][0] }}<small class="gris">/{{ x.com[k][1] }}</small></td><td class="num ind">{{ pc(x.p_com[k]) }}</td>{% endfor %}
+      <td class="num">{{ x.lat_blocs }}</td><td class="num">{{ x.lat_cabines }}</td></tr>{% endif %}{% endfor %}
+  </table></div>
+  <p class="aide">« Écoles » : écoles qui en disposent / écoles ayant répondu ; pourcentage calculé sur les écoles ayant répondu.</p>
+  <div class="tw">{{ courbes[s].com }}</div>
+</div>
+
+<div class="carte"><h2>3. Mobilier du primaire et places assises ({{ titre }})</h2>
+  <div class="tw"><table class="t serre infra">
+    <tr><th>{{ lib }}</th>{% for k, l in MOB_EP %}<th class="num">{{ l }}</th>{% endfor %}<th class="num">Places assises</th><th class="num">Élèves</th><th class="num">Déficit de places</th><th class="num">Élèves par place</th></tr>
+    {% for g in grp + [tot] %}{% set x = g[s] %}{% if x.ep %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td>
+      {% for k, l in MOB_EP %}<td class="num">{{ x.mob_ep[k]|jur_nb }}</td>{% endfor %}
+      <td class="num"><b>{{ x.places_ep|jur_nb }}</b></td><td class="num">{{ x.eleves_ep|jur_nb }}</td>
+      <td class="num ind{{ ' alerte' if x.deficit_ep }}">{{ x.deficit_ep|jur_nb }}</td><td class="num ind">{{ r(x.el_place_ep, 2) }}</td></tr>{% endif %}{% endfor %}
+  </table></div>
+  <p class="aide">Places assises = tables + chaises × 1 + table-bancs à 2 places × 2 + table-bancs à 3 places et plus × 3. Déficit = élèves − places assises (écoles dont la fiche est reçue).</p>
+  <div class="tw">{{ courbes[s].places }}</div>
+</div>
+
+<div class="carte"><h2>4. Mobilier de la maternelle ({{ titre }})</h2>
+  <div class="tw"><table class="t serre infra">
+    <tr><th>{{ lib }}</th>{% for k, l in MOB_EM %}<th class="num">{{ l }}</th>{% endfor %}<th class="num">Places (chaises + tabourets)</th><th class="num">Enfants</th><th class="num">Déficit</th><th class="num">Enfants par place</th></tr>
+    {% for g in grp + [tot] %}{% set x = g[s] %}{% if x.em %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td>
+      {% for k, l in MOB_EM %}<td class="num">{{ x.mob_em[k]|jur_nb }}</td>{% endfor %}
+      <td class="num"><b>{{ x.places_em|jur_nb }}</b></td><td class="num">{{ x.eleves_em|jur_nb }}</td>
+      <td class="num ind{{ ' alerte' if x.deficit_em }}">{{ x.deficit_em|jur_nb }}</td><td class="num ind">{{ r(x.el_place_em, 2) }}</td></tr>{% endif %}{% endfor %}
+  </table></div>
+  <div class="tw">{{ courbes[s].mat }}</div>
+</div>
+
+<div class="carte"><h2>5. Manuels du primaire ({{ titre }})</h2>
+  <div class="tw"><table class="t serre infra">
+    <tr><th>{{ lib }}</th>{% for k, l in MANUELS %}<th class="num">{{ l }}</th>{% endfor %}<th class="num">Élèves du primaire</th>{% for k, l in MANUELS %}<th class="num">{{ l }} par élève</th>{% endfor %}</tr>
+    {% for g in grp + [tot] %}{% set x = g[s] %}{% if x.ep %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td>
+      {% for k, l in MANUELS %}<td class="num">{{ x.man[k]|jur_nb }}</td>{% endfor %}<td class="num">{{ x.eleves_ep|jur_nb }}</td>
+      {% for k, l in MANUELS %}<td class="num ind{{ ' alerte' if x.man_el[k] is not none and x.man_el[k] < 1 }}">{{ r(x.man_el[k], 2) }}</td>{% endfor %}</tr>{% endif %}{% endfor %}
+  </table></div>
+  <p class="aide">Objectif : 1 manuel de chaque discipline par élève (en rouge en dessous).</p>
+  <div class="tw">{{ courbes[s].man }}</div>
+</div>
+{% endmacro %}
+
+<div class="entete"><div><h1>{{ icone('chantier') }} Infrastructures et mobilier</h1>
+  <p class="sous">{{ SOURCES[source] }} · année scolaire {{ flt.annee }} · par {{ lib|lower }} · secteur public, et secteur privé à part</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_infra', export='xlsx', **args) }}">⇩ Excel</a>
+    <button class="btn sec" type="button" onclick="window.print()">{{ icone('imprimer') }} Imprimer</button></div></div>
+{{ T.filtres(flt, 'jur_infra', extra={'par': par, 'source': source}) }}
+<div class="actions noprint" style="margin:-4px 0 6px">Source :
+  {% for k, l in SOURCES.items() %}<a class="btn petit {{ '' if source == k else 'sec' }}" href="{{ url_for('jur_infra', **dict(args1, source=k)) }}">{{ l }}</a>{% endfor %}</div>
+<div class="actions noprint" style="margin:0 0 12px">Regrouper par :
+  {% if JUR_NIVEAU == 'ddemp' %}<a class="btn petit {{ '' if par == 'cs' else 'sec' }}" href="{{ url_for('jur_infra', **dict(args0, par='cs')) }}">circonscription</a>{% endif %}
+  <a class="btn petit {{ '' if par == 'zone' else 'sec' }}" href="{{ url_for('jur_infra', **dict(args0, par='zone')) }}">zone pédagogique</a>
+  <a class="btn petit {{ '' if par == 'ecole' else 'sec' }}" href="{{ url_for('jur_infra', **dict(args0, par='ecole')) }}">école</a></div>
+
+{% if not tot.pub.ecoles and not tot.prv.ecoles %}<div class="carte">{{ T.vide("Aucune école pour ces critères.") }}</div>{% else %}
+{% if tot.pub.ecoles %}<h2 style="margin:8px 0">Secteur public</h2>{{ bloc('pub', 'secteur public') }}{% endif %}
+{% if tot.prv.ecoles %}<details style="margin-top:16px" open><summary><h2 style="display:inline;color:#8e44ad">Secteur privé (à part)</h2></summary>
+<div style="border-left:4px solid #8e44ad;padding-left:10px">{{ bloc('prv', 'secteur privé') }}</div></details>{% endif %}
+{% endif %}
+{% endblock %}

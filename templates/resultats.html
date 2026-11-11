@@ -1,0 +1,51 @@
+{% extends "base.html" %}{% block titre %}Résultats {{ cl.nom }}{% endblock %}
+{% block contenu %}
+{% set mat = cl.cycle == 'maternelle' %}
+<div class="entete">
+  <div><h1>Résultats – {{ cl.nom }} – {{ per }}</h1><p class="sous">{{ cl.niveau }} · année {{ ANNEE }}
+    {% if publie %} · <span class="badge ok">visible par les parents depuis le {{ date_fr(publie.publie_le) }}</span>{% endif %}</p></div>
+  <div class="actions">
+    {% if peut('notes') %}<a class="btn sec" href="{{ url_for('notes_saisie', cid=cl.id, p=p) }}">Modifier</a>{% endif %}
+    {% if g.user.role != 'comptable' %}<a class="btn" target="_blank" href="{{ url_for('bulletins_classe', cid=cl.id, p=p) }}">Tous les {{ 'livrets' if mat else 'bulletins' }} (PDF)</a>{% endif %}
+    {% if peut('parents') %}
+    <form method="post" action="{{ url_for('publier_bulletins', cid=cl.id, p=p) }}">
+      {% if publie %}<button class="btn sec" name="action" value="retirer">Masquer aux parents</button>
+      {% else %}<button class="btn" name="action" value="publier" title="Les parents voient le bulletin dans leur espace et reçoivent un message">Publier aux parents</button>{% endif %}
+    </form>{% endif %}
+  </div>
+</div>
+{% if not mat %}
+<div class="grille">
+  <div class="kpi"><div class="l">Effectif</div><div class="v">{{ stats.effectif }}</div><div class="d">{{ stats.classes }} classé(s)</div></div>
+  <div class="kpi"><div class="l">Moyenne de classe</div><div class="v">{{ '%.2f'|format(stats.moyenne_classe) if stats.moyenne_classe is not none else '—' }}</div></div>
+  <div class="kpi"><div class="l">Plus forte / plus faible</div><div class="v">{{ '%.2f'|format(stats.plus_forte) if stats.plus_forte is not none else '—' }} / {{ '%.2f'|format(stats.plus_faible) if stats.plus_faible is not none else '—' }}</div></div>
+  <div class="kpi"><div class="l">Admis</div><div class="v">{{ stats.admis }}</div><div class="d">{{ stats.taux_reussite if stats.taux_reussite is not none else '—' }} % de réussite</div></div>
+</div>
+{% endif %}
+<div class="tw"><table class="t">
+  {% if mat %}
+  <tr><th>Élève</th><th class="c">Acquis</th><th class="c">En cours</th><th class="c">Non acquis</th><th>Bilan</th><th>Observation</th><th></th></tr>
+  {% for e in eleves %}{% set r = res[e.id] %}{% set c = r.details.comptes or {} %}
+  <tr><td><a href="{{ url_for('eleve_detail', eid=e.id) }}"><b>{{ e.nom }}</b> {{ e.prenoms }}</a></td>
+    <td class="c">{{ c.A or 0 }}</td><td class="c">{{ c.ECA or 0 }}</td><td class="c">{{ c.NA or 0 }}</td>
+    <td>{% if r.details.evalues %}<span class="badge {{ 'ok' if r.admis else 'att' }}">{{ r.decision }}</span>{% else %}<span class="gris">non évalué</span>{% endif %}</td>
+    <td class="aide">{{ r.details.observation or '' }}</td>
+    <td class="num">{% if g.user.role != 'comptable' %}<a class="btn sec petit" target="_blank" href="{{ url_for('bulletin_eleve', eid=e.id, p=p) }}">Livret</a>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="7" class="gris">Aucun élève.</td></tr>{% endfor %}
+  {% else %}
+  <tr><th>Rang</th><th>Élève</th><th class="num">Moyenne</th><th>Mention</th><th>Décision</th>
+    {% if cl.cycle=='primaire' %}<th>Règle des 2/3</th>{% endif %}<th>Remarques</th><th></th></tr>
+  {% for e in eleves %}{% set r = res[e.id] %}
+  <tr><td>{{ r.rang_texte if r.rang else '—' }}</td>
+    <td><a href="{{ url_for('eleve_detail', eid=e.id) }}"><b>{{ e.nom }}</b> {{ e.prenoms }}</a></td>
+    <td class="num"><b>{{ '%.2f'|format(r.moyenne) if r.moyenne is not none else '—' }}</b></td>
+    <td>{{ r.mention }}</td>
+    <td><span class="badge {{ 'ok' if r.admis else ('ko' if r.decision in ("NON ADMIS","NON MAÎTRISE") else '') }}">{{ r.decision }}</span></td>
+    {% if cl.cycle=='primaire' %}<td>{% if r.details.matieres_standard %}{{ r.details.standard_reussies }}/{{ r.details.matieres_standard }} (seuil {{ r.details.seuil_2_3 }}){% endif %}</td>{% endif %}
+    <td class="aide">{% if r.details.notes_manquantes and cl.cycle=='primaire' %}<span class="rouge">{{ r.details.notes_manquantes|length }} note(s) manquante(s)</span>{% endif %}
+      {% if r.details.dispenses %} Dispensé : {{ r.details.dispenses|join(', ') }}{% endif %}</td>
+    <td class="num">{% if g.user.role != 'comptable' %}<a class="btn sec petit" target="_blank" href="{{ url_for('bulletin_eleve', eid=e.id, p=p) }}">Bulletin</a>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="8" class="gris">Aucun élève.</td></tr>{% endfor %}
+  {% endif %}
+</table></div>
+{% endblock %}

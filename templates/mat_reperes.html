@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% block titre %}Je retiens — éducateur{% endblock %}
+{% block contenu %}{% set onglet = 'maternelle' %}{% include "_prep_onglets.html" %}
+<nav class="onglets" aria-label="Rubriques de l'école maternelle">
+  <a href="{{ url_for('mat_accueil', section=c.section) }}">Progression et planification</a>
+  <a href="{{ url_for('mat_edt', section=c.section) }}">Emploi du temps</a>
+  <a href="{{ url_for('mat_grilles', section=c.section) }}">Grilles d'observation</a>
+  <a class="actif" href="{{ url_for('mat_reperes', section=c.section) }}">Je retiens (éducateur)</a>
+</nav>
+<form method="get" class="mat-filtres"><label>Domaine <select name="domaine" onchange="this.form.submit()"><option value="">Tous</option>{% for d in M.domaines %}<option value="{{ d.code }}" {{ 'selected' if d.code == c.domaine }}>{{ d.code }} — {{ d.nom }}</option>{% endfor %}</select></label><noscript><button class="btn sec petit">Afficher</button></noscript></form>
+{% for r in rs %}
+<section class="carte"><h3 style="margin-top:0">{{ r.titre }} <span class="sous">{{ r.domaine_code }}</span></h3>
+<p><b>Je retiens :</b> {{ r.regle }}</p><p>{{ r.methode }}</p><p class="aide">{{ r.exemple }}</p>
+<p class="aide"><span class="badge att">{{ r.mention }}</span></p></section>
+{% endfor %}
+{% endblock %}

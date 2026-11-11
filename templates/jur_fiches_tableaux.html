@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% block titre %}Tableaux globaux des fiches{% endblock %}
+{% import "jur_fiche_macros.html" as F with context %}
+{% block contenu %}
+{{ F.style() }}
+{% set args = f.to_dict() %}
+<div class="entete"><div><h1>{{ icone('graphique') }} Tableaux globaux des fiches</h1>
+  <p class="sous">{{ FICHES[fiche][3] }} · année {{ annee }} · une colonne par {{ lib_g|lower }} et le total · {{ tot_recues }} fiche(s) reçue(s) sur {{ tot_attendues }} attendue(s)</p></div>
+  <div class="actions">
+    <a class="btn sec petit" href="{{ url_for('jur_fiches_synthese', fiche=fiche, annee=annee) }}">Fiche consolidée (PDF officiel)</a>
+    <a class="btn sec" href="{{ url_for('jur_fiches_tableaux', **dict(args, format='xlsx', fiche=fiche, annee=annee)) }}">⇩ Excel (toutes les rubriques)</a>
+    <button class="btn sec" type="button" onclick="window.print()">{{ icone('imprimer') }} Imprimer</button></div></div>
+<nav class="onglets" aria-label="Fiches">{% for c, i in FICHES.items() %}<a href="{{ url_for('jur_fiches_tableaux', **dict(args, fiche=c, rubrique='', format='')) }}" class="{{ 'actif' if c == fiche }}">{{ i[4] }}</a>{% endfor %}</nav>
+<form method="get" class="filtres noprint"><input type="hidden" name="fiche" value="{{ fiche }}">
+  <label>Année<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  {% if JUR_NIVEAU=='ddemp' %}<label>Portée<br><select name="cs" onchange="this.form.submit()"><option value="">DDEMP : une colonne par CS</option>
+    {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if cs_id == c.id }}>CS {{ c.nom }} : une colonne par zone</option>{% endfor %}</select></label>{% endif %}
+  <label>Rubrique<br><select name="rubrique" onchange="this.form.submit()">{% for i, t in rubs %}<option value="{{ i }}" {{ 'selected' if i == idx }}>{{ t[:90] }}</option>{% endfor %}</select></label>
+  <label>Type d'école<br><select name="type" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for k, v in JUR_TYPES.items() %}<option value="{{ k }}" {{ 'selected' if f.get('type')==k }}>{{ v }}</option>{% endfor %}</select></label>
+  <label>Secteur<br><select name="secteur" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for k, v in JUR_SECTEURS.items() %}<option value="{{ k }}" {{ 'selected' if f.get('secteur')==k }}>{{ v }}</option>{% endfor %}</select></label>
+</form>
+<div class="carte">
+  <h2 style="margin-top:0">{{ (rubs|selectattr(0, 'equalto', idx)|first or [0, ''])[1] }}</h2>
+  {% if not lignes %}<p class="aide">Aucun chiffre pour cette rubrique : les fiches n'ont pas encore été transmises par les écoles.</p>{% else %}
+  <div class="tw"><table class="t compact serre">
+    <tr><th>Ligne</th><th>Colonne</th>{% for n in noms %}<th class="num">{{ n }}</th>{% endfor %}<th class="num">Total</th></tr>
+    <tr class="aide"><td colspan="2">Fiches reçues / attendues</td>{% for r in recues %}<td class="num">{{ r }} / {{ attendues[loop.index0] }}</td>{% endfor %}<td class="num">{{ tot_recues }} / {{ tot_attendues }}</td></tr>
+    {% set ns = namespace(prec='') %}
+    {% for x in lignes %}{% set entete = (x.tableau ~ ' ' ~ x.ligne) %}
+      <tr><td>{% if entete != ns.prec %}{% if x.tableau %}<span class="aide">{{ x.tableau }}</span><br>{% endif %}<b>{{ x.ligne }}</b>{% endif %}</td><td>{{ x.colonne }}</td>
+      {% for v in x.vals %}<td class="num">{{ '' if v is none else ('%g'|format(v)) }}</td>{% endfor %}<td class="num"><b>{{ '' if x.total is none else ('%g'|format(x.total)) }}</b></td></tr>
+      {% set ns.prec = entete %}
+    {% endfor %}
+  </table></div>{% endif %}
+  <p class="aide">Seuls les chiffres sont repris (l'identification, l'état nominatif et les visas restent dans les fiches de chaque école). Le total est la synthèse de toute la portée : il compte aussi les écoles sans zone.</p>
+</div>
+{% endblock %}

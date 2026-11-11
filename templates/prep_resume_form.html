@@ -1,0 +1,19 @@
+{# v1.33 — adapter un résumé pour l'école (version partagée, historique) #}
+{% extends "base.html" %}{% block titre %}Adapter le résumé{% endblock %}
+{% block contenu %}{% set onglet = 'resumes' %}{% include "_prep_onglets.html" %}
+<p class="aide"><a href="{{ url_for('prep_resume', rid=r.id) }}">← Retour au résumé</a></p>
+<h2>Adapter le résumé pour l'école</h2>
+<p class="aide">La version adaptée est partagée par tous les comptes de l'école ; l'original reste consultable et chaque version est gardée dans l'historique (auteur, date).</p>
+<form method="post" class="f carte">
+  {% for k, lib in CHAMPS %}<label for="c-{{ k }}">{{ lib }}</label>
+  {% if k == 'titre' %}<input id="c-{{ k }}" name="{{ k }}" value="{{ r[k] or '' }}" required>{% else %}<textarea id="c-{{ k }}" name="{{ k }}" rows="4">{{ r[k] or '' }}</textarea>{% endif %}{% endfor %}
+  <label for="c-voc">Vocabulaire (mots séparés par des points-virgules)</label>
+  <input id="c-voc" name="vocabulaire" value="{{ (r.vocabulaire or [])|join('; ') }}">
+  <h3>Exercices et réponses</h3>
+  {% set ex = r.exercices or [] %}
+  {% for i in range(1, 9) %}{% set e = ex[i - 1] if ex|length >= i else {} %}
+  <div class="grille2"><div><label for="q{{ i }}">Exercice {{ i }}</label><input id="q{{ i }}" name="q{{ i }}" value="{{ e.q or '' }}"></div>
+  <div><label for="r{{ i }}">Réponse {{ i }}</label><input id="r{{ i }}" name="r{{ i }}" value="{{ e.r or '' }}"></div></div>{% endfor %}
+  <div class="actions" style="margin-top:10px"><button class="btn">Enregistrer pour l'école</button> <a class="btn sec" href="{{ url_for('prep_resume', rid=r.id) }}">Annuler</a></div>
+</form>
+{% endblock %}

@@ -1,0 +1,46 @@
+{# v1.24 — Cachet et signature digitale d'un responsable du bureau de l'UASCEP #}
+{% extends "base.html" %}{% from "_macros.html" import signature %}{% block titre %}Cachet et signature — UASCEP{% endblock %}
+{% block contenu %}
+<p><a href="{{ url_for('uascep', onglet=b.niveau, entite=b.entite) }}">← Bureau {{ NIV_LIB[b.niveau] }} : {{ b.entite_lib or b.entite }}</a></p>
+<h1>Cachet et signature : {{ m.nom }} {{ m.prenoms or '' }}</h1>
+<p class="sous">{{ m.fonction or 'Membre' }} · bureau de l'UASCEP — {{ NIV_LIB[b.niveau] }} : {{ b.entite_lib or b.entite }}</p>
+<div class="grille2" style="display:flex;flex-wrap:wrap;gap:16px">
+<div class="carte" style="flex:1;min-width:260px">
+<h3>Aperçu</h3>
+<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+  <div aria-label="Aperçu du cachet">{% if apercu_cachet %}{{ apercu_cachet|safe }}{% elif m.cachet_mode == 'image' and m.cachet_image %}<img src="{{ m.cachet_image }}" alt="Cachet importé" style="max-width:180px;max-height:180px">{% else %}<span class="aide">Pas de cachet.</span>{% endif %}</div>
+  <div aria-label="Aperçu de la signature">{% if m.signature %}<img src="{{ m.signature }}" alt="Signature enregistrée" style="max-width:240px;max-height:100px;border-bottom:1px solid #98A2B3">{% else %}<span class="aide">Aucune signature enregistrée.</span>{% endif %}</div>
+</div>
+<p class="aide">Le cachet et la signature figurent sur la composition du bureau, les procès-verbaux d'élection et d'installation, l'attestation de fonction et la liste des bureaux, avec un code de vérification et un code QR.</p>
+<div class="actions">
+  <a class="btn sec petit" href="{{ url_for('uascep_attestation_pdf', mid=m.id) }}">Attestation de fonction (PDF)</a>
+  <a class="btn sec petit" href="{{ url_for('uascep_composition_pdf', bid=b.id) }}">Composition du bureau (PDF)</a>
+</div>
+</div>
+{% if peut_ecrire %}
+<form method="post" enctype="multipart/form-data" class="carte" style="flex:2;min-width:300px">
+<h3>Cachet</h3>
+<label>Cachet <select name="cachet_mode">
+  <option value="genere" {{ 'selected' if (m.cachet_mode or 'genere') == 'genere' }}>Cachet généré</option>
+  <option value="image" {{ 'selected' if m.cachet_mode == 'image' }}>Image importée</option>
+  <option value="aucun" {{ 'selected' if m.cachet_mode == 'aucun' }}>Aucun cachet</option></select></label>
+<label>Forme <select name="cachet_forme">
+  <option value="rond" {{ 'selected' if (m.cachet_forme or 'rond') == 'rond' }}>Rond (UASCEP, niveau et entité autour, fonction au centre)</option>
+  <option value="rect" {{ 'selected' if m.cachet_forme == 'rect' }}>Rectangulaire (griffe : fonction, nom, entité)</option></select></label>
+<label>Couleur <select name="cachet_couleur"><option value="bleu" {{ 'selected' if (m.cachet_couleur or 'bleu') == 'bleu' }}>Bleu</option><option value="rouge" {{ 'selected' if m.cachet_couleur == 'rouge' }}>Rouge</option><option value="vert" {{ 'selected' if m.cachet_couleur == 'vert' }}>Vert</option><option value="noir" {{ 'selected' if m.cachet_couleur == 'noir' }}>Noir</option></select></label>
+<label>Texte du haut (vide = « {{ defaut.sup }} ») <input name="cachet_sup" maxlength="60" value="{{ m.cachet_sup or '' }}"></label>
+<label>Texte du bas (vide = « {{ defaut.inf }} ») <input name="cachet_inf" maxlength="60" value="{{ m.cachet_inf or '' }}"></label>
+<label>Texte du centre (vide = « {{ defaut.centre }} ») <input name="cachet_centre" maxlength="40" value="{{ m.cachet_centre or '' }}"></label>
+<label>Image du cachet (PNG ou JPEG, 400 Ko au plus) <input type="file" name="cachet_fichier" accept="image/png,image/jpeg"></label>
+<h3>Signature digitale</h3>
+{{ signature(titre='Signez dans le cadre (souris ou doigt)', champ='signature_dessin') }}
+<label>ou importer une signature (PNG ou JPEG, 400 Ko au plus) <input type="file" name="signature_fichier" accept="image/png,image/jpeg"></label>
+<label><input type="checkbox" name="effacer_signature" value="1"> Effacer la signature enregistrée</label>
+<p><button class="btn">Enregistrer</button></p>
+</form>
+<form method="post" action="{{ url_for('uascep_cachet_reinitialiser', mid=m.id) }}" class="carte" onsubmit="return confirm('Rétablir le cachet généré par défaut et effacer la signature ?')">
+<p class="aide">Réinitialiser : cachet généré par défaut (bleu, rond), signature effacée.</p>
+<button class="btn sec petit">{{ icone('reinitialiser') }} Réinitialiser le cachet et la signature</button></form>
+{% endif %}
+</div>
+{% endblock %}

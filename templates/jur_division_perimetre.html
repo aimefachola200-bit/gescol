@@ -1,0 +1,20 @@
+{# Comptes rattachés à la division et périmètre d'accès (v1.6, a_integration.perimetre_division) #}
+<section class="carte" style="margin-top:16px"><h2>Comptes rattachés et périmètre d'accès ({{ d.comptes|length }})</h2>
+  <p class="aide">Un compte <b>chef de service</b> ou <b>agent</b> rattaché à cette division (champ « Division / service » du compte dans
+    <a href="{{ url_for('utilisateurs') }}">Utilisateurs</a>, sinon fiche agent) n'accède qu'aux modules ci-dessous et à leurs sous-pages ;
+    toute autre adresse répond « Hors du périmètre de votre division » (HTTP 403). Le responsable, l'administrateur, les conseillers
+    pédagogiques et les comptes directeur / enseignant ne sont pas concernés.</p>
+  {% if d.comptes %}<div class="tw"><table class="t compact">
+    <tr><th>Compte</th><th>Identifiant</th><th>Rôle</th><th>Rattachement</th><th>Périmètre</th></tr>
+    {% for u in d.comptes %}<tr><td>{{ u.nom }}</td><td>{{ u.identifiant }}</td><td>{{ ROLES[u.role] }}</td>
+      <td>{{ 'compte (Utilisateurs)' if u.origine == 'compte' else 'fiche agent' }}</td>
+      <td>{% if u.limite %}<span class="badge att">limité à la division</span>{% else %}<span class="badge ok">toute l'application</span>{% endif %}</td></tr>{% endfor %}
+  </table></div>{% else %}<p class="gris">Aucun compte rattaché à cette division.</p>{% endif %}
+  {% if d.perimetre %}
+  <h3 style="margin-top:12px">Modules du périmètre ({{ d.perimetre.modules|length }})</h3>
+  <p>{% for m in d.perimetre.modules %}<a class="badge" href="{{ m.url }}" title="{{ m.endpoint }}">{{ m.libelle }}</a> {% endfor %}</p>
+  <p class="aide">Pages communes toujours accessibles : tableau de bord, choix et tableau de bord de l'école ouverte, tableau synoptique
+    (lecture), messages aux directeurs et enseignants, divisions, mon compte, vérification de documents.
+    Préfixes d'adresses autorisés : <code>{{ d.perimetre.prefixes|join(', ') }}</code>.</p>
+  {% endif %}
+</section>

@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block titre %}Rations par élève{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Rations par élève</h1>
+  <p class="sous">Grammes par élève et par jour, pour chaque vivre ; les totaux se calculent en kilogrammes</p></div></div>
+{% include "stock_onglets.html" %}
+{% set sous = 'rations' %}{% include "stock_mag_barre.html" %}
+{% if proposees %}<div class="flash info">Valeurs proposées (maïs 150 g, riz 150 g, haricot 40 g, huile 10 g, sel 3 g) : ajustez-les selon votre dotation, puis enregistrez.</div>{% endif %}
+<form method="post" class="carte f">
+  <div class="tw"><table class="t compact"><thead><tr><th>Vivre</th><th>Unité de stock</th><th>Ration (g par élève et par jour)</th></tr></thead><tbody>
+  {% for v in vivres %}<tr><td><b>{{ v.nom }}</b></td><td>{{ v.unite }}</td>
+    <td><input name="r_{{ v.id }}" inputmode="decimal" style="max-width:120px" value="{{ qte(v.ration_g) if v.ration_g else '' }}" placeholder="0"></td></tr>
+  {% else %}<tr><td colspan="3" class="aide">Aucun vivre actif.</td></tr>{% endfor %}
+  </tbody></table></div>
+  <p class="actions"><button class="btn vert">{{ icone('enregistrer') }} Enregistrer les rations</button>
+    <a class="btn sec" href="{{ url_for('stock_mag_rations', proposer=1) }}">Proposer les rations types</a></p>
+  <p class="aide">Un vivre à 0 g n'est pas prélevé. La ration d'une semaine déjà prélevée ne change pas.</p>
+</form>
+{% endblock %}

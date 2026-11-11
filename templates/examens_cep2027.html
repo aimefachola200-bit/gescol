@@ -1,0 +1,47 @@
+{# v2.3 — CEP : centres et salles de composition (lettre de la DDEMP du Plateau, 28/10/2026) #}
+{% extends "base.html" %}{% block titre %}CEP — centres et salles — {{ G.titre }}{% endblock %}
+{% macro v(x) %}{{ '' if x is none else x }}{% endmacro %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<h2 style="margin:0">CEP — centres et salles de composition · {{ session|lower|capitalize }}</h2>
+<p class="aide">Point des candidats par centre et des salles de composition en bon état disponibles, pour repérer les centres dont l'effectif dépasse la capacité d'accueil. Salles nécessaires = arrondi supérieur (total des candidats ÷ candidats par salle) ; écart = salles disponibles − salles nécessaires.{% if ddemp %} Un bloc par circonscription (tableaux reçus par la synchronisation ou importés depuis l'Excel des CS), puis le total du département.{% endif %}</p>
+<nav class="onglets" aria-label="Présentation">
+  <a class="{{ 'actif' if vue == 'simple' }}" href="{{ url_for('examens_cep2027', vue='simple', annee=annee, n=n) }}">Tableau simple (modèle officiel)</a>
+  <a class="{{ 'actif' if vue != 'simple' }}" href="{{ url_for('examens_cep2027', vue='detaille', annee=annee, n=n) }}">Tableau détaillé (G / F / H)</a>
+</nav>
+<form method="{{ 'post' if saisie else 'get' }}" class="filtres" style="margin:8px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+  <input type="hidden" name="vue" value="{{ vue }}">
+  <div><label for="annee">Année scolaire</label><select id="annee" name="annee" onchange="this.form.method='get';this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></div>
+  <div><label for="n">Candidats par salle</label><select id="n" name="n" onchange="this.form.submit()">{% for k in n_choix %}<option value="{{ k }}" {{ 'selected' if k == n }}>{{ k }}</option>{% endfor %}</select></div>
+  <div><a class="btn" href="{{ url_for('examens_cep2027_pdf', vue=vue, annee=annee, n=n) }}">{{ icone('telecharger') }} Télécharger PDF</a>
+  <a class="btn sec" href="{{ url_for('examens_cep2027_xlsx', vue=vue, annee=annee, n=n) }}">{{ icone('telecharger') }} Télécharger Excel</a></div>
+</form>
+{% if saisie %}<p style="display:flex;gap:8px;flex-wrap:wrap">
+  <a class="btn sec" href="{{ url_for('reg_page', gcle='examens', rcle='salles', annee=annee) }}">{{ icone('modifier') }} Ajouter / modifier / supprimer les centres</a>
+  <form method="post" action="{{ url_for('examens_cep2027_pobe') }}" style="display:inline"><button class="btn sec">{{ icone('ajouter') }} Charger les centres de la CS de Pobè</button></form>
+  <form method="post" action="{{ url_for('examens_cep2027_pre_remplir') }}" style="display:inline"><button class="btn sec">{{ icone('actualiser') }} Pré-remplir les candidats officiels (G / F) {{ "depuis les écoles" if jur else "" }}</button></form>
+</p>{% elif not jur %}<p class="aide">Lecture seule : le tableau est tenu par la circonscription scolaire.</p>{% endif %}
+{% if note %}<div class="flash info">{{ note }}</div>{% endif %}
+{% for b in blocs %}
+<h3>{{ b.cs }}</h3>
+<div class="tw"><table class="t" aria-label="Centres et salles — {{ b.cs }}">
+{% if vue == 'simple' %}
+<thead><tr><th>N°</th><th>Nom des Centres</th><th>Effectif des candidats</th><th>Nombre de salles de composition en bon état disponible</th><th>Salles nécessaires</th><th>Écart</th><th>Observations</th></tr></thead><tbody>
+{% for l in b.lignes %}<tr{% if l.c.depasse %} class="alerte-ligne" style="background:#FDECEA"{% endif %}><td>{{ loop.index }}</td><td>{{ l.x.centre }}{% if l.x.sourceCandidats %}<br><span class="aide">{{ l.x.sourceCandidats }}</span>{% endif %}</td><td>{{ v(l.c.tt) }}</td><td>{{ v(l.c.salles) }}</td><td>{{ v(l.c.necessaires) }}</td><td>{{ v(l.c.ecart) }}</td><td>{% if l.c.depasse %}<b>{{ l.c.observation }}</b>{% else %}{{ l.c.observation }}{% endif %}</td></tr>{% endfor %}
+<tr style="background:#F2F4F7"><th></th><th>TOTAL</th><th>{{ v(b.total.tt) }}</th><th>{{ v(b.total.salles) }}</th><th>{{ v(b.total.necessaires) }}</th><th>{{ v(b.total.ecart) }}</th><th>{% if b.total.centres_depasses %}{{ b.total.centres_depasses }} centre(s) en dépassement, {{ b.total.manquantes }} salle(s) manquante(s){% endif %}</th></tr>
+{% else %}
+<thead><tr><th rowspan="3">N°</th><th rowspan="3">Nom des Centres</th><th colspan="12">Effectif des candidats</th><th rowspan="3">Salles de composition en bon état disponibles</th><th rowspan="3">Salles nécessaires</th><th rowspan="3">Écart</th><th rowspan="3">Observations</th></tr>
+<tr><th colspan="4">Candidats officiels</th><th colspan="4">Candidats libres</th><th colspan="4">Total (officiels + libres)</th></tr>
+<tr>{% for _ in range(3) %}<th>G</th><th>F</th><th>Total</th><th>Dont H</th>{% endfor %}</tr></thead><tbody>
+{% for l in b.lignes %}{% set c = l.c %}<tr{% if c.depasse %} style="background:#FDECEA"{% endif %}><td>{{ loop.index }}</td><td>{{ l.x.centre }}{% if l.x.sourceCandidats %}<br><span class="aide">{{ l.x.sourceCandidats }}</span>{% endif %}</td>
+{% for k in ('offG','offF','ot','offH','libG','libF','lt','libH','tg','tf','tt','th','salles','necessaires','ecart') %}<td>{{ v(c[k]) }}</td>{% endfor %}
+<td>{% if c.depasse %}<b>{{ c.observation }}</b>{% else %}{{ c.observation }}{% endif %}</td></tr>{% endfor %}
+<tr style="background:#F2F4F7"><th></th><th>TOTAL</th>{% for k in ('offG','offF','ot','offH','libG','libF','lt','libH','tg','tf','tt','th','salles','necessaires','ecart') %}<th>{{ v(b.total[k]) }}</th>{% endfor %}<th>{% if b.total.manquantes %}{{ b.total.manquantes }} salle(s) manquante(s){% endif %}</th></tr>
+{% endif %}
+</tbody></table></div>
+{% else %}{% if not note %}<p class="aide">Aucun centre saisi pour {{ annee }}.{% if saisie %} Ajoutez les centres ou chargez ceux de la CS de Pobè.{% endif %}</p>{% endif %}{% endfor %}
+{% if dep and ddemp %}<h3>Total du département</h3>
+<p>{{ v(dep.tt) }} candidat(s) (dont {{ v(dep.th) }} handicapé(s)), {{ v(dep.salles) }} salle(s) disponible(s), {{ v(dep.necessaires) }} nécessaire(s) — {% if dep.manquantes %}<b>{{ dep.centres_depasses }} centre(s) en dépassement, {{ dep.manquantes }} salle(s) manquante(s)</b>{% else %}capacité suffisante partout{% endif %}.</p>{% endif %}
+<p class="aide">G = Garçons ; F = Filles ; H = Handicapés.</p>
+{% endblock %}

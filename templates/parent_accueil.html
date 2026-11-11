@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% block titre %}Mes enfants{% endblock %}
+{% block contenu %}
+<h1>Bonjour {{ g.parent.nom }}</h1>
+<p class="sous">{{ ECOLE.nom }} · année scolaire {{ ANNEE }}
+  {% if non_lus %} · <a href="{{ url_for('parent_messages') }}"><b>{{ non_lus }} nouveau(x) message(s) de l'école</b></a>{% endif %}</p>
+{% for i in enfants %}{% set e = i.e %}
+<div class="enfant">
+  <div class="entete" style="margin-bottom:8px">
+    <div><h2 style="margin:0">{{ e.prenoms }} {{ e.nom }}</h2><span class="gris">{{ i.cl.nom if i.cl else '' }} · matricule {{ e.matricule }}</span></div>
+    <a class="btn sec" href="{{ url_for('parent_enfant', eid=e.id) }}">Tout voir</a>
+  </div>
+  <div class="grille" style="margin-bottom:0">
+    <div class="kpi"><div class="l">Scolarité {{ ANNEE }}</div>
+      {% if i.reste %}<div class="v rouge">{{ fcfa(i.reste) }}</div><div class="d">reste à payer sur {{ fcfa(i.du) }}</div>
+      {% else %}<div class="v vert">Soldée</div><div class="d">{{ fcfa(i.paye) }} payés</div>{% endif %}
+      {% if i.reste and paiement_actif %}<a class="btn petit" style="margin-top:8px" href="{{ url_for('parent_payer', eid=e.id) }}">Payer en ligne</a>{% endif %}</div>
+    <div class="kpi"><div class="l">Derniers résultats</div>
+      {% if i.dernier %}{% set r = i.dernier[2] %}
+        {% if r.cycle == 'maternelle' %}<div class="v" style="font-size:17px">{{ r.decision }}</div><div class="d">{{ i.dernier[1] }}</div>
+        {% else %}<div class="v">{{ '%.2f'|format(r.moyenne) if r.moyenne is not none else '—' }}<span style="font-size:14px"> /20</span></div>
+        <div class="d">{{ i.dernier[1] }} · rang {{ r.rang_texte }}</div>{% endif %}
+      {% else %}<div class="v" style="font-size:16px">—</div><div class="d">Aucun bulletin publié pour l'instant</div>{% endif %}</div>
+    <div class="kpi"><div class="l">Absences depuis la rentrée</div><div class="v">{{ i.absences.absent }}</div>
+      <div class="d">dont {{ i.absences.justifie }} justifiée(s) · {{ i.absences.retard }} retard(s)</div></div>
+  </div>
+</div>
+{% else %}
+<div class="carte">Aucun enfant n'est encore rattaché à votre compte. Contactez le secrétariat de l'école.</div>
+{% endfor %}
+{% endblock %}

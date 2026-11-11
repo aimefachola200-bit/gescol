@@ -1,0 +1,201 @@
+# Fabrique les applications web pour Android (.apk) et Windows (.exe) : l'application y est embarquée et fonctionne
+# sans Internet. Une seule recette (packaging/memp_cp) pour toutes :
+#   • Application CP du MEMP (générale) et MEMP CP Pobè  → page « memp-cp »
+#   • CS Pobè (gestion des écoles) et Mon école (CS Pobè) → page « cs-pobe »
+#   • ÉduGestion Pro et ÉduGestion Pro Master (avec l'espace CP, CCS, DDEMP intégré) → page « edugestion »
+# Liens fixes : https://github.com/<compte>/scolaris/releases/download/<page>/<fichier>
+# Chaque page porte aussi des QR codes de téléchargement (QR-*.png).
+# Fabrication : à chaque modification de packaging/memp_cp, chaque nuit (dernières mises à jour des applications),
+# ou à la demande (onglet Actions > « Fabriquer les applications web » > Run workflow).
+name: Fabriquer les applications web
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 2 * * *"
+  push:
+    branches: [main]
+    paths:
+      - "packaging/memp_cp/**"
+      - ".github/workflows/applications-web.yml"
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { depot: memp-cp-app, dossier: ".", exclure: "dosp", id: bj.memp.cp, nom: "MEMP CP", fichier: MEMP-CP }
+          - { depot: memp-cp-app, dossier: "dosp", exclure: "", id: bj.memp.dosp, nom: "DOSP", fichier: DOSP }
+          - { depot: memp-cp-pobe, dossier: ".", exclure: "", id: bj.memp.cp.pobe, nom: "MEMP CP Pobè", fichier: MEMP-CP-Pobe }
+          - { depot: cs-pobe, dossier: ".", exclure: "ecole", id: bj.memp.cs.pobe, nom: "CS Pobè", fichier: CS-Pobe }
+          - { depot: cs-pobe, dossier: "ecole", exclure: "", id: bj.memp.ecole.pobe, nom: "Mon école Pobè", fichier: Ecole-Pobe }
+          - { depot: EdugestionPro, dossier: ".", exclure: "", id: bj.memp.edugestion, nom: "ÉduGestion Pro", fichier: EduGestion-Pro }
+          - { depot: EdugestionProV5, dossier: ".", exclure: "", id: bj.memp.edugestion.master, nom: "ÉduGestion Pro Master", fichier: EduGestion-Pro-Master }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/${{ matrix.depot }}
+          path: source-app
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Embarquer l'application web
+        run: |
+          pip install pillow
+          V=$(python packaging/memp_cp/preparer.py --source "source-app/${{ matrix.dossier }}" --cible android --exclure "${{ matrix.exclure }}")
+          echo "MEMP_VERSION_NOM=$V" >> "$GITHUB_ENV"
+          echo "MEMP_VERSION_CODE=$((1000 + ${{ github.run_number }}))" >> "$GITHUB_ENV"
+      - name: Clé de signature (même clé que SCOLARIS)
+        env:
+          KS_MDP: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KS_MDP" ]; then echo "::error::Secret ANDROID_KEYSTORE_PASSWORD absent"; exit 1; fi
+      - name: APK
+        env:
+          MEMP_APP_ID: ${{ matrix.id }}
+          MEMP_APP_NOM: ${{ matrix.nom }}
+          SCOLARIS_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          SCOLARIS_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          SCOLARIS_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          gradle -p packaging/memp_cp/android assembleRelease --no-daemon --stacktrace
+          mkdir -p sortie
+          cp packaging/memp_cp/android/app/build/outputs/apk/release/app-release.apk "sortie/${{ matrix.fichier }}.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Android-${{ matrix.fichier }}
+          path: sortie/*.apk
+
+  windows:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { depot: memp-cp-app, dossier: ".", exclure: "dosp", id: bj.memp.cp, nom: "MEMP CP", fichier: MEMP-CP, port: 8871 }
+          - { depot: memp-cp-app, dossier: "dosp", exclure: "", id: bj.memp.dosp, nom: "DOSP", fichier: DOSP, port: 8877 }
+          - { depot: memp-cp-pobe, dossier: ".", exclure: "", id: bj.memp.cp.pobe, nom: "MEMP CP Pobè", fichier: MEMP-CP-Pobe, port: 8872 }
+          - { depot: cs-pobe, dossier: ".", exclure: "ecole", id: bj.memp.cs.pobe, nom: "CS Pobè", fichier: CS-Pobe, port: 8873 }
+          - { depot: cs-pobe, dossier: "ecole", exclure: "", id: bj.memp.ecole.pobe, nom: "Mon école Pobè", fichier: Ecole-Pobe, port: 8874 }
+          - { depot: EdugestionPro, dossier: ".", exclure: "", id: bj.memp.edugestion, nom: "ÉduGestion Pro", fichier: EduGestion-Pro, port: 8875 }
+          - { depot: EdugestionProV5, dossier: ".", exclure: "", id: bj.memp.edugestion.master, nom: "ÉduGestion Pro Master", fichier: EduGestion-Pro-Master, port: 8876 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/${{ matrix.depot }}
+          path: source-app
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Embarquer l'application web
+        shell: pwsh
+        run: |
+          pip install pillow pyinstaller
+          $v = python packaging/memp_cp/preparer.py --source "source-app/${{ matrix.dossier }}" --cible windows --exclure "${{ matrix.exclure }}"
+          if ($LASTEXITCODE -ne 0) { throw "préparation impossible" }
+          "MEMP_VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          '{"nom": "${{ matrix.nom }}", "port": ${{ matrix.port }}}' | Out-File -FilePath packaging/memp_cp/windows/variante.json -Encoding utf8NoBOM
+      - name: Exécutable (PyInstaller)
+        run: |
+          cd packaging/memp_cp/windows
+          pyinstaller memp_cp.spec --noconfirm --distpath dist --workpath build
+      - name: Installateur (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
+          cd packaging/memp_cp/windows
+          & $iscc "/DVersion=${env:MEMP_VERSION}" "/DNom=${{ matrix.nom }}" "/DFichier=${{ matrix.fichier }}" "/DId=${{ matrix.id }}" memp_cp.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup a échoué" }
+          New-Item -ItemType Directory -Force -Path ../../../sortie | Out-Null
+          Copy-Item "../../../dist/${{ matrix.fichier }}-Installation-${env:MEMP_VERSION}.exe" "../../../sortie/${{ matrix.fichier }}-Installation.exe"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Windows-${{ matrix.fichier }}
+          path: sortie/*.exe
+
+  publier:
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: fichiers
+          merge-multiple: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: QR codes de téléchargement
+        shell: python
+        run: |
+          import subprocess, sys, os
+          subprocess.run([sys.executable, "-m", "pip", "install", "-q", "qrcode[pil]"], check=True)
+          import qrcode
+          base = "https://github.com/${{ github.repository }}/releases/download"
+          for page, fichiers in (("memp-cp", ["MEMP-CP", "MEMP-CP-Pobe", "DOSP"]), ("cs-pobe", ["CS-Pobe", "Ecole-Pobe"]), ("edugestion", ["EduGestion-Pro", "EduGestion-Pro-Master"])):
+              os.makedirs(page, exist_ok=True)
+              for f in fichiers:
+                  for nom, suffixe in ((f + ".apk", "android"), (f + "-Installation.exe", "windows")):
+                      src = os.path.join("fichiers", nom)
+                      if not os.path.exists(src):
+                          continue
+                      os.replace(src, os.path.join(page, nom))
+                      qrcode.make(f"{base}/{page}/{nom}", box_size=8, border=2).save(os.path.join(page, f"QR-{f}-{suffixe}.png"))
+          print(os.listdir("memp-cp"), os.listdir("cs-pobe"), os.listdir("edugestion"))
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: memp-cp
+          name: "Application CP du MEMP (Android et Windows)"
+          make_latest: "false"
+          files: memp-cp/*
+          body: |
+            **Application CP du MEMP** (conseillers pédagogiques, CCS) — fonctionne sans Internet.
+            | | Android | Windows |
+            |---|---|---|
+            | **MEMP CP** (générale) | [MEMP-CP.apk](https://github.com/${{ github.repository }}/releases/download/memp-cp/MEMP-CP.apk)<br>![QR](https://github.com/${{ github.repository }}/releases/download/memp-cp/QR-MEMP-CP-android.png) | [MEMP-CP-Installation.exe](https://github.com/${{ github.repository }}/releases/download/memp-cp/MEMP-CP-Installation.exe)<br>![QR](https://github.com/${{ github.repository }}/releases/download/memp-cp/QR-MEMP-CP-windows.png) |
+            | **DOSP** (Organisation scolaire et prévision) | [DOSP.apk](https://github.com/${{ github.repository }}/releases/download/memp-cp/DOSP.apk)<br>![QR](https://github.com/${{ github.repository }}/releases/download/memp-cp/QR-DOSP-android.png) | [DOSP-Installation.exe](https://github.com/${{ github.repository }}/releases/download/memp-cp/DOSP-Installation.exe)<br>![QR](https://github.com/${{ github.repository }}/releases/download/memp-cp/QR-DOSP-windows.png) |
+            | **MEMP CP Pobè** | [MEMP-CP-Pobe.apk](https://github.com/${{ github.repository }}/releases/download/memp-cp/MEMP-CP-Pobe.apk)<br>![QR](https://github.com/${{ github.repository }}/releases/download/memp-cp/QR-MEMP-CP-Pobe-android.png) | [MEMP-CP-Pobe-Installation.exe](https://github.com/${{ github.repository }}/releases/download/memp-cp/MEMP-CP-Pobe-Installation.exe)<br>![QR](https://github.com/${{ github.repository }}/releases/download/memp-cp/QR-MEMP-CP-Pobe-windows.png) |
+
+            Scannez le QR code avec l'appareil photo du téléphone. Fabriquée chaque nuit avec la dernière version.
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: cs-pobe
+          name: "CS Pobè et Mon école (Android et Windows)"
+          make_latest: "false"
+          files: cs-pobe/*
+          body: |
+            **Circonscription scolaire de Pobè** — fonctionnent sans Internet.
+            | | Android | Windows |
+            |---|---|---|
+            | **CS Pobè** (gestion des écoles) | [CS-Pobe.apk](https://github.com/${{ github.repository }}/releases/download/cs-pobe/CS-Pobe.apk)<br>![QR](https://github.com/${{ github.repository }}/releases/download/cs-pobe/QR-CS-Pobe-android.png) | [CS-Pobe-Installation.exe](https://github.com/${{ github.repository }}/releases/download/cs-pobe/CS-Pobe-Installation.exe)<br>![QR](https://github.com/${{ github.repository }}/releases/download/cs-pobe/QR-CS-Pobe-windows.png) |
+            | **Mon école** (écoles de la CS) | [Ecole-Pobe.apk](https://github.com/${{ github.repository }}/releases/download/cs-pobe/Ecole-Pobe.apk)<br>![QR](https://github.com/${{ github.repository }}/releases/download/cs-pobe/QR-Ecole-Pobe-android.png) | [Ecole-Pobe-Installation.exe](https://github.com/${{ github.repository }}/releases/download/cs-pobe/Ecole-Pobe-Installation.exe)<br>![QR](https://github.com/${{ github.repository }}/releases/download/cs-pobe/QR-Ecole-Pobe-windows.png) |
+
+            Scannez le QR code avec l'appareil photo du téléphone. Fabriquées chaque nuit avec la dernière version.
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: edugestion
+          name: "ÉduGestion Pro et ÉduGestion Pro Master (Android et Windows)"
+          make_latest: "false"
+          files: edugestion/*
+          body: |
+            **ÉduGestion Pro** — gestion des écoles maternelles et primaires du Bénin, avec l'espace CP, CCS et DDEMP (MEMP-CP) intégré. Fonctionne sans Internet.
+            | | Android | Windows |
+            |---|---|---|
+            | **ÉduGestion Pro** | [EduGestion-Pro.apk](https://github.com/${{ github.repository }}/releases/download/edugestion/EduGestion-Pro.apk)<br>![QR](https://github.com/${{ github.repository }}/releases/download/edugestion/QR-EduGestion-Pro-android.png) | [EduGestion-Pro-Installation.exe](https://github.com/${{ github.repository }}/releases/download/edugestion/EduGestion-Pro-Installation.exe)<br>![QR](https://github.com/${{ github.repository }}/releases/download/edugestion/QR-EduGestion-Pro-windows.png) |
+            | **ÉduGestion Pro Master** | [EduGestion-Pro-Master.apk](https://github.com/${{ github.repository }}/releases/download/edugestion/EduGestion-Pro-Master.apk)<br>![QR](https://github.com/${{ github.repository }}/releases/download/edugestion/QR-EduGestion-Pro-Master-android.png) | [EduGestion-Pro-Master-Installation.exe](https://github.com/${{ github.repository }}/releases/download/edugestion/EduGestion-Pro-Master-Installation.exe)<br>![QR](https://github.com/${{ github.repository }}/releases/download/edugestion/QR-EduGestion-Pro-Master-windows.png) |
+
+            Scannez le QR code avec l'appareil photo du téléphone. Fabriquées chaque nuit avec la dernière version.

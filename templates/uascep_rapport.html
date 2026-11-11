@@ -1,0 +1,23 @@
+{# v1.24 — Rapport de fin de saison sportive d'un bureau de l'UASCEP (pré-rempli d'après les données de la saison) #}
+{% extends "base.html" %}{% block titre %}Rapport de fin de saison {{ saison }} — UASCEP{% endblock %}
+{% block contenu %}
+<p><a href="{{ url_for('uascep_saison', bid=b.id, saison=saison) }}">← Saison {{ saison }} : {{ b.entite_lib or b.entite }}</a></p>
+<div class="entete"><div><h1>Rapport de fin de saison sportive {{ saison }}</h1>
+<p class="sous">Bureau de l'UASCEP — {{ NIV_LIB[b.niveau] }} : {{ b.entite_lib or b.entite }}{% if not enregistre %} · <b>textes proposés d'après les données de la saison</b>{% endif %}</p></div>
+<div class="actions"><a class="btn petit" href="{{ url_for('uascep_rapport_pdf', bid=b.id, saison=saison) }}">{{ icone('document') }} Télécharger le rapport (PDF signé)</a>
+<a class="btn sec petit" href="{{ url_for('uascep_saison_xlsx', bid=b.id, saison=saison, rapport=1) }}">Excel</a></div></div>
+{% if manque %}<p class="aide">{{ icone('attention') }} Fonctions sans titulaire dans le bureau (signature vide) : {{ manque|join(', ') }}. Ajoutez-les dans le bureau, puis enregistrez leur cachet et leur signature.</p>{% endif %}
+<div class="carte"><h3>Données reprises automatiquement</h3>
+<p>Activités réalisées : <b>{{ part.realisees|length }}</b> sur {{ part.activites|length }} · participants : {{ part.g }} G, {{ part.f }} F, <b>{{ part.t }}</b> au total.</p>
+<p>Caisse (module du trésorier) : recettes {{ fcfa(fi.recettes) }} · dépenses {{ fcfa(fi.depenses) }} · <b>solde {{ fcfa(fi.solde) }}</b>.</p>
+<p class="aide">Le PDF contient : page de garde, contexte, organisation, activités réalisées (discipline, catégorie, date, lieu, participants G / F / T, résultats), participation, résultats et distinctions, bilan financier (journal de caisse, budget prévu / réalisé, cotisations par école), difficultés, recommandations et conclusion ; signatures et cachets du rapporteur, du secrétaire général, du trésorier et du président, visa de l'autorité hiérarchique, code de vérification et QR.</p></div>
+{% if peut_ecrire %}
+<form method="post" class="carte">
+{% for k, l in TEXTES %}<label>{{ l }} {% if k == 'titre' %}<input name="{{ k }}" value="{{ r[k] }}" maxlength="200">{% else %}<textarea name="{{ k }}" rows="{{ 5 if k in ('contexte', 'organisation', 'conclusion', 'resultats') else 3 }}">{{ r[k] }}</textarea>{% endif %}</label>
+{% endfor %}
+<p><button class="btn">Enregistrer le rapport</button> <button class="btn sec" name="reinitialiser" value="1" onclick="return confirm('Revenir aux textes proposés automatiquement ?')">{{ icone('reinitialiser') }} Réinitialiser</button></p>
+</form>
+{% else %}
+<div class="carte">{% for k, l in TEXTES %}<h3>{{ l }}</h3><p style="white-space:pre-line">{{ r[k] or '—' }}</p>{% endfor %}</div>
+{% endif %}
+{% endblock %}

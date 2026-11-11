@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% block titre %}Absences{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Absences et retards – {{ ANNEE }}</h1><p class="sous">{{ jours_appel }} jour(s) d'appel enregistré(s) · élèves ayant au moins une absence ou un retard</p></div>
+  <div class="actions"><a class="btn" href="{{ url_for('appel_stats_pdf', classe=cid) if cid else url_for('appel_stats_pdf') }}">{{ icone('document') }} PDF (courbe, signatures, QR)</a>
+  <a class="btn sec" href="{{ url_for('appel_accueil') }}">Registre d'appel</a></div>
+</div>
+<form class="filtres"><select name="classe" onchange="this.form.submit()"><option value="">Toutes les classes</option>
+  {% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if c.id==cid }}>{{ c.nom }}</option>{% endfor %}</select></form>
+{% if mois %}{% set mx = [1] + mois|map(attribute='a')|list + mois|map(attribute='r')|list %}{% set mx = mx|max %}
+<div class="carte"><b>Évolution mensuelle</b> <span class="aide">— <span style="color:#B42318">absences</span>, <span style="color:#B54708">retards</span></span>
+<svg viewBox="0 0 520 150" style="width:100%;max-width:760px;display:block;margin-top:6px" role="img" aria-label="Courbe des absences et retards par mois">
+  <line x1="30" y1="125" x2="510" y2="125" stroke="#D0D5DD"/>
+  {% for k in ('a','r') %}<polyline fill="none" stroke="{{ '#B42318' if k=='a' else '#B54708' }}" stroke-width="2.2"
+    points="{% for m in mois %}{{ 40 + loop.index0*50 }},{{ 125 - (m[k] / mx * 105)|round(1) }} {% endfor %}"/>
+  {% for m in mois %}<circle cx="{{ 40 + loop.index0*50 }}" cy="{{ 125 - (m[k] / mx * 105)|round(1) }}" r="3" fill="{{ '#B42318' if k=='a' else '#B54708' }}"><title>{{ m.lib }} : {{ m[k] }}</title></circle>{% endfor %}{% endfor %}
+  {% for m in mois %}<text x="{{ 40 + loop.index0*50 }}" y="142" font-size="11" text-anchor="middle" fill="#667085">{{ m.lib }}</text>{% endfor %}
+</svg></div>{% endif %}
+<div class="tw"><table class="t">
+  <tr><th>Élève</th><th>Classe</th><th class="num">Absences</th><th class="num">dont justifiées</th><th class="num">Retards</th><th>Dernière</th><th></th></tr>
+  {% for e in lst %}
+  <tr><td><a href="{{ url_for('eleve_detail', eid=e.id) }}"><b>{{ e.nom }}</b> {{ e.prenoms }}</a></td><td>{{ e.classe_nom }}</td>
+    <td class="num {{ 'rouge' if e.absences >= 5 }}"><b>{{ e.absences }}</b></td><td class="num">{{ e.justifiees }}</td><td class="num">{{ e.retards }}</td>
+    <td>{{ date_fr(e.derniere) }}</td><td class="num"><a class="btn sec petit" href="{{ url_for('absences_eleve_page', eid=e.id) }}">Détail</a></td></tr>
+  {% else %}<tr><td colspan="7" class="gris">Aucune absence enregistrée.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

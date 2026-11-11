@@ -1,0 +1,13 @@
+{# Résumé de carrière d'un agent (fiche de carrière et « Mon espace ») : variable f = fiche calculée #}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Grade · indices</div><div class="v">{{ f.grade or '—' }}</div>
+    <div class="d">payé {{ f.indice_paye if f.indice_paye is not none else '—' }} · réel {{ f.indice_reel if f.indice_reel is not none else '—' }}{% if f.categorie_lib %} · {{ f.categorie_lib }}{% endif %}</div></div>
+  <div class="kpi"><div class="l">Ancienneté générale</div><div class="v" style="font-size:20px">{{ f.anc_txt.generale }}</div>
+    <div class="d">au {{ f.reference.strftime('%d/%m/%Y') }} · école : {{ f.anc_txt.ecole }}</div></div>
+  <div class="kpi"><div class="l">Départ probable à la retraite</div>
+    <div class="v {{ 'rouge' if f.alerte_retraite }}" style="font-size:20px">{{ f.retraite_txt or '—' }}</div>
+    <div class="d">{% if f.retraite %}{{ 'départ atteint' if f.retraite_atteinte else 'reste ' ~ f.restant_txt }} ({{ f.age_retraite }} ans){% else %}{{ f.retraite_raison }}{% endif %}</div></div>
+  <div class="kpi"><div class="l">Visite d'aptitude · évaluation</div>
+    <div class="v" style="font-size:20px">{% if f.visite_aptitude == 'oui' %}<span class="vert">oui</span>{% elif f.visite_aptitude == 'non' %}<span class="rouge">non</span>{% else %}—{% endif %}{% if f.note_evaluation is not none %} · {{ car_fmt_nombre(f.note_evaluation) }}/20{% endif %}</div>
+    <div class="d">visites reçues : CP {{ f.visites_cp if f.visites_cp is not none else '—' }} · CCS {{ f.visites_ccs if f.visites_ccs is not none else '—' }}{% if f.participation_up is not none %} · UP {{ car_fmt_nombre(f.participation_up) }} %{% endif %}</div></div>
+</div>

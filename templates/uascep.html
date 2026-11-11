@@ -1,0 +1,61 @@
+{# v1.22 — Bureaux de l'UASCEP : onglets par niveau, synthèse, anciens bureaux #}
+{% extends "base.html" %}{% block titre %}Bureaux de l'UASCEP{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Bureaux de l'UASCEP</h1>
+<p class="sous">Union des associations scolaires et culturelles des écoles primaires — membres et responsables par école, unité pédagogique, zone pédagogique, circonscription et DDEMP</p></div>
+<div class="actions"><a class="btn sec petit" href="{{ url_for('uascep_pdf', niveau=onglet if onglet not in ('SYNTHESE', 'ANCIENS') else None, entite=entite or None) }}">Imprimer / PDF</a>
+<a class="btn sec petit" href="{{ url_for('uascep_liste_pdf', niveau=onglet if onglet not in ('SYNTHESE', 'ANCIENS') else None) }}">Liste des bureaux (PDF signé)</a>
+<a class="btn sec petit" href="{{ url_for('uascep_xlsx') }}">Excel (export)</a></div></div>
+{% include "_uascep_onglets.html" %}
+<nav class="onglets" aria-label="Niveaux des bureaux">
+{% for c, l in NIVEAUX %}<a class="{{ 'actif' if onglet == c }}" href="{{ url_for('uascep', onglet=c) }}">{{ l }}</a>{% endfor %}
+<a class="{{ 'actif' if onglet == 'SYNTHESE' }}" href="{{ url_for('uascep', onglet='SYNTHESE') }}">Synthèse</a>
+<a class="{{ 'actif' if onglet == 'ANCIENS' }}" href="{{ url_for('uascep', onglet='ANCIENS') }}">Anciens bureaux</a>
+</nav>
+{% if onglet == 'SYNTHESE' %}
+<div class="tw"><table class="t"><thead><tr><th>Niveau</th><th>Bureaux</th><th>Membres</th></tr></thead><tbody>
+{% for l, nb, nm in syn %}<tr><td>{{ l }}</td><td>{{ nb }}</td><td>{{ nm }}</td></tr>{% endfor %}</tbody></table></div>
+<h3>Par fonction</h3><ul>{% for f, n in par_fonction %}<li>{{ f }} : {{ n }}</li>{% else %}<li class="aide">Aucun membre.</li>{% endfor %}</ul>
+<h3>Par sexe</h3><p>Hommes : {{ par_sexe['M'] }} · Femmes : {{ par_sexe['F'] }}{% if par_sexe[''] %} · non renseigné : {{ par_sexe[''] }}{% endif %}</p>
+<h3>Mandats expirés ou à renouveler</h3><ul>{% for n, e, s, f in alertes %}<li>{{ n }} — {{ e }} : <b>{{ s }}</b> (fin {{ f }})</li>{% else %}<li class="aide">Aucun.</li>{% endfor %}</ul>
+{% elif onglet == 'ANCIENS' %}
+{% for b, ms in anciens %}<h3>{{ b.niveau }} — {{ b.entite_lib or b.entite }} <span class="aide">· mandat {{ jjmmaaaa(b.date_election) }} → {{ jjmmaaaa(b.date_fin) }} · archivé le {{ b.archive_le }}</span></h3>
+<ul>{% for m in ms %}<li>{{ m.ordre }}. {{ m.nom }} {{ m.prenoms }} — {{ m.fonction }}</li>{% endfor %}</ul>{% else %}<p class="aide">Aucun ancien bureau.</p>{% endfor %}
+{% else %}
+{% set peut_ecrire = onglet in ecrire %}
+<form method="get" class="filtres" style="margin:10px 0">
+<input type="hidden" name="onglet" value="{{ onglet }}">
+{% if entites and (entites|length > 1 or not entite) %}<label>{{ NIVEAUX|selectattr(0,'equalto',onglet)|map(attribute=1)|first }} <select name="entite" onchange="this.form.submit()"><option value="">Tous</option>{% for k, l, i in entites %}<option value="{{ k }}" {{ 'selected' if k == entite }}>{{ l }}</option>{% endfor %}</select></label>{% endif %}
+{% if not entite and zones %}<label>Zone <select name="zone" onchange="this.form.submit()"><option value="">Toutes</option>{% for z in zones %}<option {{ 'selected' if filtres.zone == z }}>{{ z }}</option>{% endfor %}</select></label>{% endif %}
+{% if not entite and ups %}<label>UP <select name="up" onchange="this.form.submit()"><option value="">Toutes</option>{% for u in ups %}<option {{ 'selected' if filtres.up == u }}>{{ u }}</option>{% endfor %}</select></label>{% endif %}
+<noscript><button class="btn sec petit">Afficher</button></noscript></form>
+{% if entite %}
+{% if bureau %}<p><b>Bureau :</b> {{ bureau.entite_lib or bureau.entite }} · élu le {{ jjmmaaaa(bureau.date_election) or '—' }} · durée {{ bureau.duree or 2 }} ans · fin de mandat {{ jjmmaaaa(bureau.date_fin) or '—' }} · <b>{{ statut_mandat(bureau.date_fin) }}</b>{% if bureau.ag_lieu %} · AG : {{ jjmmaaaa(bureau.ag_date) }}, {{ bureau.ag_lieu }}{% endif %}</p>{% else %}<p class="aide">Aucun bureau enregistré{% if peut_ecrire %} : ajoutez les membres ou renseignez le bureau{% endif %}.</p>{% endif %}
+{% if peut_ecrire %}<div class="actions" style="margin:6px 0">
+<a class="btn petit" href="{{ url_for('uascep_membre', mid=0, niveau=onglet, entite=entite) }}">{{ icone('ajouter') }} Ajouter un membre</a>
+<a class="btn sec petit" href="{{ url_for('uascep_bureau', bid=bureau.id if bureau else 0, niveau=onglet, entite=entite) }}">{{ icone('modifier') }} {{ 'Modifier' if bureau else 'Renseigner' }} le bureau</a>
+{% if bureau %}<form method="post" action="{{ url_for('uascep_reinitialiser', bid=bureau.id) }}" style="display:inline" onsubmit="return confirm('Réinitialiser ce bureau ?')"><label class="aide"><input type="checkbox" name="archive" value="1" checked> archiver</label> <button class="btn sec petit">{{ icone('reinitialiser') }} Réinitialiser</button></form>
+<form method="post" action="{{ url_for('uascep_renouveler', bid=bureau.id) }}" style="display:inline"><input type="date" name="date_election"> <button class="btn sec petit">{{ icone('actualiser') }} Renouvellement</button></form>{% endif %}
+</div>{% endif %}
+<p><a class="btn sec petit" href="{{ url_for('uascep_logo', niveau=onglet, entite=entite) }}">Logo UASCEP</a></p>
+{% if bureau %}<div class="actions" style="margin:6px 0" aria-label="Documents signés du bureau">
+<a class="btn sec petit" href="{{ url_for('uascep_composition_pdf', bid=bureau.id) }}">{{ icone('document') }} Composition du bureau</a>
+<a class="btn sec petit" href="{{ url_for('uascep_pv_pdf', bid=bureau.id) }}">{{ icone('document') }} PV d'élection</a>
+<a class="btn sec petit" href="{{ url_for('uascep_pv_pdf', bid=bureau.id, type='installation') }}">{{ icone('document') }} PV d'installation</a>
+<a class="btn petit" href="{{ url_for('uascep_saison', bid=bureau.id) }}">{{ icone('medaille') }} Saison sportive : calendrier, réunions, caisse, matériel, rapport</a>
+<span class="aide">Signatures et cachets du président, du secrétaire général (et du trésorier), visa de l'autorité, code de vérification et QR.</span></div>{% endif %}
+<div class="tw"><table class="t"><thead><tr><th>N°</th><th>Nom et prénoms</th><th>Sexe</th><th>École</th><th>UP</th><th>Zone pédagogique</th><th>Nom du RUP</th><th>Fonction</th><th>Qualité</th><th>Contact</th><th>Date d'élection</th><th>Date de fin de mandat</th><th>Statut</th><th>Cachet / signature</th><th></th></tr></thead><tbody>
+{% for m in membres %}<tr><td>{{ m.ordre }}</td><td>{{ m.nom }} {{ m.prenoms }}</td><td>{{ m.sexe }}</td><td>{{ m.ecole }}</td><td>{{ m.up }}</td><td>{{ m.zone }}</td><td>{{ m.rup }}</td><td>{{ m.fonction }}</td><td>{{ m.qualite }}</td><td>{{ m.contact }}</td><td>{{ jjmmaaaa(m.date_election) }}</td><td>{{ jjmmaaaa(m.date_fin) }}</td><td>{{ m.statut }}</td>
+<td>{{ (icone('coche') ~ ' cachet') if (m.cachet_mode or 'genere') != 'aucun' else '—' }} · {{ (icone('coche') ~ ' signature') if m.signature else 'sans signature' }}</td>
+<td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('uascep_cachet', mid=m.id) }}" title="Cachet et signature">{{ icone('signature') }} Cachet</a> <a class="btn sec petit" href="{{ url_for('uascep_attestation_pdf', mid=m.id) }}" title="Attestation de fonction">{{ icone('document') }}</a>{% if peut_ecrire %} <a class="btn sec petit" href="{{ url_for('uascep_membre', mid=m.id) }}">{{ icone('modifier') }}</a><form method="post" action="{{ url_for('uascep_membre_supprimer', mid=m.id) }}" style="display:inline" onsubmit="return confirm('Supprimer ce membre ?')"><button class="btn sec petit" aria-label="Supprimer">{{ icone('supprimer') }}</button></form>{% endif %}</td></tr>{% else %}<tr><td colspan="15" class="aide">Aucun membre dans ce bureau.{% if peut_ecrire %} <a href="{{ url_for('uascep_ajouter', niveau=onglet, entite=(bureau.entite_lib if bureau else entite)) }}">{{ icone('ajouter') }} Ajouter le premier membre</a>.{% else %} Saisie : {{ QUI_ECRIT[onglet] }}.{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+{% else %}
+<div class="tw"><table class="t"><thead><tr><th>Entité</th><th>N°</th><th>Nom et prénoms</th><th>Sexe</th><th>École</th><th>UP</th><th>Zone pédagogique</th><th>Nom du RUP</th><th>Fonction</th><th>Qualité</th><th>Contact</th><th>Fin de mandat</th><th>Statut</th></tr></thead><tbody>
+{% for b, m in toutes %}<tr><td><a href="{{ url_for('uascep', onglet=onglet, entite=b.entite) }}">{{ b.entite_lib or b.entite }}</a></td><td>{{ m.ordre }}</td><td>{{ m.nom }} {{ m.prenoms }}</td><td>{{ m.sexe }}</td><td>{{ m.ecole }}</td><td>{{ m.up }}</td><td>{{ m.zone }}</td><td>{{ m.rup }}</td><td>{{ m.fonction }}</td><td>{{ m.qualite }}</td><td>{{ m.contact }}</td><td>{{ jjmmaaaa(m.date_fin) }}</td><td>{{ m.statut }}</td></tr>{% else %}<tr><td colspan="13" class="aide">Aucun membre à ce niveau.{% if peut_ecrire %} <a href="{{ url_for('uascep_ajouter', niveau=onglet) }}">{{ icone('ajouter') }} Ajouter un membre</a> (l'entité peut être choisie ou saisie).{% else %} Saisie : {{ QUI_ECRIT[onglet] }}.{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endif %}
+{% if peut_ecrire %}<form method="post" action="{{ url_for('uascep_reinitialiser_tous') }}" style="margin-top:8px" onsubmit="return confirm('Réinitialiser tous les bureaux de cet onglet ?')"><input type="hidden" name="niveau" value="{{ onglet }}"><label class="aide"><input type="checkbox" name="archive" value="1" checked> archiver</label> <button class="btn sec petit">{{ icone('reinitialiser') }} Réinitialiser tous les bureaux de l'onglet</button></form>{% endif %}
+{% endif %}
+{% if ecrire %}<details style="margin-top:12px"><summary>Importer un fichier Excel (même fichier dans toutes les applications)</summary>
+<form method="post" action="{{ url_for('uascep_import') }}" enctype="multipart/form-data"><input type="file" name="fichier" accept=".xlsx"> <button class="btn sec petit">Importer</button> <a href="{{ url_for('uascep_modele') }}">Modèle Excel</a></form></details>{% endif %}
+{% endblock %}

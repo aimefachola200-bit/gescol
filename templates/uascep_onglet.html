@@ -1,0 +1,38 @@
+{# v1.28 — onglets Bureaux, Vie du bureau, Documents, Logo, Importer, Comment renseigner #}
+{% extends "base.html" %}{% block titre %}UASCEP{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Bureaux de l'UASCEP</h1><p class="sous">Union des associations sportives et culturelles des écoles primaires</p></div></div>
+{% include "_uascep_onglets.html" %}
+{% if quoi in ('bureaux', 'vie', 'documents', 'logo') %}
+{% if not bureaux %}<div class="carte"><p><b>Aucun bureau pour l'instant.</b> Un bureau est créé automatiquement dès que vous ajoutez son premier membre.</p>
+{% if ecrire %}<p><a class="btn" href="{{ url_for('uascep_ajouter') }}">{{ icone('ajouter') }} Ajouter un membre</a></p>{% endif %}</div>
+{% else %}
+<div class="tw"><table class="t" aria-label="Bureaux"><thead><tr><th>Niveau</th><th>Entité</th><th>Membres</th><th>Mandat</th><th></th></tr></thead><tbody>
+{% for b in bureaux %}<tr><td>{{ NIV_LIB[b.niveau] }}</td><td>{{ b.entite_lib or b.entite }}</td><td>{{ b.n }}</td><td>{{ jjmmaaaa(b.date_election) }}{% if b.date_fin %} → {{ jjmmaaaa(b.date_fin) }}{% endif %} {% if b.mandat %}<span class="badge">{{ b.mandat }}</span>{% endif %}</td>
+<td style="white-space:nowrap">
+{% if quoi == 'bureaux' %}<a class="btn sec petit" href="{{ url_for('uascep', onglet=b.niveau, entite=b.entite) }}">Membres</a>{% if b.niveau in ecrire %} <a class="btn sec petit" href="{{ url_for('uascep_bureau', bid=b.id) }}">{{ icone('modifier') }} Bureau</a> <a class="btn sec petit" href="{{ url_for('uascep_ajouter', niveau=b.niveau, entite=b.entite_lib or b.entite) }}">{{ icone('ajouter') }} Membre</a>{% endif %}
+{% elif quoi == 'vie' %}<a class="btn sec petit" href="{{ url_for('uascep_saison', bid=b.id) }}">Vie du bureau (saison)</a> <a class="btn sec petit" href="{{ url_for('uascep_rapport', bid=b.id) }}">Rapport de saison</a>
+{% elif quoi == 'documents' %}<a class="btn sec petit" href="{{ url_for('uascep_composition_pdf', bid=b.id) }}">{{ icone('document') }} Composition</a> <a class="btn sec petit" href="{{ url_for('uascep_pv_pdf', bid=b.id) }}">PV d'élection</a>
+{% else %}<a class="btn sec petit" href="{{ url_for('uascep_logo', niveau=b.niveau, entite=b.entite) }}">Logo du bureau</a>{% endif %}
+</td></tr>{% endfor %}</tbody></table></div>
+{% endif %}
+{% if quoi == 'documents' %}<p class="actions"><a class="btn sec petit" href="{{ url_for('uascep_liste_pdf') }}">{{ icone('document') }} Liste des bureaux (PDF signé)</a> <a class="btn sec petit" href="{{ url_for('uascep_pdf') }}">Imprimer les membres</a> <a class="btn sec petit" href="{{ url_for('uascep_xlsx') }}">{{ icone('graphique') }} Excel (export)</a></p>
+<p class="aide">Attestations de fonction : depuis l'onglet Membres, bouton de chaque membre. Documents de la saison (calendrier, résultats, caisse, rapport) : onglet Vie du bureau.</p>{% endif %}
+{% elif quoi == 'importer' %}
+<div class="carte"><h2 style="margin-top:0">{{ icone('importer') }} Importer des membres (Excel)</h2>
+<ol><li>Téléchargez le <a href="{{ url_for('uascep_modele', vide=1) }}">modèle Excel vierge</a> (ou le <a href="{{ url_for('uascep_modele') }}">modèle avec un exemple</a>).</li>
+<li>Remplissez la feuille « Membres UASCEP » : une ligne par membre. Colonnes : {{ ENT_MEMBRES|join(', ') }}.</li>
+<li>Niveau : École, Unité pédagogique, Zone pédagogique, Circonscription scolaire ou DDEMP ; Entité : nom de l'école, de l'UP…</li>
+<li>Importez le fichier : les bureaux manquants sont créés ; une ligne déjà présente (même entité, même nom et prénoms) est mise à jour.</li></ol>
+{% if ecrire %}<form method="post" action="{{ url_for('uascep_import') }}" enctype="multipart/form-data"><input type="file" name="fichier" accept=".xlsx" required> <button class="btn">{{ icone('importer') }} Importer</button></form>{% endif %}</div>
+{% else %}
+<div class="carte"><h2 style="margin-top:0">{{ icone('info') }} Comment renseigner le module UASCEP</h2>
+<ol><li><b>Ajouter un membre</b> : choisissez le niveau (école, UP, zone, CS, DDEMP), puis l'entité dans la liste (ou saisissez son nom), remplissez nom, fonction (Président, Secrétaire général…), dates du mandat, puis « Enregistrer ». Le bureau est créé automatiquement.</li>
+<li><b>Cachet et signature</b> : onglet Membres, bouton « Cachet / signature » du membre (cachet généré ou image importée, signature dessinée ou importée).</li>
+<li><b>Bureaux</b> : complétez la date d'élection, l'assemblée générale et le PV ; renouvelez le bureau en fin de mandat (l'ancien est archivé).</li>
+<li><b>Vie du bureau</b> : par saison, calendrier, activités et résultats, réunions, caisse, budget, matériel, puis le rapport de fin de saison.</li>
+<li><b>Documents</b> : composition, PV, attestations, liste des bureaux — signés avec cachets et QR.</li>
+<li><b>Importer (Excel)</b> : pour saisir beaucoup de membres d'un coup.</li></ol>
+<p class="aide">Qui peut écrire : {% for c, l in NIVEAUX %}<b>{{ l }}</b> — {{ QUI_ECRIT[c] }}{% if not loop.last %} ; {% endif %}{% endfor %}.</p></div>
+{% endif %}
+{% endblock %}

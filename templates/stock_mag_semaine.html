@@ -1,0 +1,43 @@
+{% extends "base.html" %}{% block titre %}Petit magasin — semaine{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Semaine du {{ debut.strftime('%d/%m/%Y') }}</h1>
+  <p class="sous">Petit magasin : {{ effectif }} élèves par jour (G {{ s.garcons }}, F {{ s.filles }}) × {{ JOURS }} jours — {{ 'ouverte' if ouverte else 'clôturée' }}</p></div>
+  <div class="actions"><a class="btn sec petit" href="{{ url_for('stock_mag_accueil') }}">← Magasins</a>
+    <a class="btn sec petit" target="_blank" href="{{ url_for('stock_mag_cahier_pdf', sid=s.id) }}">{{ icone('document') }} Cahier des menus (PDF)</a>
+    <a class="btn sec petit" target="_blank" href="{{ url_for('stock_mag_bilan_pdf', periode='semaine', date=s.debut) }}">{{ icone('document') }} Bilan de la semaine (PDF)</a></div>
+</div>
+{% include "stock_onglets.html" %}
+{% set sous = 'accueil' %}{% include "stock_mag_barre.html" %}
+
+<form method="post" action="{{ url_for('stock_mag_jours', sid=s.id) }}" class="carte f">
+  <h2>Jours de cantine</h2>
+  <div class="tw"><table class="t compact"><thead><tr><th>Jour</th><th>Menu</th><th class="c">G</th><th class="c">F</th><th class="c">T</th>
+    {% for l in info.lignes %}<th class="c">{{ l.nom }} (kg)</th>{% endfor %}</tr></thead><tbody>
+  {% for x in grille %}{% set j = x.j %}
+  <tr><td><b>{{ x.nom }}</b> {{ x.date[8:10] }}/{{ x.date[5:7] }}</td>
+    <td><input name="menu_{{ x.date }}" maxlength="200" value="{{ j.menu if j and j.menu else '' }}" {{ 'disabled' if not ouverte }}></td>
+    <td><input name="g_{{ x.date }}" inputmode="numeric" style="max-width:80px" value="{{ j.garcons if j else '' }}" {{ 'disabled' if not ouverte }}></td>
+    <td><input name="f_{{ x.date }}" inputmode="numeric" style="max-width:80px" value="{{ j.filles if j else '' }}" {{ 'disabled' if not ouverte }}></td>
+    <td class="c">{{ j.total if j else '' }}</td>
+    {% for l in info.lignes %}<td class="c">{{ qte(j.sorties.get(l.vivre_id, 0)) if j else '' }}</td>{% endfor %}</tr>
+  {% endfor %}
+  </tbody></table></div>
+  {% if ouverte and modifiable %}<p class="actions"><button class="btn vert">{{ icone('enregistrer') }} Enregistrer et calculer</button></p>
+  <p class="aide">Laissez G et F vides un jour sans cantine. Consommation du jour = ration × (G + F), retirée du petit magasin.</p>{% endif %}
+</form>
+
+<div class="carte">
+  <h2>Bilan du petit magasin</h2>
+  <div class="tw"><table class="t compact"><thead><tr><th>Vivre</th><th class="c">Ration (g)</th><th class="c">Prélevé (kg)</th><th class="c">Consommé (kg)</th><th class="c">Reste (kg)</th><th class="c">Retourné (kg)</th></tr></thead><tbody>
+  {% for l in info.lignes %}<tr><td><b>{{ l.nom }}</b></td><td class="c">{{ qte(l.ration_g) }}</td><td class="c">{{ qte(l.preleve) }}</td><td class="c">{{ qte(l.consomme) }}</td>
+    <td class="c"><b>{{ qte(l.reste) }}</b>{% if l.manque %} <span class="aide">(manque {{ qte(l.manque) }})</span>{% endif %}</td>
+    <td class="c">{{ qte(l.retourne) if l.retourne is not none else '—' }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% if modifiable %}<div class="actions" style="margin-top:10px">
+    {% if ouverte %}<form method="post" action="{{ url_for('stock_mag_cloturer', sid=s.id) }}" style="display:inline"><button class="btn">Clôturer et retourner le reste au grand magasin</button></form>
+      <form method="post" action="{{ url_for('stock_mag_supprimer', sid=s.id) }}" style="display:inline" onsubmit="return confirm('Supprimer cette semaine ? Le prélèvement est remis dans le grand magasin.')"><button class="btn sec">Supprimer la semaine</button></form>
+    {% else %}<form method="post" action="{{ url_for('stock_mag_rouvrir', sid=s.id) }}" style="display:inline"><button class="btn sec">Rouvrir (annule le retour)</button></form>{% endif %}
+  </div>{% endif %}
+</div>
+{% endblock %}

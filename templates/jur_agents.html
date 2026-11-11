@@ -1,0 +1,48 @@
+{% extends "base.html" %}{% block titre %}Agents de la structure{% endblock %}
+{% block contenu %}
+<style>.ag-t td,.ag-t th{font-size:13px}</style>
+<div class="entete">
+  <div><h1>Agents de la {{ 'circonscription' if JUR_NIVEAU == 'cs' else 'DDEMP' }}</h1>
+    <p class="sous">{{ st.t }} agent(s) · hommes : {{ st.h }} · femmes : {{ st.f }}</p></div>
+  <div class="actions">
+    {% if peut('jur_personnel') %}<a class="btn" href="{{ url_for('jur_agent_form') }}">+ Ajouter un agent</a>
+    <a class="btn sec" href="{{ url_for('jur_agents_import') }}">⇪ Importer (Excel)</a>{% endif %}
+    <a class="btn sec" href="{{ url_for('jur_agents', export='xlsx', **a) }}">⇩ Exporter (Excel)</a>
+  </div>
+</div>
+<form method="get" class="filtres">
+  <div><label for="s">Service</label><select id="s" name="service" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for c, n in services %}<option value="{{ c }}" {{ 'selected' if a.service == c }}>{{ n }}</option>{% endfor %}</select></div>
+  <div><label for="r">Rôle</label><select id="r" name="role" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for k, v in roles.items() %}<option value="{{ k }}" {{ 'selected' if a.role == k }}>{{ v }}</option>{% endfor %}</select></div>
+  <div><label for="q">Recherche</label><input id="q" name="q" value="{{ a.q }}" placeholder="Nom, NIP, poste…"></div>
+  <div><label style="font-weight:400;display:flex;gap:6px;align-items:center"><input type="checkbox" name="tous" value="1" style="width:auto" {{ 'checked' if a.tous == '1' }} onchange="this.form.submit()"> Inclure les agents retirés</label></div>
+  <div><button class="btn sec petit">Filtrer</button></div>
+</form>
+<div class="tw"><table class="t ag-t">
+  <tr><th>Nom et prénoms</th><th>Sexe</th><th>NIP</th><th>Service</th><th>Poste</th><th>Catégorie / grade</th><th>Anc. générale</th><th>Retraite</th><th>Compte</th><th></th></tr>
+  {% for r, f in agents %}
+  <tr style="{{ 'opacity:.55' if not r.actif }}">
+    <td><a href="{{ url_for('jur_personnel_fiche', cle='a%d' % r.id) }}"><b>{{ r.nom }}</b> {{ r.prenoms or '' }}</a>{% if not r.actif %} <span class="badge">retiré</span>{% endif %}</td>
+    <td>{{ r.sexe or '' }}</td><td>{{ r.nip or '—' }}</td><td>{{ f.ecole_service }}</td><td>{{ f.fonction_txt }}</td>
+    <td>{{ f.categorie_lib or '—' }}{% if f.grade %} · {{ f.grade }}{% endif %}</td><td>{{ f.anc_txt.generale or '—' }}</td>
+    <td>{% if f.retraite %}{{ f.retraite_txt }}{% if f.alerte_retraite %} <span class="badge ko">{{ 'atteint' if f.retraite_atteinte else f.restant_txt }}</span>{% endif %}{% else %}<span class="aide">{{ f.retraite_raison }}</span>{% endif %}</td>
+    <td>{% if r.user_id and comptes.get(r.user_id) %}{{ comptes[r.user_id].identifiant }}{% else %}—{% endif %}</td>
+    <td class="num">{% if peut('jur_personnel') %}<a class="btn sec petit" href="{{ url_for('jur_agent_form', aid=r.id) }}">Modifier</a>{% endif %}</td></tr>
+  {% else %}
+  <tr><td colspan="10" class="gris">Aucun agent. {% if peut('jur_personnel') %}Ajoutez-les un par un ou importez un fichier Excel (modèle fourni).{% endif %}</td></tr>
+  {% endfor %}
+</table></div>
+
+{% if JUR_NIVEAU == 'ddemp' %}
+<div class="carte" style="margin-top:18px"><h2>Agents des circonscriptions (reçus avec les paquets des CS, lecture seule)</h2>
+{% if recus %}
+<div class="tw"><table class="t ag-t">
+  <tr><th>CS</th><th>Nom et prénoms</th><th>Sexe</th><th>NIP</th><th>Poste</th><th>Catégorie / grade</th><th>Retraite</th></tr>
+  {% for f in recus %}<tr><td>{{ f.cs_nom }}</td><td><a href="{{ url_for('jur_personnel_fiche', cle=f.cle) }}">{{ f.nom_complet }}</a></td><td>{{ f.sexe }}</td>
+    <td>{{ f.nip or '—' }}</td><td>{{ f.fonction_txt }}</td><td>{{ f.categorie_lib or '—' }}{% if f.grade %} · {{ f.grade }}{% endif %}</td><td>{{ f.retraite_txt or '—' }}</td></tr>{% endfor %}
+</table></div>
+{% else %}<p class="gris">Aucun agent reçu des circonscriptions pour {{ ANNEE }}.</p>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

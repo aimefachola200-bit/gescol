@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% block titre %}Modifier le reçu {{ p.numero_recu }}{% endblock %}
+{% block contenu %}
+<h1>{{ icone('modifier') }} Modifier le paiement — reçu {{ p.numero_recu }}</h1>
+<p class="sous">{{ e.nom }} {{ e.prenoms }} · {{ e.matricule }} · année {{ p.annee }}{% if p.annule %} · <span class="badge ko">annulé</span>{% endif %}</p>
+<div class="carte" style="max-width:620px">
+<form method="post" class="f">
+  <div class="ligne">
+    <div><label for="cp-m">Montant (FCFA) *</label><input id="cp-m" name="montant" inputmode="numeric" required value="{{ p.montant }}"></div>
+    <div><label for="cp-d">Date *</label><input id="cp-d" type="date" name="date" required value="{{ (p.date_paiement or '')[:10] }}"></div>
+  </div>
+  <div class="ligne">
+    <div><label for="cp-mo">Mode *</label><select id="cp-mo" name="mode">{% for k, v in MODES.items() %}<option value="{{ k }}" {{ 'selected' if p.mode == k }}>{{ v }}</option>{% endfor %}</select></div>
+    <div><label for="cp-r">Référence</label><input id="cp-r" name="reference" value="{{ p.reference or '' }}"></div>
+  </div>
+  <div class="ligne">
+    <div><label for="cp-t">Téléphone du payeur</label><input id="cp-t" name="telephone" value="{{ p.telephone or '' }}"></div>
+    <div><label for="cp-mf">Motif</label><input id="cp-mf" name="motif" value="{{ p.motif or 'Frais de scolarité' }}"></div>
+  </div>
+  <p class="aide">Le reçu garde son numéro ; l'ancienne valeur est gardée dans le journal d'activité.</p>
+  <div class="actions"><button class="btn">Enregistrer la modification</button><a class="btn sec" href="{{ url_for('eleve_detail', eid=e.id) }}">Annuler</a></div>
+</form>
+</div>
+{% endblock %}

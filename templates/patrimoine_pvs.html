@@ -1,0 +1,10 @@
+{# v1.27 — reprise de l'inventaire du module Patrimoine dans les rubriques communes #}
+{% extends "base.html" %}{% block titre %}Inventaire — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<h2 style="margin:0">Reprendre l'inventaire de l'école</h2>
+<p class="aide">Le module Patrimoine de l'école compte {{ n_locaux }} local(aux) / ouvrage(s). La reprise ajoute aux « Bâtiments et salles » les ouvrages absents (même désignation) et crée, pour chaque cours, une ligne « Tables-bancs » avec l'effectif inscrit et les tables-bancs en bon état du mobilier.</p>
+{% if peut_ecrire %}<form method="post"><button class="btn">{{ icone('importer') }} Reprendre l'inventaire</button></form>{% endif %}
+{% if ep_existe('patrimoine_accueil') %}<p><a class="btn sec petit" href="{{ url_for('patrimoine_accueil') }}">{{ icone('patrimoine') }} Module Patrimoine de l'école</a></p>{% endif %}
+{% endblock %}

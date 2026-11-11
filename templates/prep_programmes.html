@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% block titre %}Programmes et progressions{% endblock %}
+{% block contenu %}{% set onglet = 'programmes' %}{% include "_prep_onglets.html" %}
+<form method="get" class="filtres" style="margin:10px 0" aria-label="Choix du cours et de la matière">
+  <label>Cours <select name="cours" onchange="this.form.submit()"><option value="">Tous</option>{% for c in COURS %}<option value="{{ c }}" {{ 'selected' if c == cours }}>{{ PREP_COURS_LIB[c] }}</option>{% endfor %}</select></label>
+  <label>Matière <select name="matiere" onchange="this.form.submit()"><option value="">Toutes</option>{% for m in MATS %}<option value="{{ m }}" {{ 'selected' if m == mat }}>{{ prep_nom_matiere(m) }}</option>{% endfor %}</select></label>
+  <noscript><button class="btn sec petit">Afficher</button></noscript>
+</form>
+{% if vigueur and (not mat or mat in vigueur.matieres) %}<div class="carte bandeau-vigueur" role="note"><b>{{ vigueur.libelle }}</b> — Éducation sociale et EPS, CI → CM2 : situations d'apprentissage, séquences, connaissances et techniques et matériel des <i>{{ vigueur.source }}</i>.{% if mat == 'es' and cours %}{% for x in vigueur.calendrier_es if x.cours == cours %}<br><span class="aide">Répartition de l'ES ({{ cours }}) — morale : {{ x.morale }} Civisme : {{ x.civisme }} Histoire-géographie : {{ x.histoire_geographie }} Langue et culture : {{ x.langue_culture }}</span>{% endfor %}{% endif %}</div>{% endif %}
+<p class="aide">Programmes détaillés disponibles : {% for c, m in dispo %}<a href="{{ url_for('prep_programmes', cours=c, matiere=m) }}">{{ c }} {{ prep_nom_matiere(m) }}</a>{% if not loop.last %} · {% endif %}{% endfor %}.</p>
+{% if progs %}
+<div class="tw"><table class="t">
+  <thead><tr><th>Cours</th><th>Matière</th><th>Unité / dossier / SA</th><th>Titre</th><th>Durée</th></tr></thead>
+  <tbody>{% for p in progs %}<tr>
+    <td>{{ p.cours }}</td><td>{{ prep_nom_matiere(p.matiere) }}</td>
+    <td>{% if p.dossier %}Dossier {{ p.dossier }} · {% endif %}{{ 'Unité' if p.type == 'unite' else 'SA' }} {{ p.num or '' }}</td>
+    <td><a href="{{ url_for('prep_programme', pid=p.id) }}">{{ p.titre }}</a>{% if p.en_vigueur %} <span class="badge" title="Mesures correctives — programme en vigueur">en vigueur</span>{% endif %}{% if p.composante and p.composante != 'EPS' %} <span class="aide">{{ p.composante }}</span>{% endif %}</td><td>{{ p.duree or (p.seances ~ ' séances' if p.seances else '') }}</td>
+  </tr>{% endfor %}</tbody></table></div>
+{% else %}<div class="carte"><p class="aide">Pas de programme détaillé pour ce choix dans les documents fournis : la planification annuelle officielle ci-dessous donne la progression.</p></div>{% endif %}
+{% if plan %}
+<h2>Planification annuelle officielle — {{ cours }}</h2>
+<div class="tw"><table class="t">
+  <thead><tr>{% for k, lib, _ in cols %}<th>{{ lib }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for l in plan %}<tr>{% for k, lib, _ in cols %}<td>{{ l[k] or '' }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
+{% endif %}
+{% endblock %}

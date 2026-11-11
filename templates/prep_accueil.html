@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% block titre %}Préparation de classe{% endblock %}
+{% block contenu %}{% set onglet = 'semaine' %}{% include "_prep_onglets.html" %}
+<div class="grille">
+  <div class="kpi"><div class="l">Fiches de la bibliothèque</div><div class="v">{{ nb_fiches }}</div><div class="d">APC, CI → CM2 et maternelle</div></div>
+  <div class="kpi"><div class="l">Guides pédagogiques</div><div class="v">{{ nb_guides }}</div><div class="d">méthodologie et démarches</div></div>
+  <div class="kpi"><div class="l">Programmes (unités, SA)</div><div class="v">{{ nb_prog }}</div><div class="d">progressions par cours</div></div>
+  <div class="kpi"><div class="l">{{ 'Mes fiches' if g.user.role == 'enseignant' else 'Mes fiches préparées' }}</div><div class="v">{{ nb_mes }}</div><div class="d"><a href="{{ url_for('prep_mes_fiches') }}">ouvrir</a></div></div>
+</div>
+<h2>Cette semaine — {{ aujourd.strftime('%d/%m/%Y') }}</h2>
+{% if not semaines %}
+<div class="carte"><p class="aide">{% if g.user.role == 'enseignant' %}Aucune classe ne vous est affectée{% else %}Aucune classe n'est enregistrée dans cette école{% endif %} : la bibliothèque, les programmes et les guides restent consultables.</p></div>
+{% endif %}
+{% for s in semaines %}
+<section class="carte prep-semaine">
+  <div class="entete"><div><h3 style="margin:0">{{ s.classe.nom }} <span class="sous">({{ s.classe.niveau }})</span></h3>
+    <p class="sous">{% if s.maternelle %}Progression de la {{ 'section des petits (proposée)' if s.section == 'petits' else 'section des grands' }} — {{ s.mois }}, semaine {{ s.semaine_num }} · <a href="{{ url_for('mat_accueil', classe=s.classe.id, vue='semaine') }}">planifier la semaine</a> · <a href="{{ url_for('mat_classeur_pdf', classe=s.classe.id, mois=s.mois, semaine=s.semaine_num) }}" target="_blank">classeur de la semaine (PDF)</a>{% elif s.bornes %}Planification mensuelle, semaine du {{ s.bornes[0] }} au {{ s.bornes[1] }}{% else %}Planification annuelle du cours — mois de {{ s.mois }} (la planification mensuelle de la classe n'a pas de case remplie pour cette semaine){% endif %}</p></div>
+    <div class="actions">
+      <a class="btn petit" href="{{ url_for('prep_semaine_pdf', classe=s.classe.id) }}" target="_blank">{{ icone('document') }} Fiches de la semaine (PDF)</a>
+      <a class="btn sec petit" href="{{ url_for('prep_fiches', classe=s.classe.id, semaine=1) }}">Voir les fiches</a>
+      <a class="btn sec petit" href="{{ url_for('prep_preparer', classe=s.classe.id) }}">+ Préparer</a>
+    </div></div>
+  {% if not s.matieres %}<p class="aide">Rien de prévu ce mois-ci dans la planification de ce cours.</p>{% else %}
+  <div class="tw"><table class="t">
+    <thead><tr><th>{{ 'Domaine' if s.maternelle else 'Matière' }}</th><th>Prévu {{ 'cette semaine' if s.bornes else 'ce mois' }}</th><th>Fiches correspondantes</th></tr></thead>
+    <tbody>{% for m in s.matieres %}<tr>
+      <td><b>{{ m.nom }}</b></td>
+      <td>{{ m.semaine or m.annuel }}{% if not m.semaine and (m.refs.u or m.refs.sa) %}<br><span class="aide">cette semaine : {{ ('U' ~ m.refs.u|join(', U')) if m.matiere == 'francais' and m.refs.u else ('SA ' ~ m.refs.sa|join(', ')) }}</span>{% endif %}</td>
+      <td>{% for f in m.fiches %}<a href="{{ url_for('prep_fiche', fid=f.id) }}?classe={{ s.classe.id }}">{{ f.titre }}</a>{% if f.statut == 'concue' %} <span class="badge" title="Conçue selon l'APC — à valider par le conseiller pédagogique">conçue</span>{% endif %}{% if not loop.last %} · {% endif %}{% if loop.last and m.total > m.fiches|length %} · <a href="{{ url_for('prep_fiches', cours=s.cours, matiere=m.matiere, sa=(m.refs.sa[0] if m.refs.sa|length == 1 and m.matiere != 'francais' else none)) }}">… {{ m.total }} au total</a>{% endif %}{% else %}<span class="aide">aucune fiche ne cite ces numéros — <a href="{{ url_for('prep_fiches', cours=s.cours, matiere=m.matiere) }}">parcourir</a> ou <a href="{{ url_for('prep_preparer', classe=s.classe.id, matiere=m.matiere) }}">préparer</a></span>{% endfor %}</td>
+    </tr>{% endfor %}</tbody></table></div>{% endif %}
+</section>
+{% endfor %}
+{% endblock %}

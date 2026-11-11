@@ -1,0 +1,45 @@
+{# v1.24 — Vie du bureau de l'UASCEP par saison : calendrier, activités et résultats, engagements, réunions (rapporteur),
+   journal de caisse et budget (trésorier), inventaire du matériel ; rapport de fin de saison sportive #}
+{% extends "base.html" %}{% block titre %}Saison {{ saison }} — UASCEP{% endblock %}
+{% block contenu %}
+<p><a href="{{ url_for('uascep', onglet=b.niveau, entite=b.entite) }}">← Bureau {{ NIV_LIB[b.niveau] }} : {{ b.entite_lib or b.entite }}</a></p>
+<div class="entete"><div><h1>Saison sportive {{ saison }}</h1>
+<p class="sous">Bureau de l'UASCEP — {{ NIV_LIB[b.niveau] }} : {{ b.entite_lib or b.entite }}</p></div>
+<div class="actions">
+<form method="get" style="display:inline"><input type="hidden" name="rub" value="{{ rub }}"><label>Saison <select name="saison" onchange="this.form.submit()">{% for s in saisons %}<option {{ 'selected' if s == saison }}>{{ s }}</option>{% endfor %}</select></label><noscript><button class="btn sec petit">OK</button></noscript></form>
+<a class="btn petit" href="{{ url_for('uascep_rapport', bid=b.id, saison=saison) }}">{{ icone('livre') }} Rapport de fin de saison</a>
+<a class="btn sec petit" href="{{ url_for('uascep_saison_xlsx', bid=b.id, saison=saison) }}">Excel (saison)</a>
+{% if peut_ecrire %}<form method="post" enctype="multipart/form-data" action="{{ url_for('uascep_saison_import', bid=b.id, saison=saison) }}" style="display:inline"><label class="btn sec petit" style="cursor:pointer">{{ icone('importer') }} Importer (Excel)<input type="file" name="fichier" accept=".xlsx" hidden onchange="this.form.submit()"></label></form>{% endif %}</div></div>
+<nav class="onglets" aria-label="Rubriques de la saison">
+{% for c, d in COLL.items() %}<a class="{{ 'actif' if c == rub }}" href="{{ url_for('uascep_saison', bid=b.id, saison=saison, rub=c) }}">{{ d.titre }}</a>{% endfor %}
+</nav>
+{% set d = COLL[rub] %}
+<div class="actions" style="margin:6px 0">
+{% if DOCS_RUB.get(rub) %}<a class="btn sec petit" href="{{ url_for('uascep_saison_pdf', bid=b.id, doc=DOCS_RUB[rub], saison=saison) }}">{{ icone('document') }} PDF signé (code QR)</a>{% endif %}
+{% if peut_ecrire and lignes %}<form method="post" action="{{ url_for('uascep_saison_reinitialiser', bid=b.id, coll=rub, saison=saison) }}" style="display:inline" onsubmit="return confirm('Supprimer toutes les lignes de cette rubrique pour la saison {{ saison }} ?')"><button class="btn sec petit">{{ icone('reinitialiser') }} Réinitialiser la rubrique</button></form>{% endif %}
+</div>
+{% if part %}<p class="aide"><b>Participation (activités réalisées)</b> : {{ part.realisees|length }} activité(s) · {{ part.g }} garçons · {{ part.f }} filles · <b>{{ part.t }}</b> au total ; {{ part.prevues|length }} prévue(s) au calendrier.</p>{% endif %}
+{% if fi %}<p class="aide"><b>Caisse</b> : recettes {{ fcfa(fi.recettes) }} · dépenses {{ fcfa(fi.depenses) }} · <b>solde {{ fcfa(fi.solde) }}</b>{% if fi.cotisations %} · cotisations : {% for e, v in fi.cotisations %}{{ e }} {{ fcfa(v) }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</p>
+{% if rub == 'budget' and fi.budget %}<div class="tw"><table class="t" aria-label="Budget prévu et réalisé"><thead><tr><th>Sens</th><th>Catégorie</th><th>Libellé</th><th>Prévu</th><th>Réalisé</th><th>Écart</th><th>Taux</th></tr></thead><tbody>
+{% for x in fi.budget %}<tr><td>{{ x.nature }}</td><td>{{ x.categorie }}</td><td>{{ x.libelle }}</td><td>{{ fcfa(x.prevu) }}</td><td>{{ fcfa(x.realise) }}</td><td>{{ fcfa(x.ecart) }}</td><td>{{ x.taux ~ ' %' if x.taux is not none else '—' }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}{% endif %}
+<div class="tw"><table class="t" aria-label="{{ d.titre }}"><thead><tr>{% for k, l, t in d.champs %}{% if t != 'long' or k in ('resultats', 'ordre', 'decisions') %}<th>{{ l }}</th>{% endif %}{% endfor %}{% if rub == 'caisse' %}<th>Solde</th>{% endif %}<th></th></tr></thead><tbody>
+{% set soldes = (fi.journal|map(attribute='solde')|list) if (fi and rub == 'caisse') else [] %}
+{% for x in lignes %}<tr>{% for k, l, t in d.champs %}{% if t != 'long' or k in ('resultats', 'ordre', 'decisions') %}<td>{% if t == 'date' %}{{ jjmmaaaa(x[k]) }}{% elif t == 'montant' %}{{ fcfa(x[k]) }}{% else %}{{ (x[k] if x[k] is not none else '')|string|truncate(120) }}{% endif %}</td>{% endif %}{% endfor %}
+{% if rub == 'caisse' %}<td>{{ fcfa(soldes[loop.index0]) }}</td>{% endif %}
+<td style="white-space:nowrap">{% if rub == 'reunions' %}<a class="btn sec petit" href="{{ url_for('uascep_reunion_pdf', bid=b.id, rid=x.id) }}">{{ icone('document') }} CR</a> {% endif %}{% if peut_ecrire %}<a class="btn sec petit" href="{{ url_for('uascep_saison', bid=b.id, saison=saison, rub=rub, modifier=x.id) }}">{{ icone('modifier') }}</a><form method="post" action="{{ url_for('uascep_saison_supprimer', bid=b.id, coll=rub, rid=x.id, saison=saison) }}" style="display:inline" onsubmit="return confirm('Supprimer ?')"><button class="btn sec petit" aria-label="Supprimer">{{ icone('supprimer') }}</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="20" class="aide">Rien d'enregistré pour la saison {{ saison }}.</td></tr>{% endfor %}
+</tbody></table></div>
+{% if peut_ecrire %}{% set e = edit or {} %}
+<form method="post" action="{{ url_for('uascep_saison_ligne', bid=b.id, coll=rub, rid=e.id or 0, saison=saison) }}" class="carte" style="margin-top:10px">
+<h3>{{ 'Modifier' if edit else (icone('ajouter') ~ ' Ajouter') }} : {{ d.unite }}</h3>
+{% for k, l, t in d.champs %}
+{% if t.startswith('choix:') %}<label>{{ l }} <select name="{{ k }}">{% for o in LISTES[t[6:]] %}<option {{ 'selected' if e[k] == o }}>{{ o }}</option>{% endfor %}</select></label>
+{% elif t.startswith('liste:') %}<label>{{ l }} <input name="{{ k }}" list="l-{{ k }}" value="{{ e[k] or '' }}"><datalist id="l-{{ k }}">{% for o in LISTES[t[6:]] %}<option value="{{ o }}">{% endfor %}</datalist></label>
+{% elif t == 'long' %}<label>{{ l }} <textarea name="{{ k }}" rows="2">{{ e[k] or '' }}</textarea></label>
+{% elif t == 'date' %}<label>{{ l }} <input type="date" name="{{ k }}" value="{{ e[k] or '' }}"></label>
+{% elif t in ('entier', 'montant') %}<label>{{ l }} <input name="{{ k }}" inputmode="numeric" size="10" value="{{ e[k] if e[k] is not none else '' }}"></label>
+{% else %}<label>{{ l }} <input name="{{ k }}" value="{{ e[k] or '' }}"></label>{% endif %}
+{% endfor %}
+<p><button class="btn">Enregistrer</button>{% if edit %} <a class="btn sec" href="{{ url_for('uascep_saison', bid=b.id, saison=saison, rub=rub) }}">Annuler</a>{% endif %}</p></form>
+{% endif %}
+{% endblock %}

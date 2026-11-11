@@ -1,0 +1,12 @@
+{# v1.28 — onglets du module UASCEP #}
+<nav class="onglets" aria-label="Module UASCEP">
+{% if ecrire %}<a class="{{ 'actif' if u_onglet == 'ajouter' }}" href="{{ url_for('uascep_ajouter') }}">{{ icone('ajouter') }} Ajouter un membre</a>{% endif %}
+<a class="{{ 'actif' if u_onglet == 'membres' }}" href="{{ url_for('uascep') }}">{{ icone('groupe') }} Membres</a>
+<a class="{{ 'actif' if u_onglet == 'bureaux' }}" href="{{ url_for('uascep_onglet', quoi='bureaux') }}">Bureaux</a>
+<a class="{{ 'actif' if u_onglet == 'vie' }}" href="{{ url_for('uascep_onglet', quoi='vie') }}">Vie du bureau</a>
+<a class="{{ 'actif' if u_onglet == 'documents' }}" href="{{ url_for('uascep_onglet', quoi='documents') }}">{{ icone('document') }} Documents</a>
+<a class="{{ 'actif' if u_onglet == 'logo' }}" href="{{ url_for('uascep_onglet', quoi='logo') }}">Logo</a>
+<a class="{{ 'actif' if u_onglet == 'importer' }}" href="{{ url_for('uascep_onglet', quoi='importer') }}">{{ icone('importer') }} Importer (Excel)</a>
+<a class="{{ 'actif' if u_onglet == 'aide' }}" href="{{ url_for('uascep_onglet', quoi='aide') }}">{{ icone('info') }} Comment renseigner</a>
+</nav>
+{% if not ecrire %}<div class="flash info">{{ icone('info') }} Votre compte ({{ role_lib }}) peut consulter ce module mais pas l'écrire. Les membres sont saisis par : {% for c, l in NIVEAUX %}<b>{{ l }}</b> — {{ QUI_ECRIT[c] }}{% if not loop.last %} ; {% endif %}{% endfor %}.</div>{% endif %}

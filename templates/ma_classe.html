@@ -1,0 +1,81 @@
+{% extends "base.html" %}{% block titre %}{{ cl.nom if cl else 'Mes classes' }}{% endblock %}
+{% block contenu %}
+{% macro puce_taux(taux) %}{% if taux is none %}<span class="puce na">—</span>{% else %}<span class="puce {{ 'ok' if taux >= 75 else ('moy' if taux >= 50 else 'ko') }}">{{ ('%.1f'|format(taux)).replace('.', ',') }} %</span>{% endif %}{% endmacro %}
+{% if not cl %}
+<h1>Mes classes</h1>
+<p class="sous">{{ ECOLE.nom }} – année scolaire {{ ANNEE }}</p>
+{% if not cartes %}
+<div class="carte">Aucune classe ne vous est encore attribuée. Demandez au directeur de vous affecter à votre classe
+  (Classes → modifier → enseignant titulaire).</div>
+{% else %}
+<div class="mc-classes">
+  {% for c in cartes %}{% set t = c.t %}
+  <div class="mc-carte">
+    <h2><a href="{{ url_for('ma_classe_detail', cid=c.cl.id) }}">{{ c.cl.nom }}</a></h2>
+    <div class="mc-ligne"><span>Effectif</span><b>{{ t.effectif }} ({{ t.filles }} F)</b></div>
+    <div class="mc-ligne"><span>Appel du jour</span>{% if t.appel_fait %}<span class="puce ok">fait · {{ t.absents_jour }} abs.</span>{% else %}<span class="puce moy">à faire</span>{% endif %}</div>
+    <div class="mc-ligne"><span>Dernière évaluation</span>{% if t.derniere %}{{ puce_taux(t.derniere.taux) }}{% else %}<span class="puce na">aucune</span>{% endif %}</div>
+    <div class="mc-ligne"><span>Élèves à suivre</span><b class="{{ 'rouge' if t.suivre }}">{{ t.suivre|length }}</b></div>
+    <div class="actions" style="margin-top:10px">
+      {% if peut('appel') %}<a class="btn petit" href="{{ url_for('appel_classe', cid=c.cl.id, jour=auj) }}">{{ icone('valider') }} Appel</a>{% endif %}
+      <a class="btn sec petit" href="{{ url_for('ma_classe_detail', cid=c.cl.id) }}">Ouvrir</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% else %}
+<div class="entete">
+  <div><h1>{{ cl.nom }}</h1><p class="sous">{{ cl.niveau }} · {{ ECOLE.nom }} · année scolaire {{ ANNEE }} · {{ date_longue(auj)|capitalize }}</p></div>
+  {% if autres %}<form class="filtres" style="margin:0"><select onchange="if(this.value) location.href=this.value" aria-label="Changer de classe">
+    <option value="">Autre classe…</option>
+    {% for c in autres %}<option value="{{ url_for('ma_classe_detail', cid=c.id) }}">{{ c.nom }}</option>{% endfor %}
+  </select></form>{% endif %}
+</div>
+
+<div class="raccourcis">
+  {% if peut('appel') %}<a href="{{ url_for('appel_classe', cid=cl.id, jour=auj) }}" class="{{ '' if t.appel_fait else 'alerte' }}"><span class="ico" aria-hidden="true">{{ icone('valider') }}</span>
+    <b>{{ "Modifier l'appel" if t.appel_fait else "Faire l'appel" }}</b><span class="d">{% if t.appel_fait %}fait à {{ t.appel_fait.fait_le[11:16] }} · {{ t.absents_jour }} absent(s), {{ t.retards_jour }} retard(s){% else %}pas encore fait aujourd'hui{% endif %}</span></a>{% endif %}
+  {% if peut('evaluations') %}
+  {% if t.derniere %}<a href="{{ url_for('eval_saisie', ev_id=t.derniere.ev.id) }}" class="{{ 'alerte' if t.derniere.manquantes }}"><span class="ico" aria-hidden="true">{{ icone('note') }}</span>
+    <b>Saisir les notes</b><span class="d">{{ t.derniere.ev.titre }}{% if t.derniere.manquantes %} · {{ t.derniere.manquantes }} note(s) manquante(s){% endif %}</span></a>
+  <a href="{{ url_for('eval_remediation', ev_id=t.derniere.ev.id) }}"><span class="ico" aria-hidden="true">{{ icone('module') }}</span>
+    <b>Groupes de remédiation</b><span class="d">après « {{ t.derniere.ev.titre }} »</span></a>
+  {% else %}<a href="{{ url_for('eval_accueil', classe=cl.id) }}"><span class="ico" aria-hidden="true">{{ icone('note') }}</span><b>Évaluations</b><span class="d">créer la première évaluation</span></a>{% endif %}
+  {% endif %}
+  <a href="{{ url_for('eleves', classe=cl.id) }}"><span class="ico" aria-hidden="true">{{ icone('groupe') }}</span><b>Mes élèves</b><span class="d">{{ t.effectif }} élève(s) · {{ t.filles }} F / {{ t.garcons }} G</span></a>
+  {% if ep_existe('communication') and peut('communication') %}<a href="{{ url_for('communication') }}"><span class="ico" aria-hidden="true">{{ icone('message') }}</span><b>Parents</b><span class="d">messages, SMS / WhatsApp</span></a>{% endif %}
+  {% if ep_existe('espace_enseignant') and g.user.role == 'enseignant' %}<a href="{{ url_for('espace_enseignant') }}"><span class="ico" aria-hidden="true">{{ icone('personne') }}</span><b>Mon espace</b><span class="d">documents, signature</span></a>{% endif %}
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Effectif</div><div class="v">{{ t.effectif }}</div><div class="d">{{ t.filles }} filles · {{ t.garcons }} garçons</div></div>
+  <div class="kpi"><div class="l">Absences aujourd'hui</div><div class="v {{ 'rouge' if t.absents_jour }}">{% if t.appel_fait %}{{ t.absents_jour }}{% else %}—{% endif %}</div>
+    <div class="d">{% if t.appel_fait %}{{ t.retards_jour }} retard(s){% else %}appel non fait{% endif %} · semaine : {{ t.absences_semaine }} absence(s)</div></div>
+  <div class="kpi"><div class="l">Dernière évaluation</div>
+    {% if t.derniere %}<div class="v">{{ puce_taux(t.derniere.taux) }}</div>
+    <div class="d">{{ t.derniere.ev.titre }} · {{ t.derniere.reussis }}/{{ t.derniere.composes }} en réussite{% if t.derniere.moyenne is not none %} · moy. {{ ('%.2f'|format(t.derniere.moyenne)).replace('.', ',') }}{% endif %}</div>
+    {% else %}<div class="v">—</div><div class="d">aucune évaluation saisie</div>{% endif %}</div>
+  <div class="kpi"><div class="l">Prochaines évaluations</div><div class="v">{{ t.prochaines|length }}</div>
+    <div class="d">{% for ev in t.prochaines %}{{ ev.titre }} ({{ date_fr(ev.date) }}){{ ', ' if not loop.last }}{% else %}aucune programmée{% endfor %}</div></div>
+</div>
+
+{% if t.derniere and t.derniere.a_renforcer %}
+<div class="flash info">Matières à renforcer après « {{ t.derniere.ev.titre }} » (moins de 50 % de réussite) :
+  <b>{{ t.derniere.a_renforcer|join(', ') }}</b>. <a href="{{ url_for('eval_remediation', ev_id=t.derniere.ev.id) }}">Voir les groupes de remédiation</a>.</div>
+{% endif %}
+
+<h2>Élèves à suivre</h2>
+{% if t.suivre %}
+<div class="tw"><table class="t">
+  <tr><th>Élève</th><th>Pourquoi</th><th></th></tr>
+  {% for s in t.suivre %}
+  <tr><td><b>{{ nom_eleve(s.eleve) }}</b></td><td>{{ s.motifs|join(' ; ') }}</td>
+    <td class="num"><a class="btn sec petit" href="{{ url_for('eleve_detail', eid=s.eleve.id) }}">Fiche</a></td></tr>
+  {% endfor %}
+</table></div>
+{% else %}
+<div class="carte">Aucun élève signalé : pas d'absences répétées (3 ou plus en 30 jours) ni de non-maîtrise à la dernière évaluation.</div>
+{% endif %}
+{% endif %}
+{% endblock %}

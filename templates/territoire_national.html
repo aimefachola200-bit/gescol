@@ -1,0 +1,23 @@
+{# v2.3 — niveau national (lecture seule) : agrégats sans données nominatives, accès API par jeton #}
+{% extends "base.html" %}{% block titre %}Niveau national — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} Niveau national</h1><p class="sous">{{ a.structure }} — agrégats de la juridiction (lecture seule, sans données nominatives)</p></div></div>
+{% if not observateur %}{% include "_onglets_groupe.html" %}{% endif %}
+<form method="get" class="filtres" style="margin:8px 0"><label for="annee">Année scolaire</label>
+<select id="annee" name="annee" onchange="this.form.submit()">{% for x in annees %}<option {{ 'selected' if x == annee }}>{{ x }}</option>{% endfor %}</select></form>
+<h2>Indicateurs</h2>
+<div class="tw"><table class="t" aria-label="Indicateurs"><thead><tr><th>Indicateur</th><th>Valeur</th></tr></thead><tbody>
+{% for k, v in a.indicateurs.items() %}<tr><td>{{ k }}</td><td>{{ v if v is not none else '—' }}</td></tr>{% else %}<tr><td colspan="2" class="aide">Aucune donnée transmise.</td></tr>{% endfor %}
+</tbody></table></div>
+{% if a.par_groupe %}<h2>Par circonscription / zone</h2><div class="tw"><table class="t" aria-label="Par groupe"><thead><tr><th>Nom</th><th>Écoles</th><th>Effectif</th><th>Filles</th></tr></thead><tbody>
+{% for x in a.par_groupe %}<tr><td>{{ x.nom }}</td><td>{{ x.ecoles }}</td><td>{{ x.t }}</td><td>{{ x.f }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+<h2>Fiches statistiques de rentrée</h2>
+<div class="grille indicateurs">{% for k, v in a.fiches_rentree.items() %}<div class="kpi"><div class="l">{{ libs.get(k, 'Non reçue') }}</div><div class="v">{{ v }}</div></div>{% endfor %}</div>
+<h2>Visites de classe et courrier</h2>
+<p>Visites : {% for k, v in a.visites.items() %}{{ k }} {{ v }}{{ ' · ' if not loop.last }}{% else %}aucune{% endfor %}. Courrier : {% for k, v in a.courrier.items() %}{{ k }} {{ v }}{{ ' · ' if not loop.last }}{% else %}aucun{% endfor %}.</p>
+{% if admin %}<h2>Accès par programme (API)</h2>
+<p class="aide">Adresse : <code>/api/stats.json?annee={{ annee }}</code> avec l'en-tête <code>X-Jeton</code> (ou le paramètre <code>jeton</code>). Seule l'empreinte du jeton est conservée : notez-le à sa création, il ne sera plus affiché.</p>
+{% if nouveau %}<div class="flash success">Nouveau jeton (à noter maintenant) : <code>{{ nouveau }}</code></div>{% endif %}
+<form method="post" style="display:inline"><button class="btn">{{ icone('cle') }} {{ 'Remplacer le jeton' if jeton_actif else 'Créer un jeton' }}</button></form>
+{% if jeton_actif %}<form method="post" style="display:inline"><input type="hidden" name="action" value="retirer"><button class="btn sec">{{ icone('fermer') }} Retirer le jeton</button></form>{% endif %}{% endif %}
+{% endblock %}

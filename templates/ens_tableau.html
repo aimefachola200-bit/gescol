@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% block titre %}Tableau de bord{% endblock %}
+{% block contenu %}
+<h1>Bonjour {{ (p.prenoms if p else g.user.nom) }} {{ icone('personne') }}</h1>
+<p class="sous">{{ ecole.nom if ecole else ECOLE.nom }} – année scolaire {{ ANNEE }}{% if car.grade %} · grade {{ car.grade }}{% endif %}{% if p and p.matricule %} · matricule {{ p.matricule }}{% endif %}</p>
+<div class="grille">
+  <div class="kpi"><div class="l">Mes classes</div><div class="v">{{ classes|length }}</div><div class="d">{{ classes|map(attribute='nom')|join(', ') or 'aucune' }}</div></div>
+  <div class="kpi"><div class="l">Mes élèves inscrits</div><div class="v">{{ classes|sum(attribute='effectif') }}</div><div class="d">dont {{ classes|sum(attribute='filles') }} filles</div></div>
+  <div class="kpi"><div class="l">Mon école</div><div class="v" style="font-size:16px">{{ ecole.nom if ecole else ECOLE.nom }}</div><div class="d">{{ ('CS ' ~ ecole.cs) if ecole and ecole.cs }}{{ (' · DDEMP ' ~ ecole.departement) if ecole and ecole.departement }}</div></div>
+</div>
+{% if application and not classes|sum(attribute='effectif') %}
+<div class="flash info">Commencez par ajouter vos élèves : <a href="{{ url_for('eleve_form', classe=classes[0].id) if classes else url_for('ens_classes') }}">un par un</a> ou <a href="{{ url_for('eleves_import') }}">en important un fichier Excel</a>.</div>
+{% endif %}
+<div class="raccourcis">
+  {% if ep_existe('listes_classe') %}<a href="{{ url_for('listes_classe') }}"><span class="ico" aria-hidden="true">{{ icone('liste') }}</span><b>Listes de classe</b><span class="d">mes classes : PDF, Excel, impression</span></a>{% endif %}
+  <a href="{{ url_for('ma_classe') }}"><span class="ico" aria-hidden="true">{{ icone('ecole') }}</span><b>Ma classe</b><span class="d">appel du jour, élèves à suivre</span></a>
+  {% if peut('appel') %}<a href="{{ url_for('appel_accueil') }}"><span class="ico" aria-hidden="true">{{ icone('valider') }}</span><b>Appel</b><span class="d">registre d'appel journalier</span></a>{% endif %}
+  {% if peut('evaluations') %}<a href="{{ url_for('eval_accueil') }}"><span class="ico" aria-hidden="true">{{ icone('note') }}</span><b>Notes</b><span class="d">évaluations</span></a>{% endif %}
+  {% if peut('notes') %}<a href="{{ url_for('notes_accueil') }}"><span class="ico" aria-hidden="true">{{ icone('graphique') }}</span><b>Bulletins</b><span class="d">notes par période</span></a>{% endif %}
+  <a href="{{ url_for('synoptique_edt') }}"><span class="ico" aria-hidden="true">{{ icone('calendrier') }}</span><b>Emploi du temps</b><span class="d">{{ 'à tenir' if application else 'en consultation' }}</span></a>
+  <a href="{{ url_for('synoptique_planification') }}"><span class="ico" aria-hidden="true">{{ icone('boussole') }}</span><b>Planification annuelle</b><span class="d">par niveau</span></a>
+  <a href="{{ url_for('synoptique_planification_mensuelle') }}"><span class="ico" aria-hidden="true">{{ icone('calendrier') }}</span><b>Planification mensuelle</b><span class="d">de mes classes</span></a>
+  {% if peut('preparation') and ep_existe('prep_accueil') %}<a href="{{ url_for('prep_accueil') }}"><span class="ico" aria-hidden="true">{{ icone('note') }}</span><b>Préparation de classe</b><span class="d">fiches APC, guides, programmes</span></a>{% endif %}
+  <a href="{{ url_for('ens_certificats') }}"><span class="ico" aria-hidden="true">{{ icone('document') }}</span><b>Mes certificats</b><span class="d">PDF pré-remplis</span></a>
+  <a href="{{ url_for('carriere_moi_fiche') }}"><span class="ico" aria-hidden="true">{{ icone('medaille') }}</span><b>Ma carrière</b><span class="d">fiche, ancienneté</span></a>
+  <a href="{{ url_for('calendrier_officiel') }}"><span class="ico" aria-hidden="true">{{ icone('livre') }}</span><b>Calendrier officiel</b><span class="d">MEMP</span></a>
+</div>
+{% if classes %}
+<h2>Mes classes</h2>
+<div class="mc-classes">{% for c in classes %}
+  <div class="mc-carte"><h2><a href="{{ url_for('ma_classe_detail', cid=c.id) }}">{{ c.nom }}</a></h2>
+    <div class="mc-ligne"><span>Niveau</span><b>{{ c.niveau }}</b></div>
+    <div class="mc-ligne"><span>Effectif</span><b>{{ c.effectif }} ({{ c.filles }} F)</b></div>
+    <div class="actions" style="margin-top:10px">
+      {% if application %}<a class="btn petit" href="{{ url_for('eleve_form', classe=c.id) }}">+ Élève</a>{% endif %}
+      <a class="btn sec petit" href="{{ url_for('ma_classe_detail', cid=c.id) }}">Ouvrir</a></div>
+  </div>{% endfor %}</div>
+{% endif %}
+{% endblock %}

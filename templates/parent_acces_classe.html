@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block titre %}Accès parents {{ cl.nom }}{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Accès parents – {{ cl.nom }}</h1><p class="sous">{{ lignes|length }} compte(s) créé(s). Les mots de passe provisoires ne seront plus affichés : envoyez-les maintenant ou imprimez cette page.</p></div>
+  <div class="actions"><button class="btn sec" onclick="window.print()">Imprimer</button><a class="btn sec" href="{{ url_for('parents_liste') }}">Terminé</a></div>
+</div>
+<p class="aide">Adresse de l'espace parents : <b>{{ url }}</b></p>
+<div class="tw"><table class="t">
+  <tr><th>Élève</th><th>Parent</th><th>Identifiant</th><th>Mot de passe provisoire</th><th></th></tr>
+  {% for p, e, mdp, wa in lignes %}
+  <tr><td>{{ e.prenoms }} {{ e.nom }}</td><td>{{ p.nom }}</td><td>{{ affiche_tel(p.telephone) }}</td>
+    <td style="font-family:Consolas,monospace;font-size:16px;letter-spacing:.1em">{{ mdp }}</td>
+    <td class="num">{% if wa %}<a class="btn wa petit" href="{{ wa }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="5" class="gris">Aucun nouveau compte : les parents de cette classe ont déjà un accès, ou leurs numéros sont absents ou invalides sur les fiches.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

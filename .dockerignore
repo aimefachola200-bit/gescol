@@ -1,0 +1,9 @@
+instance/
+venv/
+venv-build/
+__pycache__/
+*.pyc
+packaging/
+.github/
+tests/
+docs_reference/

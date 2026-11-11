@@ -1,0 +1,63 @@
+/* v2.4.3 — mode sombre. Actif si le thème est « sombre », ou « auto » avec un appareil en mode sombre.
+   Écran seulement : impressions et PDF restent clairs. Surcharge style.css sans le modifier. */
+@media screen{
+:root[data-theme="dark"]{color-scheme:dark;
+ --bleu:#5A90F2;--bleu2:#7BA7F7;--fond:#0A1226;--carte:#111C36;--txt:#E6ECF8;--gris:#92A2C2;--bord:#2A3A63;--vert:#3CC283;--rouge:#F0716A;--orange:#F2A03A}
+:root[data-theme="dark"] body{background:var(--fond);color:var(--txt)}
+:root[data-theme="dark"] .kpi,:root[data-theme="dark"] .carte,:root[data-theme="dark"] table.t,:root[data-theme="dark"] .barre-haut,
+:root[data-theme="dark"] .sticky,:root[data-theme="dark"] .modal,:root[data-theme="dark"] details{background:var(--carte)}
+:root[data-theme="dark"] input,:root[data-theme="dark"] select,:root[data-theme="dark"] textarea{background:#0D1730;color:var(--txt);border-color:var(--bord)}
+:root[data-theme="dark"] table.t th{background:#16244A;color:#B7C4E0}
+:root[data-theme="dark"] table.t th,:root[data-theme="dark"] table.t td{border-bottom-color:#223259}
+:root[data-theme="dark"] table.t tr:hover td{background:#16244A}
+:root[data-theme="dark"] .btn{background:#2A64D6;border-color:#2A64D6;color:#fff}
+:root[data-theme="dark"] .btn.sec{background:transparent;color:var(--bleu2);border-color:var(--bleu2)}
+:root[data-theme="dark"] .btn.sec:hover{background:#16244A}
+:root[data-theme="dark"] .btn.danger{background:#C23A33;border-color:#C23A33}
+:root[data-theme="dark"] .badge{background:#1B2A52;color:#D3DCF0}
+:root[data-theme="dark"] .badge.ok,:root[data-theme="dark"] .flash.success{background:#0F3322;border-color:#1B6A45;color:#7FE0AE}
+:root[data-theme="dark"] .badge.ko,:root[data-theme="dark"] .flash.danger{background:#3A1514;border-color:#7A2B27;color:#FFA8A2}
+:root[data-theme="dark"] .badge.att,:root[data-theme="dark"] .flash.warning{background:#3A2A0E;border-color:#7A5A1C;color:#FFC877}
+:root[data-theme="dark"] .flash.info{background:#10284F;border-color:#24508F;color:#9CC3FF}
+:root[data-theme="dark"] .tw,:root[data-theme="dark"] .photo{border-color:var(--bord)}
+:root[data-theme="dark"] .photo,:root[data-theme="dark"] table.saisie input.disp{background:#16244A}
+:root[data-theme="dark"] .progress{background:#223259}
+:root[data-theme="dark"] a{color:var(--bleu2)}
+:root[data-theme="dark"] .lateral{background:#07122B}
+:root[data-theme="dark"] header.top{background:#0B2F6B}
+:root[data-theme="dark"] .btn-theme{border-color:var(--bord)}
+:root[data-theme="dark"] img.logo,:root[data-theme="dark"] img[src*="armoiries"]{background:#fff;border-radius:6px}
+:root[data-theme="dark"] .raccourcis a{background:var(--carte);border-color:var(--bord);color:var(--txt)}
+:root[data-theme="dark"] .raccourcis a:hover,:root[data-theme="dark"] .raccourcis a:focus-visible{background:#16244A;border-color:var(--bleu2)}
+:root[data-theme="dark"] .raccourcis b{color:var(--txt)}:root[data-theme="dark"] .raccourcis .d{color:var(--gris)}
+:root[data-theme="dark"] .raccourcis a.alerte{background:#3A1514;border-color:#7A2B27}
+}
+@media screen and (prefers-color-scheme:dark){
+:root[data-theme="auto"]{color-scheme:dark;
+ --bleu:#5A90F2;--bleu2:#7BA7F7;--fond:#0A1226;--carte:#111C36;--txt:#E6ECF8;--gris:#92A2C2;--bord:#2A3A63;--vert:#3CC283;--rouge:#F0716A;--orange:#F2A03A}
+:root[data-theme="auto"] body{background:var(--fond);color:var(--txt)}
+:root[data-theme="auto"] .kpi,:root[data-theme="auto"] .carte,:root[data-theme="auto"] table.t,:root[data-theme="auto"] .barre-haut,
+:root[data-theme="auto"] .sticky,:root[data-theme="auto"] .modal,:root[data-theme="auto"] details{background:var(--carte)}
+:root[data-theme="auto"] input,:root[data-theme="auto"] select,:root[data-theme="auto"] textarea{background:#0D1730;color:var(--txt);border-color:var(--bord)}
+:root[data-theme="auto"] table.t th{background:#16244A;color:#B7C4E0}
+:root[data-theme="auto"] table.t th,:root[data-theme="auto"] table.t td{border-bottom-color:#223259}
+:root[data-theme="auto"] table.t tr:hover td{background:#16244A}
+:root[data-theme="auto"] .btn{background:#2A64D6;border-color:#2A64D6;color:#fff}
+:root[data-theme="auto"] .btn.sec{background:transparent;color:var(--bleu2);border-color:var(--bleu2)}
+:root[data-theme="auto"] .btn.sec:hover{background:#16244A}
+:root[data-theme="auto"] .btn.danger{background:#C23A33;border-color:#C23A33}
+:root[data-theme="auto"] .badge{background:#1B2A52;color:#D3DCF0}
+:root[data-theme="auto"] .badge.ok,:root[data-theme="auto"] .flash.success{background:#0F3322;border-color:#1B6A45;color:#7FE0AE}
+:root[data-theme="auto"] .badge.ko,:root[data-theme="auto"] .flash.danger{background:#3A1514;border-color:#7A2B27;color:#FFA8A2}
+:root[data-theme="auto"] .badge.att,:root[data-theme="auto"] .flash.warning{background:#3A2A0E;border-color:#7A5A1C;color:#FFC877}
+:root[data-theme="auto"] .flash.info{background:#10284F;border-color:#24508F;color:#9CC3FF}
+:root[data-theme="auto"] .photo,:root[data-theme="auto"] table.saisie input.disp{background:#16244A}
+:root[data-theme="auto"] .progress{background:#223259}
+:root[data-theme="auto"] a{color:var(--bleu2)}
+:root[data-theme="auto"] .lateral{background:#07122B}
+:root[data-theme="auto"] header.top{background:#0B2F6B}
+:root[data-theme="auto"] .raccourcis a{background:var(--carte);border-color:var(--bord);color:var(--txt)}
+:root[data-theme="auto"] .raccourcis a:hover,:root[data-theme="auto"] .raccourcis a:focus-visible{background:#16244A;border-color:var(--bleu2)}
+:root[data-theme="auto"] .raccourcis b{color:var(--txt)}:root[data-theme="auto"] .raccourcis .d{color:var(--gris)}
+:root[data-theme="auto"] .raccourcis a.alerte{background:#3A1514;border-color:#7A2B27}
+}

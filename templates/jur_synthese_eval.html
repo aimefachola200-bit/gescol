@@ -1,0 +1,82 @@
+{% extends "base.html" %}{% block titre %}Synthèse de l'évaluation{% endblock %}
+{% block contenu %}
+{% set NIV = 'CS' if JUR_NIVEAU == 'cs' else 'DDEMP' %}
+{% set LIBG = 'Zone pédagogique' ~ (' (CS)' if JUR_NIVEAU == 'ddemp' else '') %}
+<style>.t tr.g-total td{background:#C9D8EE;font-weight:700} .t td.ren{color:#B42318}</style>
+<div class="entete">
+  <div><h1>Synthèse de l'évaluation – niveau {{ NIV }}</h1>
+  <p class="sous">{{ titre_ev }} · année {{ annee }} · agrégation des synthèses École / UP / CS enregistrées dans {{ sy.ecoles|length }} école(s) ouverte(s) sur {{ nb_ecoles }} ({{ sy.nb_fiches }} fiche(s) de classe)</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_synthese_eval', type=type_, numero=numero, annee=annee, export='pdf') }}" target="_blank">⎙ PDF</a>
+    <a class="btn sec" href="{{ url_for('jur_synthese_eval', type=type_, numero=numero, annee=annee, export='xlsx') }}">⇩ Excel</a>
+  </div>
+</div>
+<form method="get" class="filtres">
+  <label>Type d'évaluation<br><select name="type" onchange="this.form.submit()">{% for k, v in TYPES.items() %}<option value="{{ k }}" {{ 'selected' if k == type_ }}>{{ v }}</option>{% endfor %}</select></label>
+  <label>N°<br><input type="number" name="numero" min="1" max="50" value="{{ numero }}" style="width:70px" onchange="this.form.submit()"></label>
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option value="{{ a }}" {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+  <button class="btn sec petit">Afficher</button>
+</form>
+
+{% if sy.total %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Inscrits</div><div class="v">{{ sy.total.inscrits.t }}</div><div class="d">G {{ sy.total.inscrits.g }} · F {{ sy.total.inscrits.f }}</div></div>
+  <div class="kpi"><div class="l">Ont composé</div><div class="v">{{ sy.total.composes.t }}</div><div class="d">participation {{ fr(sy.total.participation.t) }} %</div></div>
+  <div class="kpi"><div class="l">Ont atteint le seuil</div><div class="v">{{ sy.total.reussis.t }}</div><div class="d">G {{ sy.total.reussis.g }} · F {{ sy.total.reussis.f }}</div></div>
+  <div class="kpi"><div class="l">Taux de réussite</div><div class="v">{{ fr(sy.total.taux.t) }} %</div><div class="d">{{ sy.total.observation }}</div></div>
+</div>
+{% else %}
+<div class="carte"><p><b>Aucune synthèse enregistrée</b> pour {{ titre_ev }} ({{ annee }}) dans les écoles ouvertes.</p>
+<p class="aide">Ouvrez chaque école (Administration › Ouvrir une école) puis « Évaluation › Synthèse École / UP / CS » : la fiche est pré-remplie depuis les notes saisies et peut être complétée pour les autres écoles ; sauvegardez-la. Elle est alors reprise ici.</p></div>
+{% endif %}
+
+<h2>1. Résultats par école</h2>
+<div class="tw"><table class="t compact">
+  <thead><tr><th rowspan="2">École</th><th rowspan="2">{{ LIBG }}</th><th rowspan="2">Fiches</th><th colspan="3">Inscrits</th><th colspan="3">Ont composé</th><th colspan="3">Ont réussi (seuil)</th><th colspan="3">Taux (%)</th><th rowspan="2">À renforcer</th><th rowspan="2">Mise à jour</th></tr>
+  <tr>{% for _ in range(4) %}<th>G</th><th>F</th><th>T</th>{% endfor %}</tr></thead>
+  <tbody>{% for r in sy.ecoles %}{% set T = r.total %}
+  <tr><td><b>{{ r.e.nom }}</b>{% if r.publique %} <span class="badge">publique</span>{% endif %}</td><td>{{ r.zone }}</td><td class="num">{{ r.fiches }}</td>
+    {% for k in ('inscrits', 'composes', 'reussis') %}<td class="num">{{ T[k].g }}</td><td class="num">{{ T[k].f }}</td><td class="num">{{ T[k].t }}</td>{% endfor %}
+    <td class="num">{{ fr(T.taux.g) }}</td><td class="num">{{ fr(T.taux.f) }}</td><td class="num"><b>{{ fr(T.taux.t) }}</b></td>
+    <td class="ren">{{ T.renforcer|join(', ') or '—' }}</td><td class="aide">{{ r.maj[:10] if r.maj else '' }}</td></tr>
+  {% else %}<tr><td colspan="17" class="gris">Aucune école n'a de synthèse enregistrée pour cette évaluation.</td></tr>{% endfor %}</tbody>
+</table></div>
+
+{% if sy.zones %}
+<h2>2. Résultats par {{ LIBG|lower }} et par niveau</h2>
+{% for z in sy.zones %}
+<h3>{{ z.libelle }} <span class="aide">({{ z.ecoles }} école(s))</span></h3>
+<div class="tw"><table class="t compact">
+  <thead><tr><th rowspan="2">Niveau</th><th rowspan="2">Écoles / classes</th><th colspan="3">Inscrits</th><th colspan="3">Ont composé</th><th colspan="3">Ont réussi</th><th colspan="3">Taux (%)</th><th rowspan="2">À renforcer</th><th rowspan="2">Observation</th></tr>
+  <tr>{% for _ in range(4) %}<th>G</th><th>F</th><th>T</th>{% endfor %}</tr></thead>
+  <tbody>{% for n in z.niveaux + ([z.total] if z.total else []) %}
+  <tr class="{{ 'g-total' if n.niveau == 'TOTAL' }}"><td><b>{{ n.niveau }}</b></td><td>{{ n.ecoles|length }} école(s), {{ n.classes|length }} classe(s)</td>
+    {% for k in ('inscrits', 'composes', 'reussis') %}<td class="num">{{ n[k].g }}</td><td class="num">{{ n[k].f }}</td><td class="num">{{ n[k].t }}</td>{% endfor %}
+    <td class="num">{{ fr(n.taux.g) }}</td><td class="num">{{ fr(n.taux.f) }}</td><td class="num"><b>{{ fr(n.taux.t) }}</b></td>
+    <td class="ren">{{ n.renforcer|join(', ') or '—' }}</td><td>{{ n.observation }}</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endfor %}
+
+<h2>3. Synthèse générale par niveau de classe ({{ NIV }})</h2>
+<div class="tw"><table class="t compact">
+  <thead><tr><th rowspan="2">Niveau</th><th rowspan="2">Écoles / classes</th><th colspan="3">Inscrits</th><th colspan="3">Ont composé</th><th colspan="3">Ont réussi (seuil)</th><th colspan="3">Taux de réussite (%)</th><th rowspan="2">À renforcer</th><th rowspan="2">Observation</th></tr>
+  <tr>{% for _ in range(4) %}<th>G</th><th>F</th><th>T</th>{% endfor %}</tr></thead>
+  <tbody>{% for n in sy.niveaux + ([sy.total] if sy.total else []) %}
+  <tr class="{{ 'g-total' if n.niveau == 'TOTAL' }}"><td><b>{{ n.niveau }}</b></td><td>{{ n.ecoles|length }} école(s), {{ n.classes|length }} classe(s)</td>
+    {% for k in ('inscrits', 'composes', 'reussis') %}<td class="num">{{ n[k].g }}</td><td class="num">{{ n[k].f }}</td><td class="num">{{ n[k].t }}</td>{% endfor %}
+    <td class="num">{{ fr(n.taux.g) }}</td><td class="num">{{ fr(n.taux.f) }}</td><td class="num"><b>{{ fr(n.taux.t) }}</b></td>
+    <td class="ren">{{ n.renforcer|join(', ') or '—' }}</td><td>{{ n.observation }}</td></tr>{% endfor %}</tbody>
+</table></div>
+
+<h2>4. Analyse des résultats</h2>
+<div class="carte">
+  <h3>1. Analyse quantitative</h3><ul>{% for t in sy.analyse.quantitative %}<li>{{ t }}</li>{% endfor %}</ul>
+  <h3>2. Analyse qualitative</h3><ul>{% for t in sy.analyse.qualitative %}<li>{{ t }}</li>{% endfor %}</ul>
+  <h3>3. Écarts de genre</h3>
+  {% if sy.analyse.genre_lignes %}<div class="tw"><table class="t compact"><tr><th>Niveau</th><th class="num">Garçons (%)</th><th class="num">Filles (%)</th><th class="num">Écart (F − G)</th></tr>
+    {% for x in sy.analyse.genre_lignes %}<tr><td>{{ x.niveau }}</td><td class="num">{{ fr(x.g) }}</td><td class="num">{{ fr(x.f) }}</td><td class="num">{{ ('+' if x.ecart > 0 else '') ~ fr(x.ecart) if x.ecart is not none else '—' }}</td></tr>{% endfor %}</table></div>{% endif %}
+  <ul>{% for t in sy.analyse.genre %}<li>{{ t }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+<p class="aide">Réussite = élèves ayant atteint le SEUIL de maîtrise de l'évaluation ; « à renforcer » = matière à moins de {{ TAUX_REFERENCE }} % de réussite (mêmes règles que la synthèse École / UP / CS).</p>
+{% endblock %}

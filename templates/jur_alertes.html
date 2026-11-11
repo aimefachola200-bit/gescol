@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% block titre %}Alertes de pilotage{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>{{ icone('alerte') }} Alertes de pilotage</h1>
+  <p class="sous">{{ JUR.nom or NOM_APPLI }} · année scolaire {{ annee }} · ce qui demande une action, du plus urgent au moins urgent</p></div>
+  <form class="filtres" style="margin:0">
+    <select name="annee" onchange="this.form.submit()" aria-label="Année scolaire">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select>
+    {% if JUR_NIVEAU == 'ddemp' %}<select name="cs" onchange="this.form.submit()" aria-label="Circonscription">
+      <option value="">Toutes les circonscriptions</option>
+      {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if c.id == cs_id }}>{{ c.nom }}</option>{% endfor %}</select>{% endif %}
+  </form>
+</div>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Urgentes</div><div class="v {{ 'rouge' if nb.haute }}">{{ nb.haute }}</div><div class="d">à traiter cette semaine</div></div>
+  <div class="kpi"><div class="l">À traiter</div><div class="v">{{ nb.moyenne }}</div><div class="d">à suivre ce mois-ci</div></div>
+  <div class="kpi"><div class="l">Pour information</div><div class="v">{{ nb.info }}</div><div class="d">à garder à l'œil</div></div>
+</div>
+{% for a in alertes %}
+<div class="alerte-l {{ a.niveau }}"><span class="ico" aria-hidden="true">{{ icone(a.ico, 20) }}</span>
+  <div style="flex:1"><b>{{ a.titre }}</b>
+    <div class="gris" style="font-size:13px">{{ a.detail }}</div>
+    {% if a.ecoles %}<details {{ 'open' if a.ecoles|length <= 5 }}><summary>Détail ({{ a.ecoles|length }})</summary>
+      <ul>{% for x in a.ecoles[:200] %}<li>{{ x }}</li>{% endfor %}{% if a.ecoles|length > 200 %}<li>… et {{ a.ecoles|length - 200 }} autre(s)</li>{% endif %}</ul></details>{% endif %}
+  </div>
+  {% if a.lien %}<a class="btn sec petit" href="{{ a.lien }}">Agir</a>{% endif %}
+</div>
+{% else %}
+<div class="carte">{{ icone('valider') }} Aucune alerte : toutes les écoles ont transmis récemment, aucune n'est en manque d'enseignants et la programmation des CP est respectée.</div>
+{% endfor %}
+<p class="gris" style="font-size:12.5px;margin-top:14px">Règles : transmission absente ou de plus de 30 jours ; manque d'enseignants et classes pléthoriques
+  d'après les données transmises ; écoles sans visite depuis le début du trimestre (signalé après 25 % du trimestre) ;
+  activités des CP et du CCS ayant au moins 25 points de retard sur le rythme du trimestre ; séances d'UP prévues, date passée, non exécutées.</p>
+{% endblock %}

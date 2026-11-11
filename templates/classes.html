@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block titre %}Classes{% endblock %}
+{% block contenu %}
+{% set ORG = organisation_classes() if organisation_classes is defined else none %}
+<div class="entete">
+  <div><h1>Classes</h1><p class="sous">{{ classes|length }} cours{% if ORG %} · <b>{{ ORG.compte.total }} classe(s) ouverte(s)</b> : {{ ORG.compte.simples }} simple(s), {{ ORG.compte.jumelees }} jumelée(s), {{ ORG.compte.multigrades }} multigrade(s){% endif %}</p></div>
+  {% if peut('classes') %}<a class="btn" href="{{ url_for('classe_form') }}">+ Nouvelle classe</a>{% endif %}
+</div>
+{% if ORG %}<p class="aide">Une classe jumelée (deux cours, ex. CI-CP) ou multigrade (trois cours ou plus, ex. CI-CE2-CM1) tenue dans une salle par un maître compte pour <b>une</b> classe ouverte. Gardez une ligne par cours (effectifs par cours), cochez les cours de la même classe puis « Regrouper ».</p>{% endif %}
+<form method="post" action="{{ url_for('classes_regrouper') if ORG and peut('classes') else '' }}">
+<div class="tw"><table class="t" aria-label="Classes">
+  <tr>{% if ORG and peut('classes') %}<th>Choix</th>{% endif %}<th>Classe</th><th>Niveau</th><th>Cycle</th>{% if ORG %}<th>Organisation</th>{% endif %}<th class="num">Effectif</th><th class="num">Scolarité</th><th></th></tr>
+  {% for c in classes %}{% set p = ORG.par_id.get(c.id) if ORG else none %}
+  <tr>{% if ORG and peut('classes') %}<td><input type="checkbox" name="ids" value="{{ c.id }}" aria-label="Choisir {{ c.nom }}"></td>{% endif %}<td><a href="{{ url_for('classe_detail', cid=c.id) }}"><b>{{ c.nom }}</b></a></td><td>{{ c.niveau }}</td>
+      <td>{{ 'Maternelle' if c.niveau.startswith('Maternelle') else ('Primaire' if c.niveau in ['CI','CP','CE1','CE2','CM1','CM2'] else 'Secondaire') }}</td>
+      {% if ORG %}<td>{% if p and p.organisation != 'simple' %}{{ ORG.lib[p.organisation] }} {{ p.libelle }}{% else %}Simple{% endif %}</td>{% endif %}
+      <td class="num">{{ c.effectif }}</td><td class="num">{{ fcfa(c.frais_scolarite) }}</td>
+      <td class="num">{% if peut('classes') %}<a class="btn sec petit" href="{{ url_for('classe_form', cid=c.id) }}">Modifier</a>{% if p and p.cle %} <button class="btn sec petit" formaction="{{ url_for('classes_separer', cle=p.cle) }}">Séparer</button>{% endif %}{% endif %}</td></tr>
+  {% else %}<tr><td colspan="8" class="gris">Aucune classe.</td></tr>{% endfor %}
+</table></div>
+{% if ORG and peut('classes') and classes|length > 1 %}<button class="btn sec">Regrouper les cours cochés (classe jumelée / multigrade)</button>{% endif %}
+</form>
+{% endblock %}

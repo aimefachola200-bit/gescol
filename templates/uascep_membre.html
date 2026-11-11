@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% block titre %}Membre de l'UASCEP{% endblock %}
+{% block contenu %}
+<p><a href="{{ url_for('uascep', onglet=b.niveau, entite=b.entite) }}">← Bureau {{ NIV_LIB[b.niveau] }} : {{ b.entite_lib or b.entite }}</a></p>
+<h1>{{ 'Modifier' if m.id else 'Ajouter' }} un membre</h1>
+<form method="post" class="carte">
+<label>N° d'ordre <input name="ordre" value="{{ m.ordre or 1 }}" size="3"></label>
+<label>Nom <input name="nom" value="{{ m.nom or '' }}" required></label>
+<label>Prénoms <input name="prenoms" value="{{ m.prenoms or '' }}"></label>
+<label>Sexe <select name="sexe"><option value=""></option><option value="M" {{ 'selected' if m.sexe == 'M' }}>M</option><option value="F" {{ 'selected' if m.sexe == 'F' }}>F</option></select></label>
+<label>École <input name="ecole" value="{{ m.ecole or '' }}"></label>
+<label>UP <input name="up" value="{{ m.up or '' }}"></label>
+<label>Zone pédagogique <input name="zone" value="{{ m.zone or '' }}"></label>
+<label>Nom du RUP <input name="rup" value="{{ m.rup or '' }}"></label>
+<label>Fonction <input name="fonction" list="fonctions" value="{{ m.fonction or '' }}"><datalist id="fonctions">{% for f in FONCTIONS %}<option value="{{ f }}">{% endfor %}</datalist></label>
+<label>Qualité <input name="qualite" list="qualites" value="{{ m.qualite or '' }}"><datalist id="qualites">{% for f in QUALITES %}<option value="{{ f }}">{% endfor %}</datalist></label>
+<label>Contact <input name="contact" value="{{ m.contact or '' }}"></label>
+<label>E-mail <input name="email" value="{{ m.email or '' }}"></label>
+<label>Date d'élection <input type="date" name="date_election" value="{{ m.date_election or '' }}"></label>
+<label>Durée du mandat (ans) <input name="duree" value="{{ m.duree or 2 }}" size="3"></label>
+<label>Date de fin de mandat (calculée si vide) <input type="date" name="date_fin" value="{{ m.date_fin or '' }}"></label>
+<label>Date d'installation <input type="date" name="date_installation" value="{{ m.date_installation or '' }}"></label>
+<label>Observations <textarea name="observations" rows="2">{{ m.observations or '' }}</textarea></label>
+<p><button class="btn">Enregistrer</button></p></form>
+{% endblock %}

@@ -1,0 +1,13 @@
+{# v2.4.2 — Préparation de classe : entrée par classe, de la maternelle au CM2 #}
+{% extends "base.html" %}{% block titre %}Préparation par classe{% endblock %}
+{% block contenu %}{% set onglet = 'classes' %}{% include "_prep_onglets.html" %}
+<p class="aide">Choisissez une classe : vous y trouvez, rangés par matière, ses fiches de préparation, ses résumés, ses évaluations et épreuves, ses guides et ses programmes.</p>
+<div class="grille">
+{% for c in cartes %}
+  <a class="kpi" href="{{ url_for('prep_classe', cours=c.cours) }}" style="text-decoration:none;color:inherit">
+    <div class="l">{{ c.lib }}{% if c.mienne %} <span class="badge ok">ma classe</span>{% endif %}</div>
+    <div class="v">{{ c.n.fiches }}</div><div class="d">fiches · {{ c.n.resumes }} résumés · {{ c.n.evaluations }} épreuves<br>{{ c.n.guides }} guides · {{ c.n.programmes }} programmes · {{ c.mat }} matières</div>
+  </a>
+{% endfor %}
+</div>
+{% endblock %}

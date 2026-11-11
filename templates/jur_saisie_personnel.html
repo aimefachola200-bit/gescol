@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% block titre %}Personnel — {{ e.nom }}{% endblock %}
+{% block contenu %}
+<style>.sp-t input,.sp-t select{width:100%;min-width:60px;padding:3px 4px;font-size:12.5px}.sp-t td{padding:2px}</style>
+<div class="entete"><div><h1>{{ icone('groupe') }} État nominatif du personnel — {{ e.nom }}</h1>
+  <p class="sous">Directeur, adjoints, enseignants, personnel administratif et de soutien · année {{ annee }} · {{ e.cs_nom or '' }}{% if e.zone_nom %} · {{ e.zone_nom }}{% endif %}</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_saisie', annee=annee) }}">← Saisie manuelle</a>
+    {% if ep_existe('jur_personnel') %}<a class="btn sec" href="{{ url_for('jur_personnel') }}">Gestion de carrière</a>{% endif %}</div>
+</div>
+<form method="post" id="sp-form">
+  <input type="hidden" name="annee" value="{{ annee }}"><input type="hidden" name="n" id="sp-n" value="{{ lignes|length }}">
+  <div class="tw"><table class="t sp-t" id="sp-t">
+    <thead><tr><th>N°</th>{% for k, l, w in COLONNES %}<th style="min-width:{{ w }}px">{{ l }}</th>{% endfor %}<th></th></tr></thead>
+    <tbody>{% for p in lignes %}{% set i = loop.index0 %}<tr><td class="num">{{ loop.index }}</td>
+      {% for k, l, w in COLONNES %}<td>{% if k == 'sexe' %}<select name="sexe_{{ i }}" aria-label="Sexe"><option></option><option {{ 'selected' if p.sexe == 'M' }}>M</option><option {{ 'selected' if p.sexe == 'F' }}>F</option></select>
+        {% elif k == 'fonction' %}<input name="fonction_{{ i }}" list="sp-fonctions" value="{{ p.fonction or '' }}" aria-label="Fonction">
+        {% elif k == 'categorie' %}<select name="categorie_{{ i }}" aria-label="Catégorie"><option></option>{% for c in CATEGORIES %}<option {{ 'selected' if p.categorie == c }}>{{ c }}</option>{% endfor %}</select>
+        {% elif k in ('date_naissance', 'date_premiere_ps', 'date_ps_ecole') %}<input type="date" name="{{ k }}_{{ i }}" value="{{ p[k] or '' }}" aria-label="{{ l }}">
+        {% else %}<input name="{{ k }}_{{ i }}" value="{{ p[k] or '' }}" aria-label="{{ l }}">{% endif %}</td>{% endfor %}
+      <td><button type="button" class="btn danger petit" data-suppr title="Retirer la ligne">✕</button></td></tr>{% endfor %}</tbody>
+  </table></div>
+  <datalist id="sp-fonctions">{% for f in FONCTIONS %}<option value="{{ f }}">{% endfor %}</datalist>
+  <div class="actions" style="margin-top:8px"><button type="button" class="btn sec" id="sp-plus">＋ Ajouter une ligne</button>
+    <button class="btn vert">{{ icone('enregistrer') }} Enregistrer l'état nominatif</button></div>
+  <p class="aide">Une ligne par agent ; seules les lignes avec un nom sont enregistrées. La fonction « Directeur » met aussi à jour le directeur de l'école.
+  Catégorie : FE, ACDPE, ACDPCTD (AME), PRIVE (écoles privées) ou AUTRE. Les dates permettent le calcul des anciennetés et du départ à la retraite (gestion de carrière).</p>
+</form>
+<script>
+(function () {
+  var tb = document.querySelector('#sp-t tbody'), n = document.getElementById('sp-n');
+  function renum() { Array.prototype.forEach.call(tb.children, function (tr, i) { tr.firstElementChild.textContent = i + 1;
+    tr.querySelectorAll('input,select').forEach(function (e) { e.name = e.name.replace(/_\d+$/, '_' + i); }); }); n.value = tb.children.length; }
+  document.getElementById('sp-plus').addEventListener('click', function () {
+    var tr = tb.lastElementChild.cloneNode(true); tr.querySelectorAll('input').forEach(function (e) { e.value = ''; }); tr.querySelectorAll('select').forEach(function (e) { e.selectedIndex = 0; });
+    var f = tr.querySelector('input[name^="fonction_"]'); if (f) f.value = 'Adjoint(e)'; tb.appendChild(tr); renum(); });
+  tb.addEventListener('click', function (ev) { var b = ev.target.closest('[data-suppr]'); if (!b) return; if (tb.children.length > 1) { b.closest('tr').remove(); renum(); } else b.closest('tr').querySelectorAll('input').forEach(function (e) { e.value = ''; }); });
+})();
+</script>
+{% endblock %}

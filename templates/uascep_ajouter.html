@@ -1,0 +1,39 @@
+{# v1.28 — ajouter un membre de l'UASCEP : niveau, entité (liste ou saisie libre), bureau créé automatiquement #}
+{% extends "base.html" %}{% block titre %}Ajouter un membre — UASCEP{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Bureaux de l'UASCEP</h1><p class="sous">Ajouter un membre : le bureau de l'entité est créé automatiquement s'il n'existe pas encore.</p></div></div>
+{% include "_uascep_onglets.html" %}
+{% if ecrire %}
+<form method="post" class="carte" id="form-membre">
+<h2 style="margin-top:0">{{ icone('ajouter') }} Ajouter un membre</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:8px 12px">
+<label>Niveau * <select name="niveau" onchange="document.getElementById('entite').setAttribute('list','ent-'+this.value)">{% for c in ecrire %}<option value="{{ c }}" {{ 'selected' if c == niveau }}>{{ NIV_LIB[c] }}</option>{% endfor %}</select></label>
+<label>Entité * <input id="entite" name="entite" list="ent-{{ niveau }}" value="{{ entite }}" placeholder="Rechercher ou saisir le nom" autocomplete="off" required>
+<span class="aide">Choisissez dans la liste ; si l'entité manque, saisissez son nom.</span></label>
+{% for c, ents in entites_par.items() %}<datalist id="ent-{{ c }}">{% for k, l, i in ents %}<option value="{{ l }}">{% endfor %}</datalist>{% endfor %}
+<label>N° d'ordre <input name="ordre" value="{{ m.ordre or '' }}" size="3" placeholder="auto"></label>
+<label>Nom * <input name="nom" value="{{ m.nom or '' }}" required></label>
+<label>Prénoms <input name="prenoms" value="{{ m.prenoms or '' }}"></label>
+<label>Sexe <select name="sexe"><option value=""></option><option value="M" {{ 'selected' if m.sexe == 'M' }}>M</option><option value="F" {{ 'selected' if m.sexe == 'F' }}>F</option></select></label>
+<label>Fonction <input name="fonction" list="fonctions" value="{{ m.fonction or '' }}"><datalist id="fonctions">{% for f in FONCTIONS %}<option value="{{ f }}">{% endfor %}</datalist></label>
+<label>Qualité <input name="qualite" list="qualites" value="{{ m.qualite or '' }}"><datalist id="qualites">{% for f in QUALITES %}<option value="{{ f }}">{% endfor %}</datalist></label>
+<label>École <input name="ecole" value="{{ m.ecole or '' }}"></label>
+<label>UP <input name="up" value="{{ m.up or '' }}"></label>
+<label>Zone pédagogique <input name="zone" value="{{ m.zone or '' }}"></label>
+<label>Nom du RUP <input name="rup" value="{{ m.rup or '' }}"></label>
+<label>Contact <input name="contact" value="{{ m.contact or '' }}"></label>
+<label>E-mail <input name="email" value="{{ m.email or '' }}"></label>
+<label>Date d'élection <input type="date" name="date_election" value="{{ m.date_election or '' }}"></label>
+<label>Durée du mandat (ans) <input name="duree" value="{{ m.duree or 2 }}" size="3"></label>
+<label>Date de fin de mandat (calculée si vide) <input type="date" name="date_fin" value="{{ m.date_fin or '' }}"></label>
+<label>Date d'installation <input type="date" name="date_installation" value="{{ m.date_installation or '' }}"></label>
+<label style="grid-column:1/-1">Observations <textarea name="observations" rows="2">{{ m.observations or '' }}</textarea></label>
+</div>
+<p class="actions" style="margin-top:10px"><button class="btn" name="suite" value="liste">{{ icone('enregistrer') }} Enregistrer</button>
+<button class="btn sec" name="suite" value="autre">Enregistrer et ajouter un autre</button>
+<button class="btn sec" name="suite" value="cachet">Enregistrer puis cachet et signature</button>
+<button class="btn sec" type="reset">{{ icone('reinitialiser') }} Réinitialiser</button></p>
+<p class="aide">Après l'enregistrement, le cachet et la signature digitale se créent depuis l'onglet Membres (bouton « Cachet / signature ») ou directement avec le 3e bouton.</p>
+</form>
+{% endif %}
+{% endblock %}

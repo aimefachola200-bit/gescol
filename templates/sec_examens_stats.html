@@ -1,0 +1,24 @@
+{# v2.4 — statistiques des examens (BEPC, BAC, CAP, BT…) : par série et par sexe, par centre #}
+{% extends "base.html" %}{% block titre %}Statistiques des examens — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<div class="entete" style="margin-bottom:6px"><div><h2 style="margin:0">Statistiques des examens — session {{ annee }}</h2>
+<p class="aide">Taux = admis ÷ présents. Décision retenue = décision du jury si saisie, sinon décision proposée d'après la moyenne (≥ 10 admis ; BAC : de 8 à moins de 10, second tour).</p></div>
+<div class="actions"><a class="btn sec petit" href="{{ url_for('sec_examens_stats_pdf', annee=annee, examen=examen or None, centre=centre or None) }}">{{ icone('document') }} PDF signé (QR)</a>
+<a class="btn sec petit" href="{{ url_for('sec_examens_stats_xlsx', annee=annee, examen=examen or None, centre=centre or None) }}">{{ icone('graphique') }} Excel</a></div></div>
+<form method="get" class="filtres actions" style="margin:6px 0 10px">
+<label>Session <input name="annee" value="{{ annee }}" size="9"></label>
+<label>Examen <select name="examen" onchange="this.form.submit()"><option value="">Tous</option>{% for o in examens %}<option {{ 'selected' if o == examen }}>{{ o }}</option>{% endfor %}</select></label>
+<label>Centre <select name="centre" onchange="this.form.submit()"><option value="">Tous</option>{% for o in centres %}<option {{ 'selected' if o == centre }}>{{ o }}</option>{% endfor %}</select></label>
+<button class="btn sec petit">OK</button></form>
+<div class="tw"><table class="t" aria-label="Résultats par examen et série"><thead><tr>{% for c in ent %}<th>{{ c }}</th>{% endfor %}</tr></thead><tbody>
+{% for l in rows %}{% set derniere = loop.last %}<tr{% if derniere %} class="total"{% endif %}>{% for v in l %}<td>{% if derniere %}<b>{{ v|string|replace('.', ',') }}</b>{% else %}{{ v|string|replace('.', ',') }}{% endif %}</td>{% endfor %}</tr>
+{% else %}<tr><td colspan="13" class="aide">Aucun candidat enregistré.</td></tr>{% endfor %}
+</tbody></table></div>
+<h3>Par centre d'examen</h3>
+<div class="tw"><table class="t" aria-label="Résultats par centre"><thead><tr><th>Centre</th><th>Inscrits</th><th>Présents</th><th>Admis</th><th>Taux (%)</th></tr></thead><tbody>
+{% for l in centres_rows %}<tr>{% for v in l %}<td>{{ v|string|replace('.', ',') }}</td>{% endfor %}</tr>{% else %}<tr><td colspan="5" class="aide">—</td></tr>{% endfor %}
+</tbody></table></div>
+<p class="aide">{{ nb }} candidat(s) · <a href="{{ url_for('reg_page', gcle='sec', rcle='candidats', annee=annee) }}">Candidats</a> · <a href="{{ url_for('reg_page', gcle='sec', rcle='centres', annee=annee) }}">Centres d'examen</a></p>
+{% endblock %}

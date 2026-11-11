@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block titre %}{{ NOM_APPLI }}{% endblock %}
+{% block contenu %}
+<div class="login carte">
+  <img class="logo-img" src="{{ url_for('static', filename='icons/scolaris-icone.svg') }}" alt="" width="72" height="72" style="display:block;margin:0 auto 8px">
+  <h1>{{ NOM_APPLI }}</h1>
+  <p class="sous">{{ ECOLE.nom }} – année {{ ANNEE }}</p>
+  <p class="aide" style="text-align:center">Espace de l'enseignant : ma classe, emplois du temps, planifications, documents officiels et certificats.</p>
+  <form method="post" class="f">
+    <label for="identifiant">Identifiant</label><input id="identifiant" name="identifiant" autofocus required autocomplete="username" autocapitalize="none">
+    <label for="mdp">Mot de passe</label><input id="mdp" name="mdp" type="password" required autocomplete="current-password">
+    <p><button class="btn" style="width:100%">Se connecter</button></p>
+  </form>
+  <p style="text-align:right;margin:-4px 0 8px">{% if ep_existe('mdp_oublie') %}<a href="{{ url_for('mdp_oublie') }}">{{ icone('cle') }} Mot de passe oublié ?</a>{% endif %}</p>
+  <p class="aide"><a href="{{ url_for('verifier') }}">Vérifier l'authenticité d'un document</a>
+    {% if EDITION != 'enseignant' %}<br><a href="{{ url_for('login') }}">Direction, secrétariat : application de l'école</a>{% endif %}</p>
+</div>
+{% if EDITION == 'enseignant' %}<p class="aide">Application personnelle : vos données sont enregistrées sur cet appareil.</p>{% endif %}
+{% endblock %}

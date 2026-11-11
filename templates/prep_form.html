@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% block titre %}{{ 'Préparer une fiche' if nouveau else 'Modifier la fiche' }}{% endblock %}
+{% block contenu %}{% set onglet = 'mes' %}{% include "_prep_onglets.html" %}
+<h2>{{ 'Préparer une fiche' if nouveau else 'Modifier la fiche' }}</h2>
+{% if nouveau and modeles %}
+<form method="get" class="filtres" aria-label="Partir d'un modèle">
+  <input type="hidden" name="classe" value="{{ d.classe_id or '' }}">
+  <label>Partir d'un modèle APC <select name="modele" onchange="this.form.submit()"><option value="">— fiche vierge —</option>{% for m in modeles %}<option value="{{ m.id }}" {{ 'selected' if d.source_id == 'modele:' ~ m.id }}>{{ prep_nom_matiere(m.matiere) }} — {{ m.libelle }}</option>{% endfor %}</select></label>
+  <noscript><button class="btn sec petit">Charger</button></noscript>
+  <a class="btn sec petit" href="{{ url_for('prep_fiches') }}">… ou adapter une fiche de la bibliothèque</a>
+</form>{% endif %}
+{% if d.source_id and not d.source_id.startswith('modele:') %}<p class="aide">Adaptée de la fiche « <a href="{{ url_for('prep_fiche', fid=d.source_id) }}">{{ d.source_id }}</a> » de la bibliothèque.</p>{% endif %}
+<form method="post" class="carte prep-form" action="{{ url_for('prep_preparer') if nouveau else url_for('prep_ma_fiche', mid=d.id) }}">
+  <input type="hidden" name="source_id" value="{{ d.source_id or '' }}">
+  <div class="grille-form">
+    <label>Classe <select name="classe" required>{% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if c.id == d.classe_id }}>{{ c.nom }} ({{ c.niveau }})</option>{% endfor %}</select></label>
+    <label>Date de la séance <input type="date" name="date_seance" value="{{ d.date_seance or '' }}"></label>
+    <label>Matière <select name="matiere">{% for m in MATS %}<option value="{{ m }}" {{ 'selected' if m == d.matiere }}>{{ prep_nom_matiere(m) }}</option>{% endfor %}</select></label>
+    <label>SA n° <input type="number" name="sa" min="1" max="99" value="{{ d.sa or '' }}" inputmode="numeric"></label>
+    <label>Séance n° <input type="number" name="seance" min="1" max="99" value="{{ d.seance or '' }}" inputmode="numeric"></label>
+  </div>
+  {% for k, lib in CHAMPS %}
+  <label class="bloc">{{ lib }}{% if k == 'titre' %} *{% endif %}
+    {% if k in ('titre','intitule','sous_matiere','unite','duree') %}<input type="text" name="{{ k }}" value="{{ d[k] or '' }}" {{ 'required' if k == 'titre' }} maxlength="300">
+    {% else %}<textarea name="{{ k }}" rows="{{ 3 if k in ('cd','ct','strategies','materiel') else 4 }}">{{ d[k] or '' }}</textarea>{% endif %}</label>
+  {% endfor %}
+  <h3>Déroulement (phases × activités × résultats attendus)</h3>
+  <p class="aide">« **texte** » s'imprime en gras ; une ligne par consigne. Laissez une ligne vide pour la retirer.</p>
+  <div class="tw"><table class="t prep-deroul"><thead><tr><th>Phase / étape</th><th>Activités de l'enseignant(e) et des apprenant(e)s</th><th>Résultats attendus</th></tr></thead><tbody>
+  {% set lignes = d.deroulement or [] %}
+  {% for i in range(MAX) %}{% set l = (lignes[i] if i < lignes|length else ['','','']) %}
+  <tr class="{{ 'prep-vide' if i >= lignes|length and i > lignes|length + 1 }}"><td><textarea name="ph_{{ i }}" rows="3">{{ l[0] }}</textarea></td><td><textarea name="ac_{{ i }}" rows="6">{{ l[1] if l|length > 1 else '' }}</textarea></td><td><textarea name="re_{{ i }}" rows="3">{{ l[2] if l|length > 2 else '' }}</textarea></td></tr>{% endfor %}
+  </tbody></table></div>
+  <p><button type="button" class="btn sec petit" onclick="var r=document.querySelector('tr.prep-vide');if(r)r.classList.remove('prep-vide')">+ Ajouter une ligne</button></p>
+  <p class="actions"><button class="btn">Enregistrer</button> <a class="btn sec" href="{{ url_for('prep_mes_fiches') if nouveau else url_for('prep_ma_fiche', mid=d.id) }}">Annuler</a></p>
+</form>
+{% endblock %}

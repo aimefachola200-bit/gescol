@@ -1,0 +1,163 @@
+{% extends "base.html" %}{% import "jur_tableau_commun.html" as T with context %}
+{% block titre %}Effectifs{% endblock %}
+{% block contenu %}
+{% macro tab_ages(t, vide_msg="Aucun âge déclaré pour ces écoles (ni âges des élèves, ni tableau 7.3 de la fiche de recensement).") %}{% if t.vide %}<p class="aide">{{ vide_msg }}</p>{% else %}
+  <div class="tw"><table class="t serre ages">
+    <tr><th rowspan="2">Catégorie d'âge</th>{% for c in t.cols %}<th colspan="3" class="grp">{{ 'Ensemble' if c == 'ENS' else c }}</th>{% endfor %}</tr>
+    <tr>{% for _ in t.cols %}<th class="num">G</th><th class="num">F</th><th class="num">T</th>{% endfor %}</tr>
+    {% for x in t.lignes %}<tr><td>{{ x.lib }}</td>{% for c in t.cols %}{% for v, pc in x.cells[c] %}<td class="num{{ ' ens' if c == 'ENS' }}">{% if loop.index == 3 %}<b>{{ v|jur_nb }}</b>{% else %}{{ v|jur_nb }}{% endif %}{% if pc is not none and v %}<br><small class="pc">{{ ("%.1f"|format(pc))|replace('.', ',') }} %</small>{% endif %}</td>{% endfor %}{% endfor %}</tr>{% endfor %}
+    <tr class="b"><td>Total</td>{% for c in t.cols %}{% for v in t.tot[c] %}<td class="num">{{ v|jur_nb }}{% if v %}<br><small class="pc">100 %</small>{% endif %}</td>{% endfor %}{% endfor %}</tr>
+    <tr class="b stat"><td>Âge moyen (ans)</td>{% for c in t.cols %}{% for m, e in t.stats[c] %}<td class="num">{{ ("%.2f"|format(m))|replace('.', ',') if m is not none else '–' }}</td>{% endfor %}{% endfor %}</tr>
+    <tr class="b stat"><td>Écart type (ans)</td>{% for c in t.cols %}{% for m, e in t.stats[c] %}<td class="num">{{ ("%.2f"|format(e))|replace('.', ',') if e is not none else '–' }}</td>{% endfor %}{% endfor %}</tr>
+  </table></div>{% endif %}{% endmacro %}
+{% macro f3(d) %}{% for c in ('SP', 'SG', 'T') %}{% for v in d[c] %}<td class="num{{ ' ens' if c == 'T' }}">{% if loop.last %}<b>{{ v|jur_nb }}</b>{% else %}{{ v|jur_nb }}{% endif %}</td>{% endfor %}{% endfor %}{% endmacro %}
+{% macro tete_sec(premiere, extra='') %}<tr><th rowspan="2">{{ premiere }}</th>{{ extra|safe }}<th colspan="3" class="grp">Section des petits (SP)</th><th colspan="3" class="grp">Section des grands (SG)</th><th colspan="3" class="grp">Total</th></tr>
+    <tr>{% for _ in range(3) %}<th class="num">G</th><th class="num">F</th><th class="num">T</th>{% endfor %}</tr>{% endmacro %}
+{% macro bloc_mat(m, cle, titre_sect) %}
+  <h3>8.1 Effectifs par section et par {{ lib|lower }} — fiche de recensement (tableau 3)</h3>
+  <div class="tw"><table class="t serre">{{ tete_sec(lib, '<th rowspan="2" class="num">Écoles</th>') }}
+    {% for g in grp %}{% if g[cle].ecoles %}<tr><td>{{ g.nom }}</td><td class="num">{{ g[cle].ecoles }}</td>{{ f3(g[cle].rec) }}</tr>{% endif %}{% endfor %}
+    <tr class="b"><td>Total</td><td class="num">{{ m.ecoles }}</td>{{ f3(m.rec) }}</tr></table></div>
+  <h3>8.2 Catégories d'âge par section et par sexe (fiche de recensement, tableau 3)</h3>
+  {{ tab_ages(m.ages, "Aucun âge déclaré pour ces écoles maternelles (ni âges des enfants, ni tableau 3 de la fiche de recensement).") }}
+  <h3>8.3 Rapport de rentrée (EM) : répartition des enfants par section</h3>
+  <p class="aide">{{ m.n_rentree }} école(s) sur {{ m.ecoles }} ont transmis le rapport de rentrée.</p>
+  <div class="tw"><table class="t serre">{{ tete_sec('Rubrique') }}
+    {% for k, l_, d in m.rentree %}<tr class="{{ 'b' if k == 'debut' }}"><td>{{ l_ }}</td>{{ f3(d) }}</tr>{% endfor %}</table></div>
+  {% if m.n_rentree %}<div class="tw"><table class="t serre">{{ tete_sec(lib) }}
+    {% for g in grp %}{% if g[cle].ecoles %}<tr><td>{{ g.nom }} <small class="gris">(début d'année)</small></td>{{ f3(g[cle].deb) }}</tr>{% endif %}{% endfor %}</table></div>{% endif %}
+  <h3>8.4 Fiche de fin d'année (EM) : répartition des enfants par section</h3>
+  <p class="aide">{{ m.n_fin }} école(s) sur {{ m.ecoles }} ont transmis la fiche de fin d'année.</p>
+  <div class="tw"><table class="t serre">{{ tete_sec('Rubrique') }}
+    {% for k, l_, d in m.fin %}<tr class="{{ 'b' if k == 'fin' }}"><td>{{ l_ }}</td>{{ f3(d) }}</tr>{% endfor %}</table></div>
+  {% if m.n_fin %}<div class="tw"><table class="t serre">{{ tete_sec(lib) }}
+    {% for g in grp %}{% if g[cle].ecoles %}<tr><td>{{ g.nom }} <small class="gris">(fin d'année)</small></td>{{ f3(g[cle].finf) }}</tr>{% endif %}{% endfor %}</table></div>{% endif %}
+{% endmacro %}
+<style>.ages small.pc{color:#6b7280;font-size:.72em;white-space:nowrap}.ages td.ens{background:#f5f7fb}.ages tr.stat td{background:#fff8e1}</style>
+{{ T.styles() }}
+<div class="entete"><div><h1>{{ icone('groupe') }} Effectifs : apprenants et personnel enseignant</h1>
+  <p class="sous">{{ tot.ecoles }} école(s) · année scolaire {{ flt.annee }} · par {{ lib|lower }} · d'après les fiches de recensement et l'état nominatif transmis par les écoles</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_effectifs', export='xlsx', **args) }}">⇩ Excel</a>
+    <button class="btn sec" type="button" onclick="window.print()">{{ icone('imprimer') }} Imprimer</button></div></div>
+{{ T.filtres(flt, 'jur_effectifs', extra={'par': par}) }}
+<div class="actions noprint" style="margin:-4px 0 12px">Regrouper par :
+  {% if JUR_NIVEAU == 'ddemp' %}<a class="btn petit {{ '' if par == 'cs' else 'sec' }}" href="{{ url_for('jur_effectifs', **dict(args0, par='cs')) }}">circonscription</a>{% endif %}
+  <a class="btn petit {{ '' if par == 'zone' else 'sec' }}" href="{{ url_for('jur_effectifs', **dict(args0, par='zone')) }}">zone pédagogique</a>
+  <a class="btn petit {{ '' if par == 'ecole' else 'sec' }}" href="{{ url_for('jur_effectifs', **dict(args0, par='ecole')) }}">école</a></div>
+
+<p class="aide">Rubriques 1 à 5 : <b>secteur public</b>. Le <b>secteur privé</b> est compté à part (rubrique 6 et case « Écoles privées »).</p>
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Apprenants (public)</div><div class="v">{{ tot.app.t.t|jur_nb }}</div><div class="d">{{ tot.app.t.g|jur_nb }} G · {{ tot.app.t.f|jur_nb }} F</div></div>
+  <div class="kpi"><div class="l">Enseignants (public)</div><div class="v">{{ tot.ens.t }}</div><div class="d">{{ tot.ens.h }} H · {{ tot.ens.f }} F</div></div>
+  <div class="kpi"><div class="l">Directeurs (public)</div><div class="v">{{ tot.dir.t }}</div><div class="d">{{ tot.dir.h }} H · {{ tot.dir.f }} F</div></div>
+  <div class="kpi"><div class="l">CAP</div><div class="v">{{ tot.dip.cap_ep.t + tot.dip.cap_em.t }}</div><div class="d">EP {{ tot.dip.cap_ep.t }} · EM {{ tot.dip.cap_em.t }}</div></div>
+  <div class="kpi"><div class="l">CEAP</div><div class="v">{{ tot.dip.ceap_ep.t + tot.dip.ceap_em.t }}</div><div class="d">EP {{ tot.dip.ceap_ep.t }} · EM {{ tot.dip.ceap_em.t }}</div></div>
+</div>
+<div class="grille indicateurs">
+  <div class="kpi" style="border-left:4px solid #8e44ad"><div class="l">{{ icone('ecole') }} Écoles privées (à part)</div><div class="v">{{ tot.prive.ecoles }}</div><div class="d">{{ tot.prive.app.t.t|jur_nb }} apprenants ({{ tot.prive.app.t.g|jur_nb }} G · {{ tot.prive.app.t.f|jur_nb }} F)</div></div>
+  <div class="kpi" style="border-left:4px solid #8e44ad"><div class="l">Enseignants du privé</div><div class="v">{{ tot.prive.ens.t }}</div><div class="d">{{ tot.prive.ens.h }} H · {{ tot.prive.ens.f }} F</div></div>
+  <div class="kpi" style="border-left:4px solid #8e44ad"><div class="l">Directeurs du privé</div><div class="v">{{ tot.prive.dir.t }}</div><div class="d">{{ tot.prive.dir.h }} H · {{ tot.prive.dir.f }} F</div></div>
+  <div class="kpi" style="border-left:4px solid #8e44ad"><div class="l">CAP / CEAP (privé)</div><div class="v">{{ tot.prive.cap.t }} <small>/ {{ tot.prive.ceap.t }}</small></div><div class="d">CAP / CEAP</div></div>
+</div>
+
+{% if not tot.ecoles and not tot.prive.ecoles %}<div class="carte">{{ T.vide("Aucune école pour ces critères.") }}</div>{% else %}
+<div class="carte"><h2>1. Apprenants (secteur public)</h2>
+  <div class="tw"><table class="t serre">
+    <tr><th rowspan="2">{{ lib }}</th><th rowspan="2" class="num">Écoles</th><th colspan="3" class="grp">Primaire (EP)</th><th colspan="3" class="grp">Maternelle (EM)</th><th colspan="3" class="grp">Ensemble</th></tr>
+    <tr>{% for _ in range(3) %}<th class="num">G</th><th class="num">F</th><th class="num">T</th>{% endfor %}</tr>
+    {% for g in grp + [tot] %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td><td class="num">{{ g.ecoles }}</td>
+      {% for n in ('ep', 'em', 't') %}<td class="num">{{ g.app[n].g|jur_nb }}</td><td class="num">{{ g.app[n].f|jur_nb }}</td><td class="num"><b>{{ g.app[n].t|jur_nb }}</b></td>{% endfor %}</tr>{% endfor %}
+  </table></div>
+  <h3>Courbe des apprenants par {{ lib|lower }}</h3><div class="tw">{{ courbes.app }}</div>
+</div>
+
+<div class="carte"><h2>2. Personnel enseignant et directeurs (secteur public)</h2>
+  <div class="tw"><table class="t serre">
+    <tr><th rowspan="2">{{ lib }}</th><th colspan="3" class="grp">Enseignants (adjoints compris)</th><th colspan="3" class="grp">Directeurs</th><th colspan="3" class="grp">Ensemble</th></tr>
+    <tr>{% for _ in range(3) %}<th class="num">H</th><th class="num">F</th><th class="num">T</th>{% endfor %}</tr>
+    {% for g in grp + [tot] %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td>
+      {% for n in ('ens', 'dir', 'tous') %}<td class="num">{{ g[n].h }}</td><td class="num">{{ g[n].f }}</td><td class="num"><b>{{ g[n].t }}</b></td>{% endfor %}</tr>{% endfor %}
+  </table></div>
+  <h3>Courbe du personnel par {{ lib|lower }}</h3><div class="tw">{{ courbes.pers }}</div>
+</div>
+
+<div class="carte"><h2>3. Catégories du personnel (secteur public)</h2>
+  <div class="tw"><table class="t serre">
+    <tr><th rowspan="2">{{ lib }}</th>{% for k, l in CATS %}<th colspan="3" class="grp">{{ l }}</th>{% endfor %}</tr>
+    <tr>{% for _ in CATS %}<th class="num">H</th><th class="num">F</th><th class="num">T</th>{% endfor %}</tr>
+    {% for g in grp + [tot] %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td>
+      {% for k, l in CATS %}<td class="num">{{ g.cat[k].h }}</td><td class="num">{{ g.cat[k].f }}</td><td class="num"><b>{{ g.cat[k].t }}</b></td>{% endfor %}</tr>{% endfor %}
+  </table></div>
+  <p class="aide">Éducateur : catégorie déclarée « Éducateur » par l'école, ou fonction d'éducateur / éducatrice sans autre catégorie.</p>
+  <h3>Courbe des catégories par {{ lib|lower }}</h3><div class="tw">{{ courbes.cat }}</div>
+</div>
+
+<div class="carte"><h2>4. Diplômes professionnels : CAP et CEAP (EP – EM, secteur public)</h2>
+  <div class="tw"><table class="t serre">
+    <tr><th rowspan="2">{{ lib }}</th>{% for k, l in DIPLOMES %}<th colspan="3" class="grp">{{ l }}</th>{% endfor %}</tr>
+    <tr>{% for _ in DIPLOMES %}<th class="num">H</th><th class="num">F</th><th class="num">T</th>{% endfor %}</tr>
+    {% for g in grp + [tot] %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td>
+      {% for k, l in DIPLOMES %}<td class="num">{{ g.dip[k].h }}</td><td class="num">{{ g.dip[k].f }}</td><td class="num"><b>{{ g.dip[k].t }}</b></td>{% endfor %}</tr>{% endfor %}
+  </table></div>
+  <p class="aide">CAP : option EP ou EM déclarée sur la fiche de l'agent (à défaut, celle de son école). CEAP : selon le type de l'école.</p>
+  <h3>Courbe CAP / CEAP par {{ lib|lower }}</h3><div class="tw">{{ courbes.dip }}</div>
+</div>
+
+<div class="carte"><h2>5. Diplômes académiques et universitaires (secteur public)</h2>
+  <div class="tw"><table class="t serre">
+    <tr><th rowspan="2">{{ lib }}</th>{% for k, l in ACADEMIQUES %}<th colspan="3" class="grp">{{ l }}</th>{% endfor %}</tr>
+    <tr>{% for _ in ACADEMIQUES %}<th class="num">H</th><th class="num">F</th><th class="num">T</th>{% endfor %}</tr>
+    {% for g in grp + [tot] %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td>
+      {% for k, l in ACADEMIQUES %}<td class="num">{{ g.aca[k].h }}</td><td class="num">{{ g.aca[k].f }}</td><td class="num"><b>{{ g.aca[k].t }}</b></td>{% endfor %}</tr>{% endfor %}
+  </table></div>
+  <p class="aide">Diplôme académique le plus élevé déclaré sur la fiche de l'agent (état nominatif transmis par l'école) ; « Non renseigné » : case vide.</p>
+  <h3>Courbe des diplômes académiques par {{ lib|lower }}</h3><div class="tw">{{ courbes.aca }}</div>
+</div>
+
+<div class="carte" style="border-top:4px solid #8e44ad"><h2>6. Secteur privé (à part)</h2>
+  <div class="tw"><table class="t serre">
+    <tr><th rowspan="2">{{ lib }}</th><th rowspan="2" class="num">Écoles privées</th><th colspan="3" class="grp">Apprenants EP</th><th colspan="3" class="grp">Apprenants EM</th><th colspan="3" class="grp">Apprenants</th>{% for k, l in PRIVE %}<th colspan="3" class="grp">{{ l }}</th>{% endfor %}</tr>
+    <tr>{% for _ in range(3) %}<th class="num">G</th><th class="num">F</th><th class="num">T</th>{% endfor %}{% for _ in PRIVE %}<th class="num">H</th><th class="num">F</th><th class="num">T</th>{% endfor %}</tr>
+    {% for g in grp + [tot] %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td><td class="num">{{ g.prive.ecoles }}</td>
+      {% for n in ('ep', 'em', 't') %}<td class="num">{{ g.prive.app[n].g|jur_nb }}</td><td class="num">{{ g.prive.app[n].f|jur_nb }}</td><td class="num"><b>{{ g.prive.app[n].t|jur_nb }}</b></td>{% endfor %}
+      {% for k, l in PRIVE %}<td class="num">{{ g.prive[k].h }}</td><td class="num">{{ g.prive[k].f }}</td><td class="num"><b>{{ g.prive[k].t }}</b></td>{% endfor %}</tr>{% endfor %}
+  </table></div>
+  <p class="aide">Écoles privées et leur personnel (enseignants, adjoints compris, et directeurs) : ils ne sont pas comptés dans les rubriques 1 à 5. « Personnel EP / EM » : selon le type de l'école.</p>
+  <h3>Courbe des apprenants du privé par {{ lib|lower }}</h3><div class="tw">{{ courbes.prive_app }}</div>
+  <h3>Courbe du personnel du privé par {{ lib|lower }}</h3><div class="tw">{{ courbes.prive }}</div>
+</div>
+</div>
+
+<div class="carte"><h2>7. Catégories d'âge des apprenants du primaire, par sexe et par cours (secteur public)</h2>
+  {{ tab_ages(ages.pub) }}
+  <p class="aide">Âge au 31 décembre (tableau 7.3 de la fiche de recensement), d'après les âges des élèves transmis par l'école ou, à défaut, le tableau 7.3 de sa fiche.
+    Pourcentage : part de la catégorie d'âge dans l'effectif du cours et du sexe (colonne). Âge moyen et écart type (de la population) : « moins de 5 ans » compté 4 ans, « 16 ans et plus » compté 16 ans.</p>
+  {% if not ages.pub.vide %}
+  <h3>Courbe des âges (ensemble des cours) par sexe</h3><div class="tw">{{ courbes.ages }}</div>
+  <h3>Courbe des âges par cours</h3><div class="tw">{{ courbes.ages_cours }}</div>
+  <h3>Âge moyen et écart type par {{ lib|lower }}</h3>
+  <div class="tw"><table class="t serre">
+    <tr><th rowspan="2">{{ lib }}</th><th colspan="3" class="grp">Élèves dont l'âge est connu</th><th colspan="3" class="grp">Âge moyen (ans)</th><th colspan="3" class="grp">Écart type (ans)</th></tr>
+    <tr>{% for _ in range(3) %}<th class="num">G</th><th class="num">F</th><th class="num">T</th>{% endfor %}</tr>
+    {% for g in grp %}<tr><td>{{ g.nom }}</td>{% for v in g.age_eff %}<td class="num">{{ v|jur_nb }}</td>{% endfor %}
+      {% for m, e in g.age_stats %}<td class="num">{{ ("%.2f"|format(m))|replace('.', ',') if m is not none else '–' }}</td>{% endfor %}
+      {% for m, e in g.age_stats %}<td class="num">{{ ("%.2f"|format(e))|replace('.', ',') if e is not none else '–' }}</td>{% endfor %}</tr>{% endfor %}
+    <tr class="b"><td>Total</td>{% for v in ages.pub.tot.ENS %}<td class="num">{{ v|jur_nb }}</td>{% endfor %}
+      {% for m, e in ages.pub.stats.ENS %}<td class="num">{{ ("%.2f"|format(m))|replace('.', ',') if m is not none else '–' }}</td>{% endfor %}
+      {% for m, e in ages.pub.stats.ENS %}<td class="num">{{ ("%.2f"|format(e))|replace('.', ',') if e is not none else '–' }}</td>{% endfor %}</tr>
+  </table></div>
+  <div class="tw">{{ courbes.ages_grp }}</div>{% endif %}
+  <details style="margin-top:12px"{% if not ages.prv.vide %} open{% endif %}><summary><b style="color:#8e44ad">Secteur privé (à part) : catégories d'âge par sexe et par cours</b></summary>
+    {{ tab_ages(ages.prv) }}</details>
+</div>
+
+<div class="carte"><h2>8. Écoles maternelles : effectifs par section (SP et SG), par sexe (secteur public)</h2>
+  {{ bloc_mat(mats.pub, 'mat_t', 'public') }}
+  <p class="aide">{{ NOTE_AGES_M }}. Pourcentage : part de la catégorie d'âge dans l'effectif de la section et du sexe. Sources : fiche de recensement des écoles maternelles (tableau 3, ou âges des enfants transmis par l'école), rapport de rentrée EM et fiche de fin d'année EM (« Répartition des enfants par section »).</p>
+  {% if mats.pub.ecoles %}<h3>Courbe des effectifs par section et par {{ lib|lower }}</h3><div class="tw">{{ courbes.mat }}</div>
+  {% if not mats.pub.ages.vide %}<h3>Courbe des âges par section</h3><div class="tw">{{ courbes.mat_ages }}</div>{% endif %}{% endif %}
+  <details style="margin-top:12px"{% if mats.prv.ecoles %} open{% endif %}><summary><b style="color:#8e44ad">Secteur privé (à part) : écoles maternelles par section</b></summary>
+    {% if mats.prv.ecoles %}{{ bloc_mat(mats.prv, 'mat_tp', 'privé') }}{% else %}<p class="aide">Aucune école maternelle privée pour ces critères.</p>{% endif %}</details>
+</div>
+{% endif %}
+{% endblock %}

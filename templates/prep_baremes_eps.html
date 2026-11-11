@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block titre %}Barèmes EPS{% endblock %}
+{% block contenu %}{% set onglet = 'baremes' %}{% include "_prep_onglets.html" %}
+<div class="entete"><div><h1>Barèmes d'EPS proposés</h1><p class="sous">{{ mention }}</p></div>
+<div class="actions"><a class="btn petit" href="{{ url_for('prep_baremes_eps_pdf', cours=cours or None) }}">{{ icone('document') }} PDF</a></div></div>
+<form method="get" class="filtres" style="margin:8px 0"><label>Cours <select name="cours" onchange="this.form.submit()"><option value="">Tous</option>{% for c in COURS %}<option value="{{ c }}" {{ 'selected' if c == cours }}>{{ PREP_COURS_LIB[c] }}</option>{% endfor %}</select></label></form>
+{% for c, age, ref in refs %}
+<section class="carte"><h2 style="margin-top:0">{{ PREP_COURS_LIB[c] }} — âge normal : {{ age }} ans</h2>
+{% for epreuve, consigne, bm in ref %}
+  <h3>{{ epreuve }}</h3><p class="aide">{{ consigne }}</p>
+  <div class="tw"><table class="t">
+  {% if bm.observation %}<thead><tr><th>Critère observé</th><th>Points</th></tr></thead><tbody>{% for l in bm.lignes %}<tr><td>{{ l[0] }}</td><td>{{ l[1] }}</td></tr>{% endfor %}</tbody>
+  {% else %}<thead><tr><th>Note /10</th><th>Garçons {{ age }} ans</th><th>Garçons {{ age + 2 }} ans et +</th><th>Filles {{ age }} ans</th><th>Filles {{ age + 2 }} ans et +</th></tr></thead>
+  <tbody>{% for l in bm.lignes %}<tr>{% for x in l %}<td>{{ x }}</td>{% endfor %}</tr>{% endfor %}</tbody>{% endif %}
+  </table></div>
+{% endfor %}</section>
+{% endfor %}
+<section class="carte"><h2 style="margin-top:0">Dispenses, adaptations et sécurité</h2><ul>{% for a in adaptations %}<li>{{ a }}</li>{% endfor %}</ul></section>
+{% endblock %}

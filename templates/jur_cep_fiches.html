@@ -1,0 +1,85 @@
+{% extends "base.html" %}{% import "jur_tableau_commun.html" as T with context %}
+{% block titre %}CEP selon les fiches{% endblock %}
+{% block contenu %}
+{{ T.styles() }}
+<style>.cf td.ind{background:#fff8e1;font-weight:700}.cf td.alerte{color:#b42318;font-weight:700}.cf td.bon{color:#1b7f3b;font-weight:700}</style>
+{% macro pc(v) %}{{ ('%.1f'|format(v))|replace('.', ',') ~ ' %' if v is not none else '–' }}{% endmacro %}
+{% macro r(v, d=2) %}{{ (('%.' ~ d ~ 'f')|format(v))|replace('.', ',') if v is not none else '–' }}{% endmacro %}
+{% macro bloc(s, titre) %}
+{% set c = tot[s].ind.cep %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Candidats inscrits</div><div class="v">{{ c.r.insc[2]|jur_nb }}</div><div class="d">{{ c.r.insc[0] }} G ({{ pc(c.p_g) }}) · {{ c.r.insc[1] }} F ({{ pc(c.p_f) }})</div></div>
+  <div class="kpi"><div class="l">Ont composé</div><div class="v">{{ c.r.comp[2]|jur_nb }}</div><div class="d">présence {{ pc(c.presence[2]) }}</div></div>
+  <div class="kpi"><div class="l">Admis</div><div class="v">{{ c.r.adm[2]|jur_nb }}</div><div class="d">{{ c.r.adm[0] }} G · {{ c.r.adm[1] }} F</div></div>
+  <div class="kpi"><div class="l">Taux de réussite</div><div class="v">{{ pc(c.reussite[2]) }}</div><div class="d">G {{ pc(c.reussite[0]) }} · F {{ pc(c.reussite[1]) }}</div></div>
+  <div class="kpi"><div class="l">Écoles (moyenne ± écart type)</div><div class="v">{{ pc(tot[s].disp.T.moy) }}</div><div class="d">± {{ r(tot[s].disp.T.et, 1) }} pts · {{ tot[s].fiches }}/{{ tot[s].ecoles }} écoles</div></div>
+</div>
+
+<div class="carte"><h2>1. Candidats au CEP : effectifs par sexe et pourcentages ({{ titre }})</h2>
+  <div class="tw"><table class="t serre cf">
+    <tr><th rowspan="2">{{ lib }}</th><th rowspan="2" class="num">Écoles</th><th colspan="3" class="grp">Inscrits</th><th colspan="3" class="grp">Répartition</th><th colspan="3" class="grp">Ont composé</th><th colspan="3" class="grp">Taux de présence</th></tr>
+    <tr><th class="num">G</th><th class="num">F</th><th class="num">T</th><th class="num">% G</th><th class="num">% F</th><th class="num">Parité F/G</th><th class="num">G</th><th class="num">F</th><th class="num">T</th><th class="num">G</th><th class="num">F</th><th class="num">T</th></tr>
+    {% for g in grp + [tot] %}{% set x = g[s] %}{% if x.ecoles %}{% set i = x.ind.cep %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td><td class="num">{{ x.fiches }}/{{ x.ecoles }}</td>
+      {% for v in i.r.insc %}<td class="num">{{ v|jur_nb }}</td>{% endfor %}
+      <td class="num ind">{{ pc(i.p_g) }}</td><td class="num ind">{{ pc(i.p_f) }}</td><td class="num ind{{ ' alerte' if i.parite is not none and i.parite < 0.9 }}">{{ r(i.parite) }}</td>
+      {% for v in i.r.comp %}<td class="num">{{ v|jur_nb }}</td>{% endfor %}{% for v in i.presence %}<td class="num ind">{{ pc(v) }}</td>{% endfor %}</tr>{% endif %}{% endfor %}
+  </table></div>
+  <p class="aide">Parité F/G = filles ÷ garçons (1 : autant de filles que de garçons ; en rouge sous 0,90). Taux de présence = ont composé ÷ inscrits.</p>
+  <div class="tw">{{ courbes[s].cand }}</div>
+</div>
+
+<div class="carte"><h2>2. Réussite au CEP ({{ titre }})</h2>
+  <div class="tw"><table class="t serre cf">
+    <tr><th rowspan="2">{{ lib }}</th><th colspan="3" class="grp">Admis</th><th colspan="3" class="grp">Taux de réussite</th><th rowspan="2" class="num">Écart F − G (points)</th><th rowspan="2" class="num">Parité F/G</th></tr>
+    <tr><th class="num">G</th><th class="num">F</th><th class="num">T</th><th class="num">G</th><th class="num">F</th><th class="num">T</th></tr>
+    {% for g in grp + [tot] %}{% set x = g[s] %}{% if x.ecoles %}{% set i = x.ind.cep %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td>
+      {% for v in i.r.adm %}<td class="num">{{ v|jur_nb }}</td>{% endfor %}
+      {% for v in i.reussite %}<td class="num ind{{ ' alerte' if v is not none and v < 50 }}{{ ' bon' if v is not none and v >= 80 }}">{{ pc(v) }}</td>{% endfor %}
+      <td class="num">{{ r(i.ecart, 1) }}</td><td class="num">{{ r(i.parite_r) }}</td></tr>{% endif %}{% endfor %}
+  </table></div>
+  <p class="aide">Taux de réussite = admis ÷ candidats ayant composé (à défaut, ÷ inscrits). En rouge sous 50 %, en vert à partir de 80 %.</p>
+  <div class="tw">{{ courbes[s].taux }}</div>
+</div>
+
+<div class="carte"><h2>3. Rubrique 9 de la fiche : résultats aux examens de la dernière session ({{ titre }})</h2>
+  <div class="tw"><table class="t serre cf">
+    <tr><th rowspan="2">Rubrique</th>{% for e, le in EXAMENS %}<th colspan="3" class="grp">{{ le }}</th>{% endfor %}</tr>
+    <tr>{% for _ in EXAMENS %}<th class="num">G</th><th class="num">F</th><th class="num">Total</th>{% endfor %}</tr>
+    {% for k, lk in ETAPES %}<tr><td>{{ lk }}</td>{% for e, le in EXAMENS %}{% for v in tot[s].ind[e].r[k] %}<td class="num">{{ v|jur_nb }}</td>{% endfor %}{% endfor %}</tr>{% endfor %}
+    <tr class="b"><td>Taux de réussite</td>{% for e, le in EXAMENS %}{% for v in tot[s].ind[e].reussite %}<td class="num ind">{{ pc(v) }}</td>{% endfor %}{% endfor %}</tr>
+    <tr><td>Part des filles parmi les inscrits</td>{% for e, le in EXAMENS %}<td colspan="3" class="num">{{ pc(tot[s].ind[e].p_f) }}</td>{% endfor %}</tr>
+  </table></div>
+  {% if source != 'recensement' %}<p class="aide">Le CEP Vie active et les enfants handicapés ne sont renseignés que par la fiche de recensement.</p>{% endif %}
+</div>
+
+<div class="carte"><h2>4. Dispersion des taux de réussite des écoles ({{ titre }})</h2>
+  <div class="tw"><table class="t serre cf">
+    <tr><th rowspan="2">{{ lib }}</th>{% for k, l in (('T', 'Ensemble'), ('G', 'Garçons'), ('F', 'Filles')) %}<th colspan="4" class="grp">{{ l }}</th>{% endfor %}<th rowspan="2" class="num">Écoles à 100 %</th><th rowspan="2" class="num">Écoles sous 50 %</th></tr>
+    <tr>{% for _ in range(3) %}<th class="num">Moyenne</th><th class="num">Écart type</th><th class="num">Min</th><th class="num">Max</th>{% endfor %}</tr>
+    {% for g in grp + [tot] %}{% set x = g[s] %}{% if x.ecoles %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td>
+      {% for k in ('T', 'G', 'F') %}{% set d = x.disp[k] %}<td class="num ind">{{ pc(d.moy) }}</td><td class="num ind">{{ r(d.et, 1) }}</td><td class="num">{{ pc(d.min) }}</td><td class="num">{{ pc(d.max) }}</td>{% endfor %}
+      <td class="num">{{ x.disp.T.cent }}</td><td class="num{{ ' alerte' if x.disp.T.sous50 }}">{{ x.disp.T.sous50 }}</td></tr>{% endif %}{% endfor %}
+  </table></div>
+  <p class="aide">Moyenne et écart type (de la population) des taux de réussite des écoles : un écart type élevé signale de fortes inégalités entre écoles.</p>
+  <div class="tw">{{ courbes[s].disp }}</div>
+</div>
+{% endmacro %}
+
+<div class="entete"><div><h1>{{ icone('diplome') }} CEP : candidats et réussite selon les fiches</h1>
+  <p class="sous">{{ SOURCES[source] }} · année scolaire {{ flt.annee }} · par {{ lib|lower }} · secteur public, et secteur privé à part</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_cep_fiches', export='xlsx', **args) }}">⇩ Excel</a>
+    <button class="btn sec" type="button" onclick="window.print()">{{ icone('imprimer') }} Imprimer</button></div></div>
+{{ T.filtres(flt, 'jur_cep_fiches', extra={'par': par, 'source': source}) }}
+<div class="actions noprint" style="margin:-4px 0 6px">Source :
+  {% for k, l in SOURCES.items() %}<a class="btn petit {{ '' if source == k else 'sec' }}" href="{{ url_for('jur_cep_fiches', **dict(args1, source=k)) }}">{{ l }}</a>{% endfor %}</div>
+<div class="actions noprint" style="margin:0 0 12px">Regrouper par :
+  {% if JUR_NIVEAU == 'ddemp' %}<a class="btn petit {{ '' if par == 'cs' else 'sec' }}" href="{{ url_for('jur_cep_fiches', **dict(args0, par='cs')) }}">circonscription</a>{% endif %}
+  <a class="btn petit {{ '' if par == 'zone' else 'sec' }}" href="{{ url_for('jur_cep_fiches', **dict(args0, par='zone')) }}">zone pédagogique</a>
+  <a class="btn petit {{ '' if par == 'ecole' else 'sec' }}" href="{{ url_for('jur_cep_fiches', **dict(args0, par='ecole')) }}">école</a></div>
+
+{% if not tot.pub.ecoles and not tot.prv.ecoles %}<div class="carte">{{ T.vide("Aucune école primaire pour ces critères.") }}</div>{% else %}
+{% if tot.pub.ecoles %}<h2 style="margin:8px 0">Secteur public</h2>{{ bloc('pub', 'secteur public') }}{% endif %}
+{% if tot.prv.ecoles %}<details style="margin-top:16px" open><summary><h2 style="display:inline;color:#8e44ad">Secteur privé (à part)</h2></summary>
+<div style="border-left:4px solid #8e44ad;padding-left:10px">{{ bloc('prv', 'secteur privé') }}</div></details>{% endif %}
+{% endif %}
+{% endblock %}

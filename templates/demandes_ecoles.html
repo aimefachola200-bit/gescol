@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% block titre %}Écoles candidates{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Écoles candidates</h1><p class="sous">Demandes reçues par le formulaire public <a href="{{ url_for('rejoindre') }}" target="_blank">/rejoindre</a> · {{ total }} demande(s) · {{ eleves_total }} élèves déclarés</p></div>
+  <a class="btn sec" href="{{ url_for('demandes_ecoles_csv') }}">Exporter (CSV)</a>
+</div>
+<div class="filtres">
+  <a class="btn {{ '' if not filtre else 'sec' }} petit" href="{{ url_for('demandes_ecoles') }}">Toutes ({{ total }})</a>
+  {% for k,v in suivis.items() %}<a class="btn {{ '' if filtre==k else 'sec' }} petit" href="{{ url_for('demandes_ecoles', suivi=k) }}">{{ v }} ({{ compte[k] }})</a>{% endfor %}
+</div>
+<div class="tw"><table class="t">
+  <tr><th>Reçue le</th><th>Établissement</th><th>Contact</th><th>Besoins</th><th>Suivi</th></tr>
+  {% for d in lst %}
+  <tr><td style="white-space:nowrap">{{ date_fr(d.cree_le) }}</td>
+    <td><b>{{ d.ecole }}</b><br><span class="gris">{{ d.type }}{% if d.statut_etab %} · {{ d.statut_etab }}{% endif %}<br>{{ d.commune }} ({{ d.departement }}){% if d.effectif %} · {{ d.effectif }} élèves{% endif %}</span></td>
+    <td>{{ d.contact }}{% if d.fonction %}<br><span class="gris">{{ d.fonction }}</span>{% endif %}<br>{{ d.telephone }}{% if d.whatsapp %}<br>WhatsApp {{ d.whatsapp }}{% endif %}{% if d.email %}<br>{{ d.email }}{% endif %}</td>
+    <td class="aide">{{ d.modules or '' }}{% if d.demarrage %}<br>{{ d.demarrage }}{% endif %}{% if d.outil %}<br>Outil : {{ d.outil }}{% endif %}{% if d.message %}<br><i>« {{ d.message }} »</i>{% endif %}</td>
+    <td><form method="post" style="display:grid;gap:6px;min-width:190px">
+      <input type="hidden" name="id" value="{{ d.id }}">
+      <select name="suivi">{% for k,v in suivis.items() %}<option value="{{ k }}" {{ 'selected' if d.suivi==k }}>{{ v }}</option>{% endfor %}</select>
+      <input name="note_interne" value="{{ d.note_interne or '' }}" placeholder="Note interne">
+      <button class="btn sec petit">Enregistrer</button></form></td></tr>
+  {% else %}<tr><td colspan="5" class="gris">Aucune demande pour l'instant. Partagez le lien du formulaire : {{ request.host_url }}rejoindre</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

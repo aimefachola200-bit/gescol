@@ -1,0 +1,23 @@
+{# v1.18 (v1.19 : onglet Résumés) — en-tête et onglets du module « Préparation de classe » (variable : onglet) #}
+<div class="entete">
+  <div><h1>Préparation de classe</h1>
+    <p class="sous">Programmes et progressions, guides pédagogiques et fiches de préparation selon l'APC — {{ ECOLE.nom }} · {{ ANNEE }}</p></div>
+  <div class="actions"><a class="btn petit" href="{{ url_for('prep_preparer') }}">+ Préparer une fiche</a></div>
+</div>
+<nav class="onglets" aria-label="Rubriques de la préparation de classe">
+  <a class="{{ 'actif' if onglet == 'classes' }}" href="{{ url_for('prep_classes') }}">Par classe</a>
+  <a class="{{ 'actif' if onglet == 'semaine' }}" href="{{ url_for('prep_accueil') }}">Cette semaine</a>
+  <a class="{{ 'actif' if onglet == 'programmes' }}" href="{{ url_for('prep_programmes') }}">Programmes et progressions</a>
+  {% if MAT_DISPO %}<a class="{{ 'actif' if onglet == 'maternelle' }}" href="{{ url_for('mat_accueil') }}">École maternelle</a>{% endif %}
+  <a class="{{ 'actif' if onglet == 'guides' }}" href="{{ url_for('prep_guides') }}">Guides pédagogiques</a>
+  <a class="{{ 'actif' if onglet == 'baremes' }}" href="{{ url_for('prep_baremes_eps') }}">Barèmes EPS</a>
+  <a class="{{ 'actif' if onglet == 'fiches' }}" href="{{ url_for('prep_fiches') }}">Fiches de préparation</a>
+  <a class="{{ 'actif' if onglet == 'resumes' }}" href="{{ url_for('prep_resumes') }}">Résumés</a>
+  <a class="{{ 'actif' if onglet == 'revisions' }}" href="{{ url_for('prep_revisions') }}">Révisions d'éveil</a>
+  <a class="{{ 'actif' if onglet == 'manuels' }}" href="{{ url_for('prep_manuels') }}">Manuels officiels</a>
+  <a class="{{ 'actif' if onglet == 'evaluations' }}" href="{{ url_for('prep_evaluations') }}">Évaluations et épreuves</a>
+  <a class="{{ 'actif' if onglet == 'planif' }}" href="{{ url_for('prep_planif') }}">Planification et classeurs</a>
+  <a class="{{ 'actif' if onglet == 'mes' }}" href="{{ url_for('prep_mes_fiches') }}">{{ 'Mes fiches' if g.user.role == 'enseignant' else 'Fiches des enseignants' }}</a>
+  <a class="{{ 'actif' if onglet == 'manquants' }}" href="{{ url_for('prep_manquants') }}">Fiches et guides manquants</a>
+  {% if ep_existe('partage_accueil') %}<a class="{{ 'actif' if onglet == 'partage' }}" href="{{ url_for('partage_accueil') }}">Versions partagées</a>{% endif %}
+</nav>

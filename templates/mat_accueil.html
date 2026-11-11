@@ -1,0 +1,52 @@
+{% extends "base.html" %}{% block titre %}École maternelle{% endblock %}
+{# v2.1 — École maternelle : section → domaine → composante → mois / semaine → activité ; planification jour / semaine / mois ; classeurs #}
+{% block contenu %}{% set onglet = 'maternelle' %}{% include "_prep_onglets.html" %}
+<nav class="onglets" aria-label="Rubriques de l'école maternelle">
+  <a class="actif" href="{{ url_for('mat_accueil', section=c.section) }}">Progression et planification</a>
+  <a href="{{ url_for('mat_edt', section=c.section) }}">Emploi du temps</a>
+  <a href="{{ url_for('mat_grilles', section=c.section) }}">Grilles d'observation</a>
+  <a href="{{ url_for('mat_reperes', section=c.section) }}">Je retiens (éducateur)</a>
+</nav>
+<form method="get" class="mat-filtres" aria-label="Filtres de la maternelle">
+  {% if classes %}<label>Classe <select name="classe" onchange="this.form.submit()"><option value="">—</option>{% for cl in classes %}<option value="{{ cl.id }}" {{ 'selected' if c.classe and c.classe.id == cl.id }}>{{ cl.nom }} ({{ cl.niveau }})</option>{% endfor %}</select></label>{% endif %}
+  <label>Section <select name="section" onchange="this.form.submit()">{% for s in M.sections %}<option value="{{ s.code }}" {{ 'selected' if s.code == c.section }}>{{ s.nom }} ({{ s.age }})</option>{% endfor %}</select></label>
+  <label>Domaine <select name="domaine" onchange="this.form.submit()"><option value="">Tous</option>{% for d in M.domaines %}<option value="{{ d.code }}" {{ 'selected' if d.code == c.domaine }}>{{ d.code }} — {{ d.nom }}</option>{% endfor %}</select></label>
+  <label>Composante <select name="composante" onchange="this.form.submit()"><option value="">Toutes</option>{% for x in c.composantes %}<option {{ 'selected' if x == c.composante }}>{{ x }}</option>{% endfor %}</select></label>
+  <label>Mois <select name="mois" onchange="this.form.submit()"><option value="">Tous</option>{% for m in MOIS %}<option {{ 'selected' if m == c.mois }}>{{ m }}</option>{% endfor %}</select></label>
+  <label>Semaine <select name="semaine" onchange="this.form.submit()"><option value="">Toutes</option>{% for n in range(1, 6) %}<option value="{{ n }}" {{ 'selected' if n == c.semaine }}>{{ n }}</option>{% endfor %}</select></label>
+  <label>Vue <select name="vue" onchange="this.form.submit()">{% for k, lib in VUES %}<option value="{{ k }}" {{ 'selected' if k == c.vue }}>{{ lib }}</option>{% endfor %}</select></label>
+  {% if c.vue == 'jour' %}<label>Jour <select name="jour" onchange="this.form.submit()">{% for j in JOURS %}<option {{ 'selected' if j == c.jour }}>{{ j }}</option>{% endfor %}</select></label>{% endif %}
+  <noscript><button class="btn sec petit">Afficher</button></noscript>
+</form>
+<p class="actions">
+  <a class="btn petit" target="_blank" href="{{ url_for('mat_planification_pdf', section=c.section, vue=c.vue, mois=c.mois, semaine=c.semaine, jour=c.jour, domaine=c.domaine, classe=c.classe.id if c.classe else none) }}">{{ icone('document') }} Planification (PDF)</a>
+  <a class="btn sec petit" target="_blank" href="{{ url_for('mat_classeur_pdf', section=c.section, mois=c.mois, semaine=c.semaine, classe=c.classe.id if c.classe else none) }}">Classeur {{ 'de la semaine' if c.semaine else 'du mois' }} : planification et fiches (PDF)</a>
+</p>
+{% if c.section == 'petits' %}<p class="aide"><span class="badge att">proposé</span> La progression de la section des petits est dérivée de celle des grands : à adapter en conseil des maîtres (séances de 20 min).</p>{% endif %}
+
+{% if c.vue == 'mois' %}
+<h2>{{ c.mois }} — planification du mois</h2>
+<div class="tw"><table class="t mat-sem"><thead><tr><th>Semaine</th>{% for d in M.domaines if not c.domaine or d.code == c.domaine %}<th title="{{ d.nom }}">{{ d.code }}</th>{% endfor %}</tr></thead><tbody>
+{% for n, par_dom in semaines_mois|dictsort %}<tr><td><a href="{{ url_for('mat_accueil', section=c.section, vue='semaine', mois=c.mois, semaine=n, classe=c.classe.id if c.classe else none) }}">Semaine {{ n }}</a></td>
+{% for d in M.domaines if not c.domaine or d.code == c.domaine %}<td>{% for x in par_dom.get(d.code, []) %}<div><b>{{ x.composante }}</b> : {% if x.fiche %}<a href="{{ url_for('prep_fiche', fid=x.fiche) }}">{{ x.activite }}</a>{% else %}{{ x.activite }}{% endif %}</div>{% endfor %}</td>{% endfor %}</tr>{% else %}<tr><td colspan="6" class="aide">Rien de prévu ce mois-ci.</td></tr>{% endfor %}
+</tbody></table></div>
+
+{% elif c.vue in ('semaine', 'jour') %}
+<h2>{{ c.mois }}, semaine {{ c.semaine }}{% if c.vue == 'jour' %} — {{ c.jour }}{% endif %}</h2>
+<p class="aide">Les activités de la semaine sont placées dans les cases de l'emploi du temps de la section ({{ 'proposé' if c.section == 'petits' else 'officiel' }}).</p>
+{% for j in JOURS if c.vue == 'semaine' or j == c.jour %}
+<h3>{{ j }}</h3>
+<div class="tw"><table class="t"><thead><tr><th>Heure</th><th>Emploi du temps</th><th>Activité prévue</th></tr></thead><tbody>
+{% for heure, case, mis in rep.get(j, []) %}<tr><td>{{ heure }}</td><td>{{ case }}</td><td>{% for x in mis %}<div><b>{{ x.composante }}</b> : {% if x.fiche %}<a href="{{ url_for('prep_fiche', fid=x.fiche) }}">{{ x.activite }}</a>{% else %}{{ x.activite }}{% endif %}</div>{% endfor %}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endfor %}
+
+{% else %}
+<h2>Progression {{ M.annee }} — {{ 'section des petits' if c.section == 'petits' else 'section des grands' }} <span class="sous">({{ ls|length }} lignes)</span></h2>
+<div class="tw"><table class="t"><thead><tr><th>Mois</th><th>Sem.</th><th>Domaine</th><th>Composante</th><th>Activité</th></tr></thead><tbody>
+{% for x in ls %}<tr><td>{{ x.mois }}</td><td>{{ x.semaine }}</td><td title="{{ dom_nom.get(x.domaine) }}">{{ x.domaine }}</td><td>{{ x.composante }}</td>
+<td>{% if x.fiche %}<a href="{{ url_for('prep_fiche', fid=x.fiche) }}">{{ x.activite }}</a> <span class="badge" title="Fiche conçue selon l'APC — à valider par le conseiller pédagogique">conçue</span>{% else %}{{ x.activite }}{% endif %}{% if x.propose %} <span class="badge att">proposé</span>{% endif %}</td></tr>{% else %}<tr><td colspan="5" class="aide">Aucune activité pour ce choix.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endif %}
+<p class="aide">Sources : {% for s in M.sources %}{{ s }}{% if not loop.last %} ; {% endif %}{% endfor %}. {{ M.note_domaines }}</p>
+{% endblock %}

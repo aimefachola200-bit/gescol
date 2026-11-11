@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block titre %}Grilles d'observation — maternelle{% endblock %}
+{% block contenu %}{% set onglet = 'maternelle' %}{% include "_prep_onglets.html" %}
+<nav class="onglets" aria-label="Rubriques de l'école maternelle">
+  <a href="{{ url_for('mat_accueil', section=c.section) }}">Progression et planification</a>
+  <a href="{{ url_for('mat_edt', section=c.section) }}">Emploi du temps</a>
+  <a class="actif" href="{{ url_for('mat_grilles', section=c.section) }}">Grilles d'observation</a>
+  <a href="{{ url_for('mat_reperes', section=c.section) }}">Je retiens (éducateur)</a>
+</nav>
+<p class="aide">À l'école maternelle, l'évaluation se fait par l'observation de l'enfant pendant les activités (pas d'épreuves écrites) : acquis, en cours d'acquisition, non acquis.</p>
+<form method="get" class="mat-filtres">
+  {% if classes %}<label>Classe (liste des enfants) <select name="classe"><option value="">— grille vierge —</option>{% for cl in classes %}<option value="{{ cl.id }}" {{ 'selected' if c.classe and c.classe.id == cl.id }}>{{ cl.nom }}</option>{% endfor %}</select></label>{% endif %}
+  <label>Domaine <select name="domaine"><option value="">Tous</option>{% for d in M.domaines %}<option value="{{ d.code }}" {{ 'selected' if d.code == c.domaine }}>{{ d.code }} — {{ d.nom }}</option>{% endfor %}</select></label>
+  <button class="btn sec petit">Afficher</button>
+  <a class="btn petit" target="_blank" href="{{ url_for('mat_grilles_pdf', domaine=c.domaine, classe=c.classe.id if c.classe else none) }}">{{ icone('document') }} Grilles (PDF)</a>
+</form>
+<div class="tw"><table class="t"><thead><tr><th>Domaine</th><th>Composante</th><th>Critères observés</th><th></th></tr></thead><tbody>
+{% for gr in gs %}<tr><td>{{ gr.domaine }}</td><td>{{ gr.composante }}</td><td>{{ gr.criteres|join(' · ') }}</td>
+<td><a target="_blank" href="{{ url_for('mat_grilles_pdf', composante=gr.composante, classe=c.classe.id if c.classe else none) }}">PDF</a></td></tr>{% endfor %}
+</tbody></table></div>
+<p class="aide">{{ (gs[0].mention if gs else '') }}</p>
+{% endblock %}

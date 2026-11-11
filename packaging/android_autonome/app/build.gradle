@@ -1,0 +1,81 @@
+// SCOLARIS Autonome : l'application complète (Python + base de données) tourne sur le téléphone ou la tablette,
+// sans PC serveur, sans Wi-Fi et sans Internet. Python est fourni par Chaquopy (https://chaquo.com/chaquopy/).
+// Avant de fabriquer : python3 preparer.py (recopie le code SCOLARIS et les bibliothèques Python pures).
+plugins {
+    id "com.android.application"
+    id "com.chaquo.python"
+}
+
+def cleFichier = System.getenv("SCOLARIS_KEYSTORE") ?: "scolaris-signature.keystore"  // dans le dépôt, protégé par le mot de passe des secrets
+def cleMdp = System.getenv("SCOLARIS_KEYSTORE_PASSWORD") ?: ""
+def cleAlias = System.getenv("SCOLARIS_KEY_ALIAS") ?: "scolaris"
+def cleAliasMdp = System.getenv("SCOLARIS_KEY_PASSWORD") ?: cleMdp
+
+android {
+    namespace "bj.scolaris.autonome"
+    compileSdk 34
+
+    defaultConfig {
+        // différent de l'application « connectée » : les deux peuvent coexister.
+        // Application jumelle des écoles publiques : SCOLARIS_APP_ID=bj.scolaris.publique, SCOLARIS_APP_NOM="SCOLARIS Public"
+        // (et preparer.py --edition publique)
+        applicationId System.getenv("SCOLARIS_APP_ID") ?: "bj.scolaris.autonome"
+        manifestPlaceholders = [appNom: System.getenv("SCOLARIS_APP_NOM") ?: "SCOLARIS Autonome"]
+        minSdk 24
+        targetSdk 34
+        versionCode 64
+        versionName "2.4.4"
+        ndk {
+            abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
+        }
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(cleFichier)
+            storePassword cleMdp
+            keyAlias cleAlias
+            keyPassword cleAliasMdp
+            // v1.6 : signatures v1 + v2 + v3 (certains téléphones refusent un APK signé seulement en v2)
+            enableV1Signing true
+            enableV2Signing true
+            enableV3Signing true
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+chaquopy {
+    defaultConfig {
+        version "3.11"
+        def py = System.getenv("SCOLARIS_BUILD_PYTHON")
+        if (py) {
+            buildPython py
+        }
+        pip {
+            // seule bibliothèque compilée nécessaire (images : logo, photos, signatures) ;
+            // les bibliothèques Python pures sont recopiées par preparer.py dans src/main/python
+            install "pillow"
+        }
+        pyc {
+            src false
+        }
+        extractPackages "reportlab"
+    }
+}

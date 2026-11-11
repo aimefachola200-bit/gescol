@@ -1,0 +1,17 @@
+{% extends "espace_eleve_base.html" %}{% block titre %}Connexion{% endblock %}
+{% block contenu %}
+<div class="login carte">
+  <h1>Espace élève</h1>
+  <p class="sous">{{ ECOLE.nom }} — tes résultats publiés, tes absences et ta carte scolaire.</p>
+  <form method="post" class="f">
+    <label for="ee-id">Identifiant (ton matricule)</label>
+    <input id="ee-id" name="identifiant" required autocomplete="username" autocapitalize="characters" autofocus
+           placeholder="ex. {{ (ECOLE.sigle or 'ECOLE') }}-{{ ANNEE[:4] }}-P-0001" value="{{ request.form.identifiant or '' }}">
+    <label for="ee-mdp">Mot de passe</label>
+    <input id="ee-mdp" name="mdp" type="password" required autocomplete="current-password">
+    <p><button class="btn" style="width:100%">Se connecter</button></p>
+  </form>
+  <p class="aide">Pas encore de code d'accès ou mot de passe oublié ? Demande-le à ton maître / professeur principal ou au
+    secrétariat de l'école : un code provisoire te sera remis.</p>
+</div>
+{% endblock %}

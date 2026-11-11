@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% block titre %}Paiement{% endblock %}
+{% block contenu %}
+<div style="max-width:620px">
+<h1>Paiement de {{ fcfa(pel.montant) }}</h1>
+<p class="sous">{{ e.prenoms }} {{ e.nom }} · référence {{ pel.reference }}</p>
+{% if sandbox %}<div class="flash warning">Mode test : aucun argent réel n'est prélevé.</div>{% endif %}
+<div class="carte" id="etat">La fenêtre de paiement va s'ouvrir… Si elle ne s'ouvre pas, cliquez sur le bouton.</div>
+<p><button class="btn" id="ouvrir" type="button">Ouvrir le paiement</button> <a href="{{ url_for('parent_enfant', eid=e.id) }}">Annuler</a></p>
+<form method="post" action="{{ url_for('confirmer_kkiapay') }}" id="confirmer">
+  <input type="hidden" name="ref" value="{{ pel.reference }}"><input type="hidden" name="transaction_id" id="tid">
+</form>
+</div>
+<script src="https://cdn.kkiapay.me/k.js"></script>
+<script>
+(function(){
+  function ouvrir(){
+    if(typeof openKkiapayWidget!=='function'){document.getElementById('etat').textContent="Le service de paiement ne répond pas. Vérifiez votre connexion Internet puis réessayez.";return}
+    openKkiapayWidget({amount:{{ pel.montant }},key:{{ cle|tojson }},sandbox:{{ 'true' if sandbox else 'false' }},
+      phone:{{ tel|tojson }},name:{{ g.parent.nom|tojson }},data:{{ pel.reference|tojson }},position:"center",theme:"#1F4E79"});
+  }
+  if(typeof addSuccessListener==='function'){
+    addSuccessListener(function(r){document.getElementById('etat').textContent="Paiement effectué, vérification en cours…";
+      document.getElementById('tid').value=r.transactionId;document.getElementById('confirmer').submit();});
+  }
+  if(typeof addFailedListener==='function'){
+    addFailedListener(function(){document.getElementById('etat').textContent="Le paiement n'a pas abouti. Vous pouvez réessayer.";});
+  }
+  document.getElementById('ouvrir').addEventListener('click',ouvrir);
+  setTimeout(ouvrir,600);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% block titre %}{{ 'Modifier l’UP' if u else 'Ajouter une UP' }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ ('UP : ' ~ u.nom) if u else 'Ajouter une unité pédagogique' }}</h1>
+  <p class="sous">Zone pédagogique, école siège, responsable (RUP) et co-responsable (Co-RUP), nombre d'écoles membres.</p></div>
+  <a class="btn sec" href="{{ url_for('jur_up_fiche', uid=u.id) if u else url_for('jur_up') }}">← Retour</a></div>
+<form method="post" class="carte">
+  <div class="grille-id">
+    {% if JUR_NIVEAU == 'ddemp' %}
+    <div><label for="cs_id">Circonscription scolaire *</label>
+      <select id="cs_id" name="cs_id" required {% if not u %}onchange="location.href='{{ url_for('jur_up_form') }}?cs='+this.value"{% endif %}><option value="">— choisir —</option>
+        {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if (v.get('cs_id') or 0)|int == c.id }}>{{ c.nom }}</option>{% endfor %}</select></div>
+    {% endif %}
+    <div><label for="zone_id">Zone pédagogique</label>
+      <select id="zone_id" name="zone_id"><option value="">— non précisée —</option>
+        {% for z in zones %}<option value="{{ z.id }}" {{ 'selected' if (v.get('zone_id') or 0)|int == z.id }}>{{ z.nom }}{% if JUR_NIVEAU == 'ddemp' and not v.get('cs_id') %} ({{ z.cs_nom }}){% endif %}</option>{% endfor %}</select></div>
+    <div><label for="nom">Nom ou numéro de l'UP *</label><input id="nom" name="nom" required maxlength="150" value="{{ v.nom or '' }}" placeholder="ex. UP 3 ou UP de Towé"></div>
+    <div><label for="ecole_id">École siège (de la juridiction)</label>
+      <select id="ecole_id" name="ecole_id"><option value="">— autre / non précisée —</option>
+        {% for e in ecoles %}<option value="{{ e.id }}" {{ 'selected' if (v.get('ecole_id') or 0)|int == e.id }}>{{ e.nom }}{% if e.zone_nom %} – {{ e.zone_nom }}{% endif %}</option>{% endfor %}</select></div>
+    <div><label for="ecole_siege">École siège (texte libre)</label><input id="ecole_siege" name="ecole_siege" maxlength="150" value="{{ v.ecole_siege or '' }}" placeholder="si l'école n'est pas dans la liste"></div>
+    <div><label for="nb_ecoles">Nombre d'écoles membres</label><input id="nb_ecoles" name="nb_ecoles" type="number" min="0" max="200" value="{{ v.get('nb_ecoles') if v.get('nb_ecoles') is not none else '' }}"></div>
+    <div><label for="rup_nom">RUP (nom et prénoms)</label><input id="rup_nom" name="rup_nom" maxlength="150" value="{{ v.rup_nom or '' }}"></div>
+    <div><label for="rup_tel">Téléphone du RUP</label><input id="rup_tel" name="rup_tel" maxlength="40" value="{{ v.rup_tel or '' }}"></div>
+    <div><label for="corup_nom">Co-RUP (nom et prénoms)</label><input id="corup_nom" name="corup_nom" maxlength="150" value="{{ v.corup_nom or '' }}"></div>
+    <div><label for="corup_tel">Téléphone du Co-RUP</label><input id="corup_tel" name="corup_tel" maxlength="40" value="{{ v.corup_tel or '' }}"></div>
+  </div>
+  <label for="obs">Observations</label>
+  <textarea id="obs" name="observations" rows="3" style="width:100%">{{ v.observations or '' }}</textarea>
+  <div class="actions" style="margin-top:8px"><button class="btn">Enregistrer</button><a class="btn sec" href="{{ url_for('jur_up_fiche', uid=u.id) if u else url_for('jur_up') }}">Annuler</a></div>
+</form>
+{% endblock %}

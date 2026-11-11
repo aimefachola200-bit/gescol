@@ -1,0 +1,101 @@
+{% extends "base.html" %}{% block titre %}CEP – frais de relevés{% endblock %}
+{% block contenu %}
+<style>
+.t tr.g-zone td{background:#EEF3FA;font-weight:600}
+.t tr.g-cs td{background:#D9E4F2;font-weight:700}
+.t tr.g-total td{background:#C9D8EE;font-weight:700}
+.t td.n, .t th.n{text-align:right;white-space:nowrap}
+.t input.mt{width:110px;text-align:right}
+.t input.dt{width:140px}
+.t input.rf{width:110px}
+</style>
+{% set g_ = fr.global %}{% set b = fr.bareme %}
+<div class="entete"><div><h1>Frais de relevés du CEP – session {{ fr.session }}</h1>
+  <p class="sous">Année {{ fr.annee }} · montant dû = candidats × montant par candidat{% if b and b.forfait_ecole %} + forfait par école{% endif %}</p></div>
+<div class="actions">
+  <a class="btn sec" href="{{ url_for('jur_cep_frais', export='pdf', **args_url(fl)) }}" target="_blank">⎙ PDF (paysage)</a>
+  <a class="btn sec" href="{{ url_for('jur_cep_frais', export='xlsx', **args_url(fl)) }}">⇩ Excel</a>
+</div></div>
+
+<nav class="onglets" aria-label="Rubriques">
+  <a href="{{ url_for('jur_cep_frais', **args_url(fl)) }}" class="{{ 'actif' if onglet == 'tableau' }}">Tableau des frais</a>
+  <a href="{{ url_for('jur_cep_frais', onglet='bareme', **args_url(fl)) }}" class="{{ 'actif' if onglet == 'bareme' }}">Barème (paramétrage)</a>
+</nav>
+
+{% if onglet == 'bareme' %}
+<div class="grille2">
+<div class="carte">
+  <h2>Barème en vigueur – {{ fl.annee }}</h2>
+  {% if b %}<p><b>{{ fcfa(b.montant_candidat) }}</b> par candidat{% if b.forfait_ecole %} + <b>{{ fcfa(b.forfait_ecole) }}</b> par école ayant présenté des candidats{% endif %}.
+    {% if b.reference %}<br><span class="aide">Référence : {{ b.reference }}</span>{% endif %}<br><span class="aide">Enregistré le {{ b.cree_le }}{% if b.cree_par %} par {{ b.cree_par }}{% endif %}</span></p>
+  {% else %}<p class="flash warning">Aucun barème pour {{ fl.annee }} : les montants dus valent 0{% if JUR_NIVEAU=='ddemp' %} (sauf barème transmis par la CS){% endif %}.</p>{% endif %}
+  {% if peut_ecrire %}
+  <form method="post" action="{{ url_for('jur_cep_frais', onglet='bareme', **args_url(fl)) }}">
+    <input type="hidden" name="action" value="bareme">
+    <div class="grille2">
+      <label>Année scolaire<br><select name="annee">{% for x in annees %}<option {{ 'selected' if x == fl.annee }}>{{ x }}</option>{% endfor %}</select></label>
+      <label>Montant par candidat (FCFA)<br><input type="number" name="montant_candidat" min="0" step="1" required value="{{ b.montant_candidat if b else '' }}"></label>
+      <label>Forfait par école (FCFA, facultatif)<br><input type="number" name="forfait_ecole" min="0" step="1" value="{{ b.forfait_ecole if b else 0 }}"></label>
+      <label>Référence (note de service…)<br><input name="reference" maxlength="200" value="{{ b.reference if b else '' }}"></label>
+    </div>
+    <label>Observation<br><input name="observation" maxlength="300" style="width:100%"></label>
+    <p class="aide">Un nouveau barème remplace le précédent pour l'année choisie ; les anciens restent dans l'historique.</p>
+    <button class="btn">Enregistrer le barème</button>
+  </form>
+  {% endif %}
+</div>
+<div class="carte">
+  <h2>Historique des barèmes</h2>
+  {% if historique %}<div class="tw"><table class="t compact">
+    <tr><th>Année</th><th class="n">Par candidat</th><th class="n">Forfait école</th><th>Référence</th><th>Enregistré le</th></tr>
+    {% for h in historique %}<tr><td>{{ h.annee }}</td><td class="n">{{ fcfa(h.montant_candidat) }}</td><td class="n">{{ fcfa(h.forfait_ecole) }}</td>
+      <td>{{ h.reference or '' }}{% if h.observation %}<br><span class="aide">{{ h.observation }}</span>{% endif %}</td><td class="aide">{{ h.cree_le }}{% if h.cree_par %} · {{ h.cree_par }}{% endif %}</td></tr>{% endfor %}
+  </table></div>{% else %}<p class="gris">Aucun barème enregistré.</p>{% endif %}
+</div>
+</div>
+{% else %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Montant dû</div><div class="v">{{ fcfa(g_.du) }}</div><div class="d">{{ nb(g_.candidats) }} candidats · {{ g_.nb_ecoles }} école(s)</div></div>
+  <div class="kpi"><div class="l">Montant versé</div><div class="v">{{ fcfa(g_.verse) }}</div><div class="d">recouvrement {{ pct(g_.taux_recouvrement) }}</div></div>
+  <div class="kpi"><div class="l">Reste à payer</div><div class="v {{ 'rouge' if g_.reste > 0 }}">{{ fcfa(g_.reste) }}</div><div class="d">{{ g_.nb_soldees }} école(s) soldée(s)</div></div>
+  <div class="kpi"><div class="l">Barème {{ fr.annee }}</div><div class="v">{{ fcfa(b.montant_candidat) if b else '—' }}</div><div class="d">{{ ('par candidat' ~ (' + ' ~ fcfa(b.forfait_ecole) ~ ' / école' if b.forfait_ecole else '')) if b else 'non défini' }}</div></div>
+</div>
+{% with extra_onglet='' %}{% include "jur_cep_filtres.html" %}{% endwith %}
+{% if fr.sans_bareme %}<div class="flash warning">Aucun barème défini pour {{ fr.annee }}{% if JUR_NIVEAU=='ddemp' %} (ni transmis par la CS) pour {{ fr.sans_bareme }} école(s){% endif %} : <a href="{{ url_for('jur_cep_frais', onglet='bareme', **args_url(fl)) }}">définir le barème</a>.</div>{% endif %}
+{% if not fr.ecoles %}
+<div class="carte"><p><b>Aucune école n'a présenté de candidats</b> pour ces critères.</p><p class="aide">Le montant dû se calcule automatiquement à partir des candidats du CEP (tableau « Candidats et résultats »).</p></div>
+{% else %}
+<form method="post" action="{{ url_for('jur_cep_frais', **args_url(fl)) }}">
+<input type="hidden" name="action" value="versements"><input type="hidden" name="annee" value="{{ fl.annee }}">
+<div class="tw"><table class="t compact">
+  <thead><tr><th>N°</th><th>École</th><th class="n">Candidats</th><th class="n">Par candidat</th><th class="n">Forfait</th><th class="n">Montant dû</th>
+    <th class="n">Versé (FCFA)</th><th>Date</th><th>Référence</th><th class="n">Reste à payer</th><th>Situation</th></tr></thead>
+  <tbody>
+  {% for r in lignes %}{% set d = r.d %}
+  <tr class="g-{{ r.genre }}"><td>{{ r.n or '' }}</td>
+    {% if r.genre == 'ecole' %}
+    <td>{{ d.nom }}<br><span class="aide">{{ d.code }}{% if d.bareme_cs %} · barème de la CS{% endif %}</span></td>
+    <td class="n">{{ d.candidats }}</td><td class="n">{{ fcfa(d.unitaire) }}</td><td class="n">{{ fcfa(d.forfait) if d.forfait else '—' }}</td>
+    <td class="n"><b>{{ fcfa(d.du) }}</b></td>
+    {% if peut_ecrire %}
+    <td class="n"><input class="mt" type="number" min="0" step="1" name="verse_{{ d.ecole_id }}" value="{{ d.verse if (d.verse or d.date_versement or d.reference) else '' }}" aria-label="Montant versé par {{ d.nom }}">{% if d.versement_cs %}<br><span class="aide">transmis par la CS</span>{% endif %}</td>
+    <td><input class="dt" type="date" name="date_{{ d.ecole_id }}" value="{{ d.date_versement }}" aria-label="Date du versement de {{ d.nom }}"></td>
+    <td><input class="rf" name="ref_{{ d.ecole_id }}" value="{{ d.reference }}" maxlength="100" aria-label="Référence du versement de {{ d.nom }}"></td>
+    {% else %}
+    <td class="n">{{ fcfa(d.verse) }}</td><td>{{ date_fr(d.date_versement) if d.date_versement else '' }}</td><td>{{ d.reference }}</td>
+    {% endif %}
+    <td class="n {{ 'rouge' if d.reste > 0 }}"><b>{{ fcfa(d.reste) }}</b></td>
+    {% set s = statut(d) %}<td><span class="badge {{ 'ok' if s in ('Soldé','Trop-perçu') else ('att' if s == 'Partiel' else ('ko' if s == 'Non versé' else '')) }}">{{ s }}</span></td>
+    {% else %}
+    <td>{{ r.libelle }}</td><td class="n">{{ d.candidats }}</td><td></td><td></td><td class="n">{{ fcfa(d.du) }}</td><td class="n">{{ fcfa(d.verse) }}</td><td></td><td></td>
+    <td class="n">{{ fcfa(d.reste) }}</td><td class="aide">{{ d.nb_soldees }}/{{ d.nb_ecoles }} soldée(s)</td>
+    {% endif %}
+  </tr>
+  {% endfor %}
+  </tbody></table></div>
+{% if peut_ecrire %}<p class="actions" style="margin-top:10px"><button class="btn">Enregistrer les versements</button>
+  <span class="aide">Montant cumulé versé par chaque école (vider la case pour effacer un versement).</span></p>{% endif %}
+</form>
+{% endif %}
+{% endif %}
+{% endblock %}

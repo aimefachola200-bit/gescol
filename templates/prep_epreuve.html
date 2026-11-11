@@ -1,0 +1,66 @@
+{# v1.21 — Une épreuve : sujet, corrigé type, grille de correction ; v1.30 : onglets Sujet · Corrigé · Grille · Modifier,
+   version locale / original / copies, PDF Times New Roman 14 pt (1 ou 2 par page) #}
+{% extends "base.html" %}{% block titre %}{{ d.discipline }} — {{ d.cours }}{% endblock %}
+{% block contenu %}{% set onglet = 'evaluations' %}{% include "_prep_onglets.html" %}
+<style>.epreuve-texte{font-family:'Times New Roman',Times,'Liberation Serif',serif;font-size:14pt;line-height:1.35}
+@media print{.actions,.onglets-ep,nav,header,footer{display:none!important}.epreuve-texte{font-size:14pt}}</style>
+<p><a href="{{ url_for('prep_evaluations', cours=d.cours, periode=d.periode) }}">← Épreuves {{ d.cours }} — {{ d.periode_lib }}</a></p>
+<h2>Épreuve de {{ d.discipline }}{% if d.copie_num %} — copie n° {{ d.copie_num }}{% endif %}{% if original %} — original de la banque{% endif %}</h2>
+<p><b>COURS :</b> {{ d.cours }} · <b>PÉRIODE :</b> {{ d.periode_lib }} · <b>DURÉE :</b> {{ d.duree }} · <b>Barème :</b> {{ d.bareme }} points · {{ d.type_lib }}
+{% if d.entete %}<br><b>École :</b> {{ d.entete.ecole or '—' }} · <b>Classe :</b> {{ d.entete.classe or d.cours }} · <b>Date :</b> {{ d.entete.date or '—' }}{% endif %}</p>
+{% if d._origine and d._origine != 'banque' and not original %}<p class="alerte info">Version locale {{ 'modifiée' if d._origine == 'modifiee' else 'copie' if d._origine == 'copie' else 'régénérée' }} enregistrée le {{ d._maj }} — l'original de la banque est conservé :
+ <a href="{{ url_for('prep_epreuve', cle=cle, original=1) }}">voir l'original</a>.</p>{% endif %}
+<nav class="onglets onglets-ep" style="margin:6px 0">
+  <a href="{{ url_for('prep_epreuve', cle=cle, onglet='sujet', original=1 if original else None) }}" class="{{ 'actif' if vue == 'sujet' }}">Sujet</a>
+  <a href="{{ url_for('prep_epreuve', cle=cle, onglet='corrige', original=1 if original else None) }}" class="{{ 'actif' if vue == 'corrige' }}">Corrigé</a>
+  <a href="{{ url_for('prep_epreuve', cle=cle, onglet='grille', original=1 if original else None) }}" class="{{ 'actif' if vue == 'grille' }}">Grille</a>
+  <a href="{{ url_for('prep_epreuve', cle=cle) }}" class="{{ 'actif' if vue == 'tout' }}">Tout</a>
+  {% if peut_mod %}<a href="{{ url_for('prep_epreuve_modifier', cle=cle) }}">Modifier</a>{% endif %}
+</nav>
+<div class="actions" style="margin:6px 0 10px">
+  <a class="btn petit" href="{{ url_for('prep_epreuve_pdf', cle=cle, original=1 if original else None) }}">Sujet (PDF)</a>
+  <a class="btn sec petit" href="{{ url_for('prep_epreuve_pdf', cle=cle, par_page='1', original=1 if original else None) }}">Sujet — 1 par page</a>
+  <a class="btn sec petit" href="{{ url_for('prep_epreuve_pdf', cle=cle, par_page='2', original=1 if original else None) }}">Sujet — 2 par page</a>
+  <a class="btn sec petit" href="{{ url_for('prep_epreuve_pdf', cle=cle, partie='corrige', original=1 if original else None) }}">Corrigé type (PDF)</a>
+  <a class="btn sec petit" href="{{ url_for('prep_epreuve_pdf', cle=cle, partie='grille', original=1 if original else None) }}">Grille (PDF)</a>
+  <a class="btn sec petit" href="{{ url_for('prep_epreuve_doc', cle=cle) }}">Sujet (Word)</a>
+  <a class="btn sec petit" href="{{ url_for('prep_epreuve_doc', cle=cle, partie='corrige') }}">Corrigé (Word)</a>
+  {% if peut_mod and not original %}<a class="btn sec petit" href="{{ url_for('prep_epreuve_modifier', cle=cle) }}">Modifier</a>
+  <form method="post" action="{{ url_for('prep_epreuve_dupliquer', cle=cle) }}" style="display:inline"><button class="btn sec petit">Dupliquer</button></form>
+  <form method="post" action="{{ url_for('prep_epreuve_regenerer', cle=cle) }}" style="display:inline"><button class="btn sec petit">Régénérer d'après la planification</button></form>
+  {% if d._origine != 'banque' %}<form method="post" action="{{ url_for('prep_epreuve_regenerer', cle=cle) }}" style="display:inline"><input type="hidden" name="banque" value="1"><button class="btn sec petit">{{ 'Supprimer la copie' if '~' in cle else "Revenir à l'original" }}</button></form>{% endif %}
+  {% if ep_existe('partage_historique') %}<a class="btn sec petit" href="{{ url_for('partage_historique', t='epreuve', cle=cle) }}">{{ icone('horloge') }} Historique des versions</a>{% endif %}
+  {% for c in classes %}<form method="post" action="{{ url_for('prep_eval_creer') }}" style="display:inline"><input type="hidden" name="classe" value="{{ c.id }}"><input type="hidden" name="periode" value="{{ d.periode }}"><button class="btn petit">Créer l'évaluation — {{ c.nom }}</button></form>{% endfor %}{% endif %}
+</div>
+{% if copies or '~' in cle %}<p class="aide"><b>Versions :</b> <a href="{{ url_for('prep_epreuve', cle=base) }}">épreuve d'origine</a>{% for k in copies %} · <a href="{{ url_for('prep_epreuve', cle=k) }}">copie n° {{ k.split('~')[1] }}</a>{% endfor %}</p>{% endif %}
+{% if vue in ('tout', 'sujet') %}<div class="carte epreuve-texte">
+<h3>Sujet</h3>
+{% if d.contexte %}<p><i>{{ d.contexte }}</i></p>{% endif %}
+{% if d.support and d.code != 'dictee' %}<p><b>{{ 'Support' if d.code in ('ea','eps') else 'Texte' }} : {{ d.support_titre }}</b></p><p>{{ d.support }}</p>{% endif %}
+<p><b>Tâche :</b> {{ d.tache }}</p>
+<p><b>Consigne :</b></p>
+{% for it in d.consignes %}{% if it.titre != 'Présentation' %}{% if it.titre not in ('Consigne', 'Dictée') %}<p><b>{{ it.titre }}</b></p>{% endif %}
+<ol type="a">{% for x in it.questions %}<li>{{ x.q }}{% if x.pts %} <span class="aide">({{ fnb(x.pts) }} pt{{ 's' if x.pts > 1 }})</span>{% endif %}</li>{% endfor %}</ol>{% endif %}{% endfor %}
+{% if d.fiche_notation %}<p class="aide">Le PDF du sujet comprend la fiche de notation ({{ d.fiche_notation.lignes }} lignes : {{ d.fiche_notation.colonnes|join(' · ') }}).</p>{% endif %}
+</div>{% endif %}
+{% if vue in ('tout', 'corrige') %}<div class="carte epreuve-texte">
+<h3>Corrigé type</h3>
+{% if d.code == 'dictee' %}<p><b>{{ d.support_titre }}</b>{% if d.mots %} ({{ d.mots }} mots){% endif %} — {{ d.support }}</p>{% endif %}
+<div class="tw"><table class="t"><thead><tr><th>Item</th><th>Question</th><th>Réponse attendue</th><th>Pts</th></tr></thead><tbody>
+{% for it in d.consignes %}{% for x in it.questions %}{% if x.r and not (d.code == 'dictee' and it.titre == 'Dictée') %}<tr><td>{{ it.titre }}</td><td>{{ x.q }}</td><td>{{ x.r }}</td><td>{{ fnb(x.pts) if x.pts }}</td></tr>{% endif %}{% endfor %}{% endfor %}
+</tbody></table></div>
+{% for pa in d.parties_ea or [] %}<p><b>Partie {{ pa.partie }} — {{ pa.titre }} :</b> matériel : {{ pa.materiel }}.</p>{% endfor %}
+{% if d.corrige_note %}<p>{{ d.corrige_note }}</p>{% endif %}
+</div>{% endif %}
+{% if vue in ('tout', 'corrige', 'grille') %}<div class="carte epreuve-texte">
+{% for bm in d.baremes or [] %}<h3>{{ 'Grille d\'observation' if bm.observation else 'Barème' }} — {{ bm.titre }}</h3>
+<div class="tw"><table class="t"><thead><tr>{% if bm.observation %}<th>Critère</th><th>Points</th>{% else %}<th>Note</th><th>Garçons {{ d.age_normal }} ans</th><th>Garçons {{ d.age_normal + 2 }} ans et +</th><th>Filles {{ d.age_normal }} ans</th><th>Filles {{ d.age_normal + 2 }} ans et +</th>{% endif %}</tr></thead><tbody>
+{% for l in bm.lignes %}<tr>{% for c in (l[:2] if bm.observation else l) %}<td>{{ c }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>{% endfor %}
+<h3>Grille de correction</h3>
+<div class="tw"><table class="t"><thead><tr><th>Critère</th><th>Indicateurs</th><th>Points</th></tr></thead><tbody>
+{% for gr in d.grille %}<tr><td>{{ gr.critere }}</td><td>{{ gr.indicateurs|join(' ; ') }}</td><td>{{ fnb(gr.points) }}</td></tr>{% endfor %}
+</tbody></table></div>
+</div>{% endif %}
+{% if d.progression and d.progression|select|list %}<p class="aide"><b>Progression prise en compte :</b> {{ d.progression|select|join(' · ') }}</p>{% endif %}
+<p class="aide"><i>{{ d.mention }}</i> — {{ d.source }}{% if d._origine and d._origine != 'banque' and not original %} · version {{ 'modifiée' if d._origine == 'modifiee' else 'copie' if d._origine == 'copie' else 'régénérée' }} enregistrée le {{ d._maj }}{% endif %}</p>
+{% endblock %}

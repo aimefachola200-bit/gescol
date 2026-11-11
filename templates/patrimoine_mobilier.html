@@ -1,0 +1,46 @@
+{% extends "base.html" %}{% block titre %}Patrimoine – mobilier{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Mobilier</h1>
+  <p class="sous">Tables-bancs, bureaux, armoires, tableaux… par classe ou par local, et places assises par rapport aux effectifs</p></div>
+  <div class="actions"><a class="btn" href="{{ url_for('patrimoine_meuble', oid=0) }}">＋ Ajouter du mobilier</a></div>
+</div>
+{% include "patrimoine_onglets.html" %}
+{% set mb = s.mobilier %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Places assises utilisables</div><div class="v">{{ mb.places_assises }}</div><div class="d">sur {{ mb.places_total }} (mobilier en bon ou passable état)</div></div>
+  <div class="kpi"><div class="l">Élèves inscrits</div><div class="v">{{ s.effectifs.t }}</div><div class="d">{{ s.effectifs.g }} G / {{ s.effectifs.f }} F</div></div>
+  <div class="kpi"><div class="l">Déficit de places</div><div class="v">{{ mb.deficit_places }}</div><div class="d">≈ {{ mb.tables_bancs_manquantes }} table(s)-banc(s) de 2 places</div></div>
+  <div class="kpi"><div class="l">Mobilier du maître</div><div class="v">{{ mb.maitre.bureaux }}</div><div class="d">bureau(x) · {{ mb.maitre.armoires }} armoire(s) · {{ mb.maitre.tableaux }} tableau(x)</div></div>
+</div>
+
+<div class="carte">
+  <h2>Places assises par classe</h2>
+  {% if mb.par_classe %}
+  <div class="tw"><table class="t compact"><thead><tr><th>Classe</th><th>Niveau</th><th class="c">Garçons</th><th class="c">Filles</th><th class="c">Effectif</th><th class="c">Places assises</th><th class="c">Déficit</th><th class="c">Tables-bancs manquantes</th><th></th></tr></thead><tbody>
+  {% for p in mb.par_classe %}
+  <tr><td><b>{{ p.classe }}</b></td><td>{{ p.niveau }}</td><td class="c">{{ p.g }}</td><td class="c">{{ p.f }}</td><td class="c">{{ p.effectif }}</td>
+    <td class="c">{{ p.places }}{% if p.places_total != p.places %}<br><span class="aide">{{ p.places_total - p.places }} en mauvais état</span>{% endif %}</td>
+    <td class="c">{% if p.deficit %}<span class="badge ko">{{ p.deficit }}</span>{% elif p.excedent %}<span class="badge ok">+{{ p.excedent }}</span>{% else %}<span class="badge ok">0</span>{% endif %}</td>
+    <td class="c">{{ p.tables_bancs_manquantes or '—' }}</td>
+    <td><a class="btn sec petit" href="{{ url_for('patrimoine_meuble', oid=0, classe_id=p.classe_id, categorie='tb2') }}">＋ Mobilier</a></td></tr>
+  {% endfor %}</tbody></table></div>
+  <p class="aide">Places assises = quantité × places par unité (table avec chaise : 1 ; table-banc : 2 ; 3 places et plus : 3) du mobilier des élèves en état bon ou passable. Déficit = effectif inscrit − places assises.</p>
+  {% else %}<p class="aide">Aucune classe dans cette école.</p>{% endif %}
+</div>
+
+<div class="carte">
+  <h2>Inventaire du mobilier</h2>
+  {% if liste %}
+  <div class="tw"><table class="t compact"><thead><tr><th>Emplacement</th><th>Catégorie</th><th>Désignation</th><th class="c">Quantité</th><th class="c">Places / u.</th><th>État</th><th class="c">Acquis en</th><th></th></tr></thead><tbody>
+  {% for m in liste %}
+  <tr><td>{{ m.classe_nom or m.local_nom or '—' }}</td><td>{{ CAT.get(m.categorie, (m.categorie,))[0] }}</td><td>{{ m.designation or '' }}</td>
+    <td class="c"><b>{{ m.quantite }}</b></td><td class="c">{{ places_unite(m) or '' }}</td>
+    <td><span class="badge {{ {'bon':'ok','passable':'att','mauvais':'ko'}.get(m.etat, '') }}">{{ ETATS.get(m.etat, '—') }}</span></td>
+    <td class="c">{{ m.annee_acquisition or '' }}</td>
+    <td class="actions"><a class="btn sec petit" href="{{ url_for('patrimoine_meuble', oid=m.id) }}">Modifier</a>
+      <a class="btn sec petit" href="{{ url_for('patrimoine_mouvements', objet='mobilier:' ~ m.id) }}">Mouvement</a></td></tr>
+  {% endfor %}</tbody></table></div>
+  {% else %}<p class="aide">Aucun mobilier enregistré. <a href="{{ url_for('patrimoine_meuble', oid=0) }}">Ajouter le mobilier d'une classe</a>.</p>{% endif %}
+</div>
+{% endblock %}

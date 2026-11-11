@@ -1,0 +1,17 @@
+{# v2.4 — boutons propres à quelques registres de l'établissement secondaire (inclus par registre.html) #}
+{% if peut_ecrire and r.cle == 'programme' %}
+<form method="post" action="{{ url_for('sec_programme_gabarit') }}" class="actions" style="margin:4px 0 8px" onsubmit="return confirm('Charger le gabarit du programme (les lignes déjà saisies sont conservées) ?')">
+<button class="btn sec petit">{{ icone('ajouter') }} Charger le gabarit du programme</button></form>
+{% elif peut_ecrire and r.cle == 'conseils' %}
+<form method="post" action="{{ url_for('sec_conseil_calculer') }}" class="filtres actions" style="margin:4px 0 8px">
+<label>Classe <select name="classe" required><option value=""></option>{% for o in listes.classes_sec %}<option>{{ o }}</option>{% endfor %}</select></label>
+<label>Période <select name="periode" required>{% for o in listes.periodes %}<option>{{ o }}</option>{% endfor %}</select></label>
+<button class="btn sec petit">{{ icone('graphique') }} Calculer depuis les notes</button></form>
+{% elif peut_ecrire and r.cle == 'candidats' %}
+<form method="post" action="{{ url_for('sec_examens_numeroter', annee=annee) }}" class="filtres actions" style="margin:4px 0 8px">
+<label>Examen <select name="examen"><option value="">Tous</option>{% for o in listes.examens %}<option>{{ o }}</option>{% endfor %}</select></label>
+<button class="btn sec petit">Attribuer les numéros de table</button>
+<a class="btn sec petit" href="{{ url_for('sec_examens_stats', annee=annee) }}">{{ icone('graphique') }} Statistiques</a></form>
+{% elif r.cle == 'emploi' %}
+<p style="margin:4px 0 8px"><a class="btn sec petit" href="{{ url_for('sec_emploi_grille') }}">{{ icone('calendrier') }} Voir la grille d'une classe</a></p>
+{% endif %}

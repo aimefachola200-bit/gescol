@@ -1,0 +1,53 @@
+{% extends "base.html" %}{% block titre %}Remédiation – {{ ev.titre }} – {{ cl.nom }}{% endblock %}
+{% block contenu %}
+{% set mat = cl.cycle == 'maternelle' %}
+<div class="entete">
+  <div><h1>Groupes de remédiation – {{ ev.titre }}</h1>
+  <p class="sous">{{ cl.nom }} ({{ cl.niveau }}) · {{ composes }} élève(s) ayant composé · année {{ ev.annee }}</p></div>
+  <div class="actions">
+    <a class="btn sec petit" href="{{ url_for('eval_saisie', ev_id=ev.id) }}">← Saisie des notes</a>
+    {% if ep_existe('ma_classe_detail') %}<a class="btn sec petit" href="{{ url_for('ma_classe_detail', cid=cl.id) }}">{{ icone('ecole') }} Ma classe</a>{% endif %}
+    <a class="btn sec petit" href="{{ url_for('eval_remediation_pdf', ev_id=ev.id) }}" target="_blank" rel="noopener">{{ icone('document') }} PDF</a>
+    <a class="btn sec petit" href="{{ url_for('eval_remediation_xlsx', ev_id=ev.id) }}">{{ icone('graphique') }} Excel</a>
+  </div>
+</div>
+
+<p class="gris" style="font-size:13px">
+  {% if mat %}Groupes établis d'après les appréciations : NA → groupe 1 (soutien intensif), ECA → groupe 2 (consolidation), A → groupe 3 (maîtrise).
+  {% else %}Groupes établis d'après la note de chaque matière : moins de 7 → groupe 1 · de 7 à moins de 10 → groupe 2 · de 10 à moins de 15 → groupe 3 · 15 et plus → groupe 4.{% endif %}
+  Les élèves dispensés ne sont pas comptés ; ceux sans note sont signalés à part.</p>
+
+{% if composes == 0 %}
+<div class="carte">Aucune note n'est encore saisie pour cette évaluation. <a href="{{ url_for('eval_saisie', ev_id=ev.id) }}">Saisir les notes</a>.</div>
+{% else %}
+{% if rem.a_renforcer %}<div class="flash info">Matières à renforcer en priorité (moins de 50 % de réussite) : <b>{{ rem.a_renforcer|join(', ') }}</b>.</div>{% endif %}
+
+{% for d in rem.matieres %}
+<details class="carte" {{ 'open' if d.besoin }} style="margin-bottom:10px">
+  <summary style="cursor:pointer"><b>{{ d.matiere.nom }}</b> ·
+    {% if d.taux is none %}<span class="puce na">pas de note</span>{% else %}<span class="puce {{ 'ok' if d.taux >= 75 else ('moy' if d.taux >= 50 else 'ko') }}">{{ ('%.1f'|format(d.taux)).replace('.', ',') }} % de réussite</span>{% endif %}
+    · {{ d.besoin }} élève(s) en besoin</summary>
+  {% for k, lib, bas, haut, conseil in GROUPES %}{% set el = d.groupes[k] %}
+  {% if el %}<div class="groupe-rem {{ k }}">
+    <h3>{{ lib }} — {{ el|length }} élève(s)</h3>
+    <div>{% for e in el %}{{ nom_eleve(e) }}{{ ', ' if not loop.last }}{% endfor %}</div>
+    <p class="gris" style="font-size:12.5px;margin:6px 0 0">{{ d.activites if k in ('g1','g2') else conseil }}</p>
+  </div>{% endif %}
+  {% endfor %}
+  {% if d.absents %}<p class="gris" style="font-size:12.5px">Sans note : {% for e in d.absents %}{{ nom_eleve(e) }}{{ ', ' if not loop.last }}{% endfor %}</p>{% endif %}
+</details>
+{% endfor %}
+
+<h2>Élèves en non-maîtrise</h2>
+{% if rem.non_maitrise %}
+<div class="tw"><table class="t">
+  <tr><th>Élève</th>{% if not mat %}<th class="num">Moyenne</th><th class="num">Matières réussies</th>{% endif %}<th>Matières à reprendre</th></tr>
+  {% for x in rem.non_maitrise %}
+  <tr><td><b>{{ nom_eleve(x.eleve) }}</b></td>
+    {% if not mat %}<td class="num">{{ ('%.2f'|format(x.moyenne)).replace('.', ',') if x.moyenne is not none else '—' }}</td><td class="num">{{ x.reussies }} / {{ x.seuil }}</td>{% endif %}
+    <td>{{ x.matieres|join(', ') or '—' }}</td></tr>
+  {% endfor %}
+</table></div>
+{% else %}<div class="carte">Tous les élèves ayant composé sont en maîtrise. {{ icone('valider') }}</div>{% endif %}
+{% endif %}
+{% endblock %}

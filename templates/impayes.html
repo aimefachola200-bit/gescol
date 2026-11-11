@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block titre %}Impayés{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Élèves avec un reste à payer</h1><p class="sous">{{ lst|length }} élève(s) · total restant {{ fcfa(total) }}</p></div>
+  <div class="actions"><button class="btn sec" onclick="window.print()">Imprimer</button></div>
+</div>
+<div class="tw"><table class="t">
+  <tr><th>Classe</th><th>Élève</th><th>Parent</th><th class="num">Dû</th><th class="num">Payé</th><th class="num">Reste</th><th></th></tr>
+  {% for e, du, paye, reste in lst %}
+  <tr><td>{{ e.classe_nom }}</td><td><a href="{{ url_for('eleve_detail', eid=e.id) }}">{{ e.nom }} {{ e.prenoms }}</a></td>
+    <td>{{ e.parent_nom or '' }} <span class="gris">{{ e.parent_telephone or '' }}</span></td>
+    <td class="num">{{ fcfa(du) }}</td><td class="num">{{ fcfa(paye) }}</td><td class="num rouge"><b>{{ fcfa(reste) }}</b></td>
+    <td class="num"><a class="btn petit" href="{{ url_for('paiement_nouveau', eleve_id=e.id) }}">Encaisser</a></td></tr>
+  {% else %}<tr><td colspan="7" class="gris">Tous les élèves sont à jour.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

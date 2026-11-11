@@ -1,0 +1,9 @@
+{# Onglets communs du module Patrimoine (variable onglet) #}
+<div class="onglets">
+  <a class="{{ 'actif' if onglet == 'accueil' }}" href="{{ url_for('patrimoine_accueil') }}">Tableau de bord</a>
+  <a class="{{ 'actif' if onglet == 'locaux' }}" href="{{ url_for('patrimoine_locaux') }}">Infrastructures</a>
+  <a class="{{ 'actif' if onglet == 'equipements' }}" href="{{ url_for('patrimoine_equipements') }}">Équipements et services</a>
+  <a class="{{ 'actif' if onglet == 'mobilier' }}" href="{{ url_for('patrimoine_mobilier') }}">Mobilier</a>
+  <a class="{{ 'actif' if onglet == 'didactique' }}" href="{{ url_for('patrimoine_didactique') }}">Matériel didactique</a>
+  <a class="{{ 'actif' if onglet == 'mouvements' }}" href="{{ url_for('patrimoine_mouvements') }}">Mouvements</a>
+</div>

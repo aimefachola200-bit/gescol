@@ -1,0 +1,76 @@
+{% extends "base.html" %}{% block titre %}Mise en ligne et sauvegardes{% endblock %}
+{% block contenu %}
+<h1>Mise en ligne et sauvegardes</h1>
+<p class="sous">SCOLARIS peut fonctionner sur le PC de l'école (Wi-Fi de l'école) ou chez un hébergeur Internet : il est alors accessible partout (maison, téléphone, autre école), sans dépendre du Wi-Fi de l'école.</p>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Fonctionnement actuel</div><div class="v" style="font-size:18px">{{ hebergeur }}</div>
+    <div class="d">{% if en_ligne %}<span class="badge ok">en ligne</span>{% else %}<span class="badge att">réseau local</span>{% endif %}</div></div>
+  <div class="kpi"><div class="l">Adresse</div><div class="v" style="font-size:15px;word-break:break-all">{{ adresse }}</div>
+    <div class="d">{% if https %}<span class="badge ok">connexion sécurisée (https)</span>{% else %}<span class="badge att">non chiffrée (http)</span>{% endif %}</div></div>
+  <div class="kpi"><div class="l">Sauvegardes disponibles</div><div class="v">{{ sauvegardes|length }}</div><div class="d">automatique chaque jour ({{ garder }} dernières gardées){% if suivi and suivi.auto %} — dernière : {{ suivi.auto[:16].replace('T', ' ') }} {% if suivi.auto_ok %}<span class="badge ok">vérifiée</span>{% else %}<span class="badge att">à vérifier</span>{% endif %}{% endif %}</div></div>
+  <div class="kpi"><div class="l">Copie hors de l'appareil</div><div class="v" style="font-size:18px">{% if jours_externe is none %}jamais{% elif jours_externe == 0 %}aujourd'hui{% else %}il y a {{ jours_externe }} j{% endif %}</div>
+    <div class="d">{% if jours_externe is none or jours_externe >= 7 %}<span class="badge att">à faire</span>{% else %}<span class="badge ok">à jour</span>{% endif %} clé USB, disque externe ou téléchargement</div></div>
+</div>
+{% if verif %}<div class="flash {{ 'success' if verif.ok else 'danger' }}" role="status"><b>Vérification de « {{ verif.titre }} » : {{ 'sauvegarde intacte' if verif.ok else 'sauvegarde NON valide' }}.</b>{% if verif.infos.version %} Version {{ verif.infos.version }}, {{ verif.infos.date[:16].replace('T', ' ') if verif.infos.date }}.{% endif %}<ul style="margin:4px 0 0 18px">{% for m in verif.msgs %}<li>{{ m }}</li>{% endfor %}</ul></div>{% endif %}
+
+{% if not en_ligne %}
+<div class="carte">
+  <h2 style="margin-top:0">Mettre SCOLARIS en ligne</h2>
+  <ol>
+    <li>Choisissez un hébergeur : <b>PythonAnywhere</b> (gratuit pour commencer, le plus simple), <b>Render</b> (déploiement automatique depuis GitHub) ou un <b>serveur VPS</b> (le plus puissant, votre nom de domaine). Le guide <b>EN_LIGNE.md</b> fourni avec SCOLARIS détaille chaque étape.</li>
+    <li>Ici, cliquez sur <b>Créer une sauvegarde maintenant</b> puis téléchargez-la.</li>
+    <li>Sur la version en ligne : connectez-vous, ouvrez cette même page et utilisez <b>Restaurer une sauvegarde</b> : élèves, notes, paiements, photos et réglages sont repris.</li>
+    <li>Sur les tablettes, téléphones et dans l'application Android, remplacez l'adresse du PC par l'adresse en ligne (https://…).</li>
+  </ol>
+  <p class="aide">Le PC de l'école peut rester en <b>secours</b> (sans Internet), mais ses données sont séparées de la version en ligne : pour le remettre à jour, restaurez-y une sauvegarde téléchargée depuis la version en ligne.</p>
+</div>
+{% else %}
+<div class="flash info">SCOLARIS est en ligne : il fonctionne partout où il y a Internet. Téléchargez régulièrement une sauvegarde et gardez-en une copie (clé USB, PC de l'école en secours).</div>
+{% endif %}
+
+<div class="grille2">
+<div class="carte">
+  <h2 style="margin-top:0">Sauvegardes</h2>
+  <div class="actions" style="margin-bottom:10px">
+    <a class="btn" href="{{ url_for('sauvegarde_un_clic') }}">{{ icone('telecharger') }} Télécharger une sauvegarde maintenant</a>
+    <form method="post" action="{{ url_for('sauvegarde_maintenant') }}"><button class="btn sec">Créer une sauvegarde sur l'appareil</button></form>
+  </div>
+  <p class="aide">Gardez toujours une copie <b>hors de l'appareil</b> (clé USB, disque externe, autre ordinateur) : un rappel s'affiche si la dernière copie date de plus de 7 jours. Sur le téléphone, la sauvegarde téléchargée va dans le dossier « Téléchargements ».</p>
+  {% if sauvegardes %}
+  <div class="tw"><table class="t compact">
+    <tr><th>Fichier</th><th>Date</th><th class="num">Taille</th><th></th></tr>
+    {% for s in sauvegardes %}<tr><td>{{ s.nom }}</td><td>{{ s.date }}</td><td class="num">{{ (s.taille/1024)|round(0)|int }} Ko</td>
+      <td class="num" style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('sauvegarde_telecharger', nom=s.nom) }}">Télécharger</a>
+        <form method="post" action="{{ url_for('sauvegarde_verifier') }}" style="display:inline"><input type="hidden" name="nom" value="{{ s.nom }}"><button class="btn sec petit">{{ icone('verifier') }} Vérifier</button></form></td></tr>{% endfor %}
+  </table></div>
+  {% else %}<p class="aide">Aucune sauvegarde pour le moment.</p>{% endif %}
+  <p class="aide">Dossier des données : {{ dossier }}</p>
+  <form method="post" action="{{ url_for('en_ligne_page') }}" class="f" style="margin-top:10px">
+    <h3 style="margin:6px 0">Réglages</h3>
+    <label for="garder">Sauvegardes automatiques gardées sur l'appareil</label>
+    <input id="garder" type="number" name="garder" min="3" max="90" value="{{ garder }}" style="max-width:120px">
+    <label for="ds">Dossier de secours (clé USB ou disque externe), par exemple <code>E:\SAUVEGARDES</code></label>
+    <input id="ds" name="dossier_secours" value="{{ dossier_secours }}" placeholder="laisser vide si aucun" autocomplete="off">
+    <p class="aide">Chaque sauvegarde (automatique ou téléchargée) y est aussi copiée quand le dossier est branché.</p>
+    <div class="actions"><button class="btn sec">Enregistrer les réglages</button></div>
+  </form>
+</div>
+<div class="carte">
+  <h2 style="margin-top:0">Vérifier une sauvegarde</h2>
+  <form method="post" action="{{ url_for('sauvegarde_verifier') }}" enctype="multipart/form-data" class="f" style="margin-bottom:14px">
+    <label for="fv">Fichier de sauvegarde (.zip)</label><input id="fv" type="file" name="fichier" accept=".zip" required>
+    <div class="actions" style="margin-top:8px"><button class="btn sec">{{ icone('verifier') }} Vérifier sans restaurer</button></div>
+  </form>
+  <h2>Restaurer une sauvegarde</h2>
+  <p>Remplace <b>toutes</b> les données de cette installation par celles d'une sauvegarde SCOLARIS (.zip). La sauvegarde est d'abord vérifiée (empreintes, contrôle de la base) ; l'état actuel est sauvegardé automatiquement (« avant_restauration »).</p>
+  <form method="post" action="{{ url_for('restaurer') }}" enctype="multipart/form-data" class="f">
+    <label for="fichier">Fichier de sauvegarde (.zip)</label>
+    <input id="fichier" type="file" name="fichier" accept=".zip" required>
+    <label for="conf">Pour confirmer, tapez RESTAURER</label>
+    <input id="conf" name="confirmation" autocomplete="off" required placeholder="RESTAURER">
+    <div class="actions" style="margin-top:10px"><button class="btn danger" data-confirmer="Remplacer toutes les données par cette sauvegarde ?">Restaurer</button></div>
+  </form>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends "base.html" %}{% block titre %}Groupes WhatsApp{% endblock %}
+{% block contenu %}
+{% set qs = {'groupe': aud, 'cs': cs_id or None, 'zone': zone_id or None} %}
+<div class="entete">
+  <div><h1>{{ icone('message') }} Groupes WhatsApp</h1>
+  <p class="sous">Partager les informations avec {{ audiences[aud]|lower }} · les numéros restent dans l'application</p></div>
+  {% if jur %}<form class="filtres" style="margin:0">
+    <input type="hidden" name="groupe" value="{{ aud }}">
+    {% if cs %}<select name="cs" onchange="this.form.zone && (this.form.zone.value=''); this.form.submit()" aria-label="Circonscription">
+      <option value="">Toutes les circonscriptions</option>
+      {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if c.id == cs_id }}>{{ c.nom }}</option>{% endfor %}</select>{% endif %}
+    {% if zones %}<select name="zone" onchange="this.form.submit()" aria-label="Zone pédagogique">
+      <option value="">Toutes les zones</option>
+      {% for z in zones %}<option value="{{ z.id }}" {{ 'selected' if z.id == zone_id }}>{{ z.nom }}</option>{% endfor %}</select>{% endif %}
+  </form>{% endif %}
+</div>
+
+<div class="actions" style="margin-bottom:14px">
+  {% for k, l in audiences.items() %}<a class="btn {{ '' if k == aud else 'sec' }}" href="{{ url_for('groupes_whatsapp', groupe=k, cs=cs_id or None, zone=zone_id or None) }}">{{ l }}</a>{% endfor %}
+</div>
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Personnes</div><div class="v">{{ wa_nb.total }}</div><div class="d">dans la liste</div></div>
+  <div class="kpi"><div class="l">Numéros valides</div><div class="v {{ 'rouge' if wa_nb.valides < wa_nb.total }}">{{ wa_nb.valides }}</div><div class="d">{{ wa_nb.total - wa_nb.valides }} à compléter</div></div>
+  <div class="kpi"><div class="l">Sur WhatsApp</div><div class="v">{{ wa_nb.wa }}</div><div class="d">retenus pour le groupe</div></div>
+  <div class="kpi"><div class="l">Invités</div><div class="v">{{ wa_nb.invites }}</div><div class="d">lien envoyé</div></div>
+</div>
+
+<div class="carte">
+  <h3 style="margin-top:0">Créer le groupe en trois gestes</h3>
+  <ol style="line-height:1.6;padding-left:20px;margin:6px 0">
+    <li><b>Contacts :</b> sur le téléphone qui administrera le groupe, ouvrez cette page et touchez « {{ icone('fiche') }} Contacts pour WhatsApp » ; ouvrez le fichier et importez les contacts (ils commencent tous par « {{ prefixe }} »).</li>
+    <li><b>Créer le groupe :</b> WhatsApp → ⋮ → Nouveau groupe → tapez « {{ prefixe }} » et cochez tout. WhatsApp ne propose que les personnes qui ont un compte WhatsApp : les autres sont écartées d'elles-mêmes.</li>
+    <li><b>Lien d'invitation :</b> dans le groupe → Infos → Inviter via un lien → Copier ; collez-le ci-dessous, puis envoyez-le aux personnes absentes du groupe ({{ icone('message') }}), un toucher par personne. Les envois sont notés.</li>
+  </ol>
+  <p class="aide">WhatsApp n'autorise aucune application à créer un groupe ni à y ajouter quelqu'un à la place de son administrateur : ces trois gestes sont le chemin le plus court. Un groupe compte au plus 1 024 membres ; au-delà, faites un groupe par zone avec le filtre ci-dessus.</p>
+  <div class="actions" style="margin:10px 0">
+    <a class="btn vert" href="{{ url_for('groupes_whatsapp_vcf', **qs) }}">{{ icone('fiche') }} Contacts pour WhatsApp (.vcf)</a>
+    <a class="btn sec" href="{{ url_for('groupes_whatsapp_suivant', **qs) }}" target="_blank" rel="noopener" onclick="setTimeout(function(){location.reload()},1500)">{{ icone('suivant') }} Inviter le suivant</a>
+    {% if d.lien %}<a class="btn sec" href="https://wa.me/?text={{ ('Rejoignez le groupe WhatsApp « ' ~ d.nom ~ ' » : ' ~ d.lien)|urlencode }}" target="_blank" rel="noopener">{{ icone('envoyer') }} Partager le lien</a>{% endif %}
+  </div>
+  <form method="post" action="{{ url_for('groupes_whatsapp_reglages', **qs) }}" class="f" style="max-width:820px">
+    <label>Nom du groupe</label><input name="nom" value="{{ d.nom }}" maxlength="120">
+    <label>Lien d'invitation du groupe</label><input name="lien" value="{{ d.lien }}" placeholder="https://chat.whatsapp.com/…" maxlength="300">
+    <label>Message d'invitation <span class="gris">({nom}, {ecole}, {groupe}, {lien}, {emetteur})</span></label>
+    <textarea name="message" rows="3" maxlength="1000">{{ d.message }}</textarea>
+    <button class="btn">Enregistrer</button>
+  </form>
+</div>
+
+<div class="carte">
+  <h3 style="margin-top:0">{{ icone('courrier') }} Messages prêts à l'emploi</h3>
+  <form method="post" action="{{ url_for('groupes_whatsapp_reglages', **qs) }}" class="f" style="max-width:820px">
+    <label>Modèle</label><select name="modele_type">{% for k, m in modeles.items() %}<option value="{{ k }}" {{ 'selected' if (d.modele.type or 'convocation') == k }}>{{ m[0] }}</option>{% endfor %}</select>
+    <label>Objet (réunion, visite, document…)</label><input name="objet" value="{{ d.modele.objet or '' }}" maxlength="600">
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div style="flex:1 1 180px"><label>Date</label><input type="date" name="date" value="{{ d.modele.date or '' }}"></div>
+      <div style="flex:1 1 120px"><label>Heure</label><input type="time" name="heure" value="{{ d.modele.heure or '' }}"></div>
+      <div style="flex:2 1 220px"><label>Lieu</label><input name="lieu" value="{{ d.modele.lieu or '' }}" maxlength="600"></div>
+    </div>
+    <label>Précisions</label><textarea name="precisions" rows="2" maxlength="600">{{ d.modele.precisions or '' }}</textarea>
+    <button class="btn sec">Mettre à jour l'aperçu</button>
+  </form>
+  <pre style="white-space:pre-wrap;background:#e7f8ee;color:#17201b;border-radius:10px;padding:10px 12px;font:13px/1.45 system-ui,sans-serif;margin:10px 0">{{ apercu }}</pre>
+  <div class="actions">
+    <a class="btn wa" href="{{ lien_groupe }}" target="_blank" rel="noopener">{{ icone('groupe') }} Envoyer au groupe</a>
+    <a class="btn sec" href="{{ url_for('groupes_whatsapp_suivant', message=1, **qs) }}" target="_blank" rel="noopener">{{ icone('personne') }} À chaque personne — au suivant</a>
+  </div>
+  <p class="aide">« Envoyer au groupe » ouvre WhatsApp avec le message : choisissez le groupe. « À chaque personne » ouvre une conversation personnalisée (nom, école), l'une après l'autre.</p>
+</div>
+
+<div class="tw"><table class="t compact">
+  <tr><th>WhatsApp</th><th>Nom</th><th>{{ 'École' if jur else 'Fonction' }}</th>{% if jur %}<th>Zone / CS</th>{% endif %}<th>Numéro</th><th>Invitation</th><th></th></tr>
+  {% for p in lst %}
+  <tr style="{{ '' if p.num else 'opacity:.65' }}">
+    <td>{% if p.num %}<form method="post" action="{{ url_for('groupes_whatsapp_contact', **qs) }}" style="margin:0">
+      <input type="hidden" name="personne" value="{{ p.cle }}"><input type="hidden" name="wa" value="{{ '0' if p.wa else '1' }}">
+      <button class="btn {{ 'vert' if p.wa else 'sec' }} petit" title="Cliquer pour changer">{{ 'Oui' if p.wa else 'Non' }}</button></form>{% else %}—{% endif %}</td>
+    <td><b>{{ p.nom or '—' }}</b>{% if jur and p.role_lib %}<br><span class="gris">{{ p.role_lib }}</span>{% endif %}</td>
+    <td>{{ p.ecole if jur else p.role_lib }}</td>
+    {% if jur %}<td class="gris">{{ p.zone }}{% if p.cs and cs %}<br>{{ p.cs }}{% endif %}</td>{% endif %}
+    <td style="white-space:nowrap">{% if p.num %}{{ p.affiche }}{% elif p.brut %}{{ p.brut }} <span class="badge ko">invalide</span>{% else %}<span class="badge att">à compléter</span>{% endif %}</td>
+    <td>{% if p.envoye %}<span class="badge ok">envoyée le {{ date_fr(p.envoye) }}</span>{% else %}—{% endif %}</td>
+    <td>{% if p.num and p.wa %}<a class="btn wa petit" href="{{ url_for('groupes_whatsapp_inviter', cle=p.cle, **qs) }}" target="_blank" rel="noopener" onclick="setTimeout(function(){location.reload()},1500)">{{ icone('message') }} Inviter</a>{% endif %}</td>
+  </tr>
+  {% else %}<tr><td colspan="7" class="gris">Aucune personne dans cette liste.{% if jur %} Les enseignants et directeurs apparaissent après la transmission des données des écoles (menu Transmissions).{% else %} Ajoutez le personnel et ses numéros (menu Personnel).{% endif %}</td></tr>{% endfor %}
+</table></div>
+<form method="post" action="{{ url_for('groupes_whatsapp_raz', **qs) }}" style="margin-top:10px" onsubmit="return confirm('Effacer le suivi des invitations envoyées ?')"><button class="btn sec petit">↺ Remettre le suivi des envois à zéro</button></form>
+<p class="aide" style="margin-top:10px">Numéros manquants ou faux : {% if jur %}complétez la fiche de l'école (directeur) ou demandez à l'école de mettre à jour son personnel puis de retransmettre ses données ; pour les CP, la fiche de la zone pédagogique.{% else %}complétez le téléphone dans la fiche du membre du personnel.{% endif %} Format : 10 chiffres commençant par 01.</p>
+{% endblock %}

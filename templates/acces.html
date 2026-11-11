@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% block titre %}Code d'accès personnel{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone('verrou') }} Code d'accès personnel</h1>
+  <p class="sous">{{ appli }} · compte « {{ g.user.identifiant }} » · installation {{ installation }}</p></div>
+  {% if gestion %}<div class="actions"><a class="btn sec" href="{{ url_for('acces_comptes') }}">Codes de tous les comptes</a></div>{% endif %}
+</div>
+{% if ok %}
+<div class="carte" style="max-width:760px">{{ icone('valider') }} Votre compte est autorisé : votre code d'accès personnel est enregistré. Vous n'avez rien d'autre à faire.</div>
+{% else %}
+<div class="carte" style="max-width:760px">
+  <p>L'utilisation de {{ appli }} est soumise à l'autorisation de son concepteur, <b>Maître Aimé FACHOLA</b>. Chaque compte reçoit
+  un <b>code d'accès personnel</b>, valable pour ce compte sur cette installation seulement, à saisir une seule fois.</p>
+  {% if reste > 0 %}<p class="aide">Délai accordé : encore <b>{{ reste }} jour(s)</b> ; ensuite, l'application ne s'ouvrira plus sans code.</p>
+  {% else %}<p class="flash danger" style="margin:8px 0">Le délai est écoulé : saisissez votre code d'accès pour continuer.</p>{% endif %}
+  <h3>1. Demandez votre code</h3>
+  <p>Votre demande :</p>
+  <pre id="demande" style="white-space:pre-wrap;background:#F2F4F7;border-radius:8px;padding:10px 12px;font-size:14px">{{ demande }}</pre>
+  <div class="actions">
+    <a class="btn wa" href="{{ lien_wa }}" target="_blank" rel="noopener">{{ icone('message') }} Envoyer la demande par WhatsApp</a>
+    <button type="button" class="btn sec" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('demande').textContent).then(function(){SCOLARIS.toast('Demande copiée.')})">{{ icone('presse_papiers') }} Copier la demande</button>
+  </div>
+  <h3>2. Saisissez le code reçu</h3>
+  <form method="post" class="f">
+    <label for="code">Code d'accès personnel (collez-le en entier)</label>
+    <textarea id="code" name="code" rows="3" required autocomplete="off" spellcheck="false" placeholder="XXXXX-XXXXX-XXXXX-…"></textarea>
+    <button class="btn">Valider le code</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% block titre %}Paiements{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Paiements {{ ANNEE }}</h1><p class="sous">{{ paiements|length }} opération(s) · total encaissé {{ fcfa(total) }}</p></div>
+  <div class="actions"><a class="btn" href="{{ url_for('paiement_nouveau') }}">+ Enregistrer un paiement</a>
+    <a class="btn sec" href="{{ url_for('impayes') }}">Impayés</a></div>
+</div>
+<form class="filtres">
+  <div><label class="aide">Du</label><input type="date" name="du" value="{{ d1 }}"></div>
+  <div><label class="aide">Au</label><input type="date" name="au" value="{{ d2 }}"></div>
+  <div><label class="aide">Mode</label><select name="mode"><option value="">Tous</option>
+    {% for k,v in MODES_PAIEMENT.items() %}<option value="{{ k }}" {{ 'selected' if k==mode }}>{{ v }}</option>{% endfor %}</select></div>
+  <button class="btn sec">Filtrer</button>
+</form>
+{% if par_mode %}<div class="grille">{% for k,v in par_mode.items() %}
+  <div class="kpi"><div class="l">{{ MODES_PAIEMENT.get(k,k) }}</div><div class="v" style="font-size:19px">{{ fcfa(v) }}</div></div>{% endfor %}</div>{% endif %}
+<div class="tw"><table class="t">
+  <tr><th>Reçu</th><th>Date</th><th>Élève</th><th>Classe</th><th>Mode</th><th>Référence</th><th class="num">Montant</th></tr>
+  {% for p in paiements %}
+  <tr><td><a href="{{ url_for('recu', pid=p.id) }}" target="_blank">{{ p.numero_recu }}</a> {% if p.annule %}<span class="badge ko">annulé</span>{% endif %}</td>
+    <td>{{ date_fr(p.date_paiement) }} <span class="gris">{{ p.date_paiement[11:16] }}</span></td>
+    <td><a href="{{ url_for('eleve_detail', eid=p.eleve_id) }}">{{ p.nom }} {{ p.prenoms }}</a></td><td>{{ p.classe_nom or '' }}</td>
+    <td>{{ MODES_PAIEMENT.get(p.mode, p.mode) }}</td><td>{{ p.reference or '' }}</td>
+    <td class="num {{ 'gris' if p.annule }}" style="{{ 'text-decoration:line-through' if p.annule }}">{{ fcfa(p.montant) }}</td></tr>
+  {% else %}<tr><td colspan="7" class="gris">Aucun paiement.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

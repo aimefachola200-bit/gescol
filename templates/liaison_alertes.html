@@ -1,0 +1,12 @@
+{# v1.26 — alertes : échéances, notes non lues, convocations, décrochage, licences, stocks #}
+{% extends "base.html" %}{% block titre %}Alertes — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<h2 style="margin:0">Alertes</h2>
+<p class="aide">Échéances en retard ou dans le délai de rappel, notes non lues, convocations des 7 prochains jours, élèves en alerte de décrochage, licences « Non examiné » ou « Inapte », stocks de cantine épuisés.</p>
+<div class="tw"><table class="t" aria-label="Alertes"><thead><tr><th>Nature</th><th>Détail</th><th></th></tr></thead><tbody>
+{% for k, t, d, u in alertes %}<tr><td>{{ icone('alerte') }} {{ t }}</td><td>{{ d }}</td><td><a class="btn sec petit" href="{{ u }}">Ouvrir</a></td></tr>
+{% else %}<tr><td colspan="3" class="aide">Aucune alerte.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

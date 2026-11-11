@@ -1,0 +1,16 @@
+{# v1.26 — boîte de réception des notes de service, circulaires et convocations #}
+{% extends "base.html" %}{% block titre %}Boîte de réception — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<h2 style="margin:0">Boîte de réception</h2>
+<p class="aide">Notes adressées à : <b>{{ NIV.get(entite[0], entite[0]) }} — {{ entite[1] }}</b>. « Accuser réception » ajoute une ligne à la feuille « Accusés de réception » (à exporter vers l'émetteur s'il travaille sur un autre appareil).</p>
+<div class="tw"><table class="t" aria-label="Boîte de réception"><thead><tr><th>Date</th><th>Type</th><th>Référence / objet</th><th>Émetteur</th><th>Convocation</th><th>Échéance</th><th>État</th><th></th></tr></thead><tbody>
+{% for n in notes %}<tr><td>{{ jj(n.date) }}</td><td>{{ n.type }}</td><td><b>{{ n.lib }}</b>{% if n.texte %}<br><span class="aide">{{ n.texte|truncate(180) }}</span>{% endif %}</td>
+<td>{{ NIV.get(n.niveau, n.niveau) }} — {{ n.entite }}</td><td>{% if n.dateReunion %}{{ jj(n.dateReunion) }} {{ n.heureReunion or '' }} {{ n.lieuReunion or '' }}{% endif %}</td><td>{{ jj(n.echeance) }}</td>
+<td>{% if n.lue %}{{ icone('valider') }} Reçue{% else %}<b>Non lue</b>{% endif %}</td>
+<td style="white-space:nowrap"><a class="btn sec petit" href="{{ url_for('reg_doc_pdf', gcle='communication', rcle='notes', rid=n.id, doc='note') }}" title="Note signée">{{ icone('document') }}</a>
+{% if not n.lue %}<form method="post" action="{{ url_for('liaison_accuser', nid=n.id) }}" style="display:inline"><button class="btn petit">{{ icone('valider-cercle') }} Accuser réception</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="8" class="aide">Aucune note reçue.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

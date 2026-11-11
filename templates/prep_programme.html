@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% block titre %}{{ p.titre }}{% endblock %}
+{% block contenu %}{% set onglet = 'programmes' %}{% include "_prep_onglets.html" %}
+<p><a href="{{ url_for('prep_programmes', cours=p.cours, matiere=p.matiere) }}">← Programmes {{ p.cours }} {{ prep_nom_matiere(p.matiere) }}</a></p>
+<section class="carte">
+<h2 style="margin-top:0">{{ p.titre }}</h2>
+<p class="sous">{{ p.cours }} · {{ prep_nom_matiere(p.matiere) }}{% if p.dossier %} · Dossier {{ p.dossier }}{% if p.dossier_titre %} — {{ p.dossier_titre }}{% endif %}{% endif %} · {{ 'Unité' if p.type == 'unite' else 'Situation d\'apprentissage' }} {{ p.num or '' }}{% if p.duree %} · {{ p.duree }}{% endif %}{% if p.periode %} · {{ p.periode }}{% endif %}</p>
+<dl class="prep-dl">
+{% for k, lib in [('theme','Thème'),('domaine','Domaine'),('cd','Compétence disciplinaire'),('ct','Compétences transversales'),('ctd','Compétences transdisciplinaires'),('connaissances','Connaissances et techniques'),('materiel','Matériel'),('page','Pages du guide')] %}{% if p[k] %}<dt>{{ lib }}</dt><dd>{{ p[k]|prep_txt }}</dd>{% endif %}{% endfor %}
+{% if p.detail %}{% for k, v in p.detail.items() %}{% if v %}<dt>{{ k|replace('_',' ')|capitalize }}</dt><dd>{{ v|prep_txt if v is string else v }}</dd>{% endif %}{% endfor %}{% endif %}
+</dl>
+{% if p.en_vigueur %}<p class="badge-vigueur" role="note">Programme en vigueur : mesures correctives{% if p.composante and p.composante != 'EPS' %} · {{ p.composante }}{% endif %}</p>{% endif %}
+{% if p.sequences and p.sequences[0].titre is defined %}<h3>Séquences ({{ p.sequences|length }})</h3>
+<div class="tw"><table class="t"><thead><tr><th>N°</th><th>Intitulé de la séquence</th><th>Connaissances et techniques</th><th>Matériel</th></tr></thead><tbody>
+{% for s in p.sequences %}<tr><td>{{ s.num }}</td><td><b>{{ s.titre }}</b></td><td>{{ s.connaissances }}</td><td>{{ s.materiel }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% elif p.sequences %}<h3>Séquences</h3><ol>{% for s in p.sequences %}<li>{{ s.titre if s.titre is defined else s }}</li>{% endfor %}</ol>{% endif %}
+{% if p.semaines %}<h3>Progression par semaine</h3>
+<div class="tw"><table class="t"><thead><tr><th>Semaine</th><th>SA</th><th>Sous-matière</th><th>Contenu</th></tr></thead><tbody>
+{% for s in p.semaines %}{% for x in s.seances %}<tr>{% if loop.first %}<td rowspan="{{ s.seances|length }}">{{ s.num }}</td>{% endif %}<td>{{ x.sa or '' }}</td><td>{{ x.sous_matiere or '' }}</td><td><b>{{ x.titre or '' }}</b>{% if x.detail %}<br><span class="aide">{{ x.detail }}</span>{% endif %}</td></tr>{% endfor %}{% endfor %}
+</tbody></table></div>{% endif %}
+<p class="aide">Source : {{ p.source }}</p>
+</section>
+<h2>Fiches de préparation de {{ 'cette unité' if p.type == 'unite' else 'cette SA' }}</h2>
+{% if fiches %}<ul>{% for f in fiches %}<li><a href="{{ url_for('prep_fiche', fid=f.id) }}">{{ f.titre }}</a> <span class="aide">{{ f.sous_matiere or '' }}{% if f.seance %} · séance {{ f.seance }}{% endif %}</span>{% if f.statut == 'concue' %} <span class="badge">conçue</span>{% endif %}</li>{% endfor %}</ul>
+{% else %}<p class="aide">Aucune fiche dans la bibliothèque. <a href="{{ url_for('prep_preparer') }}">Préparer une fiche</a>.</p>{% endif %}
+{% endblock %}

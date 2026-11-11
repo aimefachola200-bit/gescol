@@ -1,0 +1,44 @@
+{% extends "base.html" %}{% block titre %}Paie {{ mois }}{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Paie de {{ mois_long(mois) }}</h1><p class="sous">{{ lst|length }} bulletin(s){% if manquants %} · {{ manquants }} membre(s) du personnel sans bulletin ce mois{% endif %}</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('paie_accueil') }}">← Tous les mois</a>
+    {% if lst %}<a class="btn sec" href="{{ url_for('livre_paie', mois=mois) }}">Livre de paie (CSV)</a>{% endif %}
+  </div>
+</div>
+{% if manquants %}
+<form method="post" class="carte"><input type="hidden" name="action" value="preparer">
+  <b>Préparer la paie</b> : crée un bulletin pour chaque membre du personnel en activité, à partir de sa fiche.
+  <p style="margin:10px 0 0"><button class="btn">Préparer {{ manquants }} bulletin(s)</button></p></form>
+{% endif %}
+{% if lst %}
+<form method="post">
+<div class="tw"><table class="t">
+  <tr><th>Personnel</th><th class="num">Heures</th><th class="num">Base</th><th class="num">Primes</th><th class="num">Brut</th><th class="num">CNSS</th><th class="num">ITS</th><th class="num">Retenues</th><th class="num">Avances</th><th class="num">Net</th><th>État</th><th></th></tr>
+  {% for b in lst %}{% set ed = b.statut == 'brouillon' %}
+  <tr><td><b>{{ b.nom }}</b> {{ b.prenoms }}<br><span class="gris">{{ b.fonction }} · {{ b.type_contrat }}</span></td>
+    <td class="num">{% if b.type_contrat=='Vacataire' %}{% if ed %}<input name="heures_{{ b.id }}" value="{{ '%g'|format(b.heures) }}" style="width:70px;text-align:right">{% else %}{{ '%g'|format(b.heures) }}{% endif %}{% else %}—{% endif %}</td>
+    <td class="num">{{ fcfa(b.salaire_base) }}</td>
+    {% for k in ['primes'] %}<td class="num">{% if ed %}<input name="{{ k }}_{{ b.id }}" value="{{ b[k] }}" style="width:90px;text-align:right">{% else %}{{ fcfa(b[k]) }}{% endif %}</td>{% endfor %}
+    <td class="num">{{ fcfa(b.brut) }}</td><td class="num">{{ fcfa(b.cnss_salarie) }}</td><td class="num">{{ fcfa(b.its) }}</td>
+    {% for k in ['retenues','avances'] %}<td class="num">{% if ed %}<input name="{{ k }}_{{ b.id }}" value="{{ b[k] }}" style="width:90px;text-align:right">{% else %}{{ fcfa(b[k]) }}{% endif %}</td>{% endfor %}
+    <td class="num"><b>{{ fcfa(b.net) }}</b></td>
+    <td>{% if b.statut=='paye' %}<span class="badge ok">payé</span>{% elif b.statut=='valide' %}<span class="badge">validé</span>{% else %}<span class="badge att">brouillon</span>{% endif %}</td>
+    <td class="num"><a class="btn sec petit" target="_blank" href="{{ url_for('bulletin_paie_pdf', bid=b.id) }}">PDF</a></td></tr>
+  {% endfor %}
+  <tr style="font-weight:700;background:#F9FAFB"><td>Total</td><td></td><td></td><td></td><td class="num">{{ fcfa(tot.brut) }}</td><td class="num">{{ fcfa(tot.cnss_salarie) }}</td><td class="num">{{ fcfa(tot.its) }}</td><td class="num">{{ fcfa(tot.retenues) }}</td><td class="num">{{ fcfa(tot.avances) }}</td><td class="num">{{ fcfa(tot.net) }}</td><td colspan="2"></td></tr>
+</table></div>
+<p class="aide">Charges patronales du mois : CNSS {{ fcfa(tot.cnss_patronal) }} · VPS {{ fcfa(tot.vps) }} · à reverser à la CNSS : {{ fcfa(tot.cnss_salarie + tot.cnss_patronal) }} · ITS à reverser aux impôts : {{ fcfa(tot.its) }}.</p>
+<div class="actions">
+  {% if 'brouillon' in statuts %}<button class="btn sec" name="action" value="enregistrer">Enregistrer et recalculer</button>
+    {% if g.user.role in ('admin','directeur') %}<button class="btn" name="action" value="valider">Valider la paie</button>{% else %}<span class="aide">La direction doit valider la paie avant paiement.</span>{% endif %}{% endif %}
+  {% if 'valide' in statuts %}
+    <select name="mode" style="width:auto">{% for k, v in modes.items() if k not in ('fedapay','kkiapay') %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select>
+    <button class="btn" name="action" value="payer">Marquer les salaires validés comme payés</button>
+    {% if g.user.role in ('admin','directeur') %}<button class="btn sec" name="action" value="rouvrir">Remettre en brouillon</button>{% endif %}
+  {% endif %}
+</div>
+</form>
+{% endif %}
+{% endblock %}

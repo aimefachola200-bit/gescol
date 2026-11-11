@@ -1,0 +1,42 @@
+{# v1.28 — un centre d'examen blanc : candidats, notes, résultats, bilan, recommandations #}
+{% extends "base.html" %}{% block titre %}{{ c.nom }} — examen blanc{% endblock %}
+{% block contenu %}{% include "_examen_blanc_onglets.html" %}
+<p class="aide"><a href="{{ url_for('examen_blanc', session=c.session) }}">← Centres de l'examen blanc {{ c.session }}</a></p>
+<div class="entete"><div><h1>{{ c.nom }}</h1><p class="sous">Session {{ c.session }}{% if c.chef %} · chef de centre : {{ c.chef }}{% endif %}{% if c.date %} · {{ c.date }}{% endif %}</p></div>
+<div class="actions"><a class="btn sec petit" href="{{ url_for('examen_blanc_pdf', cid=c.id, doc='pv') }}">{{ icone('document') }} PV du centre</a>
+<a class="btn sec petit" href="{{ url_for('examen_blanc_pdf', cid=c.id, doc='releve') }}">{{ icone('document') }} Relevé de centre</a>
+<a class="btn sec petit" href="{{ url_for('examen_blanc_xlsx', cid=c.id) }}">{{ icone('graphique') }} Excel</a>
+<a class="btn sec petit" href="{{ url_for('examen_blanc_modele', cid=c.id) }}">Modèle Excel</a>
+{% if peut_ecrire %}<form method="post" enctype="multipart/form-data" action="{{ url_for('examen_blanc_import', cid=c.id) }}" style="display:inline"><label class="btn sec petit" style="cursor:pointer">{{ icone('importer') }} Importer « Candidats à l'examen blanc »<input type="file" name="fichier" accept=".xlsx" hidden onchange="this.form.submit()"></label></form>{% endif %}</div></div>
+<form method="post"><input type="hidden" name="action" value="notes">
+<div class="tw"><table class="t" aria-label="Candidats et notes"><thead><tr><th>N°</th><th>Nom et prénoms</th><th>S</th><th>École</th>{% for k, l, a in MATIERES %}<th title="{{ l }}">{{ a }}</th>{% endfor %}<th>Total</th><th>Moy.</th><th>Maît.</th><th>Seuil</th><th>Rang</th><th></th></tr></thead><tbody>
+{% for x in b.classes %}{% set cd = x.candidat %}<tr><td>{{ cd.ordre or '' }}</td><td>{{ cd.nom }}</td><td>{{ cd.sexe or '' }}</td><td>{{ cd.ecole or '' }}</td>
+{% for k, l, a in MATIERES %}{% set v = cd.notes.get(k) %}<td><input name="n_{{ cd.id }}_{{ k }}" value="{{ num(v) if v is not none else '' }}" size="3" inputmode="decimal" {{ 'disabled' if not peut_ecrire }} aria-label="{{ l }} — {{ cd.nom }}"></td>{% endfor %}
+<td>{{ num(x.total) if x.aCompose else '' }}</td><td>{{ num(x.moyenne) }}</td><td>{{ x.maitrises if x.aCompose else '' }}</td><td>{% if not x.aCompose %}absent{% elif x.admis %}<b>oui</b>{% else %}non{% endif %}</td><td>{{ x.rang or '' }}</td>
+<td>{% if peut_ecrire %}<button class="btn sec petit" form="sup-{{ cd.id }}" aria-label="Supprimer">{{ icone('supprimer') }}</button>{% endif %}</td></tr>
+{% else %}<tr><td colspan="20" class="aide">Aucun candidat : ajoutez-les ci-dessous, reprenez la liste du CEP ou importez le fichier Excel.</td></tr>{% endfor %}
+</tbody></table></div>
+{% if peut_ecrire and b.classes %}<p><button class="btn">{{ icone('enregistrer') }} Enregistrer les notes</button> <span class="aide">Notes sur 20 au quart de point ; une case vide = épreuve non composée (dispensé d'EPS : laisser l'EPS vide).</span></p>{% endif %}
+</form>
+{% for x in b.classes %}<form id="sup-{{ x.candidat.id }}" method="post" onsubmit="return confirm('Supprimer ce candidat ?')"><input type="hidden" name="action" value="supprimer"><input type="hidden" name="candidat" value="{{ x.candidat.id }}"></form>{% endfor %}
+{% if peut_ecrire %}<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:10px;margin-top:10px">
+<form method="post" class="carte"><h3>{{ icone('ajouter') }} Ajouter un candidat</h3><input type="hidden" name="action" value="candidat">
+<label>Nom et prénoms * <input name="nom" required></label> <label>Sexe <select name="sexe"><option value="G">G</option><option value="F">F</option></select></label>
+<label>École de provenance <input name="ecole" list="eb-ecoles"><datalist id="eb-ecoles">{% for e in ecoles %}<option value="{{ e }}">{% endfor %}</datalist></label> <button class="btn">Ajouter</button></form>
+<form method="post" class="carte"><h3>{{ icone('importer') }} Reprendre la liste du CEP</h3><input type="hidden" name="action" value="cep">
+<label>Session CEP <select name="session_cep"><option value="">Toutes</option>{% for x in sessions_cep %}<option>{{ x }}</option>{% endfor %}</select></label>
+<label>Centre CEP <select name="centre_cep"><option value="">Tous</option>{% for x in centres_cep %}<option>{{ x }}</option>{% endfor %}</select></label>
+<button class="btn sec">Reprendre</button><p class="aide">Candidats du module Examens et concours ; un nom déjà présent dans le centre n'est pas dupliqué.</p></form>
+<form method="post" class="carte" onsubmit="return confirm('Supprimer tous les candidats du centre ?')"><h3>{{ icone('reinitialiser') }} Réinitialiser</h3><input type="hidden" name="action" value="reinitialiser"><button class="btn sec">Vider la liste du centre</button></form></div>{% endif %}
+<h2>Bilan du centre</h2>
+<div class="tw"><table class="t" aria-label="Participation"><thead><tr><th></th><th>Garçons</th><th>Filles</th><th>Total</th></tr></thead><tbody>
+<tr><td>Inscrits</td><td>{{ b.g.inscrits }}</td><td>{{ b.f.inscrits }}</td><td>{{ b.inscrits }}</td></tr>
+<tr><td>Ont composé</td><td>{{ b.g.composes }}</td><td>{{ b.f.composes }}</td><td>{{ b.composes }}</td></tr>
+<tr><td>Ont atteint le seuil</td><td>{{ b.g.admis }}</td><td>{{ b.f.admis }}</td><td>{{ b.admis }}</td></tr>
+<tr><td>Taux (%)</td><td>{{ num(b.g.taux) }}</td><td>{{ num(b.f.taux) }}</td><td><b>{{ num(b.taux) }}</b></td></tr></tbody></table></div>
+<p>Moyenne du centre : <b>{{ num(b.moyenneCentre) }}</b> · écart type des moyennes : {{ num(b.ecartTypeMoyennes) }}{% if b.ecartGenre is not none %} · écart filles − garçons : {{ num(b.ecartGenre) }} points{% endif %}</p>
+<div class="tw"><table class="t" aria-label="Épreuves"><thead><tr><th>Épreuve</th><th>Composé</th><th>Moyenne</th><th>Maîtrises</th><th>Taux (%)</th><th>Écart type</th></tr></thead><tbody>
+{% for m in b.matieres %}<tr><td>{{ m.libelle }}</td><td>{{ m.notes }}</td><td>{{ num(m.moyenne) }}</td><td>{{ m.maitrises }}</td><td>{{ num(m.taux) }}</td><td>{{ num(m.ecartType) }}</td></tr>{% endfor %}</tbody></table></div>
+<p>Épreuves fortes : {% for m in b.fortes %}{{ m.libelle }} ({{ num(m.moyenne) }}){% if not loop.last %}, {% endif %}{% endfor %} · faibles : {% for m in b.faibles %}{{ m.libelle }} ({{ num(m.moyenne) }}){% if not loop.last %}, {% endif %}{% endfor %}</p>
+<h3>Recommandations</h3><ul>{% for t in recos %}<li>{{ t }}</li>{% endfor %}</ul>
+{% endblock %}

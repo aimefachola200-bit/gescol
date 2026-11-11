@@ -1,0 +1,23 @@
+{# v1.27 — session du CEP : épreuves, centres, candidats, numéros de table, paramètres de délibération #}
+{% extends "base.html" %}{% block titre %}Session CEP — {{ G.titre }}{% endblock %}
+{% block contenu %}
+{% include "_examens_entete.html" %}
+<h2 style="margin:0">{{ s }}</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px;margin-top:8px">
+<div class="carte"><h3>{{ icone('examen') }} Épreuves ({{ epreuves|length }})</h3>
+{% if epreuves %}<ul>{% for e in epreuves %}<li>{{ e.epreuve }} — coef. {{ '%g' % (e.coefficient or 1) }}, sur {{ '%g' % (e.bareme or 20) }}</li>{% endfor %}</ul>{% else %}<p class="aide">Aucune épreuve.</p>{% endif %}
+{% if peut_ecrire and not epreuves %}<form method="post"><input type="hidden" name="session" value="{{ s }}"><button class="btn sec petit" name="action" value="epreuves">{{ icone('ajouter') }} Épreuves par défaut</button></form>{% endif %}
+<a class="btn sec petit" href="{{ url_for('reg_page', gcle='examens', rcle='epreuves') }}">{{ icone('modifier') }} Gérer les épreuves</a></div>
+<div class="carte"><h3>{{ icone('ecole') }} Centres ({{ centres|length }})</h3>
+{% if centres %}<ul>{% for c in centres %}<li><b>{{ c.centre }}</b>{% if c.code %} ({{ c.code }}){% endif %} — {{ par_centre[c.centre] }} candidat(s), {{ c.salles or 1 }} salle(s) de {{ c.capacite or 30 }} places</li>{% endfor %}</ul>{% else %}<p class="aide">Aucun centre.</p>{% endif %}
+<a class="btn sec petit" href="{{ url_for('reg_page', gcle='examens', rcle='centres') }}">{{ icone('modifier') }} Centres</a> <a class="btn sec petit" href="{{ url_for('reg_page', gcle='examens', rcle='jurys') }}">Jurys</a></div>
+<div class="carte"><h3>{{ icone('groupe') }} Candidats ({{ n_cand }})</h3>
+<p class="aide">{{ sans_centre }} sans centre · {{ sans_num }} sans numéro de table.</p>
+{% if peut_ecrire %}<form method="post" style="display:inline"><input type="hidden" name="session" value="{{ s }}">{% if ecole_ouverte %}<button class="btn sec petit" name="action" value="candidats">{{ icone('importer') }} Reprendre les élèves de CM2</button> {% endif %}<button class="btn sec petit" name="action" value="numeros">{{ icone('etiquette') }} Numéros de table et salles</button></form>{% endif %}
+<p><a class="btn sec petit" href="{{ url_for('reg_page', gcle='examens', rcle='candidats') }}">{{ icone('modifier') }} Candidats</a></p></div>
+<div class="carte"><h3>{{ icone('reglages') }} Délibération</h3>
+<form method="post"><input type="hidden" name="session" value="{{ s }}"><label>Seuil d'admission (/20) <input name="seuil" value="{{ seuil }}" size="5"></label>
+<label>Seuil de repêchage <input name="repechage" value="{{ repechage }}" size="5" placeholder="aucun"></label>{% if peut_ecrire %} <button class="btn sec petit" name="action" value="param">Enregistrer</button>{% endif %}</form>
+<p><a class="btn sec petit" href="{{ url_for('examens_notes', session=s) }}">Saisie des notes</a> <a class="btn sec petit" href="{{ url_for('examens_deliberation', session=s) }}">Délibération et résultats</a></p></div>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}{% block titre %}Services et attributions{% endblock %}
+{% block contenu %}
+<style>
+.org-svg{overflow-x:auto;background:#fff;border:1px solid var(--bord);border-radius:10px;padding:8px}
+.attr{white-space:pre-line;line-height:1.5}
+.svc-inactif{opacity:.55}
+.note-art{background:#F8FAFC;border-left:4px solid #1F4E79;padding:8px 12px;font-style:italic}
+</style>
+<div class="entete"><div><h1>Services et attributions</h1>
+<p class="sous">{{ 'Circonscription scolaire' if JUR_NIVEAU=='cs' else 'Direction départementale' }} : organigramme, responsables et attributions de chaque service.</p></div>
+<div class="actions">
+  {% if peut('jur_structure') %}<a class="btn" href="{{ url_for('jur_service_form') }}">+ Ajouter un service oublié</a>
+  <a class="btn sec" href="{{ url_for('jur_cachets') }}">Cachets et signatures</a>{% endif %}
+  {% if s %}<a class="btn sec" href="{{ url_for('jur_organigramme', export='pdf') }}" target="_blank">PDF organigramme + attributions</a>{% endif %}
+</div></div>
+
+{% if not s %}<div class="flash info">La structure n'est pas encore configurée : renseignez d'abord l'identité de la {{ 'circonscription' if JUR_NIVEAU=='cs' else 'DDEMP' }}{% if peut('jur_structure') %} (<a href="{{ url_for('jur_structure') }}">Identité de la structure</a>){% endif %}.</div>{% endif %}
+
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Services actifs</div><div class="v">{{ kpi.services }}</div><div class="d">{{ kpi.inactifs }} désactivé(s)</div></div>
+  <div class="kpi"><div class="l">Agents de la structure</div><div class="v">{{ kpi.agents }}</div><div class="d">responsables possibles</div></div>
+  {% if JUR_NIVEAU=='ddemp' %}<div class="kpi"><div class="l">Circonscriptions</div><div class="v">{{ kpi.cs }}</div><div class="d">relèvent du Directeur départemental</div></div>{% endif %}
+  <div class="kpi"><div class="l">Zones pédagogiques</div><div class="v">{{ kpi.zones }}</div><div class="d">&nbsp;</div></div>
+  <div class="kpi"><div class="l">Écoles</div><div class="v">{{ kpi.ecoles }}</div><div class="d">actives</div></div>
+</div>
+
+<nav class="onglets" aria-label="Sections">
+  <a href="#organigramme" class="actif">Organigramme</a><a href="#liste">Liste des services</a><a href="#attributions">Attributions</a>
+  {% if peut('jur_structure') %}<a href="{{ url_for('jur_service_form') }}">+ Ajouter un service oublié</a>{% endif %}
+</nav>
+
+<section class="carte" id="organigramme">
+  <h2>Organigramme</h2>
+  <p class="aide">Du sommet à la base : {{ 'DDEMP → Circonscription → divisions et services → zones pédagogiques → écoles' if JUR_NIVEAU=='cs' else 'Direction départementale → services → circonscriptions scolaires (qui dépendent directement du Directeur départemental) → divisions → zones pédagogiques → écoles' }}, avec les nombres.</p>
+  {% if svg %}<div class="org-svg">{{ svg|safe }}</div>{% else %}<p class="gris">Organigramme disponible après la configuration de la structure.</p>{% endif %}
+</section>
+
+<section class="carte" id="liste">
+  <h2>Liste des services</h2>
+  <div class="tw"><table class="t compact">
+    <tr><th class="num">Ordre</th><th>Sigle</th><th>Service</th><th>Rattachement</th><th>Responsable</th><th class="num">Agents</th><th>État</th>{% if peut('jur_structure') %}<th></th>{% endif %}</tr>
+    {% for x in services %}
+    <tr class="{{ '' if x.actif else 'svc-inactif' }}">
+      <td class="num">{{ x.ordre }}</td><td><b>{{ x.sigle or '' }}</b></td><td>{{ x.nom }}{% if x.reference %} <span class="badge">{{ x.reference }}</span>{% endif %}</td>
+      <td>{{ x.parent_nom or '—' }}</td><td>{{ x.responsable_nom or '—' }}</td><td class="num">{{ nb_ag.get(x.code, 0) }}</td>
+      <td>{% if x.actif %}<span class="badge ok">actif</span>{% else %}<span class="badge ko">désactivé</span>{% endif %}</td>
+      {% if peut('jur_structure') %}<td class="num" style="white-space:nowrap">
+        <a class="btn sec petit" href="{{ url_for('jur_service_form', sid=x.id) }}">Modifier</a>
+        {% if x.code != racine and (x.actif or not x.defaut) %}<form method="post" action="{{ url_for('jur_service_supprimer', sid=x.id) }}" style="display:inline">
+          <button class="btn danger petit" data-confirmer="{{ 'Désactiver' if x.actif else 'Supprimer définitivement' }} « {{ x.nom }} » ?">{{ 'Désactiver' if x.actif else 'Supprimer' }}</button></form>{% endif %}
+      </td>{% endif %}
+    </tr>
+    {% else %}<tr><td colspan="8" class="gris">Aucun service.</td></tr>{% endfor %}
+  </table></div>
+</section>
+
+<section class="carte" id="attributions">
+  <h2>Attributions</h2>
+  {% for x in services if x.actif %}
+  <details {{ 'open' if loop.first }}>
+    <summary><b>{{ x.sigle or '' }}</b> — {{ x.nom }}{% if x.reference %} ({{ x.reference }}){% endif %}{% if x.responsable_nom %} · {{ x.responsable_nom }}{% endif %}</summary>
+    <div class="attr">{{ x.attributions or 'Attributions non renseignées.' }}</div>
+    {% if x.note %}<p class="note-art">{{ x.note }}</p>{% endif %}
+  </details>
+  {% endfor %}
+</section>
+{% endblock %}

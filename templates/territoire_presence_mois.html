@@ -1,0 +1,14 @@
+{# v2.3 — statistiques mensuelles de présence du personnel #}
+{% extends "base.html" %}{% block titre %}Présence du mois — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<h2 style="margin:0">Statistiques du mois {{ mois }}</h2>
+<form method="get" class="filtres" style="margin:8px 0"><label for="mois">Mois</label><input type="month" id="mois" name="mois" value="{{ mois }}" onchange="this.form.submit()"></form>
+<p class="aide">Jours pointés par agent et par statut ; taux de présence = (présent + retard) / jours pointés.</p>
+<div class="tw"><table class="t" aria-label="Présence du mois"><thead><tr><th>Agent</th>{% for s in statuts %}<th>{{ s }}</th>{% endfor %}<th>Jours pointés</th><th>Taux de présence</th></tr></thead><tbody>
+{% for l in lignes %}<tr><td>{{ l.agent }}</td>{% for s in statuts %}<td>{{ l.c[s] }}</td>{% endfor %}<td>{{ l.jours }}</td><td>{{ l.taux if l.taux is not none else '—' }} %</td></tr>
+{% else %}<tr><td colspan="{{ statuts|length + 3 }}" class="aide">Aucun pointage ce mois-ci.</td></tr>{% endfor %}
+{% if lignes %}<tr><th>Total</th>{% for s in statuts %}<th>{{ tot[s] }}</th>{% endfor %}<th>{{ tot.values()|sum }}</th><th>{{ taux if taux is not none else '—' }} %</th></tr>{% endif %}
+</tbody></table></div>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}{% import "jur_tableau_commun.html" as T with context %}
+{% block titre %}Écoles : structure et équipements{% endblock %}
+{% block contenu %}
+{{ T.styles() }}
+<style>.es td.ind{background:#fff8e1;font-weight:700}.es td.alerte{color:#b42318;font-weight:700}.es small.gris{color:#6b7280}</style>
+{% macro pc(v) %}{{ ('%.1f'|format(v))|replace('.', ',') ~ ' %' if v is not none else '–' }}{% endmacro %}
+{% macro r(v, d=2) %}{{ (('%.' ~ d ~ 'f')|format(v))|replace('.', ',') if v is not none else '–' }}{% endmacro %}
+{% macro bloc(s, titre) %}
+{% set t = tot[s] %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Écoles</div><div class="v">{{ t.ecoles }}</div><div class="d">{{ t.EP }} EP · {{ t.EM }} EM{% if t.EE %} · {{ t.EE }} EE{% endif %} · {{ t.fiches }} fiche(s)</div></div>
+  <div class="kpi"><div class="l">Classes autorisées / ouvertes</div><div class="v">{{ t.aut }} <small>/ {{ t.ouv }}</small></div><div class="d">taux d'ouverture : {{ pc(t.taux_ouv) }}</div></div>
+  <div class="kpi"><div class="l">Multigrades</div><div class="v">{{ t.struct.multi }}</div><div class="d">{{ pc(t.p_multi) }} des classes · jumelées {{ t.struct.jumelee }}</div></div>
+  <div class="kpi"><div class="l">Élèves par classe</div><div class="v">{{ r(t.stats.taille.moy, 1) }}</div><div class="d">écart type {{ r(t.stats.taille.et, 1) }}</div></div>
+  <div class="kpi"><div class="l">Puits / Électricité</div><div class="v">{{ t.eau_src.puits }} <small>/ {{ t.equip.elec[0] }}</small></div><div class="d">écoles</div></div>
+</div>
+
+<div class="carte"><h2>1. Nombre d'écoles, classes et salles ({{ titre }})</h2>
+  <div class="tw"><table class="t serre es">
+    <tr><th>{{ lib }}</th><th class="num">Primaires</th><th class="num">Maternelles</th><th class="num">Espaces enfance</th><th class="num">Total écoles</th><th class="num">Fiches reçues</th><th class="num">Classes / sections autorisées</th><th class="num">Ouvertes</th><th class="num">Taux d'ouverture</th><th class="num">Salles existantes</th><th class="num">Salles utilisées</th></tr>
+    {% for g in grp + [tot] %}{% set x = g[s] %}{% if x.ecoles %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td>
+      <td class="num">{{ x.EP }}</td><td class="num">{{ x.EM }}</td><td class="num">{{ x.EE }}</td><td class="num"><b>{{ x.ecoles }}</b></td><td class="num">{{ x.fiches }}</td>
+      <td class="num">{{ x.aut }}</td><td class="num">{{ x.ouv }}</td><td class="num ind">{{ pc(x.taux_ouv) }}</td><td class="num">{{ x.s_exist }}</td><td class="num">{{ x.s_util }}</td></tr>{% endif %}{% endfor %}
+  </table></div>
+  <div class="tw">{{ courbes[s].ecoles }}</div><div class="tw">{{ courbes[s].classes }}</div>
+</div>
+
+<div class="carte"><h2>2. Structure pédagogique : classes simples, jumelées, multigrades ({{ titre }})</h2>
+  <div class="tw"><table class="t serre es">
+    <tr><th>{{ lib }}</th>{% for k, l in STRUCT %}<th class="num">{{ l }}</th>{% endfor %}<th class="num">Total</th><th class="num">% jumelées</th><th class="num">% multigrades</th></tr>
+    {% for g in grp + [tot] %}{% set x = g[s] %}{% if x.ecoles %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td>
+      {% for k, l in STRUCT %}<td class="num">{{ x.struct[k] }}</td>{% endfor %}<td class="num"><b>{{ x.struct_tot }}</b></td>
+      <td class="num ind">{{ pc(x.p_jum) }}</td><td class="num ind{{ ' alerte' if x.p_multi and x.p_multi >= 20 }}">{{ pc(x.p_multi) }}</td></tr>{% endif %}{% endfor %}
+  </table></div>
+  <p class="aide">Primaire : tableau 3.14 de la fiche de recensement (ou bloc « structure pédagogique » des rapports) ; une classe jumelée ou multigrade est comptée une fois (salles utilisées). Maternelle : tableau 4 (sections).</p>
+  <div class="tw">{{ courbes[s].struct }}</div>
+</div>
+
+<div class="carte"><h2>3. Moyennes et écarts types ({{ titre }})</h2>
+  <div class="tw"><table class="t serre es">
+    <tr><th rowspan="2">{{ lib }}</th>{% for k, l in STATS %}<th colspan="4" class="grp">{{ l }}</th>{% endfor %}</tr>
+    <tr>{% for _ in STATS %}<th class="num">Moyenne</th><th class="num">Écart type</th><th class="num">Min</th><th class="num">Max</th>{% endfor %}</tr>
+    {% for g in grp + [tot] %}{% set x = g[s] %}{% if x.ecoles %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td>
+      {% for k, l in STATS %}{% set m = x.stats[k] %}<td class="num ind">{{ r(m.moy) }}</td><td class="num ind">{{ r(m.et) }}</td><td class="num">{{ m.min if m.min is not none else '–' }}</td><td class="num">{{ m.max if m.max is not none else '–' }}</td>{% endfor %}</tr>{% endif %}{% endfor %}
+  </table></div>
+  <p class="aide">Écart type de la population : dispersion autour de la moyenne (un écart type élevé signale des écoles ou des classes très inégales). Élèves par classe : effectif de chaque classe transmis par les écoles.</p>
+  <div class="tw">{{ courbes[s].stats }}</div>
+</div>
+
+<div class="carte"><h2>4. Équipements et commodités ({{ titre }})</h2>
+  {% if source != 'recensement' %}<p class="aide">Le rapport de rentrée et la fiche de fin d'année ne renseignent que la cantine et le lavage des mains ; choisissez la fiche de recensement pour l'eau, l'électricité, les latrines, la clôture…</p>{% endif %}
+  <div class="tw"><table class="t serre es">
+    <tr><th rowspan="2">{{ lib }}</th>{% for k, l in EQUIP %}<th colspan="2" class="grp">{{ l }}</th>{% endfor %}</tr>
+    <tr>{% for _ in EQUIP %}<th class="num">Écoles</th><th class="num">%</th>{% endfor %}</tr>
+    {% for g in grp + [tot] %}{% set x = g[s] %}{% if x.ecoles %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td>
+      {% for k, l in EQUIP %}<td class="num">{{ x.equip[k][0] }}<small class="gris">/{{ x.equip[k][1] }}</small></td><td class="num ind">{{ pc(x.p_equip[k]) }}</td>{% endfor %}</tr>{% endif %}{% endfor %}
+  </table></div>
+  <h3>Sources d'eau potable et d'électricité (nombre d'écoles et % des écoles ayant répondu)</h3>
+  <div class="tw"><table class="t serre es">
+    <tr><th rowspan="2">{{ lib }}</th>{% for k, l in EAU %}<th colspan="2" class="grp">{{ l }}</th>{% endfor %}{% for k, l in ELEC %}<th colspan="2" class="grp">Élec. : {{ l }}</th>{% endfor %}</tr>
+    <tr>{% for _ in EAU + ELEC %}<th class="num">Écoles</th><th class="num">%</th>{% endfor %}</tr>
+    {% for g in grp + [tot] %}{% set x = g[s] %}{% if x.ecoles %}<tr class="{{ 'b' if loop.last }}"><td>{{ g.nom }}</td>
+      {% for k, l in EAU %}<td class="num">{{ x.eau_src[k] }}</td><td class="num ind">{{ pc(x.p_eau_src[k]) }}</td>{% endfor %}
+      {% for k, l in ELEC %}<td class="num">{{ x.elec_src[k] }}</td><td class="num ind">{{ pc(x.p_elec_src[k]) }}</td>{% endfor %}</tr>{% endif %}{% endfor %}
+  </table></div>
+  <div class="tw">{{ courbes[s].equip }}</div><div class="tw">{{ courbes[s].eau }}</div>
+</div>
+{% endmacro %}
+
+<div class="entete"><div><h1>{{ icone('ecole') }} Écoles : nombre, structure pédagogique et équipements</h1>
+  <p class="sous">{{ SOURCES[source] }} · année scolaire {{ flt.annee }} · par {{ lib|lower }} · secteur public, et secteur privé à part</p></div>
+  <div class="actions"><a class="btn sec" href="{{ url_for('jur_ecoles_struct', export='xlsx', **args) }}">⇩ Excel</a>
+    <button class="btn sec" type="button" onclick="window.print()">{{ icone('imprimer') }} Imprimer</button></div></div>
+{{ T.filtres(flt, 'jur_ecoles_struct', extra={'par': par, 'source': source}) }}
+<div class="actions noprint" style="margin:-4px 0 6px">Source :
+  {% for k, l in SOURCES.items() %}<a class="btn petit {{ '' if source == k else 'sec' }}" href="{{ url_for('jur_ecoles_struct', **dict(args1, source=k)) }}">{{ l }}</a>{% endfor %}</div>
+<div class="actions noprint" style="margin:0 0 12px">Regrouper par :
+  {% if JUR_NIVEAU == 'ddemp' %}<a class="btn petit {{ '' if par == 'cs' else 'sec' }}" href="{{ url_for('jur_ecoles_struct', **dict(args0, par='cs')) }}">circonscription</a>{% endif %}
+  <a class="btn petit {{ '' if par == 'zone' else 'sec' }}" href="{{ url_for('jur_ecoles_struct', **dict(args0, par='zone')) }}">zone pédagogique</a>
+  <a class="btn petit {{ '' if par == 'ecole' else 'sec' }}" href="{{ url_for('jur_ecoles_struct', **dict(args0, par='ecole')) }}">école</a></div>
+
+{% if not tot.pub.ecoles and not tot.prv.ecoles %}<div class="carte">{{ T.vide("Aucune école pour ces critères.") }}</div>{% else %}
+{% if tot.pub.ecoles %}<h2 style="margin:8px 0">Secteur public</h2>{{ bloc('pub', 'secteur public') }}{% endif %}
+{% if tot.prv.ecoles %}<details style="margin-top:16px" open><summary><h2 style="display:inline;color:#8e44ad">Secteur privé (à part)</h2></summary>
+<div style="border-left:4px solid #8e44ad;padding-left:10px">{{ bloc('prv', 'secteur privé') }}</div></details>{% endif %}
+{% endif %}
+{% endblock %}

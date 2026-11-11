@@ -1,0 +1,13 @@
+{# v1.26 — soldes des stocks de la cantine (Σ entrées − Σ sorties par denrée et unité) #}
+{% extends "base.html" %}{% block titre %}Soldes des stocks — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">{{ G.sous_titre }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<h2 style="margin:0">Soldes des stocks de la cantine</h2>
+<p class="aide">Solde = entrées − sorties, par denrée et par unité{{ ' — année ' ~ annee if annee else ' (toutes années)' }}. Alerte quand le solde est nul ou négatif.</p>
+<div class="tw"><table class="t" aria-label="Soldes des stocks"><thead><tr><th>Denrée</th><th>Unité</th><th>Solde</th><th>État</th></tr></thead><tbody>
+{% for (den, un), v in soldes %}<tr><td>{{ den }}</td><td>{{ un }}</td><td>{{ ('%g' % v)|replace('.', ',') }}</td><td>{% if v <= 0 %}{{ icone('alerte') }} <b>Épuisé</b>{% else %}{{ icone('valider') }} Disponible{% endif %}</td></tr>
+{% else %}<tr><td colspan="4" class="aide">Aucun mouvement de stock.</td></tr>{% endfor %}
+</tbody></table></div>
+<p><a class="btn sec petit" href="{{ url_for('reg_page', gcle='sante', rcle='stocks') }}">{{ icone('modifier') }} Mouvements de stock</a></p>
+{% endblock %}

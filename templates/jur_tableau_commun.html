@@ -1,0 +1,46 @@
+{# Fragments communs du tableau de bord et des statistiques de la juridiction (a_tableau.py) #}
+{% macro styles() %}
+<style>
+  .jsvg{display:block;max-width:820px;font-family:inherit}
+  .jsvg .lb{font-size:11.5px;fill:#344054}.jsvg .lb2{font-size:12.5px;fill:#344054;font-weight:600}
+  .jsvg .vl{font-size:10.5px;fill:#475467}.jsvg .lg{font-size:11px;fill:#475467}
+  .jsvg .gr{stroke:#EAECF0;stroke-width:1}.jsvg .ref{stroke:#1D2939;stroke-width:1.2;stroke-dasharray:4 3}
+  .jsvg rect{transition:opacity .15s}.jsvg g:hover rect{opacity:.8}
+  table.t.serre th,table.t.serre td{padding:5px 7px;font-size:13px}
+  table.t.serre th{font-size:11.5px}
+  table.t.serre td.num{white-space:nowrap}
+  table.t tr.b td{font-weight:700;background:#F2F6FB}
+  table.t th.grp{text-align:center;border-left:1px solid #EAECF0}
+  .deux{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:18px}
+  .carte h2{margin:0 0 4px;font-size:17px;color:var(--bleu)}
+  .carte h3{margin:14px 0 6px;font-size:14.5px}
+  .legende-gf{display:flex;gap:14px;font-size:12.5px;color:var(--gris);margin:4px 0}
+  .legende-gf i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  .kpi .v small{font-size:13px;color:var(--gris);font-weight:500}
+  .alerte-liste{margin:6px 0 0;padding-left:18px}.alerte-liste li{margin:2px 0}
+  @media(max-width:600px){table.t.serre th,table.t.serre td{padding:4px 5px;font-size:12px}}
+</style>
+{% endmacro %}
+
+{# filtres : année toujours ; CS (DDEMP) ; zone, type, secteur, recherche selon la page #}
+{% macro filtres(flt, endpoint, zone=True, type_=True, secteur=True, recherche=False, extra={}) %}
+<form method="get" class="filtres" action="{{ url_for(endpoint) }}">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">
+    {% for a in flt.annees %}<option value="{{ a }}" {{ 'selected' if a == flt.annee }}>{{ a }}</option>{% endfor %}</select></label>
+  {% if JUR_NIVEAU == 'ddemp' %}<label>Circonscription<br><select name="cs" onchange="if(this.form.zone)this.form.zone.value='';this.form.submit()"><option value="">Toutes</option>
+    {% for c in flt.cs %}<option value="{{ c.id }}" {{ 'selected' if flt.cs_id == c.id }}>{{ c.nom }}</option>{% endfor %}</select></label>{% endif %}
+  {% if zone %}<label>Zone pédagogique<br><select name="zone" onchange="this.form.submit()"><option value="">Toutes</option>
+    {% for z in flt.zones %}<option value="{{ z.id }}" {{ 'selected' if flt.zone_id == z.id }}>{% if JUR_NIVEAU == 'ddemp' and not flt.cs_id %}{{ z.cs_nom }} – {% endif %}{{ z.nom }}</option>{% endfor %}</select></label>{% endif %}
+  {% if type_ %}<label>Type<br><select name="type" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for k, v in JUR_TYPES.items() %}<option value="{{ k }}" {{ 'selected' if flt.type == k }}>{{ v }}</option>{% endfor %}</select></label>{% endif %}
+  {% if secteur %}<label>Secteur<br><select name="secteur" onchange="this.form.submit()"><option value="">Tous</option>
+    {% for k, v in JUR_SECTEURS.items() %}<option value="{{ k }}" {{ 'selected' if flt.secteur == k }}>{{ v }}</option>{% endfor %}</select></label>{% endif %}
+  {% if recherche %}<label>Recherche<br><input name="q" value="{{ flt.q }}" placeholder="Nom, code, directeur…"></label>{% endif %}
+  {% for k, v in extra.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+  <button class="btn sec petit">Filtrer</button>
+</form>
+{% endmacro %}
+
+{% macro legende_gf() %}<div class="legende-gf"><span><i style="background:#2a78d6"></i>Garçons</span><span><i style="background:#eb6834"></i>Filles</span></div>{% endmacro %}
+
+{% macro vide(message) %}<p class="aide">{{ message }}</p>{% endmacro %}

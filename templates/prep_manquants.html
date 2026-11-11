@@ -1,0 +1,65 @@
+{% extends "base.html" %}{% block titre %}Fiches et guides manquants{% endblock %}
+{% block contenu %}{% set onglet = 'manquants' %}{% include "_prep_onglets.html" %}
+<h2>Fiches et guides manquants</h2>
+<p class="aide">Comparaison entre la planification annuelle officielle (SA prévues par cours et matière) et les fiches et guides des documents fournis. Les fiches et guides ajoutés pour combler les manques portent la mention : <b>{{ mention }}</b></p>
+{% for titre, lignes in [('Après les fiches et guides conçus', apres), ('Avant (documents fournis seuls)', avant)] %}
+<h3>{{ titre }}</h3>
+<div class="tw"><table class="t">
+  <thead><tr><th>Cours</th><th>Matière</th><th>Fiches</th><th>Guides</th><th>SA prévues</th><th>SA sans fiche</th></tr></thead>
+  <tbody>{% for l in lignes %}<tr>
+    <td>{{ l.cours }}</td><td>{{ prep_nom_matiere(l.matiere) }}</td><td>{{ l.fiches }}</td><td>{{ l.guides }}</td>
+    <td>{{ l.sa_prevues|join(', ') if l.sa_prevues else '—' }}</td>
+    <td>{% if l.sa_sans_fiche %}<span class="badge ko">{{ l.sa_sans_fiche|join(', ') }}</span>{% else %}<span class="badge ok">aucune</span>{% endif %}</td>
+  </tr>{% endfor %}</tbody></table></div>
+{% endfor %}
+{% if inv %}
+<h3>Inventaire CM1 (v1.19)</h3>
+<p class="aide">{{ inv.note }}</p>
+<div class="tw"><table class="t">
+  <thead><tr><th>Matière</th><th>Séances de référence</th><th>Déjà dans l'application</th><th>Manquantes</th><th>Conçues (à valider)</th><th>Restent à faire</th><th></th></tr></thead>
+  <tbody>{% for x in inv.matieres %}<tr>
+    <td>{{ x.nom }}</td><td>{{ x.reference }}</td><td>{{ x.dans_app }}</td><td>{{ x.manquantes }}</td><td>{{ x.concues }}</td>
+    <td>{% if x.restent %}<span class="badge ko">{{ x.restent }}</span>{% else %}<span class="badge ok">0</span>{% endif %}</td>
+    <td>{% if x.concues %}<a class="btn sec petit" href="{{ url_for('prep_fiches', cours='CM1', matiere=x.matiere, statut='concue') }}">Voir</a>{% endif %}</td>
+  </tr>{% endfor %}</tbody></table></div>
+<details><summary>Détail par sous-matière</summary>
+<div class="tw"><table class="t"><thead><tr><th>Matière</th><th>Sous-matière</th><th>Référence</th><th>Dans l'app</th><th>Manquantes</th><th>Conçues</th></tr></thead><tbody>
+{% for x in inv.lignes %}<tr><td>{{ prep_nom_matiere(x.matiere) }}</td><td>{{ x.sous_matiere }}</td><td>{{ x.reference }}</td><td>{{ x.dans_app }}</td><td>{{ x.manquantes }}</td><td>{{ x.concues }}</td></tr>{% endfor %}
+</tbody></table></div></details>
+<p class="aide">{{ inv.hors_reference }} Contes, poèmes et chants : la fiche donne la démarche, le texte est à prendre dans le recueil de la classe. {{ nb_resumes }} résumés « l'essentiel à retenir » sont disponibles dans l'onglet <a href="{{ url_for('prep_resumes') }}">Résumés</a>.</p>
+{% endif %}
+{% if lots %}
+<h3>Lot 2 (v1.19)</h3>
+{% if lots['lot2-cs'] %}<p><b>Fiches de mathématiques transmises par la CS</b> : {{ lots['lot2-cs'].lues }} fiches lues dans {{ lots['lot2-cs'].fichiers|length }} fichiers, {{ lots['lot2-cs'].importees }} importées (une par séquence), {{ lots['lot2-cs'].doublons }} doublons retirés. <a href="{{ url_for('prep_fiches', q='transmises par la CS') }}">Voir les fiches</a></p>{% endif %}
+{% if lots['lot2-reference'] %}<div class="tw"><table class="t"><thead><tr><th>Recueil de référence (structure seulement)</th><th>Séances</th><th>Déjà dans l'application</th><th>Conçues (à valider)</th><th>Restent</th></tr></thead><tbody>
+{% for k, v in lots['lot2-reference'].items() %}<tr><td>{{ k }}</td><td>{{ v.reference }}</td><td>{{ v.dans_app }}</td><td>{{ v.concues }}</td><td>{% if v.restent %}<span class="badge ko">{{ v.restent }}</span>{% else %}<span class="badge ok">0</span>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+{% if lots['guide-cp'] %}<p><b>Guide officiel de Mathématiques CP (MEMP, 2022)</b> : <a href="{{ url_for('prep_guide', gid='g-memp-ma-cp') }}">guide et progression</a> ; {{ lots['guide-cp'].fiches }} fiches CP (une par jour de la progression) dont {{ lots['guide-cp'].developpees }} reprises du guide (texte relevé par OCR, à relire) et {{ lots['guide-cp'].associees }} fiches associées. <a href="{{ url_for('prep_fiches', cours='CP', matiere='maths') }}">Voir les fiches</a></p>{% endif %}
+{% endif %}
+{% if lots['lot3-inventaire'] %}
+<h3>Lot 3 (v1.20)</h3>
+<p class="aide">Recueils d'auteurs tiers (CI, CP, CE2, CM2) utilisés uniquement pour la structure (numéros, titres de séance) ; les fiches ajoutées sont des rédactions originales portant la mention « Conçue selon l'APC — à valider par le conseiller pédagogique ». Détail : docs/inventaire_fiches.md.</p>
+<div class="tw"><table class="t"><thead><tr><th>Cours</th><th>Séances de référence</th><th>Déjà dans l'application</th><th>Conçues (à valider)</th><th>Doublons internes</th><th>Intrus écartés</th><th></th></tr></thead><tbody>
+{% for c in ['CI', 'CP', 'CE2', 'CM2'] %}{% set v = lots['lot3-inventaire'][c] %}{% if v %}<tr><td>{{ c }}</td><td>{{ v.reference }}</td><td>{{ v.dans_app }}</td><td>{{ v.concues }}</td><td>{{ v.doublons_internes }}</td><td>{{ v.intrus }}</td>
+<td><a class="btn sec petit" href="{{ url_for('prep_fiches', cours=c, statut='concue') }}">Voir</a></td></tr>{% endif %}{% endfor %}
+</tbody></table></div>
+{% if lots['lot3-est-cs'] %}<p><b>Fiches d'EST CM2 transmises par la CS</b> : {{ lots['lot3-est-cs'].lues }} lues, {{ lots['lot3-est-cs'].importees }} importées, {{ lots['lot3-est-cs'].fusionnees }} fiches de même objet remplacées (voir « Doublons »). <a href="{{ url_for('prep_fiches', q='EST CM2 transmises par la CS') }}">Voir les fiches</a></p>{% endif %}
+{% if lots['lot3-guides-cm1'] %}<p><b>Guides officiels CM1 (MEMP / INFRE)</b> : {% for gid in lots['lot3-guides-cm1'].guides %}<a href="{{ url_for('prep_guide', gid=gid) }}">{{ {'g-memp-fr-cm1': 'Français', 'g-memp-ma-cm1': 'Mathématiques', 'g-memp-eps-cm1': 'EPS', 'g-memp-est-cm1': 'EST'}[gid] }}</a>{% if not loop.last %} · {% endif %}{% endfor %} — {{ lots['lot3-guides-cm1'].fiches_eps_corrigees }} fiches d'EPS CM1 réalignées sur les SA du guide.</p>{% endif %}
+{% if lots['lot3-es'] %}<p><b>Éducation sociale actualisée</b> (faits vérifiés le {{ lots['lot3-es'].date }}) : {{ lots['lot3-es'].fiches_actualisees }} fiches corrigées, {{ lots['lot3-es'].resumes }} résumés, <a href="{{ url_for('prep_guide', gid='g-es-actualite') }}">repères d'actualité institutionnelle et sources</a>.</p>{% endif %}
+{% if lots['lot3-programmes'] %}<details><summary>Titres de SA ajoutés aux programmes d'après les recueils ({{ lots['lot3-programmes']|length }})</summary><ul>{% for p in lots['lot3-programmes'] %}<li>{{ p.cours }} — {{ prep_nom_matiere(p.matiere) }} SA {{ p.sa }} : {{ p.titre }}</li>{% endfor %}</ul></details>{% endif %}
+{% if lots['lot3-intrus'] %}<details><summary>Intrus écartés ({{ lots['lot3-intrus']|length }})</summary><ul>{% for x in lots['lot3-intrus'] %}<li>{{ x.cours }} p. {{ x.page }} — {{ x.titre }} : {{ x.raison }}</li>{% endfor %}</ul></details>{% endif %}
+{% endif %}
+{% if doublons %}
+<h3>Doublons</h3>
+<div class="tw"><table class="t"><thead><tr><th>Type</th><th>Cours</th><th>Référence</th><th>Titre</th><th>Conservée</th><th>Retirée</th><th>Raison</th></tr></thead><tbody>
+{% for d in doublons %}<tr><td>{{ d.type }}</td><td>{{ d.cours }}</td><td>{{ d.reference }}</td><td>{{ d.titre }}</td><td>{{ d.garde }}</td><td>{{ d.retire }}</td><td>{{ d.raison }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endif %}
+<h3>Fiches conçues selon l'APC (à valider)</h3>
+{% for (c, m), fs in par.items()|sort %}
+<p><b>{{ c }} — {{ prep_nom_matiere(m) }}</b> ({{ fs|length }}) : {% for f in fs %}<a href="{{ url_for('prep_fiche', fid=f.id) }}">{{ f.titre }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+{% endfor %}
+<h3>Guides conçus</h3>
+<ul>{% for x in guides_c %}<li><a href="{{ url_for('prep_guide', gid=x.id) }}">{{ x.titre }}</a> — {{ prep_nom_matiere(x.matiere) }}</li>{% endfor %}</ul>
+<p class="aide">Les SA restées sans fiche ne figurent dans la planification que par leur numéro (aucun titre ni contenu dans les documents) : préparez-les avec « Préparer une fiche » à partir du guide de la matière.</p>
+{% endblock %}
