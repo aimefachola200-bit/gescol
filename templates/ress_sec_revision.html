@@ -1,0 +1,7 @@
+{% extends "base.html" %}{% block titre %}Fiche de révision{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ r[2] }}</h1><p class="aide">{{ r[0] }} · {{ r[1] }}</p></div><a class="btn sec" href="{{ url_for('ress_sec', vue='revisions') }}">← Fiches</a></div>
+<div class="carte"><h2>À retenir</h2><ul>{% for p in r[3] %}<li>{{ p }}</li>{% endfor %}</ul>
+<h2>Méthode</h2><p>{{ r[4] }}</p><h2>Erreurs fréquentes</h2><p>{{ r[5] }}</p>
+<h2>Je m'évalue</h2><ol>{% for en, rep in r[6] %}<li>{{ en }}<br><em>Réponse : {{ rep }}</em></li>{% endfor %}</ol></div>
+{% endblock %}

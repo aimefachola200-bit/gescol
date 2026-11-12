@@ -68,6 +68,7 @@
       {% if peut('notes') %}{{ lien('orientation_accueil', 'Orientation des élèves', ep.startswith('orientation')) }}{% endif %}
       {{ lien('bilan_annuel', 'Bilan annuel et décision', ep.startswith('bilan')) }}{% endif %}
       {% if peut('epreuves') and ep_existe('epreuves_accueil') %}{{ lien('epreuves_accueil', "Comité d'évaluation, épreuves et grilles", ep.startswith('epreuves')) }}{% endif %}
+      {% if SECONDAIRE and peut('epreuves') and ep_existe('ress_sec') %}{{ lien('ress_sec', "Ressources du secondaire (épreuves, exposés, révisions)", ep.startswith('ress_sec')) }}{% endif %}
       {% if peut('notes') %}{{ lien('notes_accueil', 'Notes par période (bulletins)', ep.startswith('notes') or ep=='resultats') }}{% endif %}
       {% if peut('synthese') %}{{ lien('synthese_accueil', 'Synthèse École / UP / CS', ep.startswith('synthese')) }}{% endif %}
       {% if ep_existe('themes_up') %}{{ lien('themes_up', "Thèmes d'UP, conférences et formations", ep.startswith('themes_up')) }}{% endif %}

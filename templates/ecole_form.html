@@ -7,7 +7,7 @@
 <div class="carte">
   <h2 style="margin-top:0">Identité</h2>
   <div class="ligne">
-    <div><label for="nom">Nom de l'école *</label><input id="nom" name="nom" required value="{{ e.nom or '' }}" placeholder="EPP Akpakpa Centre / Groupe A"></div>
+    <div><label for="nom">Nom de l'école *</label><input id="nom" name="nom" required data-geo="ecole" value="{{ e.nom or '' }}" placeholder="EPP Akpakpa Centre / Groupe A"></div>
     <div><label for="sigle">Sigle</label><input id="sigle" name="sigle" value="{{ e.sigle or '' }}" maxlength="15"></div>
     <div><label for="statut">Statut</label><select id="statut" name="statut">{% for s in ['Publique','Privée','Confessionnelle','Communautaire'] %}<option {{ 'selected' if e.statut==s }}>{{ s }}</option>{% endfor %}</select></div>
     <div><label for="ordre">Ordre d'enseignement</label><select id="ordre" name="ordre"><option value="">—</option>{% for o in ordres %}<option {{ 'selected' if e.ordre==o }}>{{ o }}</option>{% endfor %}</select></div>
@@ -17,10 +17,11 @@
     <div><label for="dep">Département (DDEMP)</label>
       <input id="dep" name="departement" data-geo="departement" data-dep list="dl-deps" value="{{ e.departement or '' }}" placeholder="Choisir ou saisir">
       <datalist id="dl-deps">{% for d in DEPARTEMENTS %}<option value="{{ d }}">{% endfor %}</datalist></div>
-    <div><label for="cs">Circonscription scolaire <span class="aide nb-cs"></span></label><input id="cs" name="cs" data-cs value="{{ e.cs or '' }}" placeholder="Choisir ou saisir"></div>
+    <div><label for="cs">Circonscription scolaire <span class="aide nb-cs"></span></label><input id="cs" name="cs" data-cs data-geo="cs" value="{{ e.cs or '' }}" placeholder="Choisir ou saisir"></div>
     <div><label for="up">Unité pédagogique (UP)</label><input id="up" name="up" value="{{ e.up or '' }}"></div>
     <div><label for="zone">Zone pédagogique</label><input id="zone" name="zone" value="{{ e.zone or '' }}"></div>
     <div><label for="commune">Commune</label><input id="commune" name="commune" data-geo="commune" value="{{ e.commune or '' }}"></div>
+    <div><label for="arrondissement">Arrondissement</label><input id="arrondissement" name="arrondissement" data-geo="arrondissement" value="{{ e.arrondissement or '' }}"></div>
     <div><label for="ville">Ville (lieu de signature)</label><input id="ville" name="ville" data-geo="lieu" value="{{ e.ville or '' }}"></div>
   </div>
   <p class="aide">Les 12 départements et les 118 circonscriptions scolaires du Bénin sont proposés ; vous pouvez aussi saisir librement.</p>

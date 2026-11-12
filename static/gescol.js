@@ -288,8 +288,57 @@
       }
       function majArr() {
         var c = un('commune') && communeDe(un('commune').value);
-        (ch.arrondissement || []).forEach(function (el) { liste(el, c ? (G.arr[c.nom] || []).map(function (a) { return [a, '']; }) : []); });
-        majVillages();
+        var supp = (EC && c) ? (EC.arr[c.nom] || []) : [], base = c ? (G.arr[c.nom] || []) : [];
+        var tous = base.concat(supp.filter(function (x) { return !base.some(function (y) { return geoCle(y) === geoCle(x); }); }));
+        (ch.arrondissement || []).forEach(function (el) { liste(el, c ? tous.map(function (a) { return [a, '']; }) : []); });
+        majEcoles(); majVillages();
+      }
+      /* v2.5.0 : écoles du Bénin (static/referentiel_ecoles.json) : data-geo="ecole" propose les écoles du département / de la commune /
+         de l'arrondissement choisis ; en choisir une renseigne l'arrondissement, la commune, le département, la CS (data-geo="cs") et le type. */
+      var EC = null;
+      function majEcoles() {
+        if (!EC || !ch.ecole) return;
+        var com = un('commune') && communeDe(un('commune').value), arr = un('arrondissement') && un('arrondissement').value;
+        var lst = EC.liste.filter(function (e) {
+          return (!com || geoCle(e.com) === geoCle(com.nom)) && (!arr || geoCle(e.arr) === geoCle(arr));
+        });
+        ch.ecole.forEach(function (el) {
+          var k = geoCle(el.value);
+          if (!com && !arr) { lst = k.length >= 3 ? EC.liste.filter(function (e) { return geoCle(e.nom).indexOf(k) >= 0; }).slice(0, 40) : []; }
+          liste(el, lst.slice(0, 800).map(function (e) { return [e.nom, e.arr + ' – ' + e.com + (e.t === 'M' ? ' (maternelle)' : '')]; }));
+        });
+      }
+      function ecoleChoisie(el) {
+        var k = geoCle(el.value); if (!k || !EC) return;
+        var com = un('commune') && communeDe(un('commune').value), arr = un('arrondissement') && un('arrondissement').value;
+        var m = EC.liste.filter(function (e) { return geoCle(e.nom) === k; });
+        var f = m.filter(function (e) { return (!com || geoCle(e.com) === geoCle(com.nom)) && (!arr || geoCle(e.arr) === geoCle(arr)); });
+        var e = (f.length ? f : m)[0]; if (!e) return;
+        if (el.value !== e.nom) el.value = e.nom;
+        poser('departement', e.dep); poser('commune', e.com); poser('arrondissement', e.arr);
+        (ch.cs || []).forEach(function (c) {
+          var nom = e.cs >= 0 ? EC.cs[e.cs] : (EC.co[e.dep + '|' + e.com] || []).length === 1 ? EC.cs[EC.co[e.dep + '|' + e.com][0]] : '';
+          if (!nom) return;
+          if (c.tagName === 'SELECT') { Array.prototype.forEach.call(c.options, function (o) { if (geoCle(o.textContent) === geoCle(nom)) { c.value = o.value; c.dispatchEvent(new Event('change', { bubbles: true })); } }); }
+          else if (c.value !== nom) { c.value = nom; c.dispatchEvent(new Event('change', { bubbles: true })); }
+        });
+        (ch['ecole-type'] || []).forEach(function (t) { t.value = e.t === 'M' ? 'EM' : 'EP'; });
+        (ch['ecole-annee'] || []).forEach(function (t) { if (!t.value) t.value = e.an; });
+      }
+      if (ch.ecole) {
+        var base2 = (document.querySelector('script[src*="gescol.js"]') || {}).src || '/static/gescol.js';
+        fetch(base2.replace(/gescol\.js.*$/, 'referentiel_ecoles.json'), { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (j) {
+          EC = { cs: j.cs, co: j.co, liste: [], arr: {} };
+          j.d.forEach(function (d) { d[1].forEach(function (c) { c[1].forEach(function (a) {
+            (EC.arr[c[0]] = EC.arr[c[0]] || []).push(a[0]);
+            a[1].forEach(function (e) { EC.liste.push({ nom: e[0], t: e[1], an: e[2], cs: e[3], arr: a[0], com: c[0], dep: d[0] }); });
+          }); }); });
+          majArr();
+        }).catch(function () {});
+        ch.ecole.forEach(function (el) {
+          el.addEventListener('input', majEcoles);
+          el.addEventListener('change', function () { ecoleChoisie(el); });
+        });
       }
       function majVillages() {
         var c = un('commune') && communeDe(un('commune').value), a = un('arrondissement') && un('arrondissement').value;
@@ -317,7 +366,7 @@
           majArr();
         });
       });
-      (ch.arrondissement || []).forEach(function (el) { el.addEventListener('change', majVillages); });
+      (ch.arrondissement || []).forEach(function (el) { el.addEventListener('change', function () { majVillages(); majEcoles(); }); });
       (ch.village || []).forEach(function (el) {
         el.addEventListener('change', function () {
           var k = geoCle(el.value), c = un('commune') && communeDe(un('commune').value);

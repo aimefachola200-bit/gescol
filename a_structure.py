@@ -18,6 +18,7 @@
    avec QR de vérification, historique et réimpression, version vierge.
 """
 import io
+import sys
 import json
 import re
 from datetime import date, datetime
@@ -2045,3 +2046,6 @@ def enregistrer(app, H):
         return H.pdf_reponse(construire_pdf(h["type"], [(v, options(sig_code, bool(h["signe"]), h["code"],
                                                                      jur_ecole_id=jur_eid))],
                                             h["libelle"] + " (réimpression)"), f"{h['type']}_{h['numero'] or hid}.pdf")
+
+import a_aof_secondaire as _aof_sec  # noqa: E402  (v2.5.0 : services du secondaire d après le décret 2016-427)
+_aof_sec.appliquer_structure(sys.modules[__name__])

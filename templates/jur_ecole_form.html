@@ -4,11 +4,11 @@
 <a class="btn sec" href="{{ url_for('jur_ecoles') }}">← Écoles</a></div>
 <form method="post" class="carte">
   <div class="grille-id">
-    <div><label for="nom">Nom de l'école *</label><input id="nom" name="nom" required value="{{ e.nom or '' }}" placeholder="EPP Adjégounlè"></div>
+    <div><label for="nom">Nom de l'école *</label><input id="nom" name="nom" required data-geo="ecole" value="{{ e.nom or '' }}" placeholder="EPP Adjégounlè : tapez le début du nom ou choisissez la commune"></div>
     <div><label for="code">Code (laisser vide = automatique)</label><input id="code" name="code" value="{{ e.code or '' }}"></div>
-    <div><label for="type">Type *</label><select id="type" name="type">{% for k, v in JUR_TYPES.items() %}<option value="{{ k }}" {{ 'selected' if e.type==k }}>{{ v }}</option>{% endfor %}</select></div>
+    <div><label for="type">Type *</label><select id="type" name="type" data-geo="ecole-type">{% for k, v in JUR_TYPES.items() %}<option value="{{ k }}" {{ 'selected' if e.type==k }}>{{ v }}</option>{% endfor %}</select></div>
     <div><label for="sec">Secteur *</label><select id="sec" name="secteur">{% for k, v in JUR_SECTEURS.items() %}<option value="{{ k }}" {{ 'selected' if e.secteur==k }}>{{ v }}</option>{% endfor %}</select></div>
-    <div><label for="cs">Circonscription *</label><select id="cs" name="cs_id" onchange="filtrerZones()">
+    <div><label for="cs">Circonscription *</label><select id="cs" name="cs_id" data-geo="cs" onchange="filtrerZones()">
       {% for c in cs %}<option value="{{ c.id }}" {{ 'selected' if e.cs_id|string == c.id|string }}>{{ c.nom }}</option>{% endfor %}</select></div>
     <div><label for="zone">Zone pédagogique</label><select id="zone" name="zone_id"><option value="">—</option>
       {% for z in zones %}<option value="{{ z.id }}" data-cs="{{ z.cs_id }}" {{ 'selected' if e.zone_id|string == z.id|string }}>{{ z.nom }}</option>{% endfor %}</select></div>
@@ -21,7 +21,7 @@
     <div><label for="dtel">Téléphone du directeur</label><input id="dtel" name="directeur_tel" value="{{ e.directeur_tel or '' }}"></div>
     <div><label for="tel">Téléphone de l'école</label><input id="tel" name="telephone" value="{{ e.telephone or '' }}"></div>
     <div><label for="mail">E-mail</label><input id="mail" name="email" type="email" value="{{ e.email or '' }}"></div>
-    <div><label for="an">Année de création</label><input id="an" name="annee_creation" inputmode="numeric" value="{{ e.annee_creation or '' }}"></div>
+    <div><label for="an">Année de création</label><input id="an" name="annee_creation" data-geo="ecole-annee" inputmode="numeric" value="{{ e.annee_creation or '' }}"></div>
   </div>
   <p class="actions"><button class="btn">Enregistrer</button></p>
 </form>

@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block titre %}Liste officielle des écoles{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Charger les écoles de la liste officielle</h1></div><a class="btn sec" href="{{ url_for('jur_ecoles') }}">← Écoles</a></div>
+<form method="post" class="carte">
+<p>Les écoles maternelles et primaires du Bénin (liste des subventions 2023-2024) sont rangées dans leur circonscription scolaire d'après les
+arrondissements de chaque CS. Cochez les circonscriptions à charger : chaque école est créée dans sa CS, avec sa commune, son arrondissement et son année de création.
+Les écoles déjà présentes ne sont pas touchées ; quand l'école envoie son premier fichier de transmission, sa fiche est mise à jour sans doublon.</p>
+<div class="tw"><table class="t"><tr><th></th><th>Circonscription</th><th>Écoles sûres</th><th>À confirmer</th><th>Déjà dans la base</th></tr>
+{% for l in lignes %}<tr><td><input type="checkbox" name="cs" value="{{ l.c.id }}" {{ 'checked' if unique or l.deja == 0 }} aria-label="{{ l.c.nom }}"></td>
+<td><b>{{ l.c.nom }}</b></td><td class="num">{{ l.sures }}</td><td class="num">{{ l.a_confirmer }}</td><td class="num">{{ l.deja }}</td></tr>{% endfor %}
+</table></div>
+<p><label><input type="checkbox" name="a_confirmer" value="1"> Ajouter aussi les écoles « à confirmer » (arrondissement partagé entre plusieurs CS de la commune) : vous pourrez les retirer ensuite.</label></p>
+<p class="aide">Écoles « sûres » : l'arrondissement figure dans la liste officielle de la CS, ou la commune n'a qu'une seule CS. Zones pédagogiques : à renseigner ensuite (la liste n'en donne pas).</p>
+<p class="actions"><button class="btn">Charger les écoles</button></p>
+</form>
+{% endblock %}

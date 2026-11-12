@@ -18,6 +18,7 @@ jur_agents, jur_agent_form, jur_agent_supprimer, jur_agents_import.
 Exposé : H.jur_retraites_proches(annee, cs_id=None, ans=2).
 """
 import json
+import sys
 import re
 from datetime import date
 
@@ -1270,3 +1271,6 @@ def enregistrer(app, H):
             H.journal("jur_agents_import", f"{nb_c} ajout(s), {nb_m} maj")
             return redirect(url_for("jur_agents"))
         return render_template("jur_agents_import.html", champs=CHAMPS_AGENT, services=services())
+
+import a_aof_secondaire as _aof_sec  # noqa: E402  (v2.5.0)
+_aof_sec.appliquer_personnel(sys.modules[__name__])

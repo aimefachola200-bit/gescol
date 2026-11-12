@@ -3,7 +3,8 @@
 <div class="entete"><div><h1>Écoles de la juridiction</h1><p class="sous">{{ ecoles|length }} école(s) · année {{ ANNEE }}</p></div>
 <div class="actions">
   {% if peut('jur_ecoles') %}<a class="btn" href="{{ url_for('jur_ecole_form') }}">+ Ajouter une école</a>
-  <a class="btn sec" href="{{ url_for('jur_ecoles_import') }}">⇪ Importer (Excel)</a>{% endif %}
+  <a class="btn sec" href="{{ url_for('jur_ecoles_import') }}">⇪ Importer (Excel)</a>
+  {% if not SECONDAIRE %}<a class="btn sec" href="{{ url_for('jur_ecoles_liste_officielle') }}">Charger la liste officielle</a>{% endif %}{% endif %}
   <a class="btn sec" href="{{ url_for('jur_ecoles', export='xlsx', **f) }}">⇩ Exporter (Excel)</a>
 </div></div>
 <div class="grille indicateurs">

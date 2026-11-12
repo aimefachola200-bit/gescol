@@ -12,7 +12,7 @@ from flask import Response, abort, flash, g, redirect, render_template, request,
 import cachet
 import referentiel_benin as RB
 
-CHAMPS_ECOLE = ["nom", "sigle", "statut", "ordre", "departement", "cs", "up", "zone", "commune", "ville", "adresse", "bp",
+CHAMPS_ECOLE = ["nom", "sigle", "statut", "ordre", "departement", "cs", "up", "zone", "commune", "arrondissement", "ville", "adresse", "bp",
                 "telephone", "email", "directeur_titre", "directeur_nom", "directeur_tel", "admin_titre", "admin_nom",
                 "ccs_titre", "ccs_nom", "cachet_sup", "cachet_inf", "cachet_centre", "cachet_couleur",
                 "griffe_actif", "griffe_ligne3", "griffe_couleur", "devise"]
@@ -24,6 +24,7 @@ RE_CLE_SIGNATURE = re.compile(r"^(ecole:\d+:(directeur|admin|ccs)|classe:\d+:tit
 
 
 def enregistrer(app, H):
+    H.ajouter_colonne("ecoles", "arrondissement", "TEXT")      # v2.5.0 : arrondissement de l'école (liste officielle)
     q, ex, config = H.q, H.ex, H.config
     # v1.6 : lien d'une école locale avec l'école de la juridiction (jur_ecoles) dans GESCOL Circonscription / DDEMP
     H.ajouter_colonne("ecoles", "jur_ecole_id", "INTEGER")

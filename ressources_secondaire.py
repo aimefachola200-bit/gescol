@@ -1,0 +1,191 @@
+# -*- coding: utf-8 -*-
+"""v2.5.0 : ressources pédagogiques du secondaire (4ᵉ → Terminale) : thèmes d'exposés, fiches de révision (avec auto-évaluation) et schémas.
+Données pures (sans Flask). Les thèmes d'exposés tirés des romans (Les Tresseurs de corde de J. Pliya, Une si longue lettre de M. Bâ,
+Une vie de boy de F. Oyono) ne reproduisent aucun passage : ce sont des questions à étudier. Le professeur reste libre de les adapter."""
+
+NIVEAUX = ["4e", "3e", "2nde", "1ère", "Tle"]
+
+# (matière, niveaux, thème, axes de recherche, remarque)
+EXPOSES = [
+ # ---- Français : œuvres
+ ("Français", "3e–Tle", "La condition de la femme dans « Une si longue lettre » (Mariama Bâ)", "Polygamie et mariage forcé ; veuvage et belle-famille ; éducation et travail des femmes ; solidarité féminine", "Œuvre au programme : relever des passages-clés et citer à partir du livre."),
+ ("Français", "3e–Tle", "L'amitié entre Ramatoulaye et Aïssatou : une amitié à l'épreuve des trahisons", "Les souvenirs d'école ; la rupture d'Aïssatou ; la lettre comme confidence ; l'amitié comme force", "Comparer avec une amitié d'un autre roman africain."),
+ ("Français", "2nde–Tle", "Tradition et modernité dans « Une si longue lettre »", "Castes et mariage ; deuil et réclusion ; place de l'islam ; choix de Ramatoulaye", "Prévoir un débat : faut-il tout garder de la tradition ?"),
+ ("Français", "2nde–Tle", "L'écriture épistolaire : pourquoi une « si longue lettre » ?", "Le destinataire ; le « je » ; le mélange des temps ; la lettre comme thérapie et comme témoignage", "Rédiger ensuite une lettre-réponse d'Aïssatou."),
+ ("Français", "3e–Tle", "« Les Tresseurs de corde » (Jean Pliya) : « au bout de l'ancienne corde il faut tresser la nouvelle »", "Sens de l'image de la corde ; le pays imaginaire du Bokéli ; les générations ; l'équilibre tradition-progrès", "Partir de l'avant-propos pour formuler la problématique."),
+ ("Français", "2nde–Tle", "Trabi, Prékéto et la capitale : le village face à l'État dans « Les Tresseurs de corde »", "Le retour au village ; les anciens et les jeunes ; les promesses du pouvoir ; la place des comités et du Conseil", "Étudier le rôle de personnages secondaires (Kissa, Myriam, Boni…)."),
+ ("Français", "1ère–Tle", "Pouvoir, révolution et espérance dans « Les Tresseurs de corde »", "Le Président ; le Comité et la Révolution ; les illusions et les désillusions ; la paix", "Relier au contexte des indépendances africaines."),
+ ("Français", "3e–Tle", "Le regard du « boy » : l'ironie dans « Une vie de boy » (Ferdinand Oyono)", "Le journal de Toundi ; le naïf qui observe ; l'humour comme arme ; la lucidité progressive", "Distinguer le narrateur naïf du regard de l'auteur."),
+ ("Français", "2nde–Tle", "La colonisation et les rapports raciaux dans « Une vie de boy »", "Préjugés et humiliations ; le commandant et son épouse ; la mission, l'administration et le commerce ; la servitude", "S'appuyer sur l'article de Diao Faye joint au dossier."),
+ ("Français", "3e–Tle", "Comment un roman devient un témoin de l'histoire : comparer les trois œuvres", "Époque et lieu de chaque récit ; place du narrateur ; ce que chaque auteur dénonce ; ce qui reste d'actuel", "Tableau comparatif à rendre avec l'exposé."),
+ ("Français", "4e–3e", "Le conte africain : origines, fonctions et transmission", "Le conteur ; les formules d'ouverture ; la morale ; passer de l'oral à l'écrit", "Recueillir un conte auprès d'un aîné."),
+ ("Français", "4e–2nde", "Le théâtre béninois : de la veillée au spectacle", "Théâtre traditionnel ; auteurs béninois ; le rôle du public ; monter une scène", "Possibilité de jouer une scène courte."),
+ ("Français", "1ère–Tle", "Les mouvements littéraires : de la Négritude aux écritures contemporaines africaines", "Césaire, Senghor, Damas ; la génération des indépendances ; les voix féminines ; la littérature béninoise", "Fournir une courte anthologie de trois extraits cités par des élèves."),
+ # ---- Histoire-Géographie
+ ("Histoire-Géographie", "4e", "Les royaumes d'Abomey, d'Allada et de Porto-Novo avant la colonisation", "Fondation ; organisation politique ; économie ; relations avec les Européens", "Utiliser une carte du golfe de Guinée."),
+ ("Histoire-Géographie", "3e", "La traite négrière : causes, routes et conséquences pour l'Afrique", "Le commerce triangulaire ; Ouidah et la route des esclaves ; les résistances ; l'abolition", "Visiter si possible le mémorial de Ouidah."),
+ ("Histoire-Géographie", "3e–2nde", "La conférence de Berlin et le partage de l'Afrique", "Contexte ; règles du partage ; conséquences sur les frontières ; résistances (Béhanzin)", "Légender une carte d'avant et d'après 1885."),
+ ("Histoire-Géographie", "2nde–1ère", "Du Dahomey à la République du Bénin : les grandes étapes politiques", "Indépendance 1960 ; instabilités et coups d'État ; la Conférence nationale de 1990 ; le renouveau démocratique", "Frise chronologique obligatoire."),
+ ("Histoire-Géographie", "1ère–Tle", "La Conférence des forces vives de la nation (1990) et la transition démocratique", "Causes ; déroulement ; décisions ; portée pour l'Afrique", "Comparer avec une autre conférence nationale africaine."),
+ ("Histoire-Géographie", "Tle", "La décolonisation et la naissance des États africains", "Les voies (négociée, armée) ; les leaders ; l'OUA puis l'Union africaine", "Faire le lien avec les romans du programme."),
+ ("Histoire-Géographie", "4e–3e", "Le relief, le climat et la végétation du Bénin", "Les grandes régions naturelles ; saisons ; zones climatiques ; conséquences pour l'agriculture", "Croquis du Bénin avec légende."),
+ ("Histoire-Géographie", "2nde–Tle", "L'économie du Bénin : agriculture, commerce, port et nouveaux secteurs", "Coton, ananas, anacarde ; le port de Cotonou ; le commerce informel ; le tertiaire", "Chiffres récents à citer avec leur source."),
+ ("Histoire-Géographie", "Tle", "Le commerce au Bénin et l'intégration régionale (CEDEAO, UEMOA)", "Rôle de la nature ; corridors et ports ; avantages et limites de l'intégration", "Lien avec un sujet d'examen blanc de Terminale."),
+ ("Histoire-Géographie", "1ère", "La Première et la Seconde Guerre mondiale : participation et conséquences en Afrique", "Les tirailleurs ; le travail forcé ; l'éveil des nationalismes", "Témoignages d'anciens combattants."),
+ # ---- SVT
+ ("SVT", "4e", "Les paysages granitiques et argileux : formation, propriétés, usages", "Observation ; roches ; sols ; exploitation (carrières, briques)", "Collecter des échantillons de roches."),
+ ("SVT", "4e–3e", "L'alimentation équilibrée et les maladies de la nutrition", "Nutriments ; besoins ; carences et excès ; prévention", "Enquête sur les repas des élèves de la classe."),
+ ("SVT", "3e–2nde", "La reproduction humaine, la contraception et les IST/VIH", "Appareils reproducteurs ; fécondation ; méthodes ; prévention", "Respecter la sensibilité de la classe : sources fiables uniquement."),
+ ("SVT", "2nde–1ère", "Le paludisme : agent, vecteur, symptômes, lutte", "Cycle du parasite ; moustiquaires ; traitements ; vaccin", "Schéma du cycle à reproduire."),
+ ("SVT", "1ère–Tle", "Hérédité et maladies génétiques : drépanocytose, transmission des caractères", "Gènes et allèles ; arbres généalogiques ; dépistage ; conseil génétique", "Faire un arbre généalogique à partir d'un cas fictif."),
+ ("SVT", "Tle", "Le système nerveux et la régulation hormonale", "Neurone et synapse ; hypothalamus et hypophyse ; régulation de la reproduction", "Appui sur les sujets de BAC A-B."),
+ ("SVT", "4e–Tle", "Les déchets et la protection de l'environnement au Bénin", "Types de déchets ; recyclage ; compost ; reboisement", "Projet d'action concret dans l'établissement."),
+ # ---- Physique-Chimie
+ ("Physique-Chimie", "4e–3e", "L'électricité à la maison : circuits, dangers et économies d'énergie", "Circuit série/parallèle ; sécurité ; consommation ; énergies renouvelables", "Expérience simple avec pile et lampe."),
+ ("Physique-Chimie", "3e–2nde", "L'eau potable : traitement et analyse", "Sources d'eau ; filtration ; chloration ; tests simples", "Comparer l'eau de puits et l'eau de la SONEB."),
+ ("Physique-Chimie", "2nde–1ère", "Les acides et les bases dans la vie quotidienne", "pH ; indicateurs colorés ; produits ménagers ; précautions", "Fabriquer un indicateur au chou rouge."),
+ ("Physique-Chimie", "1ère–Tle", "L'énergie solaire au Bénin : principe, avantages, limites", "Panneaux photovoltaïques ; stockage ; coût ; exemples locaux", "Estimation de la puissance d'une installation scolaire."),
+ ("Physique-Chimie", "Tle", "Les piles et l'électrolyse : applications industrielles", "Oxydoréduction ; pile Daniell ; galvanoplastie ; recyclage des piles", "Schéma annoté obligatoire."),
+ # ---- Mathématiques
+ ("Mathématiques", "4e–3e", "Les nombres à travers l'histoire : de l'écriture des nombres au calcul moderne", "Numérations anciennes ; zéro ; nombres décimaux ; usages", "Frise et exemples chiffrés."),
+ ("Mathématiques", "3e–2nde", "Thalès et Pythagore : deux théorèmes, mille applications", "Énoncés ; démonstrations ; mesurer sans toucher ; construction", "Mesure de la hauteur d'un arbre ou d'un bâtiment."),
+ ("Mathématiques", "2nde–1ère", "Les statistiques au service de la société : lire et interpréter des données béninoises", "Moyenne, médiane, écart-type ; graphiques ; erreurs d'interprétation", "Données de l'INStaD à exploiter."),
+ ("Mathématiques", "1ère–Tle", "Les probabilités : jeux de hasard, assurances et décisions", "Dénombrement ; probabilité conditionnelle ; espérance ; paradoxes", "Simulation avec dés ou tirage."),
+ ("Mathématiques", "Tle", "La fonction logarithme et l'exponentielle : croissance, décroissance, applications", "Propriétés ; dérivées ; populations ; radioactivité", "Faire tracer une courbe complète."),
+ # ---- Philosophie
+ ("Philosophie", "Tle", "Le langage sert-il à manipuler ?", "Langage et communication ; langage et vérité ; propagande et publicité ; responsabilité de celui qui parle", "Sujet de dissertation fréquent ; exposé en trois parties."),
+ ("Philosophie", "Tle", "Liberté, responsabilité et contraintes sociales", "Liberté et déterminismes ; liberté et loi ; engagement", "Exemples tirés des romans africains."),
+ ("Philosophie", "Tle", "Qu'est-ce qu'une société juste ?", "Égalité et équité ; droit et justice ; justice entre les sexes (Une si longue lettre)", "Confronter deux auteurs."),
+ ("Philosophie", "Tle", "Le travail : aliénation ou épanouissement ?", "Travail et nécessité ; travail et dignité ; chômage et sens", "Enquête auprès d'un artisan ou d'un agriculteur."),
+ # ---- Langues vivantes
+ ("Anglais", "4e–Tle", "Famous West African personalities and their contribution", "Life story ; achievements ; lessons for young people", "Présentation orale de 5 minutes, en anglais."),
+ ("Anglais", "2nde–Tle", "Technology and young people: opportunities and dangers", "Social media; online learning; cyber-bullying; good habits", "Débat final en anglais."),
+ ("Allemand", "4e–Tle", "Deutschland und Benin : eine Partnerschaft", "Geschichte; Zusammenarbeit; Austausch; deutsche Kultur", "Exposé oral en allemand, support visuel."),
+ ("Espagnol", "4e–Tle", "El mundo hispanohablante : países, culturas y fiestas", "Geografía; fiestas; gastronomía; música", "Présenter une fête hispanique."),
+ # ---- Autres
+ ("EPS", "4e–Tle", "Sport et santé : pourquoi bouger ?", "Effets sur le corps ; prévention ; dopage ; athlètes béninois", "Associer une courte démonstration."),
+ ("Informatique", "2nde–Tle", "Sécurité en ligne et protection des données personnelles", "Mots de passe ; arnaques ; droit à l'image ; bons usages", "Charte d'usage à rédiger."),
+ ("Économie", "1ère–Tle", "La microfinance et l'entrepreneuriat des jeunes au Bénin", "Tontines et crédits ; création d'entreprise ; réussites locales", "Interviewer un entrepreneur de la ville."),
+]
+
+# ---- Fiches de révision : (matière, niveau, chapitre, points clés, méthode, erreurs, exercices[(énoncé, réponse)], schéma)
+REVISIONS = [
+ ("Mathématiques", "4e", "Le théorème de Pythagore", [
+   "Dans un triangle rectangle, le carré de l'hypoténuse est égal à la somme des carrés des deux autres côtés : BC² = AB² + AC².",
+   "L'hypoténuse est le côté opposé à l'angle droit (le plus long).",
+   "Réciproque : si BC² = AB² + AC², alors le triangle ABC est rectangle en A.",
+   "Contraposée : si l'égalité n'est pas vraie, le triangle n'est pas rectangle."],
+  "Écrire d'abord l'égalité de Pythagore avec les lettres de la figure, puis remplacer par les valeurs, calculer, puis extraire la racine carrée.",
+  "Oublier de dire « d'après le théorème de Pythagore dans le triangle … rectangle en … » ; additionner au lieu de soustraire quand on cherche un côté de l'angle droit.",
+  [("ABC est rectangle en A, AB = 6 cm et AC = 8 cm. Calculer BC.", "BC² = 36 + 64 = 100 donc BC = 10 cm."),
+   ("Un triangle a pour côtés 5 cm, 12 cm et 13 cm. Est-il rectangle ?", "13² = 169 = 5² + 12² = 25 + 144 : oui, il est rectangle (réciproque).")], "triangle_rectangle"),
+ ("Mathématiques", "3e", "Le théorème de Thalès", [
+   "Deux droites (BC) et (MN) parallèles coupent deux droites sécantes issues de A : AM/AB = AN/AC = MN/BC.",
+   "Il permet de calculer des longueurs (agrandissement, réduction) quand des droites sont parallèles.",
+   "La réciproque, avec les rapports égaux dans le même ordre, permet de démontrer que deux droites sont parallèles."],
+  "Faire un tableau de proportionnalité avec les deux triangles pour ne pas se tromper de rapport.",
+  "Mélanger les côtés des deux triangles ; appliquer Thalès sans avoir vérifié le parallélisme.",
+  [("(MN) // (BC), AM = 3, AB = 5, BC = 10. Calculer MN.", "MN/BC = AM/AB donc MN = 10 × 3/5 = 6."),
+   ("AM = 2, AB = 5, AN = 3, AC = 7,5. (MN) est-elle parallèle à (BC) ?", "2/5 = 0,4 et 3/7,5 = 0,4 : oui (réciproque de Thalès).")], "thales"),
+ ("Mathématiques", "2nde", "Fonctions affines", [
+   "f(x) = ax + b : a est le coefficient directeur (pente), b l'ordonnée à l'origine.",
+   "La représentation graphique est une droite. Elle passe par (0 ; b).",
+   "Si a > 0 la fonction croît ; si a < 0 elle décroît ; si a = 0 elle est constante.",
+   "Pour trouver a : a = (f(x₂) − f(x₁)) / (x₂ − x₁)."],
+  "Pour tracer : calculer deux points, les placer, tracer la droite avec une règle.",
+  "Confondre a et b ; se tromper de signe en calculant le coefficient directeur.",
+  [("f est affine, f(1) = 3 et f(3) = 7. Trouver f.", "a = (7−3)/(3−1) = 2 ; 3 = 2×1 + b donc b = 1 ; f(x) = 2x + 1.")], "repere_droite"),
+ ("Mathématiques", "Tle", "Logarithme népérien", [
+   "ln est définie sur ]0 ; +∞[ ; ln 1 = 0 ; ln e = 1.",
+   "ln(ab) = ln a + ln b ; ln(a/b) = ln a − ln b ; ln(aⁿ) = n ln a.",
+   "ln est strictement croissante ; (ln x)' = 1/x ; lim ln x = +∞ en +∞ et −∞ en 0⁺."],
+  "Toujours écrire le domaine de définition avant de résoudre une équation ou inéquation avec ln.",
+  "Oublier la condition x > 0 ; confondre ln(a+b) avec ln a + ln b (faux).",
+  [("Résoudre ln(x+1) = 2.", "x + 1 > 0 et x + 1 = e² donc x = e² − 1.")], "ln_courbe"),
+ ("SVT", "4e", "Les paysages granitiques et argileux", [
+   "Un paysage est décrit par son relief, sa végétation, l'eau et les roches du sous-sol.",
+   "Le granite : roche dure, grenue, formée de cristaux (quartz, feldspath, mica), perméable en surface seulement (fissures).",
+   "L'argile : roche tendre, imperméable, retient l'eau (mares, marécages), sert à fabriquer briques et poteries.",
+   "La nature des roches explique le relief, la végétation et l'usage du sol."],
+  "Pour un texte scientifique : annoncer le plan, comparer sur les mêmes critères (relief, eau, végétation, usages), conclure.",
+  "Décrire sans comparer ; oublier les critères d'observation.",
+  [("Cite deux propriétés qui distinguent le granite de l'argile.", "Dureté (granite dur, argile tendre) et perméabilité (granite fissuré, argile imperméable).")], "roches"),
+ ("SVT", "6e", "Les aliments et leur classification", [
+   "Aliment simple : une seule substance nutritive (sel, sucre, eau). Aliment composé : plusieurs substances (lait, viande, haricot).",
+   "Les aliments sont classés selon leur origine : animale, végétale, minérale.",
+   "Réactifs : eau iodée (amidon : bleu-violet) ; liqueur de Fehling (sucres réducteurs : rouge brique) ; acide nitrique (protides : jaune)."],
+  "Pour un classement, faire un tableau à deux colonnes (aliment / critère) et justifier chaque choix.",
+  "Confondre origine et nature de l'aliment ; oublier le réactif correspondant à chaque test.",
+  [("Quel réactif met en évidence l'amidon et quelle couleur obtient-on ?", "L'eau iodée ; coloration bleu-violacée.")], "aliments"),
+ ("SVT", "3e", "Le paludisme", [
+   "Agent : un parasite, le Plasmodium. Vecteur : l'anophèle femelle.",
+   "Symptômes : fièvre périodique, frissons, anémie ; peut être mortel chez l'enfant et la femme enceinte.",
+   "Prévention : moustiquaire imprégnée, assainissement, éviter les eaux stagnantes ; traitement : antipaludiques sur diagnostic."],
+  "Un cycle se raconte dans l'ordre : moustique → homme → moustique, en indiquant ce qui se passe à chaque étape.",
+  "Dire que le paludisme est une maladie « de l'eau » ou contagieuse par contact.",
+  [("Quel est le rôle de l'anophèle dans le paludisme ?", "Il transmet le parasite d'une personne malade à une personne saine en piquant.")], "cycle_palu"),
+ ("SVT", "Tle", "Le système nerveux et la régulation hormonale", [
+   "Le neurone transmet un message nerveux (influx) ; la synapse transmet par un neurotransmetteur.",
+   "L'hypothalamus commande l'hypophyse, qui commande les glandes (testicules, ovaires) par des hormones.",
+   "Une lésion de l'hypothalamus peut perturber la production d'hormones sexuelles et entraîner la stérilité.",
+   "Régulation : une rétroaction négative ramène la quantité d'hormone vers la valeur normale."],
+  "Dans une « restitution organisée des connaissances » : introduction, développement en paragraphes titrés, conclusion, schéma légendé.",
+  "Rester descriptif sans expliquer les liens de cause à effet ; ne pas utiliser le vocabulaire scientifique.",
+  [("Pourquoi une lésion de l'hypothalamus peut-elle entraîner la stérilité ?", "Elle perturbe la commande de l'hypophyse donc la sécrétion des hormones sexuelles et la formation des gamètes.")], "regulation"),
+ ("Physique-Chimie", "4e", "Le circuit électrique simple", [
+   "Un circuit comprend un générateur, des fils, un interrupteur et un récepteur ; il doit être fermé pour que le courant circule.",
+   "Série : un seul chemin ; si un dipôle est coupé, tout s'arrête. Dérivation : plusieurs chemins, chaque branche fonctionne seule.",
+   "L'intensité se mesure en ampères (A) avec un ampèremètre monté en série ; la tension en volts (V) avec un voltmètre monté en dérivation."],
+  "Toujours schématiser avec les symboles normalisés avant de câbler.",
+  "Brancher l'ampèremètre en dérivation ; oublier le sens du courant (de + vers − à l'extérieur du générateur).",
+  [("Deux lampes en dérivation : l'une grille. L'autre brille-t-elle ?", "Oui, car son circuit reste fermé.")], "circuit"),
+ ("Physique-Chimie", "2nde", "Acides, bases et pH", [
+   "Une solution acide a un pH < 7, neutre pH = 7, basique pH > 7.",
+   "Le pH se mesure avec du papier pH ou un pH-mètre ; les indicateurs colorés changent de teinte selon le pH.",
+   "Dilution : ajouter de l'eau rapproche le pH de 7."],
+  "Présenter les mesures dans un tableau (solution / pH / nature).",
+  "Penser que plus le pH est grand, plus la solution est acide.",
+  [("Le pH du jus de citron vaut 2,5. Est-il acide ou basique ?", "Acide (pH < 7).")], "echelle_ph"),
+ ("Histoire-Géographie", "3e", "Le partage de l'Afrique : conférence de Berlin (1884-1885)", [
+   "Objectif : régler le partage de l'Afrique entre puissances européennes sans guerre entre elles.",
+   "Principe de l'occupation effective : il faut occuper un territoire pour le revendiquer.",
+   "Conséquences : frontières artificielles, résistances (Béhanzin au Dahomey), exploitation coloniale."],
+  "Pour une dissertation d'histoire : problématique, plan chronologique ou thématique, exemples datés.",
+  "Confondre la conférence de Berlin (1884-1885) avec la conquête elle-même (qui dure jusqu'en 1914).",
+  [("Cite une conséquence du partage de l'Afrique et un exemple de résistance.", "Frontières artificielles ; résistance de Béhanzin au Dahomey.")], "frise"),
+ ("Histoire-Géographie", "Tle", "La Conférence nationale de 1990 au Bénin", [
+   "Février 1990 : Conférence des forces vives de la nation à Cotonou ; elle se déclare souveraine.",
+   "Décisions : fin du régime militaire marxiste-léniniste, constitution pluraliste, transition dirigée par un Premier ministre.",
+   "Portée : modèle de transition démocratique pour d'autres pays africains."],
+  "Citer des dates, des acteurs et des effets mesurables (constitution de 1990, élections de 1991).",
+  "Mélanger Conférence nationale et élection présidentielle de 1991.",
+  [("Pourquoi parle-t-on de « modèle béninois » ?", "Parce que la Conférence a réussi une transition pacifique vers le multipartisme, imitée ensuite par d'autres pays.")], "frise"),
+ ("Français", "4e", "La lettre et la narration : structure et conjugaison", [
+   "Une lettre comprend : lieu et date, formule d'appel, corps, formule de politesse, signature.",
+   "Le récit au passé : passé simple (actions de premier plan) et imparfait (décors, habitudes).",
+   "Le schéma narratif : situation initiale, élément perturbateur, péripéties, dénouement, situation finale."],
+  "Avant d'écrire : lister les personnages, le lieu, le problème, puis les 5 étapes du schéma narratif.",
+  "Mélanger passé simple et présent ; oublier la formule de politesse.",
+  [("Conjugue « partir » au passé simple, 3ᵉ personne du pluriel.", "Ils partirent.")], "schema_narratif"),
+ ("Français", "Tle", "Le commentaire composé et la dissertation littéraire", [
+   "Commentaire : introduction (présentation du texte, projet de lecture), développement en deux ou trois axes, conclusion.",
+   "Dissertation : problématiser le sujet, plan dialectique ou thématique, exemples tirés des œuvres au programme.",
+   "Toujours illustrer chaque idée par un exemple précis (citation courte)."],
+  "Faire un brouillon d'abord : idées, plan, exemples ; garder 10 minutes pour la relecture.",
+  "Raconter le texte au lieu de l'analyser ; ne pas relier les exemples à l'idée.",
+  [("Propose deux axes pour étudier un texte sur la condition de la femme.", "1) La femme victime de contraintes sociales ; 2) La femme qui résiste et affirme sa dignité.")], "plan_dissertation"),
+ ("Anglais", "3e", "Simple past and present perfect", [
+   "Simple past: finished action at a definite time (I went to Cotonou yesterday).",
+   "Present perfect: past action with a link to the present (I have lived here for 5 years).",
+   "Signal words: yesterday, ago, last (past simple) / already, yet, just, ever, never, for, since (present perfect)."],
+  "Look for time markers first; then choose the tense.",
+  "Using the present perfect with a finished time (✗ I have seen him yesterday).",
+  [("Put the verb in the correct tense: She (not / finish) her homework yet.", "She hasn't finished her homework yet.")], "frise"),
+ ("Philosophie", "Tle", "Méthode de la dissertation philosophique", [
+   "Analyser le sujet : définir les termes, repérer les concepts et la question posée.",
+   "Formuler une problématique, annoncer un plan en trois parties (thèse, antithèse, synthèse) avec transitions.",
+   "Utiliser des exemples précis (histoire, littérature, vie sociale) et des auteurs."],
+  "Introduction : amorce, définitions, problématique, annonce du plan. Conclusion : bilan et ouverture.",
+  "Faire un cours sur le thème au lieu de répondre à la question posée.",
+  [("Pour le sujet « Le langage sert-il à manipuler ? », propose une problématique.", "Le langage n'est-il qu'un instrument d'influence au service de celui qui parle, ou permet-il aussi la vérité et l'entente ?")], "plan_dissertation"),
+]

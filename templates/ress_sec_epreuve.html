@@ -1,0 +1,7 @@
+{% extends "base.html" %}{% block titre %}{{ e.matiere }} – {{ e.niveau }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ e.matiere }} – {{ e.niveau }}{% if e.serie %} (série {{ e.serie }}){% endif %}</h1>
+<p class="aide">{{ e.type }}{% if e.duree %} · Durée : {{ e.duree }}{% endif %}{% if e.periode %} · {{ e.periode }}{% endif %}</p></div>
+<a class="btn sec" href="{{ url_for('ress_sec') }}">← Ressources</a></div>
+<div class="carte">{% for it in e['items'] %}<h3>{{ it.titre }}</h3>{% for l in it.texte.split('\n\n') %}{% if l.strip() %}<p>{{ l | replace('\n', ' ') }}</p>{% endif %}{% endfor %}{% endfor %}</div>
+{% endblock %}

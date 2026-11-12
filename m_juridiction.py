@@ -247,6 +247,11 @@ def enregistrer_ecole(e, cs_id=None, zone_id=None):
     """Crée ou met à jour une école à partir d'une IDENTITE_ECOLE (dict). Renvoie (id, créée?)."""
     code = (e.get("code") or "").strip()
     ex_ = q("SELECT id FROM jur_ecoles WHERE code=?", (code,), un=True)
+    if not ex_ and cs_id and e.get("nom"):       # v2.5.0 : école chargée depuis la liste officielle (code « REF-… ») → on la rattache
+        pre = q("SELECT id FROM jur_ecoles WHERE cs_id=? AND code LIKE 'REF-%' AND UPPER(nom)=UPPER(?)", (cs_id, str(e["nom"]).strip()), un=True)
+        if pre:
+            ex("UPDATE jur_ecoles SET code=? WHERE id=?", (code, pre["id"]))
+            ex_ = pre
     vals = {k: (str(e.get(k)) if e.get(k) is not None else "") for k in
             ("nom", "type", "secteur", "commune", "arrondissement", "localite", "adresse", "telephone", "email",
              "directeur_titre", "directeur_nom", "directeur_tel", "annee_creation")}
