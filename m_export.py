@@ -25,7 +25,7 @@ PREFIXES = ("/preparation", "/epreuves", "/aide/guide",
             # v2.2 : documents à garder ou à modifier (rapports, comptes rendus, notes de service, bilans, tableaux)
             "/rapports", "/communication", "/inspection", "/uascep", "/examens", "/examen-blanc", "/cep-blanc", "/pilotage",
             "/sport", "/sante-scolaire", "/patrimoine-materiel", "/visites", "/bilan-annuel", "/maitre-semaine", "/themes-up",
-            "/calendrier-scolaire", "/ressources-secondaire", "/tableau-honneur", "/synthese", "/statistiques-evaluation", "/juridiction")
+            "/calendrier-scolaire", "/ressources-secondaire", "/budget-previsionnel", "/tableau-honneur", "/synthese", "/statistiques-evaluation", "/juridiction")
 # pages qui reçoivent aussi la barre (avant : seulement « Imprimer »)
 ENDPOINTS_EN_PLUS = {"impayes", "jur_tableau", "jur_fiches_tableaux", "jur_ecoles_struct", "jur_rubriques", "jur_cep_fiches",
                      "jur_infra", "jur_effectifs", "acces_parent"}

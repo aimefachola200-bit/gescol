@@ -97,6 +97,17 @@ class T(unittest.TestCase):
         r = subprocess.run([sys.executable, "-c", "P=%r\n" % PREFIXE + code], cwd=RACINE, env=dict(os.environ), capture_output=True, text=True, timeout=600)
         self.assertIn("OK", r.stdout, r.stderr[-1800:])
 
+    def test_corrections_college(self):
+        code = ("import os,sys,tempfile\n"
+                "os.environ[P+'_EDITION']='sec_publique'; os.environ[P+'_DATA']=tempfile.mkdtemp(); os.environ[P+'_SANS_PRECHARGEMENT']='1'\n"
+                "sys.path.insert(0,os.getcwd())\n"
+                "import m_sec_supervision as M, banque_ea_eps as B\n"
+                "assert M.habiller_texte('Bureaux de l UASCEP')=='Bureaux de l UASCES'\n"
+                "assert M.habiller_texte('Note /10')=='Note /20' and B.NOTES[0]==20 and 'Note /20' in B.FICHE_COLONNES\n"
+                "print('OK')")
+        r = subprocess.run([sys.executable, "-c", "P=%r\n" % PREFIXE + code], cwd=RACINE, env=dict(os.environ), capture_output=True, text=True, timeout=300)
+        self.assertIn("OK", r.stdout, r.stderr[-1500:])
+
     def test_js_et_json(self):
         self.assertIn("data-geo=\"ecole\"", open(os.path.join(RACINE, "templates", "ecole_form.html"), encoding="utf-8").read())
         self.assertTrue(os.path.getsize(os.path.join(RACINE, "static", "referentiel_ecoles.json")) > 100000)

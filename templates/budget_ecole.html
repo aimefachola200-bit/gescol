@@ -1,0 +1,65 @@
+{% extends "base.html" %}{% block titre %}Budget prévisionnel{% endblock %}
+{% macro f(v) %}{{ m(v) if v else '' }}{% endmacro %}
+{% block contenu %}
+<div class="entete"><div><h1>Budget prévisionnel {{ annee }}</h1><p class="aide">Modèle officiel des EM / EPP : budget prévisionnel, puis compte rendu d'exécution. La subvention de l'État est comparée aux recettes déjà enregistrées.</p></div></div>
+<nav class="onglets">
+ <a class="{{ 'actif' if vue=='saisie' }}" href="?vue=saisie">Saisie</a>
+ <a class="{{ 'actif' if vue=='previsionnel' }}" href="?vue=previsionnel">Budget prévisionnel</a>
+ <a class="{{ 'actif' if vue=='compte-rendu' }}" href="?vue=compte-rendu">Compte rendu d'exécution</a>
+</nav>
+{% if vue=='saisie' %}
+<form method="post" class="carte"><input type="hidden" name="vue" value="saisie">
+<h2>A – Recettes</h2>
+<div class="tw"><table class="t"><tr><th>Compte</th><th>Intitulé</th><th>Prévu (FCFA)</th><th>Déjà enregistré</th><th>Observation</th></tr>
+{% for t,ch,c,i,g in RECETTES %}<tr><td>{{ c }}</td><td>{{ i }}</td>
+ <td>{% if c=='I-1' %}<b>{{ m(i1) }}</b>{% else %}<input name="p_R_{{ c }}" inputmode="numeric" value="{{ prevu.get(('R',c)) or '' }}" aria-label="{{ i }}">{% endif %}</td>
+ <td class="num">{% if c in deja %}{{ m(deja[c]) }}{% endif %}</td>
+ <td>{% if c!='I-1' %}<input name="o_R_{{ c }}" value="{{ obs.get(('R',c)) or '' }}">{% endif %}</td></tr>{% endfor %}</table></div>
+<h2>B – Dépenses</h2>
+<div class="tw"><table class="t"><tr><th>Compte</th><th>Intitulé</th><th>Prévu (FCFA)</th><th>Exécuté (FCFA)</th><th>Observation</th></tr>
+{% for t,ch,c,i,g in DEPENSES %}<tr><td>{{ c }}</td><td>{{ i }}</td>
+ <td><input name="p_D_{{ c }}" inputmode="numeric" value="{{ prevu.get(('D',c)) or '' }}" aria-label="Prévu {{ i }}"></td>
+ <td><input name="e_D_{{ c }}" inputmode="numeric" value="{{ exec_.get(('D',c)) or '' }}" aria-label="Exécuté {{ i }}"></td>
+ <td><input name="o_D_{{ c }}" value="{{ obs.get(('D',c)) or '' }}"></td></tr>{% endfor %}</table></div>
+<p class="aide">Total des recettes prévues : <b>{{ m(pr_rt) }}</b> FCFA · Total des dépenses prévues : <b>{{ m(pr_dt) }}</b> FCFA
+{% if not equilibre %}<br><b>Le budget n'est pas encore équilibré</b> (écart : {{ m((pr_rt - pr_dt)|abs) }} FCFA).{% else %}· Budget équilibré.{% endif %}</p>
+<p class="actions"><button class="btn">Enregistrer</button></p></form>
+{% elif vue=='previsionnel' %}
+<div class="carte">
+<p style="text-align:center"><b>RÉPUBLIQUE DU BÉNIN</b><br>MINISTÈRE DES ENSEIGNEMENTS MATERNEL ET PRIMAIRE<br>DIRECTION DÉPARTEMENTALE DES ENSEIGNEMENTS MATERNEL ET PRIMAIRE DU {{ (ident.ddemp or '………')|upper }}<br>
+CIRCONSCRIPTION SCOLAIRE : {{ ident.cs or '………' }} · Zone pédagogique n° {{ ident.zone or '……' }}<br>EM/EPP : {{ ident.ecole or '………' }} · Année scolaire : {{ annee }}</p>
+<h2 style="text-align:center">BUDGET PRÉVISIONNEL</h2>
+<h3>A – État des recettes</h3>
+<table class="t"><tr><th>Chapitre</th><th>Compte</th><th>Intitulé</th><th>Recettes inscrites</th><th>Total des chapitres</th><th>Observation</th></tr>
+{% for t,ch,c,i,g in RECETTES %}<tr><td>{{ ch }}</td><td>{{ c }}</td><td>{{ i }}</td><td class="num">{% if c=='I-1' %}{{ f(i1) }}{% else %}{{ f(prevu.get(('R',c))) }}{% endif %}</td><td></td><td>{{ obs.get(('R',c)) or '' }}</td></tr>
+ {% if loop.last or RECETTES[loop.index0+1][1] != ch %}<tr><td></td><td></td><td><b>TOTAL CHAPITRE {{ ch }}</b></td><td></td><td class="num"><b>{{ m(pr_r.get(ch, 0)) }}</b></td><td></td></tr>{% endif %}{% endfor %}
+<tr><td colspan="4"><b>TOTAL DES RECETTES</b></td><td class="num"><b>{{ m(pr_rt) }}</b></td><td></td></tr></table>
+<p>Arrêté les présentes prévisions des recettes à la somme de : <b>{{ lettres(pr_rt) }}</b> francs CFA.</p>
+<h3>B – État des dépenses</h3>
+<table class="t"><tr><th>Chapitre</th><th>Compte</th><th>Intitulé</th><th>Prévision des dépenses</th><th>Total du chapitre</th></tr>
+{% for t,ch,c,i,g in DEPENSES %}{% if loop.first or DEPENSES[loop.index0-1][4] != g %}<tr><td colspan="5"><b>{{ g }}</b></td></tr>{% endif %}
+ <tr><td>{{ ch }}</td><td>{{ c }}</td><td>{{ i }}</td><td class="num">{{ f(prevu.get(('D',c))) }}</td><td></td></tr>
+ {% if loop.last or DEPENSES[loop.index0+1][1] != ch %}<tr><td></td><td></td><td><b>TOTAL CHAPITRE {{ ch }}</b></td><td></td><td class="num"><b>{{ m(pr_d.get(ch, 0)) }}</b></td></tr>{% endif %}{% endfor %}
+<tr><td colspan="4"><b>TOTAL GLOBAL DES DÉPENSES</b></td><td class="num"><b>{{ m(pr_dt) }}</b></td></tr></table>
+<p>Arrêté le présent budget de l'exercice {{ annee }} à la somme de : <b>{{ lettres(pr_dt) }}</b> francs CFA.</p>
+<h3>Récapitulation du budget prévisionnel</h3>
+<table class="t"><tr><th>Recettes</th><th>Dépenses</th></tr><tr><td class="num">{{ m(pr_rt) }}</td><td class="num">{{ m(pr_dt) }}</td></tr></table>
+<p>{% if equilibre %}Le présent budget de l'exercice {{ annee }} est équilibré en recettes et en dépenses à la somme de : <b>{{ lettres(pr_rt) }}</b> francs CFA.{% else %}<b>Budget non équilibré : écart de {{ m((pr_rt - pr_dt)|abs) }} FCFA.</b>{% endif %}</p>
+<p>Fait à ……………………… le ……/……/……</p>
+<p>Ont signé : {{ ident.directeur_titre }} {{ ident.directeur_nom }} · Le Président de l'APE · {{ ident.ccs_titre }} {{ ident.ccs_nom }}</p></div>
+{% else %}
+<div class="carte"><h2 style="text-align:center">COMPTE RENDU D'EXÉCUTION DE BUDGET – Exercice {{ annee }}</h2>
+<p>EPP : {{ ident.ecole or '………' }} · Circonscription scolaire de : {{ ident.cs or '………' }}</p>
+<h3>A – Prévision des recettes</h3>
+<table class="t"><tr><th>Compte</th><th>Intitulé</th><th>Recettes prévues</th><th>Déjà enregistré</th><th>Observation</th></tr>
+{% for t,ch,c,i,g in RECETTES %}<tr><td>{{ c }}</td><td>{{ i }}</td><td class="num">{% if c=='I-1' %}{{ f(i1) }}{% else %}{{ f(prevu.get(('R',c))) }}{% endif %}</td><td class="num">{% if c in deja %}{{ m(deja[c]) }}{% endif %}</td><td>{{ obs.get(('R',c)) or '' }}</td></tr>{% endfor %}
+<tr><td colspan="2"><b>TOTAL DES RECETTES</b></td><td class="num"><b>{{ m(pr_rt) }}</b></td><td></td><td></td></tr></table>
+<h3>B – Dépenses</h3>
+<table class="t"><tr><th>Chapitre</th><th>Compte</th><th>Intitulé</th><th>Dépenses prévues</th><th>Dépenses exécutées</th><th>Reste</th><th>%</th></tr>
+{% for t,ch,c,i,g in DEPENSES %}{% set p = prevu.get(('D',c), 0) %}{% set e = exec_.get(('D',c), 0) %}
+ {% if loop.first or DEPENSES[loop.index0-1][4] != g %}<tr><td colspan="7"><b>{{ g }}</b></td></tr>{% endif %}
+ <tr><td>{{ ch }}</td><td>{{ c }}</td><td>{{ i }}</td><td class="num">{{ f(p) }}</td><td class="num">{{ f(e) }}</td><td class="num">{{ m(p - e) if (p or e) else '' }}</td><td class="num">{{ ((100 * e / p)|round(1)) ~ ' %' if p else '' }}</td></tr>{% endfor %}
+<tr><td colspan="3"><b>TOTAL</b></td><td class="num"><b>{{ m(pr_dt) }}</b></td><td class="num"><b>{{ m(ex_dt) }}</b></td><td class="num"><b>{{ m(pr_dt - ex_dt) }}</b></td><td class="num"><b>{{ ((100 * ex_dt / pr_dt)|round(1)) ~ ' %' if pr_dt else '' }}</b></td></tr></table>
+<p>Fait à ……………………… le ……/……/……</p><p>{{ ident.directeur_titre }} {{ ident.directeur_nom }} · Le Président de l'APE · {{ ident.ccs_titre }} {{ ident.ccs_nom }}</p></div>
+{% endif %}
+{% endblock %}

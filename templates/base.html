@@ -198,6 +198,7 @@
       {% if peut('stock') and ep_existe('stock_accueil') %}{{ lien('stock_accueil', 'Vivres et stock de la cantine', ep.startswith('stock')) }}{% endif %}
       {% if peut('depenses') %}{{ lien('depenses_accueil', 'Dépenses (fonds de cantine…)', ep.startswith('depense')) }}
       {{ lien('recettes_accueil', 'Subventions et recettes', ep.startswith('recette')) }}
+      {% if ep_existe('budget_ecole') %}{{ lien('budget_ecole', 'Budget prévisionnel', ep.startswith('budget_ecole')) }}{% endif %}
       {% if not SECONDAIRE %}{{ lien('cep_frais', 'Frais de dossier CEP', ep.startswith('cep_frais')) }}{% endif %}{% endif %}
       {% if peut('paiements') %}{{ lien('paiements_en_ligne', 'Paiements en ligne (facultatif)', ep=='paiements_en_ligne') }}{% endif %}
       {% else %}

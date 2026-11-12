@@ -36,7 +36,9 @@ _ELISIONS = [("de la Inspection", "de l'Inspection"), ("de la inspection", "de l
 _COMMUN = [("Circonscriptions scolaires", "Inspections secondaires"), ("Circonscription scolaire", "Inspection secondaire"),
            ("circonscriptions scolaires", "inspections secondaires"), ("circonscription scolaire", "inspection secondaire"),
            ("Circonscriptions", "Inspections"), ("Circonscription", "Inspection"), ("circonscriptions", "inspections"),
-           ("circonscription", "inspection"), ("DDEMP", "DDESTFP"), ("Chef de Inspection", "Chef d'Inspection")]
+           ("circonscription", "inspection"), ("DDEMP", "DDESTFP"),
+           ("UASCEP", "UASCES"), ("Uascep", "Uasces"), ("uascep", "uasces"), ("Note /10", "Note /20"),   # v2.5.0 : au collège, UASCES ; barème d'EPS sur 20
+           ("Chef de Inspection", "Chef d'Inspection")]
 _SUPERVISION = [("Écoles", "Établissements"), ("écoles", "établissements"), ("École", "Établissement"), ("école", "établissement"),
                 ("Ecoles", "Établissements"), ("Ecole", "Établissement")]
 

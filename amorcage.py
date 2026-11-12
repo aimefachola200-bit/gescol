@@ -21,7 +21,7 @@ import threading
 import time
 
 MARQUE = "GESCOL"
-BASE_VERSION = "2.5.0"          # version contenue dans cette installation (tests : égale à config.VERSION)
+BASE_VERSION = "2.5.1"          # version contenue dans cette installation (tests : égale à config.VERSION)
 ESSAIS_MAX = 4
 _etat = {"actif": None}
 

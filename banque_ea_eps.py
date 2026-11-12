@@ -111,7 +111,9 @@ LANCER = {"CI": 8, "CP": 10, "CE1": 13, "CE2": 16, "CM1": 19, "CM2": 22}        
 JEUX = {"P": ("Jeu de l'épervier", "Les « éperviers » au centre du terrain essaient de toucher les « oiseaux » qui traversent ; l'oiseau touché devient épervier."),
         "E": ("Relais navette 4 × 20 m", "Par équipes de quatre, chacun parcourt 20 m et touche la main du suivant ; on observe la vitesse et la transmission."),
         "M": ("Mini-handball (2 × 5 min)", "Deux équipes de cinq ; marquer en lançant le ballon dans le but adverse, sans contact ni marcher avec le ballon.")}
-NOTES = [10, 8, 6, 4, 2]
+import config  # noqa: E402
+
+NOTES = [20, 16, 12, 8, 4] if config.secondaire() else [10, 8, 6, 4, 2]       # v2.5.0 : au secondaire, le barème d'EPS est sur 20
 
 
 def _f(x, unite):
@@ -167,7 +169,8 @@ def eps(cours, k):
             "deux": e2, "type2": deux, "baremes": [course, b2], "age": AGE[cours]}
 
 
-FICHE_COLONNES = ["N°", "Nom et prénoms", "Sexe", "Âge", "Course (temps)", "Note /10", "Épreuve 2 (perf.)", "Note /10", "Total /20"]
+FICHE_COLONNES = (["N°", "Nom et prénoms", "Sexe", "Âge", "Épreuve 1 (perf.)", "Épreuve 2 (perf.)", "Épreuve 3 (perf.)", "Total", "Note /20"] if config.secondaire()
+                  else ["N°", "Nom et prénoms", "Sexe", "Âge", "Course (temps)", "Note /10", "Épreuve 2 (perf.)", "Note /10", "Total /20"])
 
 
 # ------------------------------------------------------------------ v1.32 : référentiel des barèmes EPS proposés (CI → CM2)

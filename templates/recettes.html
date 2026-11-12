@@ -9,7 +9,7 @@
 <div class="entete">
   <div><h1>Subventions et recettes – {{ ANNEE }}</h1>
   <p class="sous">Fonds reçus par l'école : subventions de l'État et de la commune, dons des partenaires (PAM, ONG…), cotisations APE… et solde d'ouverture de l'année.</p></div>
-  <div class="actions">
+  <div class="actions"><a class="btn sec" href="{{ url_for('budget_ecole') }}">Budget prévisionnel</a>
     <a class="btn sec" href="{{ url_for('recettes_pdf', origine=r.origine or None, annulees='1' if r.annulees else None) }}" target="_blank">PDF</a>
     <a class="btn sec" href="{{ url_for('recettes_xlsx', origine=r.origine or None, annulees='1' if r.annulees else None) }}">Excel</a>
     <a class="btn sec" href="{{ url_for('depenses_accueil') }}">Dépenses</a>
