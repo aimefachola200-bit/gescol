@@ -5,7 +5,7 @@ là-bas remplacent celles-ci."""
 import os
 import sys
 
-VERSION = "2.4.8"
+VERSION = "2.4.9"
 # v1.8 : vérification des nouvelles versions (page « Releases » du dépôt GitHub) et fichiers à proposer par édition
 DEPOT_MAJ = os.environ.get("GESCOL_DEPOT_MAJ", "aimefachola200-bit/gescol")
 FICHIERS_MAJ = {"privee": ("GESCOL-Installation.exe", "GESCOL-Autonome.apk"),

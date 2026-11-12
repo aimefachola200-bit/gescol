@@ -11,7 +11,7 @@ on:
     tags: ["v*"]
 
 env:
-  VERSION: "2.4.8"
+  VERSION: "2.4.9"
 
 jobs:
   tests:
@@ -216,6 +216,15 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+      - name: Décompresser le code source (gescol_source.zip)
+        shell: python
+        run: |
+          import os, zipfile
+          if os.path.exists("gescol_source.zip"):
+              zipfile.ZipFile("gescol_source.zip").extractall(".")
+      - name: Mise à jour automatique (MAJ-CODE.zip et MAJ-CODE.json)
+        run: python3 packaging/fabriquer_maj.py fichiers_maj
       - uses: actions/download-artifact@v4
         with:
           path: fichiers
@@ -248,7 +257,9 @@ jobs:
           tag_name: v${{ env.VERSION }}
           name: GESCOL ${{ env.VERSION }}
           make_latest: "true"
-          files: fichiers/*
+          files: |
+            fichiers/*
+            fichiers_maj/*
           body: |
             **Android autonome** : GESCOL-Autonome.apk fonctionne seul sur le téléphone ou la tablette, sans PC ni Internet.
             **GESCOL Public (écoles publiques)** : GESCOL-Public.apk (Android) et GESCOL-Public-Installation.exe (Windows).

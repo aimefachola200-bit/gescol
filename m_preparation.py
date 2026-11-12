@@ -1187,8 +1187,20 @@ def enregistrer(app, H):
                 continue
             refs = references(sem or ann)
             if not sem:
+                refs_mois = refs
                 refs = refs_de_la_semaine(refs, m, auj)
             toutes = correspondances(cours, m, refs)
+            if not sem and not toutes and refs is not refs_mois:
+                # v2.4.8 : la SA / l'unité de la semaine n'a aucune fiche dans la bibliothèque (ex. éducation artistique du CM1 : SA7 et SA8)
+                # -> on propose celle du mois qui en a, la plus proche de la semaine, au lieu d'une semaine vide
+                cle = "u" if m == "francais" and refs_mois["u"] else "sa"
+                voulu = refs[cle][0] if refs.get(cle) else None
+                ordre = refs_mois.get(cle) or []
+                dispo = [x for x in ordre if correspondances(cours, m, dict(refs_mois, **{cle: [x]}))]
+                if dispo and voulu in ordre:
+                    x = min(dispo, key=lambda v: abs(ordre.index(v) - ordre.index(voulu)))
+                    refs = dict(refs_mois, **{cle: [x]})
+                    toutes = correspondances(cours, m, refs)
             mats.append({"matiere": m, "nom": nom_matiere(m), "annuel": ann, "semaine": sem, "refs": refs,
                          "fiches": toutes[:PAR_MATIERE], "total": len(toutes), "ids": [f["id"] for f in toutes]})
         return {"classe": cl, "cours": cours, "mois": MOIS_FR[mc.month - 1], "bornes": bornes, "matieres": mats}

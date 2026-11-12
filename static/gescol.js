@@ -444,12 +444,20 @@
     for (var i = 0; i < Math.max(x.length, y.length); i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); }
     return false;
   }
+  function initMajAuto() {          // v2.4.9 : mise à jour automatique déjà téléchargée par l'application
+    var a = $('#bandeau-maj-auto'); if (!a || !window.fetch) return;
+    fetch('/maj/etat', { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (!j || !j.pret) return;
+      $('.maj-auto-v', a).textContent = j.pret; a.hidden = false;
+      var o = $('#bandeau-maj'); if (o) o.hidden = true; o && o.setAttribute('data-masque', '1');
+    }).catch(function () {});
+  }
   function initMaj() {
     var b = $('#bandeau-maj'); if (!b || !window.fetch) return;
     var depot = b.dataset.depot, actuelle = b.dataset.version, cache = {};
     try { cache = JSON.parse(localStorage.getItem('gescol-maj') || '{}'); } catch (_) {}
     function afficher(tag) {
-      if (!tag || !plusRecente(tag, actuelle)) return;
+      if (!tag || !plusRecente(tag, actuelle) || b.dataset.masque) return;
       try { if (localStorage.getItem('gescol-maj-ignore') === tag) return; } catch (_) {}
       var f = b.dataset.fichier, lien = 'https://github.com/' + depot + '/releases/' + (f ? 'latest/download/' + f : 'latest');
       $('.maj-v', b).textContent = tag.replace(/^v/i, '');
@@ -621,7 +629,7 @@
     $$('input[type=password]', racine).forEach(initOeil);
     $$('form[data-hors-ligne]', racine).forEach(initHorsLigne);
     fixerEntetes(racine);
-    if (racine === document) { majFile(); viderFile(); initMaj();
+    if (racine === document) { majFile(); viderFile(); initMaj(); initMajAuto();
       var fa = $('#file-attente'); if (fa) fa.addEventListener('click', function (e) { e.preventDefault(); toast('Envoi des saisies en attente…', true); viderFile(); }); }
   }
 

@@ -50,6 +50,11 @@ def demarrer(dossier_donnees, dossier_web):
     except ImportError:
         pass
 
+    try:  # v2.4.9 : code mis à jour automatiquement (prioritaire sur celui de l'application)
+        import amorcage
+        amorcage.appliquer()
+    except Exception:
+        pass
     _metadonnees_tolerantes()
     from werkzeug.serving import make_server
     from app import app

@@ -67,6 +67,11 @@ def main():
         webbrowser.open(f"http://localhost:{PORT}")
         return
 
+    try:                       # v2.4.9 : code mis à jour automatiquement (prioritaire sur celui de l'installation)
+        import amorcage
+        amorcage.appliquer()
+    except Exception:  # noqa: BLE001
+        pass
     import config
     os.makedirs(config.INSTANCE_DIR, exist_ok=True)
     logging.basicConfig(filename=os.path.join(config.INSTANCE_DIR, "gescol_serveur.log"), level=logging.INFO,
