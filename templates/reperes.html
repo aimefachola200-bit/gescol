@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block titre %}Repères pédagogiques{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Repères pédagogiques</h1>
+<p class="sous">Les grands auteurs de l'éducation, l'art d'enseigner et la lecture au CP. Synthèses originales, sans reproduction d'ouvrages protégés.</p></div>
+<div><a class="btn sec" href="{{ url_for('poesies') }}">Poésies</a> <a class="btn sec" href="{{ url_for('schemas_fournis') }}">Cartes et croquis</a> <a class="btn sec" href="{{ url_for('cahiers_langues') }}">Bréviaires de langues</a> <a class="btn sec" href="{{ url_for('lectures_college') }}">Lectures du collège</a> <a class="btn sec" href="{{ url_for('acteurs_etablissement') }}">Acteurs et périmètres</a></div></div>
+<h2>Piliers de l'éducation</h2>
+{% for n, i, c in auteurs %}<div class="carte"><b>{{ n }}</b><p style="margin:4px 0">{{ i }}</p><p class="sous" style="margin:0"><b>En classe :</b> {{ c }}</p></div>{% endfor %}
+<h2>L'art d'enseigner</h2>
+{% for n, d in art %}<div class="carte"><b>{{ n }}</b> : {{ d }}</div>{% endfor %}
+<h2>Apprendre à lire au CP</h2>
+{% for n, d in lecture %}<div class="carte"><b>{{ n }}</b> : {{ d }}</div>{% endfor %}
+{% endblock %}

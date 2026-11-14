@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% block titre %}Textes officiels{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Textes officiels de référence</h1><p class="sous">Arrêtés du MEMP et du MESTFP joints à l'application. Les résumés ne remplacent pas le texte : ouvrez le PDF.</p></div>
+  <div><a class="btn sec" href="{{ url_for('reperes_pedagogiques') }}">Repères pédagogiques</a> <a class="btn sec" href="{{ url_for('acteurs_etablissement') }}">Acteurs et périmètres</a> <a class="btn sec" href="{{ url_for('archives') }}">Archives</a></div>
+</div>
+{% for t in textes %}
+<div class="carte">
+  <h3 style="margin-top:0">{{ t.titre }}</h3>
+  <p class="sous">{{ t.tutelle }}</p>
+  <ul>{% for p in t.points %}<li>{{ p }}</li>{% endfor %}</ul>
+  <p><a class="btn" href="{{ url_for('static', filename='textes_officiels/' ~ t.fichier) }}" target="_blank">Ouvrir le PDF</a></p>
+</div>
+{% endfor %}
+<h2 id="cahiers">Cahiers d'activités officiels (CI et CP)</h2>
+{% for c in cahiers %}<div class="carte"><b>{{ c.titre }}</b><p class="sous">{{ c.info }}</p><p><a class="btn" href="{{ url_for('static', filename='cahiers_officiels/' ~ c.fichier) }}" target="_blank">Ouvrir le PDF</a></p></div>{% endfor %}
+<div class="carte" id="progression-cp"><b>Cahier d'activités de Français CP (édition 2022) : progression des {{ cp_lecons|length }} leçons</b>
+  <p class="sous">Titre et page de chaque leçon, d'après la table des matières du cahier (DIIP / INFRE). Chaque leçon comporte : entourer, copier, associer lettres et syllabes, lire, copier des mots, compléter une phrase, écrire sous la dictée.</p>
+  <p><a class="btn" href="{{ url_for('cahier_cp_francais_pdf') }}" target="_blank">Cahier d'exercices CP (PDF, 70 leçons)</a>
+  <a class="btn sec" href="{{ url_for('cahier_cp_francais_pdf', corrige=1) }}" target="_blank">Corrigé de l'enseignant</a></p>
+  <details><summary>Afficher la progression</summary>
+  <div style="overflow:auto"><table class="t"><thead><tr><th>Leçon</th><th>Contenu</th><th>Page</th></tr></thead><tbody>
+  {% for n, t, p in cp_lecons %}<tr><td>{{ n }}</td><td>{{ t }}</td><td>{{ p }}</td></tr>{% endfor %}</tbody></table></div></details></div>
+{% endblock %}

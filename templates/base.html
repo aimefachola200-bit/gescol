@@ -16,8 +16,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="{{ NOM_APPLI }}">
-<link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192.png') }}">
-<link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+<link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/insignes/' ~ INSIGNE ~ '-icon-192.png') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/insignes/' ~ INSIGNE ~ '-apple-touch-icon.png') }}">
 </head>
 <body>
 {% set ep = request.endpoint or '' %}
@@ -26,7 +26,7 @@
 {% macro groupe(cle, titre, actif, ico) %}<details class="groupe-l {{ 'actif' if actif }}" data-g="{{ cle }}" {{ 'open' if actif }}><summary><span class="ico" aria-hidden="true">{{ icone(ico) }}</span>{{ titre }}</summary><div class="sous">{{ caller() }}</div></details>{% endmacro %}
 <div class="app">
 <aside id="lateral" class="lateral" aria-label="Menu principal">
-  <a class="marque" href="{{ url_for('accueil') }}"><span class="logo-g">G</span><span>{{ NOM_APPLI }}<small title="{{ ECOLE.devise or '' }}">{{ ECOLE.sigle or ECOLE.nom }}</small></span>{% if ECOLE.id %}<img class="logo-ecole-entete" src="{{ url_for('ecole_logo', eid=ECOLE.id) }}" alt="" width="30" height="30" onerror="this.remove()" style="margin-left:6px;border-radius:50%;object-fit:contain">{% endif %}</a>
+  <a class="marque" href="{{ url_for('accueil') }}"><span class="logo-g">G</span><span>{{ NOM_APPLI }}<small title="{{ ECOLE.devise or '' }}">{{ ECOLE.sigle or ECOLE.nom }}</small></span>{% if ECOLE.id %}<img class="logo-ecole-entete" src="{{ url_for('ecole_logo', eid=ECOLE.id) }}" alt="" width="30" height="30" onerror="this.remove()" style="margin-left:6px;border-radius:50%;object-fit:contain">{% endif %}<span class="insigne insigne-{{ INSIGNE_FORME }}" style="background:{{ INSIGNE_COULEUR }}" title="{{ INSIGNE_LIB }}" aria-label="{{ INSIGNE_LIB }}">{{ INSIGNE_LETTRE }}</span></a>
   {% if JURIDICTION and not ECOLE_COURANTE %}
   {# CS / DDEMP : aucune école ouverte tant que l'utilisateur n'en a pas choisi une (a_integration) #}
   <div class="choix-ecole"><span class="aide">École ouverte</span><br><b style="font-size:13px">Aucune école ouverte</b>
@@ -67,6 +67,7 @@
       {{ lien('honneur_accueil', "Tableau d'honneur", ep.startswith('honneur')) }}
       {% if peut('notes') %}{{ lien('orientation_accueil', 'Orientation des élèves', ep.startswith('orientation')) }}{% endif %}
       {{ lien('bilan_annuel', 'Bilan annuel et décision', ep.startswith('bilan')) }}{% endif %}
+      {% if peut('epreuves') and ep_existe('schemas_accueil') %}{{ lien('schemas_accueil', "Schémas et cartes du Bénin", ep.startswith('schemas')) }}{% endif %}
       {% if peut('epreuves') and ep_existe('epreuves_accueil') %}{{ lien('epreuves_accueil', "Comité d'évaluation, épreuves et grilles", ep.startswith('epreuves')) }}{% endif %}
       {% if SECONDAIRE and peut('epreuves') and ep_existe('ress_sec') %}{{ lien('ress_sec', "Ressources du secondaire (épreuves, exposés, révisions)", ep.startswith('ress_sec')) }}{% endif %}
       {% if peut('notes') %}{{ lien('notes_accueil', 'Notes par période (bulletins)', ep.startswith('notes') or ep=='resultats') }}{% endif %}

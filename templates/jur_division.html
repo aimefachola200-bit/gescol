@@ -22,6 +22,8 @@ details.aof summary{cursor:pointer;font-weight:600;color:var(--bleu)}
   <div class="actions">
     <a class="btn sec" href="{{ url_for('jur_divisions', annee=annee) }}">← Toutes les divisions</a>
     <a class="btn sec" href="{{ url_for('jur_divisions_plan', annee=annee) }}">Vue d'ensemble</a>
+    <a class="btn sec" href="{{ url_for('jur_division_tb', code=d.code, annee=annee) }}">Tableau de bord</a>
+    <a class="btn sec" href="{{ url_for('jur_division_synop', code=d.code, annee=annee) }}">Synoptique</a>
     {% if peut('jur_structure') %}<a class="btn sec" href="{{ url_for('jur_service_form', sid=d.id) }}">Nom, sigle, chef</a>{% endif %}
     {% if modifiable %}<a class="btn sec" href="{{ url_for('jur_division_import', code=d.code, annee=annee) }}">⇧ Importer (Excel)</a>{% endif %}
     <a class="btn sec" href="{{ url_for('jur_division_xlsx', code=d.code, annee=annee) }}">⇩ Excel</a>

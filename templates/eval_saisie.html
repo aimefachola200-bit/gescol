@@ -99,6 +99,8 @@ table.ev-grille tr.ok td.nom{box-shadow:inset 3px 0 0 #1B7F3B}
 
 {% if mat %}
 <p class="aide">Choisissez l'appréciation de chaque domaine : <b>A</b> = acquis, <b>ECA</b> = en cours d'acquisition, <b>NA</b> = non acquis, <b>D</b> = dispensé.</p>
+{% elif cl.cycle == 'secondaire' %}
+<p class="aide">Saisissez directement la note de chaque matière, de <b>0 à 20</b> (20/20 est accepté ; virgule ou point pour les décimales ; <b>D</b> = dispensé).</p>
 {% else %}
 <p class="aide">Pour chaque matière : <b>note principale</b> (inférieure à 20) puis, dans la petite case <b>P</b>, la <b>note de performance</b> (0 à 2), accordée seulement à partir de 10 ; la note retenue est leur somme, 20 au plus (19 → performance 1 au plus). <span style="color:#B42318;font-weight:700">Case rouge</span> : note principale ≥ 20 (20/20 n'est possible qu'avec la performance), performance avec une note inférieure à 10, performance supérieure à 2 ou somme supérieure à 20 — elle ne sera pas enregistrée. <b>D</b> = dispensé, case vide = pas de note. <b>Entrée</b> passe à l'élève suivant (même matière).
   {% if prim %}<b>MAÎTRISE</b> : {{ seuil_txt }} — seule condition de réussite ; la moyenne sert au rang.
@@ -126,7 +128,7 @@ table.ev-grille tr.ok td.nom{box-shadow:inset 3px 0 0 #1B7F3B}
       {% else %}
       {% set np = (val or '').split('|') %}<span class="ev-np">
       <input {% if ok %}name="n_{{ e.id }}_{{ m.id }}"{% else %}disabled{% endif %} data-m="{{ m.id }}" class="cell" value="{{ np[0] }}" inputmode="decimal" maxlength="6" aria-label="{{ e.nom }} {{ e.prenoms }} – {{ m.nom }} : note principale">
-      <input {% if ok %}name="p_{{ e.id }}_{{ m.id }}"{% else %}disabled{% endif %} data-m="{{ m.id }}" class="perf" value="{{ np[1] if np|length > 1 else '' }}" inputmode="decimal" maxlength="4" placeholder="P" title="Note de performance (0 à 2)" aria-label="{{ e.nom }} {{ e.prenoms }} – {{ m.nom }} : note de performance"></span>
+      {% if cl.cycle != 'secondaire' %}<input {% if ok %}name="p_{{ e.id }}_{{ m.id }}"{% else %}disabled{% endif %} data-m="{{ m.id }}" class="perf" value="{{ np[1] if np|length > 1 else '' }}" inputmode="decimal" maxlength="4" placeholder="P" title="Note de performance (0 à 2)" aria-label="{{ e.nom }} {{ e.prenoms }} – {{ m.nom }} : note de performance">{% endif %}</span>
       {% endif %}</td>
     {% endfor %}
     {% if mat %}<td class="calc c-dec">—</td>{% else %}
@@ -172,7 +174,7 @@ table.ev-grille tr.ok td.nom{box-shadow:inset 3px 0 0 #1B7F3B}
   /* v1.9 : note principale + note de performance ; les deux cases passent au rouge si une règle n'est pas respectée */
   function perfDe(el){ return el.parentNode ? el.parentNode.querySelector('.perf') : null; }
   function lireNP(el){
-    var p = perfDe(el), r = GardeNotes.lire(el.value, p ? p.value : '');
+    var p = perfDe(el), r = GardeNotes.lire(el.value, p ? p.value : '', !!CFG.simple);
     el.classList.toggle('err', !!r.errN); if (p) p.classList.toggle('err', !!r.errP);
     el.title = r.msg || ''; if (p) p.title = r.msg || 'Note de performance (0 à 2)';
     if (r.errN || r.errP) return {err: true};

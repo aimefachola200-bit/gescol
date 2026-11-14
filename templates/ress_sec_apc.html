@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% block titre %}Épreuve APC{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ e.matiere }} · {{ e.niveau }}{{ ' · CORRIGÉ ET BARÈME' if corrige }}</h1><p class="aide">Épreuve conforme à l'approche par les compétences (APC) · durée {{ e.duree }} · notée sur 20</p></div>
+ <div class="actions"><a class="btn sec" href="{{ url_for('ress_sec', vue='apc') }}">← Épreuves APC</a>
+ {% if corrige %}<a class="btn sec" href="{{ url_for('ress_sec_apc', i=e.id) }}">Voir le sujet</a>{% else %}<a class="btn sec" href="{{ url_for('ress_sec_apc', i=e.id, corrige=1) }}">Voir le corrigé</a>{% endif %}</div></div>
+<div class="carte">
+<p style="text-align:center"><b>RÉPUBLIQUE DU BÉNIN</b><br>{{ ident.ecole or '………………………………' }} · Année scolaire {{ ident.annee }}<br>Épreuve de <b>{{ e.matiere }}</b> · Classe de <b>{{ e.niveau }}</b> · Durée : {{ e.duree }} · Nom et prénoms : ………………………………</p>
+<h2>Compétence disciplinaire</h2><p>{{ e.competence }}</p>
+<h2>Situation d'évaluation</h2><p>{{ e.situation }}</p>
+{% if e.support %}<h2>Support</h2><blockquote style="border-left:4px solid #9bb;padding:6px 12px;margin:0">{{ e.support }}</blockquote>{% endif %}
+<h2>Tâche</h2><p>{{ e.tache }}</p>
+<h2>Consignes</h2>
+<table class="t"><tr><th>N°</th><th>Consigne</th><th>Points</th>{% if corrige %}<th>Éléments de correction</th>{% endif %}</tr>
+{% for it in e["items"] %}<tr><td>{{ loop.index }}</td><td>{{ it.consigne }}</td><td class="num">{{ it.points }}</td>{% if corrige %}<td>{{ it.correction }}</td>{% endif %}</tr>{% endfor %}
+<tr><td></td><td>Perfectionnement : maîtrise de la langue, soin et présentation</td><td class="num">{{ e.perfectionnement }}</td>{% if corrige %}<td>Copie propre, phrases correctes, écriture lisible.</td>{% endif %}</tr>
+<tr><td></td><td><b>Total</b></td><td class="num"><b>{{ e.total }}</b></td>{% if corrige %}<td></td>{% endif %}</tr></table>
+{% if corrige %}<h2>Critères d'évaluation</h2><ul>{% for c, t in grille %}<li><b>{{ c }}</b> : {{ t }}</li>{% endfor %}</ul>
+<p class="aide">Conseil de correction : pour chaque consigne, accorder les points si le raisonnement est juste même si la formulation diffère ; ne pas pénaliser deux fois la même erreur.</p>{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% block titre %}Fiche pédagogique{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Fiche pédagogique : {{ f.titre }}</h1><p class="aide">{{ f.matiere }} · {{ f.niveau }} · {{ f.duree }} · approche par les compétences (APC)</p></div><a class="btn sec" href="{{ url_for('ress_sec', vue='fiches') }}">← Fiches</a></div>
+<div class="carte">
+<table class="t"><tr><th>Établissement</th><td>{{ ident.ecole or '………………' }}</td><th>Année scolaire</th><td>{{ ident.annee }}</td></tr>
+<tr><th>Professeur</th><td>………………</td><th>Classe / effectif</th><td>{{ f.niveau }} / ……</td></tr></table>
+<h2>Compétence disciplinaire</h2><p>{{ f.competence }}</p>
+<h2>Situation d'apprentissage</h2><p>{{ f.situation }}</p>
+<h2>Objectifs d'apprentissage</h2><p>{{ f.objectifs }}</p>
+<h2>Déroulement</h2>
+<table class="t"><tr><th>Phase</th><th>Activités de l'enseignant et des élèves</th></tr>
+<tr><td>1. Mise en situation (10 min)</td><td>{{ f.mise_en_situation }}</td></tr>
+<tr><td>2. Recherche et exploration (20 min)</td><td>{{ f.recherche }}</td></tr>
+<tr><td>3. Mise en commun et structuration (10 min)</td><td>{{ f.trace }}</td></tr>
+<tr><td>4. Application et évaluation (15 min)</td><td>{{ f.application }}</td></tr>
+<tr><td>5. Prolongement</td><td>{{ f.prolongement }}</td></tr></table>
+<h2>Critères d'évaluation de la compétence</h2><ul><li>Pertinence : le travail répond à la situation et à la tâche demandée.</li><li>Utilisation correcte des outils de la discipline.</li><li>Cohérence du raisonnement ou de la production.</li></ul>
+<p class="aide">Observations du professeur : ………………………………………………………………</p></div>
+{% endblock %}

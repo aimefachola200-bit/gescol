@@ -27,9 +27,10 @@ def _nombre(s):
     return float(s)
 
 
-def lire(brut_note, brut_perf=None):
+def lire(brut_note, brut_perf=None, simple=False):
     """(note principale, note de performance) saisies -> (valeur retenue | None, dispense, performance | None).
-    Lève NoteRefusee(message) si une règle n'est pas respectée."""
+    Lève NoteRefusee(message) si une règle n'est pas respectée.
+    simple=True (secondaire / collège) : note directe de 0 à 20 inclus, sans note de performance."""
     if isinstance(brut_note, float) and brut_note.is_integer():
         brut_note = str(int(brut_note))
     s = ("" if brut_note is None else str(brut_note)).strip()
@@ -46,6 +47,10 @@ def lire(brut_note, brut_perf=None):
         raise NoteRefusee(f"« {s} » n'est pas une note") from None
     if v < 0:
         raise NoteRefusee("note négative")
+    if simple:
+        if v > NOTE_MAX:
+            raise NoteRefusee(f"note {s} : elle ne peut pas dépasser 20")
+        return round(v, 2), False, None
     if v >= NOTE_MAX:
         raise NoteRefusee(f"note principale {s} : elle doit rester inférieure à 20 (20/20 n'est possible qu'avec la note de performance)")
     perf = None
@@ -73,13 +78,13 @@ def separer(saisie):
     return s, ""
 
 
-def afficher(valeur, performance):
+def afficher(valeur, performance, simple=False):
     """Valeurs à réafficher dans les deux cases : (principale, performance) en texte."""
     def f(x):
         return "" if x is None else (f"{x:.2f}".rstrip("0").rstrip("."))
     if valeur is None:
         return "", ""
-    if performance is None:
+    if simple or performance is None:
         return f(valeur), ""
     return f(round(valeur - performance, 2)), f(performance)
 
@@ -89,10 +94,16 @@ JS = r"""
 window.GardeNotes = (function(){
   function nb(s){ s = String(s || '').trim().replace(',', '.'); return /^\d{1,2}(\.\d{1,2})?$/.test(s) ? parseFloat(s) : NaN; }
   /* principale, performance (textes) -> {vide|disp|note, perf, errN, errP, msg} */
-  function lire(a, b){
+  function lire(a, b, simple){
     a = String(a || '').trim(); b = String(b || '').trim();
     if (a.toUpperCase() === 'D') return {disp: true};
     if (a === '' && b === '') return {vide: true};
+    if (simple) {
+      var s = nb(a);
+      if (isNaN(s) || s < 0) return {errN: true, msg: 'note invalide'};
+      if (s > 20) return {errN: true, msg: 'la note ne peut pas dépasser 20'};
+      return {note: Math.round(s * 100) / 100};
+    }
     var r = {}, v = nb(a), p = b === '' ? 0 : nb(b);
     if (a === '') { r.errP = true; r.msg = 'note de performance sans note principale'; return r; }
     if (isNaN(v) || v < 0) { r.errN = true; r.msg = 'note invalide'; }

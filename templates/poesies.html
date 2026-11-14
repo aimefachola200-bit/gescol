@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block titre %}Poésies et récitations{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Poésies et récitations</h1>
+<p class="sous">Poèmes originaux pour la récitation en classe, avec conseils et grille d'évaluation sur 20.</p></div>
+<a class="btn sec" href="{{ url_for('reperes_pedagogiques') }}">Repères pédagogiques</a></div>
+<div class="carte"><b>Conduite d'une séance de récitation</b><ol>{% for c in conseils %}<li>{{ c }}</li>{% endfor %}</ol>
+<table class="t"><thead><tr><th>Critère</th><th>Points</th></tr></thead><tbody>{% for c, p in grille %}<tr><td>{{ c }}</td><td>{{ p }}</td></tr>{% endfor %}</tbody></table></div>
+{% for t, n, v, th in poemes %}<div class="carte"><h3 style="margin-top:0">{{ t }}</h3><p class="sous">{{ n }} - Thème : {{ th }}</p><p style="line-height:1.7">{% for l in v %}{{ l }}<br>{% endfor %}</p></div>{% endfor %}
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}{% block titre %}Synoptique – {{ d.sigle or d.nom }}{% endblock %}
+{% block contenu %}
+<style>
+.rub{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px;margin:0}
+.rub dt{color:#667085;font-weight:600}.rub dd{margin:0}
+.taux{display:inline-block;min-width:52px;text-align:center;border-radius:12px;padding:1px 8px;font-weight:600;font-size:12.5px}
+.taux.ok{background:#ECFDF3;color:#067647}.taux.moy{background:#FFFAEB;color:#B54708}.taux.ko{background:#FEF3F2;color:#B42318}.taux.na{background:#F2F4F7;color:#667085}
+.deux-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+</style>
+{% macro badge_taux(v) %}{% if v is none %}<span class="taux na">—</span>{% elif v >= 75 %}<span class="taux ok">{{ pct(v) }}</span>{% elif v >= 50 %}<span class="taux moy">{{ pct(v) }}</span>{% else %}<span class="taux ko">{{ pct(v) }}</span>{% endif %}{% endmacro %}
+<div class="entete"><div><h1>Tableau synoptique — {% if d.sigle %}{{ d.sigle }} · {% endif %}{{ d.nom }}</h1>
+  <p class="sous">Identité, agents, attributions, comptes et périmètre d'accès de la division · année scolaire {{ annee }}.</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_division_tb', code=d.code, annee=annee) }}">Tableau de bord</a>
+    {% if global_ok %}<a class="btn sec" href="{{ url_for('jur_divisions_synop', annee=annee) }}">Toutes les divisions</a>{% endif %}
+    <a class="btn" href="{{ url_for('jur_division_synop_pdf', code=d.code, annee=annee) }}" target="_blank">{{ icone('document') }} PDF</a>
+  </div></div>
+<form method="get" class="filtres carte"><label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label></form>
+
+<section class="carte"><h2>Identité</h2>
+  <dl class="rub">
+    <dt>Division</dt><dd><b>{{ d.sigle or d.code|upper }}</b> — {{ d.nom }}</dd>
+    <dt>Article de l'AOF</dt><dd>{% if d.article %}Article {{ d.article }}{% else %}—{% endif %}</dd>
+    <dt>Rattachement</dt><dd>{{ d.parent_nom or '—' }}</dd>
+    <dt>Chef</dt><dd><b>{{ d.chef_nom or 'non désigné' }}</b>{% if d.chef_titre %} — {{ d.chef_titre }}{% endif %}</dd>
+    <dt>Plan d'action {{ annee }}</dt><dd>{{ d.synthese.realisees }} réalisée(s) / {{ d.synthese.total }} {{ badge_taux(d.synthese.taux) }} · {{ d.retards|length }} en retard</dd>
+  </dl>
+</section>
+
+<section class="carte" style="margin-top:16px"><h2>Attributions et lignes d'action</h2>
+  <div style="overflow:auto"><table class="t"><thead><tr><th>N°</th><th>Attribution / ligne d'action</th><th>Responsable</th><th>Modules</th><th>Échéance</th><th>État</th><th>Taux</th></tr></thead><tbody>
+  {% for l in d.lignes %}<tr><td>{{ l.ordre or loop.index }}</td><td>{{ l.libelle }}</td><td>{{ l.responsable or '' }}</td><td>{{ l.modules_libelles|join(' ; ') }}</td><td>{{ l.echeance or '' }}</td><td>{{ l.etat }}</td><td>{{ badge_taux(l.taux_effectif) }}</td></tr>
+  {% else %}<tr><td colspan="7" class="aide">Aucune ligne d'action pour cette année.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+
+<div class="deux-col" style="margin-top:16px">
+<section class="carte"><h2>Agents de la division</h2>
+  <table class="t"><thead><tr><th>Agent</th><th>Poste</th><th>Téléphone</th></tr></thead><tbody>
+  {% for a in d.agents %}<tr><td>{{ ((a.prenoms or '') ~ ' ' ~ (a.nom or ''))|trim }}</td><td>{{ a.poste or '' }}</td><td>{{ a.telephone or '' }}</td></tr>
+  {% else %}<tr><td colspan="3" class="aide">Aucun agent affecté à cette division.</td></tr>{% endfor %}</tbody></table>
+</section>
+<section class="carte"><h2>Comptes et périmètre d'accès</h2>
+  <table class="t"><thead><tr><th>Compte</th><th>Rôle</th><th>Périmètre</th></tr></thead><tbody>
+  {% for c in d.comptes_lib %}<tr><td>{{ c.nom }}<br><span class="aide">{{ c.identifiant }}</span></td><td>{{ c.role_lib }}</td><td>{{ 'limité à la division' if c.limite else 'toute l\'application' }}</td></tr>
+  {% else %}<tr><td colspan="3" class="aide">Aucun compte rattaché : créez un compte « Chef de division / de service » ou « Agent » et choisissez sa division.</td></tr>{% endfor %}</tbody></table>
+</section>
+</div>
+
+<section class="carte" style="margin-top:16px"><h2>Périmètre : modules ouverts à la division ({{ d.modules|length }})</h2>
+  <p class="aide">Un compte de cette division n'accède qu'à ces modules et à leurs sous-pages ; toute autre page répond « Hors du périmètre de votre division ».</p>
+  <table class="t"><thead><tr><th>Module</th><th>Accès</th></tr></thead><tbody>
+  {% for m in d.modules %}<tr><td><a href="{{ m.url }}">{{ m.libelle }}</a></td><td>{{ 'lecture et écriture' if m.acces else 'lecture seule' }}</td></tr>{% endfor %}</tbody></table>
+</section>
+{% endblock %}

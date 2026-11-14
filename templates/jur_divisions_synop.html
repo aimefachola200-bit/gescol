@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% block titre %}Synoptique des divisions{% endblock %}
+{% block contenu %}
+<style>
+.taux{display:inline-block;min-width:52px;text-align:center;border-radius:12px;padding:1px 8px;font-weight:600;font-size:12.5px}
+.taux.ok{background:#ECFDF3;color:#067647}.taux.moy{background:#FFFAEB;color:#B54708}.taux.ko{background:#FEF3F2;color:#B42318}.taux.na{background:#F2F4F7;color:#667085}
+td.n,th.n{text-align:center}
+</style>
+{% macro badge_taux(v) %}{% if v is none %}<span class="taux na">—</span>{% elif v >= 75 %}<span class="taux ok">{{ pct(v) }}</span>{% elif v >= 50 %}<span class="taux moy">{{ pct(v) }}</span>{% else %}<span class="taux ko">{{ pct(v) }}</span>{% endif %}{% endmacro %}
+<div class="entete"><div><h1>Tableau synoptique des divisions</h1>
+  <p class="sous">Une ligne par division : chef, agents, comptes, modules, plan d'action et retards · année scolaire {{ annee }}. Une seule application : chaque compte est limité à sa division.</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_divisions', annee=annee) }}">Divisions et attributions</a>
+    <a class="btn sec" href="{{ url_for('jur_divisions_synop_xlsx', annee=annee) }}">⇩ Excel</a>
+    <a class="btn" href="{{ url_for('jur_divisions_synop_pdf', annee=annee) }}" target="_blank">{{ icone('document') }} PDF</a>
+  </div></div>
+<form method="get" class="filtres carte"><label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label></form>
+<section class="carte"><div style="overflow:auto"><table class="t"><thead><tr>
+  <th>Division</th><th>Art. AOF</th><th>Chef</th><th class="n">Agents</th><th class="n">Comptes</th><th class="n">Modules</th><th class="n">Lignes</th><th class="n">Réalisées</th><th class="n">Taux</th><th class="n">Retards</th><th></th></tr></thead><tbody>
+  {% for l in lignes %}<tr><td><b>{{ l.sigle }}</b> — {{ l.nom }}</td><td>{{ l.article or '—' }}</td><td>{{ l.chef }}</td>
+  <td class="n">{{ l.agents }}</td><td class="n">{{ l.comptes }}</td><td class="n">{{ l.modules }}</td><td class="n">{{ l.lignes }}</td><td class="n">{{ l.realisees }}</td><td class="n">{{ badge_taux(l.taux) }}</td><td class="n">{{ l.retards }}</td>
+  <td><a href="{{ url_for('jur_division_tb', code=l.code, annee=annee) }}">Tableau de bord</a> · <a href="{{ url_for('jur_division_synop', code=l.code, annee=annee) }}">Synoptique</a></td></tr>{% endfor %}
+  </tbody><tfoot><tr><th colspan="6">Total structure</th><th class="n">{{ toutes.total }}</th><th class="n">{{ toutes.realisees }}</th><th class="n">{{ badge_taux(toutes.taux) }}</th><th colspan="2"></th></tr></tfoot></table></div>
+</section>
+{% endblock %}

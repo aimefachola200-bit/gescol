@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block titre %}Acteurs de l'établissement{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Acteurs de l'établissement et leurs périmètres</h1>
+  <p class="sous">Répartition usuelle des tâches, donnée comme aide-mémoire. En cas de doute, les textes officiels et le règlement intérieur de l'établissement font foi.</p></div>
+  <a class="btn sec" href="{{ url_for('textes_officiels') }}">Textes officiels</a>
+</div>
+<h2>Enseignement secondaire</h2>
+{% for n, d in sec %}<div class="carte"><b>{{ n }}</b><p style="margin:4px 0 0">{{ d }}</p></div>{% endfor %}
+<h2>Écoles maternelles et primaires</h2>
+{% for n, d in prim %}<div class="carte"><b>{{ n }}</b><p style="margin:4px 0 0">{{ d }}</p></div>{% endfor %}
+{% endblock %}

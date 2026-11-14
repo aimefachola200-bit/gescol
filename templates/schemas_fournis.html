@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block titre %}Cartes et croquis{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Cartes du Bénin et croquis du corps humain</h1>
+<p class="sous">Documents de cours à projeter ou imprimer pour les leçons de géographie, de sciences et de SVT. Ouvrez une image pour l'agrandir.</p></div>
+<a class="btn sec" href="{{ url_for('schemas_accueil') }}">Schémas de l'application</a></div>
+<h2>Cartes du Bénin</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
+{% for f, t, m, c in cartes %}<div class="carte"><a href="{{ url_for('static', filename='schemas_fournis/' ~ f) }}" target="_blank"><img src="{{ url_for('static', filename='schemas_fournis/' ~ f) }}" alt="{{ t }}" loading="lazy" style="width:100%;height:200px;object-fit:contain"></a><p style="margin:6px 0 0"><b>{{ t }}</b></p><p class="sous" style="margin:0">{{ m }}</p></div>{% endfor %}</div>
+<h2>Croquis du corps humain et de la fleur</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
+{% for f, t, m, c in croquis %}<div class="carte"><a href="{{ url_for('static', filename='schemas_fournis/' ~ f) }}" target="_blank"><img src="{{ url_for('static', filename='schemas_fournis/' ~ f) }}" alt="{{ t }}" loading="lazy" style="width:100%;height:200px;object-fit:contain"></a><p style="margin:6px 0 0"><b>{{ t }}</b></p><p class="sous" style="margin:0">{{ m }}</p></div>{% endfor %}</div>
+{% endblock %}

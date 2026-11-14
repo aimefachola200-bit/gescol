@@ -4,6 +4,8 @@ import json
 import os
 
 import config
+import epreuves_apc as AP
+import fiches_sec as FS
 import ressources_secondaire as R
 from flask import abort, render_template, request
 
@@ -37,12 +39,18 @@ def enregistrer(app, H):
         elif vue == "revisions":
             lignes = [(i, e) for i, e in enumerate(R.REVISIONS) if (not mat or e[0] == mat) and (not niv or e[1] == niv) and (not qs or qs in " ".join(e[:3]).lower())]
             mats = sorted({e[0] for e in R.REVISIONS})
+        elif vue == "apc":
+            lignes = [e for e in AP.EPREUVES if (not mat or e["matiere"] == mat) and (not niv or e["niveau"] == niv) and (not qs or qs in (e["matiere"] + e["situation"]).lower())]
+            mats = sorted({e["matiere"] for e in AP.EPREUVES})
+        elif vue == "fiches":
+            lignes = [(i, f) for i, f in enumerate(FS.FICHES) if (not mat or f["matiere"] == mat) and (not niv or f["niveau"] == niv) and (not qs or qs in (f["titre"] + f["matiere"]).lower())]
+            mats = sorted({f["matiere"] for f in FS.FICHES})
         else:
             vue = "epreuves"
             lignes = [e for e in ep if (not mat or e["matiere"] == mat) and (not niv or e["niveau"] == niv) and (not qs or qs in (e["matiere"] + e["texte"]).lower())]
             mats = sorted({e["matiere"] for e in ep})
         return render_template("ress_sec.html", vue=vue, lignes=lignes, mats=mats, niveaux=["6e", "5e"] + R.NIVEAUX + ["BEPC", "BAC"], niv=niv, mat=mat, q=qs,
-                               nb=dict(epreuves=len(ep), exposes=len(R.EXPOSES), revisions=len(R.REVISIONS)))
+                               nb=dict(epreuves=len(ep), exposes=len(R.EXPOSES), revisions=len(R.REVISIONS), fiches=len(FS.FICHES), apc=len(AP.EPREUVES)))
 
     @app.route("/ressources-secondaire/epreuve/<int:i>")
     @H.connexion_requise("epreuves")
@@ -52,6 +60,22 @@ def enregistrer(app, H):
         if not e:
             abort(404)
         return render_template("ress_sec_epreuve.html", e=e)
+
+    @app.route("/ressources-secondaire/apc/<int:i>")
+    @H.connexion_requise("epreuves")
+    def ress_sec_apc(i):
+        garde()
+        if not 0 <= i < len(AP.EPREUVES):
+            abort(404)
+        return render_template("ress_sec_apc.html", e=AP.EPREUVES[i], grille=AP.GRILLE, corrige=request.args.get("corrige") == "1", ident=H.identification())
+
+    @app.route("/ressources-secondaire/fiche/<int:i>")
+    @H.connexion_requise("epreuves")
+    def ress_sec_fiche(i):
+        garde()
+        if not 0 <= i < len(FS.FICHES):
+            abort(404)
+        return render_template("ress_sec_fiche.html", f=FS.FICHES[i], i=i, ident=H.identification())
 
     @app.route("/ressources-secondaire/revision/<int:i>")
     @H.connexion_requise("epreuves")

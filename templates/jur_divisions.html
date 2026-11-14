@@ -21,6 +21,7 @@
   <div class="actions">
     <a class="btn sec" href="{{ url_for('jur_organigramme') }}">Organigramme</a>
     <a class="btn sec" href="{{ url_for('jur_divisions_plan', annee=annee) }}">Plan d'action (vue d'ensemble)</a>
+    <a class="btn sec" href="{{ url_for('jur_divisions_synop', annee=annee) }}">Synoptique des divisions</a>
     <a class="btn" href="{{ url_for('jur_divisions_pdf', annee=annee) }}" target="_blank">{{ icone('document') }} PDF divisions, modules et attributions</a>
   </div></div>
 

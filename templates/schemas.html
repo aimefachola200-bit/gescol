@@ -1,0 +1,8 @@
+{% extends "base.html" %}{% block titre %}Schémas et cartes{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Schémas et cartes du Bénin</h1><p><a class="btn sec" href="{{ url_for('schemas_fournis') }}">Cartes et croquis fournis (images)</a></p><p class="aide">Dessins vectoriels nets à toutes les tailles : à projeter en classe ou à imprimer. Les cartes sont schématiques (contour simplifié).</p></div></div>
+<form method="get" class="filtres"><select name="matiere" aria-label="Matière"><option value="">Toutes les matières</option>{% for m in mats %}<option {{ 'selected' if m==mat }}>{{ m }}</option>{% endfor %}</select>
+<input name="q" value="{{ q }}" placeholder="Rechercher…"><button class="btn">Filtrer</button></form>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px">
+{% for x in liste %}<a href="{{ url_for('schemas_voir', sid=x[0]) }}" class="carte" style="text-decoration:none;color:inherit"><b>{{ x[1] }}</b><br><span class="aide">{{ x[3] }} · {{ x[2] }}</span><p>{{ x[4] }}</p></a>{% else %}<p>Aucun schéma.</p>{% endfor %}</div>
+{% endblock %}

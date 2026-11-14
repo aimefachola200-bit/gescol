@@ -32,7 +32,7 @@
   <dl class="prep-dl">{% for k, lib in CHAMPS %}{% if k in ('cd','ct','contenus','objectifs','strategies','materiel') and f[k] %}<dt>{{ lib }}</dt><dd>{{ f[k]|prep_txt }}</dd>{% endif %}{% endfor %}</dl>
   <h3>Déroulement</h3>
   <div class="tw"><table class="t prep-deroul"><thead><tr><th>Phases / étapes</th><th>Activités de l'enseignant(e) et des apprenant(e)s</th><th>Résultats attendus</th></tr></thead>
-  <tbody>{% for l in f.deroulement or [] %}<tr><td><b>{{ l[0]|prep_txt }}</b></td><td>{{ (l[1] if l|length > 1 else '')|prep_txt }}</td><td>{{ (l[2] if l|length > 2 else '')|prep_txt }}</td></tr>{% endfor %}</tbody></table></div>
+  <tbody>{% for l in (f.deroulement or [])|prep_repartir %}<tr><td><b>{{ l[0]|prep_txt }}</b></td><td>{{ l[1]|prep_txt }}</td><td>{{ l[2]|prep_txt }}</td></tr>{% endfor %}</tbody></table></div>
   {% for k, lib in CHAMPS %}{% if k in ('evaluation','projection','je_retiens','observations') and f[k] %}<h3>{{ lib }}</h3><p>{{ f[k]|prep_txt }}</p>{% endif %}{% endfor %}
   {% if resumes %}<h3>Résumé de la séance — l'essentiel à retenir</h3>
   <ul>{% for r in resumes %}<li><a href="{{ url_for('prep_resume', rid=r.id) }}">{{ r.titre }}</a> <span class="aide">({{ r.domaine }}{% if not r.seance_resume %} · résumé de la SA{% endif %})</span>

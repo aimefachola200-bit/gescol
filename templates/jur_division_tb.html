@@ -1,0 +1,79 @@
+{% extends "base.html" %}{% block titre %}Tableau de bord – {{ d.sigle or d.nom }}{% endblock %}
+{% block contenu %}
+<style>
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:12px;margin:14px 0}
+.kpi{background:var(--carte);border:1px solid var(--bord);border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font-size:24px;color:var(--bleu);line-height:1.2}.kpi span{font-size:12.5px;color:#667085}
+.kpi.alerte b{color:#B42318}
+.deux-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+.barre{display:flex;height:16px;border-radius:8px;overflow:hidden;background:#EAECF0;margin:6px 0 4px}
+.barre i{display:block;height:100%}
+.c-real{background:#12B76A}.c-cours{background:#2E90FA}.c-prev{background:#98A2B3}.c-rep{background:#F79009}
+.legende{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:#475467}.legende i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
+.taux{display:inline-block;min-width:52px;text-align:center;border-radius:12px;padding:1px 8px;font-weight:600;font-size:12.5px}
+.taux.ok{background:#ECFDF3;color:#067647}.taux.moy{background:#FFFAEB;color:#B54708}.taux.ko{background:#FEF3F2;color:#B42318}.taux.na{background:#F2F4F7;color:#667085}
+ul.liens{margin:0;padding-left:18px}ul.liens li{margin:3px 0}
+</style>
+{% macro badge_taux(v) %}{% if v is none %}<span class="taux na">—</span>{% elif v >= 75 %}<span class="taux ok">{{ pct(v) }}</span>{% elif v >= 50 %}<span class="taux moy">{{ pct(v) }}</span>{% else %}<span class="taux ko">{{ pct(v) }}</span>{% endif %}{% endmacro %}
+{% set sy = d.synthese %}
+<div class="entete"><div><h1>Tableau de bord — {% if d.sigle %}{{ d.sigle }} · {% endif %}{{ d.nom }}</h1>
+  <p class="sous">Chef : <b>{{ d.chef_nom or 'non désigné' }}</b>{% if d.parent_nom %} · rattachée à {{ d.parent_nom }}{% endif %} · année scolaire {{ annee }}</p></div>
+  <div class="actions">
+    <a class="btn sec" href="{{ url_for('jur_division_synop', code=d.code, annee=annee) }}">Tableau synoptique</a>
+    <a class="btn sec" href="{{ url_for('jur_division', code=d.code, annee=annee) }}">Plan d'action</a>
+    {% if global_ok %}<a class="btn sec" href="{{ url_for('jur_divisions_synop', annee=annee) }}">Toutes les divisions</a>{% endif %}
+  </div></div>
+
+<form method="get" class="filtres carte">
+  <label>Année scolaire<br><select name="annee" onchange="this.form.submit()">{% for a in annees %}<option {{ 'selected' if a == annee }}>{{ a }}</option>{% endfor %}</select></label>
+</form>
+
+<div class="kpis">
+  <div class="kpi"><b>{{ badge_taux(sy.taux) }}</b><span>Taux de réalisation du plan</span></div>
+  <div class="kpi"><b>{{ sy.realisees }} / {{ sy.total }}</b><span>Lignes d'action réalisées</span></div>
+  <div class="kpi {{ 'alerte' if d.retards }}"><b>{{ d.retards|length }}</b><span>Lignes en retard</span></div>
+  <div class="kpi"><b>{{ d.proches|length }}</b><span>Échéances sous 30 jours</span></div>
+  <div class="kpi"><b>{{ d.agents|length }}</b><span>Agents affectés</span></div>
+  <div class="kpi"><b>{{ d.comptes_lib|length }}</b><span>Comptes rattachés</span></div>
+  <div class="kpi"><b>{{ d.nb_modules_ok }} / {{ d.modules|length }}</b><span>Modules en écriture / ouverts</span></div>
+</div>
+
+<div class="deux-col">
+<section class="carte"><h2>Avancement du plan d'action</h2>
+  {% if sy.total %}
+  <div class="barre" role="img" aria-label="Répartition des lignes d'action par état">
+    <i class="c-real" style="width:{{ 100 * sy.realisees / sy.total }}%"></i>
+    <i class="c-cours" style="width:{{ 100 * sy.en_cours / sy.total }}%"></i>
+    <i class="c-prev" style="width:{{ 100 * sy.prevues / sy.total }}%"></i>
+    <i class="c-rep" style="width:{{ 100 * sy.reportees / sy.total }}%"></i>
+  </div>
+  <div class="legende"><span><i class="c-real"></i>Réalisées {{ sy.realisees }}</span><span><i class="c-cours"></i>En cours {{ sy.en_cours }}</span><span><i class="c-prev"></i>Prévues {{ sy.prevues }}</span><span><i class="c-rep"></i>Reportées {{ sy.reportees }}</span></div>
+  {% else %}<p class="aide">Aucune ligne d'action : ouvrez le plan d'action de la division pour les générer à partir des attributions.</p>{% endif %}
+</section>
+
+<section class="carte"><h2>Indicateurs de terrain</h2>
+  {% if d.indicateurs %}
+  <table class="t"><tbody>
+  {% for i in d.indicateurs %}<tr><td>{% if i.ep %}<a href="{{ url_for(i.ep) }}">{{ i.libelle }}</a>{% else %}{{ i.libelle }}{% endif %}<br><span class="aide">{{ i.aide }}</span></td><td style="text-align:right"><b>{{ i.valeur }}</b></td></tr>{% endfor %}
+  </tbody></table>
+  {% else %}<p class="aide">Aucun indicateur de terrain pour cette division : suivez son plan d'action et ses modules.</p>{% endif %}
+</section>
+</div>
+
+<div class="deux-col" style="margin-top:16px">
+<section class="carte"><h2>Lignes en retard</h2>
+  {% if d.retards %}<table class="t"><thead><tr><th>Ligne d'action</th><th>Échéance</th><th>État</th><th>Taux</th></tr></thead><tbody>
+  {% for l in d.retards %}<tr><td>{{ l.libelle }}</td><td>{{ l.echeance }}</td><td>{{ l.etat }}</td><td>{{ pct(l.taux_effectif) }}</td></tr>{% endfor %}</tbody></table>
+  {% else %}<p class="aide">Aucune ligne en retard (seules les échéances datées AAAA-MM-JJ sont contrôlées).</p>{% endif %}
+</section>
+<section class="carte"><h2>Échéances des 30 prochains jours</h2>
+  {% if d.proches %}<table class="t"><thead><tr><th>Ligne d'action</th><th>Échéance</th><th>Responsable</th></tr></thead><tbody>
+  {% for l in d.proches %}<tr><td>{{ l.libelle }}</td><td>{{ l.echeance }}</td><td>{{ l.responsable or '' }}</td></tr>{% endfor %}</tbody></table>
+  {% else %}<p class="aide">Aucune échéance datée dans les 30 prochains jours.</p>{% endif %}
+</section>
+</div>
+
+<section class="carte" style="margin-top:16px"><h2>Modules de la division</h2>
+  <ul class="liens">{% for m in d.modules %}<li><a href="{{ m.url }}">{{ m.libelle }}</a>{% if not m.acces %} <span class="aide">(lecture seule)</span>{% endif %}</li>{% endfor %}</ul>
+</section>
+{% endblock %}

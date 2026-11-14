@@ -446,6 +446,7 @@ def enregistrer(app, H):
 
     H.perimetre_utilisateur = perimetre_utilisateur
     H.perimetre_division = perimetre_division
+    H.code_division_utilisateur = code_division_utilisateur
     H.dans_perimetre = dans_perimetre
 
     @app.before_request

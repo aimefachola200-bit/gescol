@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block titre %}Lectures du collège{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Lectures du collège</h1>
+<p class="sous">Fiches de lecture originales : résumé, thèmes, questions et situation d'intégration APC. Les ouvrages ne sont pas reproduits ; lisez-les en entier.</p></div>
+<a class="btn sec" href="{{ url_for('reperes_pedagogiques') }}">Repères pédagogiques</a></div>
+{% for l in lectures %}
+<div class="carte"><h3 style="margin-top:0">{{ l.titre }}</h3>
+<p class="sous">{{ l.auteur }} - {{ l.info }} - Classes : {{ l.classes }}</p>
+<p>{{ l.resume }}</p>
+<p><b>Thèmes :</b> {{ l.themes|join(' ; ') }}</p>
+<p><b>Questions :</b></p><ol>{% for q in l.questions %}<li>{{ q }}</li>{% endfor %}</ol>
+<p><b>Situation d'intégration :</b> {{ l.situation }}</p></div>
+{% endfor %}
+{% endblock %}

@@ -178,7 +178,7 @@ def enregistrer(app, H):
                 if maternelle:
                     val, disp, app_ = lire_saisie(brut, maternelle)
                 else:  # v1.9 : note principale (< 20) + note de performance (0 à 2)
-                    val, disp, perf = GN.lire(*GN.separer(brut))
+                    val, disp, perf = GN.lire(*GN.separer(brut), simple=(cl["cycle"] == "secondaire"))
                     app_ = None
             except GN.NoteRefusee as err:
                 erreurs.append(f"{e['nom']} {e['prenoms']} – {noms_mat[mid]} : {err}.")
@@ -374,7 +374,7 @@ def enregistrer(app, H):
             v = valeur_cellule(l, m, maternelle)
             if maternelle or v in ("", "D"):
                 return v
-            a, b = GN.afficher(l["notes"].get(m["id"]), perfs.get((l["eleve"]["id"], m["id"])))
+            a, b = GN.afficher(l["notes"].get(m["id"]), perfs.get((l["eleve"]["id"], m["id"])), cl["cycle"] == "secondaire")
             return f"{a}|{b}" if b else a
         return matieres, lignes, {str(l["eleve"]["id"]): {str(m["id"]): cellule(l, m) for m in matieres} for l in lignes}
 
@@ -423,7 +423,7 @@ def enregistrer(app, H):
                 rejets += 1
         coef = cl["cycle"] == "secondaire" and cl["niveau"] not in NIVEAUX_SANS_COEF
         config_js = {
-            "cycle": cl["cycle"], "seuil": ev.get("seuil"), "coef": coef,
+            "cycle": cl["cycle"], "simple": cl["cycle"] == "secondaire", "seuil": ev.get("seuil"), "coef": coef,
             "matieres": [{"id": m["id"], "nom": m["nom"], "code": m["code"],
                           "coef": m["coefficient"] if coef else 1} for m in matieres],
             "eleves": [{"id": l["eleve"]["id"], "nom": f"{l['eleve']['nom']} {l['eleve']['prenoms']}",
@@ -591,7 +591,7 @@ def enregistrer(app, H):
                     ignorees += 1
                     continue
                 try:
-                    lire_saisie(brut, maternelle) if maternelle else GN.lire(brut)
+                    lire_saisie(brut, maternelle) if maternelle else GN.lire(brut, simple=(cl["cycle"] == "secondaire"))
                 except GN.NoteRefusee as err:
                     erreurs.append(f"Ligne {num} ({qui}) – {m['nom']} : {err}.")
                     continue

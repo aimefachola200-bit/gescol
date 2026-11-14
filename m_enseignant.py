@@ -22,6 +22,7 @@ bulletins), emplois du temps, planifications annuelle et mensuelle, calendrier o
 thèmes d'UP, documents officiels et « Mes certificats » (PDF pré-remplis, m_docs_enseignant), ma carrière,
 mon compte (mot de passe, question de secours, signature). Les modules du directeur et de l'école n'y figurent pas.
 """
+import insignes
 import json
 import re
 
@@ -326,8 +327,8 @@ def enregistrer(app, H):
             "lang": "fr", "id": "/enseignant", "start_url": "/enseignant?source=app", "scope": "/", "display": "standalone",
             "orientation": "any", "background_color": "#F4F6F9", "theme_color": "#00796B",
             "icons": [
-                {"src": url_for("static", filename="icons/icon-192.png"), "sizes": "192x192", "type": "image/png"},
-                {"src": url_for("static", filename="icons/icon-512.png"), "sizes": "512x512", "type": "image/png"},
+                {"src": url_for("static", filename="icons/insignes/" + insignes.cle_courante() + "-icon-192.png"), "sizes": "192x192", "type": "image/png"},
+                {"src": url_for("static", filename="icons/insignes/" + insignes.cle_courante() + "-icon-512.png"), "sizes": "512x512", "type": "image/png"},
                 {"src": url_for("static", filename="icons/maskable-512.png"), "sizes": "512x512",
                  "type": "image/png", "purpose": "maskable"},
             ],

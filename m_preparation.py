@@ -221,6 +221,31 @@ _MOTS_COLLES = re.compile(r"[a-zàâçéèêëîïôûù]{3,}[A-ZÉÈÀ][a-zàâ
 _DIALOGUE = re.compile(r"^(?:[ÉE]l[èe]ve|Ma[iî]tre|Enseignant|Apprenant|Tous|Groupe|Question|R[ée]ponse)", re.I)
 
 
+_REP_APPRENANT = re.compile(r"^[\s\u25aa\u2022\-\u2013*]*(?:les\s+|chaque\s+)?(?:[ée]l[èe]ves?|apprenant(?:\(e\))?(?:\(e\)s|s|e|es)?|r[ée]ponses?)\b", re.I)
+
+
+def repartir_ligne(l):
+    """v2.5.5 — colonne « Activités » : actions de l'enseignant(e) et consignes ; les réponses des apprenant(e)s vont dans la
+    colonne « Résultats attendus » (lignes commençant par Élève(s), Apprenant(e)(s), Réponse(s))."""
+    l = list(l or []) + ["", "", ""]
+    a, b, c = l[0], l[1], l[2]
+    if not isinstance(b, str) or not b.strip():
+        return [a, b, c]
+    gardees, deplacees = [], []
+    for ligne in b.split("\n"):
+        (deplacees if _REP_APPRENANT.match(ligne) else gardees).append(ligne)
+    if not deplacees or not any(x.strip() for x in gardees):
+        return [a, b, c]                       # tout est réponse d'élèves ou rien à déplacer : on ne touche à rien
+    c = str(c or "")
+    ajout = [x for x in deplacees if x.strip() and x.strip() not in c]
+    c2 = ("\n".join(ajout) + ("\n" + c if c.strip() else "")) if ajout else c
+    return [a, "\n".join(gardees).strip("\n"), c2]
+
+
+def repartir(lignes):
+    return [repartir_ligne(l) for l in (lignes or [])]
+
+
 def case_illisible(t):
     """v2.2.1 — case de déroulement abîmée à l'extraction : deux colonnes du PDF mêlées ligne à ligne (sous-titres répétés,
     mots collés d'une colonne à l'autre)."""
@@ -1114,6 +1139,8 @@ def enregistrer(app, H):
     if config.AUTONOME or not (app.config.get("TESTING") or os.environ.get("GESCOL_SANS_PRECHARGEMENT")):
         threading.Thread(target=corpus, name="corpus-pedagogique", daemon=True).start()
 
+    app.template_filter("prep_repartir")(repartir)
+
     @app.template_filter("prep_txt")
     def _f_txt(t):
         from markupsafe import Markup
@@ -1331,7 +1358,7 @@ def enregistrer(app, H):
         bande = " · ".join(x for x in [COURS_LIB.get(d.get("cours"), d.get("cours") or ""), mat, d.get("sous_matiere") or "",
                                         f"SA {d['sa']}" if d.get("sa") else "", f"séance {d['seance']}" if d.get("seance") else "",
                                         d.get("duree") or ""] if x)
-        lignes = d.get("deroulement") or []
+        lignes = repartir(d.get("deroulement"))
         u = q("SELECT * FROM utilisateurs WHERE id=?", (d.get("user_id"),), un=True) if d.get("user_id") else None
         s_ens = pdfs.image_data_url(H.signature_enseignant(u["id"]) if u else (H.signature_titulaire(cl["id"]) if cl else None))
         sigs = [("L'enseignant(e)", (u["nom"] if u else filigrane), s_ens, False), ("Visa du directeur / de la directrice", "", s_dir, True)]
@@ -1581,7 +1608,7 @@ def enregistrer(app, H):
         for d in fiches:
             cl, eff = entete_classe(d)
             lignes = "".join(f"<tr><td><b>{txt_html(a)}</b></td><td>{txt_html(b)}</td><td>{txt_html(c)}</td></tr>"
-                             for a, b, c in [(l + ['', '', ''])[:3] for l in d.get("deroulement") or []])
+                             for a, b, c in repartir(d.get("deroulement")))
             blocs = "".join(f"<tr><th>{lib}</th><td>{txt_html(d.get(k))}</td></tr>" for k, lib in CHAMPS
                             if k in ("cd", "ct", "contenus", "objectifs", "strategies", "materiel") and d.get(k))
             fin = "".join(f"<p><b>{dict(CHAMPS)[k]} :</b><br>{txt_html(d[k])}</p>" for k in ("evaluation", "projection", "je_retiens", "observations") if d.get(k))

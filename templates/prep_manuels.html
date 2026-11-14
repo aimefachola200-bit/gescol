@@ -1,6 +1,6 @@
 {# v1.31 — Manuels officiels : textes de lecture et dossiers de mathématiques rattachés aux séances ; mesures correctives #}
 {% extends "base.html" %}{% block titre %}Manuels officiels{% endblock %}
-{% block contenu %}{% set onglet = 'manuels' %}{% include "_prep_onglets.html" %}
+{% block contenu %}{% set onglet = 'manuels' %}{% include "_prep_onglets.html" %}<p class="aide"><a href="{{ url_for('textes_officiels') }}#cahiers">Cahiers d'activités officiels CI et CP (PDF)</a></p>
 <p class="aide">Manuels de l'élève des programmes officiels : chaque texte de lecture est rattaché à ses séances et à son résumé ; chaque fiche de mathématiques à son dossier et à sa situation d'apprentissage. Les manuels eux-mêmes ne sont pas reproduits.</p>
 {% for m in manuels %}
 <details class="carte" style="margin-bottom:8px" {% if loop.first %}open{% endif %}><summary><b>{{ m.titre }}</b> — {{ m.cours }} · {{ m.editeur }}{% if m.annee %}, {{ m.annee }}{% endif %}</summary>

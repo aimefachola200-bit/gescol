@@ -4,6 +4,7 @@ GESCOL – Gestion d'établissement scolaire (CPFA, Bénin)
 Lancement : python app.py   puis ouvrir http://localhost:5000
 Compte initial : admin / admin123 (changement demandé à la première connexion)
 """
+import insignes
 import csv
 import hashlib
 import io
@@ -422,7 +423,7 @@ MODULES = ["m_performance",  # v1.33 : compression gzip (en premier : passe en d
            "m_juridiction", "a_transmission", "a_tableau", "a_cep", "a_personnel", "a_structure", "a_visites", "a_fiches",
            # v1.6 : tableau synoptique, vivres et stock, comité d'évaluation et épreuves (toutes éditions) ;
            # CS / DDEMP : divisions, unités pédagogiques, modules des écoles ouverts aux applications d'administration
-           "m_synoptique", "m_partage", "m_preparation", "m_prep_classes", "m_maternelle", "m_evalprep", "guide_utilisation", "m_export", "m_uascep", "m_stock_cantine", "m_magasins_cantine", "m_graphiques_accueil", "m_orientation", "m_annonces_personnel", "m_sec_supervision", "maj_auto", "m_ecoles_ref", "m_ressources_sec", "m_budget_ecole", "m_epreuves", "m_calendrier_officiel", "m_themes_up", "a_divisions", "a_up", "a_integration", "a_synoptique",
+           "m_synoptique", "m_partage", "m_preparation", "m_prep_classes", "m_maternelle", "m_evalprep", "guide_utilisation", "m_export", "m_uascep", "m_stock_cantine", "m_magasins_cantine", "m_graphiques_accueil", "m_orientation", "m_annonces_personnel", "m_sec_supervision", "maj_auto", "m_ecoles_ref", "m_ressources_sec", "m_budget_ecole", "m_insignes", "m_schemas", "m_textes", "m_vocab_sec", "m_epreuves", "m_calendrier_officiel", "m_themes_up", "a_divisions", "a_up", "a_integration", "a_synoptique", "a_tb_division",
            # v1.7 : conseillers pédagogiques — programmation, journal des activités, bilans trimestriel et annuel
            "a_cp",
            # v1.8 : Ma classe, accueil par rôle, groupes de remédiation ; alertes de pilotage (CS / DDEMP)
@@ -1016,7 +1017,7 @@ def create_app(test_config=None):
                         modifs += 1
                         continue
                     try:  # v1.9 : note principale (< 20) + note de performance (0 à 2)
-                        val, disp, perf = garde_notes.lire(request.form[cle], request.form.get(f"p_{e['id']}_{m['id']}"))
+                        val, disp, perf = garde_notes.lire(request.form[cle], request.form.get(f"p_{e['id']}_{m['id']}"), simple=(cl["cycle"] == "secondaire"))
                     except garde_notes.NoteRefusee as err:
                         erreurs.append(f"{e['nom']} {e['prenoms']} – {m['nom']} : {err}.")
                         continue
@@ -1046,7 +1047,7 @@ def create_app(test_config=None):
             else:
                 flash(f"Notes enregistrées ({modifs} modification(s)).", "success")
             return redirect(url_for("notes_saisie", cid=cid, p=p))
-        return render_template("notes_saisie.html", garde_js=garde_notes.JS, afficher_np=garde_notes.afficher, cl=cl, p=p, per=per, matieres=matieres,
+        return render_template("notes_saisie.html", garde_js=garde_notes.JS, afficher_np=garde_notes.afficher, simple=(cl["cycle"] == "secondaire"), cl=cl, p=p, per=per, matieres=matieres,
                                eleves=eleves, notes=notes, res=res, stats=stats, APPRECIATIONS=APPRECIATIONS)
 
     @app.route("/notes/<int:cid>/<int:p>/resultats")
@@ -1582,8 +1583,8 @@ def create_app(test_config=None):
             "lang": "fr", "id": "/", "start_url": "/?source=app", "scope": "/", "display": "standalone",
             "orientation": "any", "background_color": "#F4F6F9", "theme_color": "#1F4E79",
             "icons": [
-                {"src": url_for("static", filename="icons/icon-192.png"), "sizes": "192x192", "type": "image/png"},
-                {"src": url_for("static", filename="icons/icon-512.png"), "sizes": "512x512", "type": "image/png"},
+                {"src": url_for("static", filename="icons/insignes/" + insignes.cle_courante() + "-icon-192.png"), "sizes": "192x192", "type": "image/png"},
+                {"src": url_for("static", filename="icons/insignes/" + insignes.cle_courante() + "-icon-512.png"), "sizes": "512x512", "type": "image/png"},
                 {"src": url_for("static", filename="icons/maskable-512.png"), "sizes": "512x512",
                  "type": "image/png", "purpose": "maskable"},
             ],

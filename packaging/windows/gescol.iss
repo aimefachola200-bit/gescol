@@ -81,7 +81,7 @@ DefaultGroupName={#Nom}
 DisableProgramGroupPage=yes
 OutputDir=..\..\dist
 OutputBaseFilename={#Fichier}{#Version}
-SetupIconFile=..\..\static\icons\gescol.ico
+SetupIconFile=..\..\static\icons\insignes\{#Edition}.ico
 UninstallDisplayIcon={app}\GESCOL.exe
 Compression=lzma2
 SolidCompression=yes
@@ -103,11 +103,11 @@ Source: "..\..\dist\GESCOL\*"; DestDir: "{app}"; Flags: ignoreversion recursesub
 Source: "..\..\LISEZMOI.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\{#Nom}"; Filename: "{app}\GESCOL.exe"
+Name: "{group}\{#Nom}"; Filename: "{app}\GESCOL.exe"; IconFilename: "{app}\_internal\static\icons\insignes\{#Edition}.ico"
 Name: "{group}\Dossier des données {#Nom}"; Filename: "{userappdata}\{#Donnees}"
 Name: "{group}\Désinstaller {#Nom}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#Nom}"; Filename: "{app}\GESCOL.exe"; Tasks: bureau
-Name: "{userstartup}\{#Nom}"; Filename: "{app}\GESCOL.exe"; Parameters: "--sans-navigateur"; Tasks: demarrage
+Name: "{autodesktop}\{#Nom}"; Filename: "{app}\GESCOL.exe"; IconFilename: "{app}\_internal\static\icons\insignes\{#Edition}.ico"; Tasks: bureau
+Name: "{userstartup}\{#Nom}"; Filename: "{app}\GESCOL.exe"; IconFilename: "{app}\_internal\static\icons\insignes\{#Edition}.ico"; Parameters: "--sans-navigateur"; Tasks: demarrage
 
 [Run]
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#Nom}"""; Flags: runhidden; Tasks: parefeu

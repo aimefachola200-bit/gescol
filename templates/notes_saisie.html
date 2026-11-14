@@ -15,6 +15,8 @@
 </div>
 {% if mat %}
 <p class="aide">Choisissez l'appréciation de chaque domaine. « D » = dispensé. La colonne Observation apparaît sur le livret remis aux parents.</p>
+{% elif simple %}
+<p class="aide">Saisissez directement la note de chaque matière, de <b>0 à 20</b> (20/20 est accepté ; virgule ou point pour les décimales ; <b>D</b> = dispensé). Touche Entrée : case suivante.</p>
 {% else %}
 <p class="aide">Pour chaque matière : <b>note principale</b> (inférieure à 20) puis, dans la petite case <b>P</b>, la <b>note de performance</b> (0 à 2), accordée seulement à partir de 10 ; la note retenue est leur somme, 20 au plus (19 → performance 1 au plus). <span style="color:#B42318;font-weight:700">Case rouge</span> : note principale ≥ 20 (20/20 seulement avec la performance), performance avec une note inférieure à 10, performance supérieure à 2 ou somme supérieure à 20 — elle n'est pas enregistrée. <b>D</b> = dispensé ; vide = matière pas encore évaluée. Entrée passe à la case suivante. L'observation apparaît sur le bulletin.</p>
 <style>.np{display:inline-flex;gap:2px;align-items:center}.np input.n{width:48px}.np input.perf{width:34px;font-size:12px;background:#F5F8FF;border-style:dashed}
@@ -38,10 +40,10 @@ input.err{outline:2px solid #B42318!important;background:#FEE4E2!important;color
         <option value="D" {{ 'selected' if v=='D' }}>D</option>
       </select></td>
       {% else %}
-      {% set np = afficher_np(n.valeur, n.performance if n and 'performance' in n.keys() else none) if n and not n.dispense else ('', '') %}
+      {% set np = afficher_np(n.valeur, n.performance if n and 'performance' in n.keys() else none, simple) if n and not n.dispense else ('', '') %}
       {% set v = 'D' if n and n.dispense else np[0] %}
       <td class="c"><span class="np"><input name="n_{{ e.id }}_{{ m.id }}" value="{{ v }}" inputmode="decimal" autocomplete="off" aria-label="{{ e.nom }} – {{ m.nom }} : note principale"
-        class="n {{ 'disp' if v=='D' else ('bas' if n and n.valeur is not none and n.valeur < 10 else '') }}"><input name="p_{{ e.id }}_{{ m.id }}" value="{{ np[1] }}" class="perf" inputmode="decimal" maxlength="4" placeholder="P" autocomplete="off" title="Note de performance (0 à 2)" aria-label="{{ e.nom }} – {{ m.nom }} : note de performance"></span></td>
+        class="n {{ 'disp' if v=='D' else ('bas' if n and n.valeur is not none and n.valeur < 10 else '') }}">{% if not simple %}<input name="p_{{ e.id }}_{{ m.id }}" value="{{ np[1] }}" class="perf" inputmode="decimal" maxlength="4" placeholder="P" autocomplete="off" title="Note de performance (0 à 2)" aria-label="{{ e.nom }} – {{ m.nom }} : note de performance">{% endif %}</span></td>
       {% endif %}
     {% endfor %}
     {% if mat %}
@@ -62,8 +64,8 @@ input.err{outline:2px solid #B42318!important;background:#FEE4E2!important;color
 (function(){
   function verifier(el){
     var box=el.closest('.np'); if(!box) return;
-    var a=box.querySelector('input.n'), b=box.querySelector('input.perf'), r=GardeNotes.lire(a.value,b.value);
-    a.classList.toggle('err',!!r.errN); b.classList.toggle('err',!!r.errP); a.title=r.msg||''; b.title=r.msg||'Note de performance (0 à 2)';
+    var a=box.querySelector('input.n'), b=box.querySelector('input.perf'), r=GardeNotes.lire(a.value,b?b.value:'',{{ 'true' if simple else 'false' }});
+    a.classList.toggle('err',!!r.errN); if(b){b.classList.toggle('err',!!r.errP); b.title=r.msg||'Note de performance (0 à 2)';} a.title=r.msg||'';
     a.style.outline='';
   }
   [].slice.call(document.querySelectorAll('#grille .np input')).forEach(function(el){ el.addEventListener('input',function(){verifier(el)}); verifier(el); });

@@ -2,7 +2,7 @@
 {% block contenu %}
 <div class="entete">
   <div><h1>Archives</h1><p class="sous">Documents numérisés de l'établissement et des élèves. Ils sont inclus dans la sauvegarde.</p></div>
-  <a class="btn sec" href="{{ url_for('courrier') }}">Courrier</a>
+  <div><a class="btn sec" href="{{ url_for('textes_officiels') }}">Textes officiels</a> <a class="btn sec" href="{{ url_for('courrier') }}">Courrier</a></div>
 </div>
 <details class="carte" {{ 'open' if not lst }}>
   <summary style="cursor:pointer;font-weight:600">+ Archiver un document</summary>

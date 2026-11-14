@@ -4,6 +4,8 @@
 <nav class="onglets">
   <a class="{{ 'actif' if vue=='epreuves' }}" href="?vue=epreuves">Épreuves ({{ nb.epreuves }})</a>
   <a class="{{ 'actif' if vue=='exposes' }}" href="?vue=exposes">Thèmes d'exposés ({{ nb.exposes }})</a>
+  <a class="{{ 'actif' if vue=='apc' }}" href="?vue=apc">Épreuves APC du collège ({{ nb.apc }})</a>
+  <a class="{{ 'actif' if vue=='fiches' }}" href="?vue=fiches">Fiches pédagogiques ({{ nb.fiches }})</a>
   <a class="{{ 'actif' if vue=='revisions' }}" href="?vue=revisions">Fiches de révision ({{ nb.revisions }})</a>
 </nav>
 <form method="get" class="filtres"><input type="hidden" name="vue" value="{{ vue }}">
@@ -15,6 +17,10 @@
  {% for e in lignes %}<tr><td>{{ e.niveau }}</td><td>{{ e.matiere }}</td><td>{{ e.type }}</td><td>{{ e.serie }}</td><td>{{ e.duree }}</td><td><a class="btn sec petit" href="{{ url_for('ress_sec_epreuve', i=e.id) }}">Ouvrir</a></td></tr>{% else %}<tr><td colspan="6">Aucune épreuve.</td></tr>{% endfor %}
 {% elif vue=='exposes' %}<tr><th>Matière</th><th>Classes</th><th>Thème</th><th>Axes de recherche</th><th>Conseil</th></tr>
  {% for e in lignes %}<tr><td>{{ e[0] }}</td><td>{{ e[1] }}</td><td><b>{{ e[2] }}</b></td><td>{{ e[3] }}</td><td>{{ e[4] }}</td></tr>{% else %}<tr><td colspan="5">Aucun thème.</td></tr>{% endfor %}
+{% elif vue=='apc' %}<tr><th>Classe</th><th>Matière</th><th>Durée</th><th>Compétence évaluée</th><th></th></tr>
+ {% for e in lignes %}<tr><td>{{ e.niveau }}</td><td>{{ e.matiere }}</td><td>{{ e.duree }}</td><td>{{ e.competence }}</td><td><a class="btn sec petit" href="{{ url_for('ress_sec_apc', i=e.id) }}">Sujet</a> <a class="btn sec petit" href="{{ url_for('ress_sec_apc', i=e.id, corrige=1) }}">Corrigé</a></td></tr>{% else %}<tr><td colspan="5">Aucune épreuve.</td></tr>{% endfor %}
+{% elif vue=='fiches' %}<tr><th>Matière</th><th>Classe</th><th>Leçon</th><th>Durée</th><th></th></tr>
+ {% for i, f in lignes %}<tr><td>{{ f.matiere }}</td><td>{{ f.niveau }}</td><td>{{ f.titre }}</td><td>{{ f.duree }}</td><td><a class="btn sec petit" href="{{ url_for('ress_sec_fiche', i=i) }}">Ouvrir</a></td></tr>{% else %}<tr><td colspan="5">Aucune fiche.</td></tr>{% endfor %}
 {% else %}<tr><th>Matière</th><th>Classe</th><th>Chapitre</th><th></th></tr>
  {% for i, r in lignes %}<tr><td>{{ r[0] }}</td><td>{{ r[1] }}</td><td>{{ r[2] }}</td><td><a class="btn sec petit" href="{{ url_for('ress_sec_revision', i=i) }}">Ouvrir</a></td></tr>{% else %}<tr><td colspan="4">Aucune fiche.</td></tr>{% endfor %}
 {% endif %}</table></div>

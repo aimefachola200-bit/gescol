@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block titre %}Bréviaires de langues{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Bréviaires de langues vivantes</h1>
+<p class="sous">Français (CE2 à la 3e), anglais, allemand et espagnol (4e à la terminale) : cahier de l'élève et cahier de l'enseignant (avec corrigés) en PDF. Exercices originaux, par situation d'apprentissage, avec une évaluation notée sur 20.</p></div>
+<a class="btn sec" href="{{ url_for('reperes_pedagogiques') }}">Repères pédagogiques</a></div>
+{% for langue, par in data.items() %}
+<div class="carte"><h3 style="margin-top:0">{{ langue }}</h3>
+<table class="t"><thead><tr><th>Classe</th><th>Élève</th><th>Enseignant</th></tr></thead><tbody>
+{% for n in par.keys() %}<tr><td>{{ n }}</td>
+<td><a class="btn sec petit" href="{{ url_for('cahier_langue_pdf', langue=langue, niveau=n, qui='eleve') }}" target="_blank">PDF</a></td>
+<td><a class="btn sec petit" href="{{ url_for('cahier_langue_pdf', langue=langue, niveau=n, qui='enseignant') }}" target="_blank">PDF</a></td></tr>{% endfor %}
+</tbody></table></div>{% endfor %}
+{% endblock %}

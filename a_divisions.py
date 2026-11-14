@@ -940,3 +940,5 @@ def enregistrer(app, H):
 
     H.jur_lignes_action = lignes
     H.jur_divisions = divisions
+    H.jur_division = division_ou_404
+    H.jur_annees_div = annees_dispo

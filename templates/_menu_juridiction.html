@@ -4,6 +4,8 @@
 {% if ep_existe('jur_alertes') and (peut('jur_ecoles') or peut('jur_visites') or peut('jur_cp_bilan') or peut('jur_transmission')) %}{{ lien('jur_alertes', 'Alertes de pilotage', ep=='jur_alertes', 'alerte') }}{% endif %}
 {% if ep_existe('groupes_whatsapp') and groupes_whatsapp_autorise() %}{{ lien('groupes_whatsapp', 'Groupes WhatsApp (directeurs, enseignants)', ep.startswith('groupes_whatsapp'), 'message') }}{% endif %}
 {% if g.user.role != 'observateur' %}{{ lien('listes_classe', 'Listes de classe (écoles)', ep.startswith('listes_classe'), 'liste') }}{% endif %}
+{{ lien('jur_division_mon', 'Mon tableau de bord (division)', ep.startswith('jur_division_tb') or ep=='jur_division_mon', 'accueil') }}
+{{ lien('jur_divisions_synop', 'Synoptique des divisions', ep.startswith('jur_divisions_synop'), 'tableau') }}
 {{ lien('jur_synoptique', 'Tableau synoptique de la ' ~ ('CS' if CS_ else 'DDEMP'), ep.startswith('jur_synoptique'), 'tableau') }}
 {% if SECONDAIRE %}{% call groupe('jsec', 'Secondaire (supervision)', ep.startswith('sec_'), 'graphique') %}
   {{ lien('sec_tableau', 'Effectifs : élèves, classes, enseignants', ep=='sec_tableau') }}

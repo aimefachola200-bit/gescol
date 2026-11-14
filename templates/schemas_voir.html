@@ -1,0 +1,5 @@
+{% extends "base.html" %}{% block titre %}{{ x[1] }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ x[1] }}</h1><p class="aide">{{ x[3] }} · {{ x[2] }}</p></div><div class="actions"><a class="btn sec" href="{{ url_for('schemas_accueil') }}">← Schémas</a> <button class="btn" onclick="window.print()">Imprimer / enregistrer en PDF</button></div></div>
+<div class="carte" style="text-align:center;max-width:760px;margin:auto">{{ svg|safe }}<p>{{ x[4] }}</p></div>
+{% endblock %}
