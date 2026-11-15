@@ -958,6 +958,154 @@ L.append(E("Physique-Chimie-Technologie", "4e", "2 h", "Traiter une situation re
   ("Calcule la tension aux bornes de la résistance de 20 ohms.", 3, "U = R I = 20 x 0,3 = 6 V."),
   ("Cite une règle de sécurité électrique.", 3, "Ne jamais toucher un fil dénudé ni manipuler un appareil avec les mains mouillées.")]))
 
+# ------------------------------------------------------------------ SVT Tle D (structure : restitution 6 pts, deux situations-problèmes de 6 pts, perfectionnement 2 pts)
+L.append(E("SVT", "Tle", "3 h", "Résoudre une situation relevant de la régulation de la glycémie (série D).",
+ "Monsieur A., commerçant à Bohicon, ressent une soif intense et urine abondamment. Son médecin l'envoie faire des examens pour comprendre l'origine de ces signes.",
+ "Partie I : Explique comment l'organisme maintient la glycémie autour de 1 g/L après un repas riche en glucides puis pendant le jeûne. "
+ "Partie II, situation 1 : Document 1 : à jeun, la glycémie de M. A. est de 2,3 g/L et son insulinémie est très basse (2 mUI/L, valeur normale 10 mUI/L). Après une injection d'insuline, sa glycémie passe à 1,1 g/L en deux heures. "
+ "Situation 2 : Document 2 : test de charge en glucose (75 g). Glycémie en g/L à 0, 60 et 120 minutes : sujet témoin 0,9 ; 1,5 ; 1,0 ; M. A. 2,3 ; 3,6 ; 3,4.",
+ "Tu es invité(e) à traiter les consignes suivantes. Ta production sera appréciée selon la cohérence interne et la pertinence.",
+ [("Partie I : explique le rôle du pancréas et du foie dans le retour de la glycémie à la normale après un repas.", 3, "Hyperglycémie, sécrétion d'insuline par les cellules β des îlots de Langerhans, stockage du glucose en glycogène dans le foie et les muscles, utilisation par les cellules."),
+  ("Partie I : explique comment la glycémie est maintenue pendant le jeûne.", 3, "Hypoglycémie, sécrétion de glucagon, hydrolyse du glycogène hépatique et libération de glucose dans le sang ; néoglucogenèse."),
+  ("Situation 1 : exploite le document 1 pour identifier le trouble de M. A. et l'effet de l'insuline.", 3, "Hyperglycémie à jeun avec insulinémie basse : insuffisance de sécrétion d'insuline. L'injection fait baisser la glycémie : l'insuline est hypoglycémiante."),
+  ("Situation 1 : propose un traitement et deux mesures d'hygiène de vie pour M. A.", 3, "Insulinothérapie ; alimentation équilibrée pauvre en sucres rapides et activité physique régulière."),
+  ("Situation 2 : compare la courbe du témoin et celle de M. A. et tire une conclusion sur la tolérance au glucose.", 3, "Le témoin revient à 1,0 g/L en 2 h ; M. A. reste à 3,4 g/L : intolérance au glucose, diabète."),
+  ("Situation 2 : explique pourquoi M. A. urine abondamment et a soif.", 3, "Au-delà du seuil rénal (≈ 1,8 g/L), le glucose passe dans l'urine et entraîne l'eau (polyurie), d'où déshydratation et soif.")]))
+L.append(E("SVT", "Tle", "3 h", "Résoudre une situation relevant de l'énergie cellulaire : respiration et fermentation (série D).",
+ "Une boulangère de Savè observe que sa pâte à pain gonfle mieux quand elle l'aère et la laisse reposer. Elle veut comprendre le rôle des levures.",
+ "Partie I : Décris les étapes de la respiration cellulaire et montre le rôle de la mitochondrie. "
+ "Situation 1 : Document 1 : des levures placées en milieu glucosé avec dioxygène consomment 1 mol de glucose et produisent 6 mol de CO2 et 6 mol d'eau ; sans dioxygène, 1 mol de glucose donne 2 mol d'éthanol et 2 mol de CO2. "
+ "Situation 2 : Document 2 : rendement énergétique : respiration 36 ATP par glucose ; fermentation alcoolique 2 ATP par glucose. Un cultivateur de levures observe que la croissance est dix fois plus rapide avec dioxygène.",
+ "Tu es invité(e) à traiter les consignes suivantes.",
+ [("Partie I : décris les trois grandes étapes de la respiration cellulaire (glycolyse, cycle de Krebs, chaîne respiratoire).", 3, "Glycolyse dans le cytoplasme ; cycle de Krebs dans la matrice mitochondriale ; chaîne respiratoire dans la membrane interne avec consommation de O2 et synthèse d'ATP."),
+  ("Partie I : justifie le rôle de la mitochondrie comme centrale énergétique de la cellule.", 3, "Elle abrite les réactions d'oxydation complète du pyruvate et produit l'essentiel de l'ATP."),
+  ("Situation 1 : écris l'équation globale de la respiration et celle de la fermentation alcoolique à partir du document 1.", 3, "C6H12O6 + 6 O2 donne 6 CO2 + 6 H2O + énergie ; C6H12O6 donne 2 C2H5OH + 2 CO2 + énergie."),
+  ("Situation 1 : explique pourquoi la pâte gonfle.", 3, "Le CO2 produit par la fermentation reste piégé dans la pâte et la fait lever."),
+  ("Situation 2 : calcule le rapport des rendements et interprète la croissance plus rapide avec dioxygène.", 3, "36 / 2 = 18 fois plus d'ATP par glucose ; plus d'énergie disponible pour la croissance."),
+  ("Situation 2 : conclus sur les conditions qui favorisent la respiration ou la fermentation.", 3, "Respiration en présence de O2 ; fermentation en son absence ou en carence.")]))
+L.append(E("SVT", "Tle", "3 h", "Résoudre une situation relevant de la transmission synaptique (série D).",
+ "Une équipe de santé de Natitingou étudie les effets d'un poison de flèche, le curare, et d'une substance utilisée en anesthésie.",
+ "Partie I : Explique le mécanisme de la transmission d'un message nerveux au niveau d'une synapse neuromusculaire. "
+ "Situation 1 : Document 1 : la stimulation du nerf moteur d'un muscle de grenouille provoque une contraction ; après application de curare sur la plaque motrice, la même stimulation ne produit plus de contraction, alors que la stimulation directe du muscle produit encore une contraction. Le potentiel d'action du nerf reste normal. "
+ "Situation 2 : Document 2 : la concentration d'acétylcholine dans la fente synaptique augmente quand l'acétylcholinestérase est inhibée par un insecticide organophosphoré ; le muscle présente alors une contraction prolongée (tétanie).",
+ "Tu es invité(e) à traiter les consignes suivantes.",
+ [("Partie I : décris les événements successifs de la transmission synaptique.", 3, "Arrivée du potentiel d'action, entrée de Ca2+, libération du neurotransmetteur par exocytose, fixation sur les récepteurs postsynaptiques, potentiel de plaque."),
+  ("Partie I : explique pourquoi la transmission est unidirectionnelle.", 3, "Le neurotransmetteur n'est libéré que par la terminaison présynaptique et les récepteurs sont uniquement postsynaptiques."),
+  ("Situation 1 : exploite le document 1 pour localiser l'action du curare.", 3, "Le nerf et le muscle fonctionnent ; le curare agit au niveau de la plaque motrice."),
+  ("Situation 1 : propose une hypothèse sur le mode d'action du curare et indique son effet sur la respiration.", 3, "Il bloque les récepteurs de l'acétylcholine (concurrence) ; paralysie des muscles respiratoires."),
+  ("Situation 2 : explique la tétanie observée avec l'insecticide.", 3, "Sans dégradation de l'acétylcholine, la stimulation du muscle se prolonge."),
+  ("Situation 2 : propose deux précautions à prendre lors de l'épandage d'insecticides.", 3, "Porter gants, masque et vêtements couvrants ; respecter les doses et ne pas manipuler à proximité de l'eau potable.")]))
+L.append(E("SVT", "Tle", "3 h", "Résoudre une situation relevant de la transmission de deux caractères héréditaires (série D).",
+ "Dans un laboratoire de l'université d'Abomey-Calavi, des élèves étudient la transmission de deux caractères chez la drosophile : la couleur du corps (gris ou noir) et la forme des ailes (longues ou vestigiales).",
+ "Partie I : Explique la notion de gènes indépendants et le rôle de la méiose dans le brassage interchromosomique. "
+ "Situation 1 : Document 1 : le croisement de drosophiles de lignée pure corps gris et ailes longues avec des drosophiles corps noir et ailes vestigiales donne en F1 uniquement des individus corps gris et ailes longues. "
+ "Situation 2 : Document 2 : le croisement-test d'une femelle F1 avec un mâle corps noir et ailes vestigiales donne : 41,5 % gris-longues, 41,5 % noir-vestigiales, 8,5 % gris-vestigiales, 8,5 % noir-longues.",
+ "Tu es invité(e) à traiter les consignes suivantes.",
+ [("Partie I : explique le brassage interchromosomique et ses conséquences sur les gamètes.", 3, "Répartition aléatoire des chromosomes homologues en anaphase I : gamètes de combinaisons variées."),
+  ("Partie I : explique le brassage intrachromosomique (crossing-over).", 3, "Échanges de segments entre chromatides homologues en prophase I, d'où des gamètes recombinés."),
+  ("Situation 1 : déduis les relations de dominance et le génotype de la F1 en utilisant des symboles que tu définis.", 3, "Gris (G) et longues (L) dominants ; F1 hétérozygote."),
+  ("Situation 1 : indique les proportions attendues du test-cross si les gènes étaient indépendants.", 3, "25 % de chaque phénotype."),
+  ("Situation 2 : compare les résultats observés aux proportions attendues et conclus sur la localisation des gènes.", 3, "Les phénotypes parentaux sont majoritaires (83 %) : gènes liés sur le même chromosome."),
+  ("Situation 2 : calcule la distance entre les deux gènes et écris l'échiquier ou la répartition des gamètes de la femelle F1.", 3, "Recombinés 8,5 + 8,5 = 17 % : 17 centimorgans ; gamètes parentaux 83 %, recombinés 17 %.")]))
+L.append(E("SVT", "Tle", "3 h", "Résoudre une situation relevant de la génétique des populations (série D).",
+ "Dans un village de Malanville, un agent de santé veut connaître la fréquence de l'allèle de la drépanocytose et estimer le nombre de personnes concernées.",
+ "Partie I : Définis une population panmictique, la fréquence d'un allèle et énonce la loi de Hardy-Weinberg. "
+ "Situation 1 : Document 1 : sur 2 000 habitants, 20 sont drépanocytaires (SS), 360 sont porteurs sains (AS) et le reste est AA. "
+ "Situation 2 : Document 2 : une migration de 200 personnes AA dans le village, sans autre changement, est annoncée pour l'an prochain.",
+ "Tu es invité(e) à traiter les consignes suivantes.",
+ [("Partie I : définis population panmictique et fréquence allélique.", 3, "Population où les croisements se font au hasard ; fréquence allélique = proportion de l'allèle parmi tous les allèles du gène."),
+  ("Partie I : énonce la loi de Hardy-Weinberg et ses conditions.", 3, "Les fréquences alléliques et génotypiques restent constantes de génération en génération si l'effectif est grand, sans sélection, mutation ni migration."),
+  ("Situation 1 : calcule les fréquences des allèles A et S.", 3, "Allèles S : (2 x 20 + 360) / 4 000 = 0,10 ; A : 0,90."),
+  ("Situation 1 : vérifie si la population est en équilibre de Hardy-Weinberg.", 3, "Attendus : AA 0,81 x 2 000 = 1 620 ; AS 0,18 x 2 000 = 360 ; SS 0,01 x 2 000 = 20 : équilibre vérifié."),
+  ("Situation 2 : calcule la nouvelle fréquence de l'allèle S après la migration.", 3, "Allèles S : 400 sur (2 200 x 2 = 4 400) soit 0,091."),
+  ("Situation 2 : explique pourquoi la migration modifie l'équilibre et propose deux actions de prévention de la drépanocytose.", 3, "La migration change les fréquences alléliques ; conseil génétique, dépistage prénuptial et néonatal.")]))
+L.append(E("SVT", "Tle", "3 h", "Résoudre une situation relevant de l'infection par le VIH et de son traitement (série D).",
+ "Un agent de santé communautaire de Djougou accompagne un patient séropositif et doit expliquer l'importance du traitement antirétroviral.",
+ "Partie I : Explique comment le VIH détruit le système immunitaire. "
+ "Situation 1 : Document 1 : un patient non traité présente 800 lymphocytes T4 par mm3 de sang à la contamination, 500 au bout de 3 ans, 200 au bout de 8 ans ; des maladies opportunistes apparaissent quand le taux est inférieur à 200. "
+ "Situation 2 : Document 2 : sous traitement antirétroviral, la charge virale d'un patient passe de 100 000 copies/mL à moins de 50 copies/mL en six mois et le taux de T4 remonte de 250 à 600 par mm3.",
+ "Tu es invité(e) à traiter les consignes suivantes.",
+ [("Partie I : décris le cycle de multiplication du VIH dans le lymphocyte T4.", 3, "Fixation, pénétration, transcription inverse de l'ARN en ADN, intégration, production de nouvelles particules."),
+  ("Partie I : explique le lien entre baisse des lymphocytes T4 et apparition des maladies opportunistes.", 3, "Les T4 coordonnent la réponse immunitaire : leur chute entraîne l'immunodéficience."),
+  ("Situation 1 : trace l'évolution du taux de T4 et détermine à quel moment le patient entre dans la phase SIDA.", 3, "Courbe décroissante ; SIDA quand T4 < 200, vers la 8e année."),
+  ("Situation 1 : propose un test de dépistage et explique la notion de période muette (fenêtre sérologique).", 3, "Test sérologique ELISA confirmé par Western Blot ; délai entre contamination et apparition des anticorps."),
+  ("Situation 2 : exploite le document 2 pour montrer l'efficacité du traitement.", 3, "Charge virale quasi indétectable et T4 qui remontent : immunité restaurée."),
+  ("Situation 2 : cite trois moyens de prévention de la transmission du VIH.", 3, "Préservatif, dépistage et traitement, prévention de la transmission mère-enfant, matériel stérile.")]))
+L.append(E("SVT", "Tle", "3 h", "Résoudre une situation relevant du génie génétique et du diagnostic de la drépanocytose (série D).",
+ "Un laboratoire de Cotonou diagnostique la drépanocytose chez un nouveau-né et un autre produit de l'insuline avec des bactéries.",
+ "Partie I : Explique les étapes du transfert d'un gène humain dans une bactérie pour produire une protéine. "
+ "Situation 1 : Document 1 : l'enzyme de restriction MstII coupe l'allèle normal de l'hémoglobine en deux fragments de 1,15 kb et 0,20 kb, alors que l'allèle muté n'a plus de site de coupure et donne un seul fragment de 1,35 kb. "
+ "Situation 2 : Document 2 : après électrophorèse, la mère présente deux bandes de 1,35 kb et 1,15 kb ; le père deux bandes de 1,35 kb et 1,15 kb ; le nouveau-né une seule bande de 1,35 kb.",
+ "Tu es invité(e) à traiter les consignes suivantes.",
+ [("Partie I : décris les étapes de la fabrication d'une bactérie productrice d'insuline.", 3, "Isolement du gène, insertion dans un plasmide avec enzyme de restriction et ligase, transformation de la bactérie, sélection et culture."),
+  ("Partie I : donne deux intérêts et une limite éthique du génie génétique.", 3, "Production de médicaments et plantes améliorées ; risques écologiques et questions éthiques."),
+  ("Situation 1 : explique pourquoi les deux allèles donnent des fragments différents.", 3, "La mutation supprime le site de reconnaissance de MstII."),
+  ("Situation 1 : précise le rôle de l'électrophorèse dans l'analyse.", 3, "Séparer les fragments d'ADN selon leur taille."),
+  ("Situation 2 : détermine les génotypes de la mère, du père et du nouveau-né.", 3, "Parents hétérozygotes AS ; nouveau-né homozygote SS."),
+  ("Situation 2 : calcule la probabilité qu'un troisième enfant soit atteint et propose un conseil aux parents.", 3, "1/4 ; consultation de conseil génétique, suivi médical et dépistage précoce.")]))
+L.append(E("SVT", "Tle", "3 h", "Résoudre une situation relevant de la régulation hormonale du cycle sexuel féminin (série D).",
+ "Une sage-femme de Lokossa explique à des élèves comment les hormones commandent le cycle menstruel et comment la pilule agit.",
+ "Partie I : Explique la régulation hormonale du cycle sexuel de la femme. "
+ "Situation 1 : Document 1 : chez une ratte, l'ablation des ovaires entraîne l'atrophie de l'utérus et une forte élévation de la FSH et de la LH ; l'injection d'œstrogènes à une ratte ovariectomisée fait baisser la FSH et la LH et restaure l'utérus. "
+ "Situation 2 : Document 2 : une femme prend chaque jour pendant 21 jours un comprimé contenant œstrogène et progestérone de synthèse ; ses dosages de FSH et de LH restent bas et on n'observe pas de pic de LH au milieu du cycle.",
+ "Tu es invité(e) à traiter les consignes suivantes.",
+ [("Partie I : explique le rôle de l'axe hypothalamus - hypophyse - ovaire dans le cycle.", 3, "GnRH, FSH et LH commandent la maturation du follicule et l'ovulation ; œstrogènes et progestérone préparent l'utérus."),
+  ("Partie I : explique le pic de LH et ses conséquences.", 3, "Rétroaction positive des œstrogènes : pic de LH, ovulation, formation du corps jaune."),
+  ("Situation 1 : exploite le document 1 pour montrer le rétrocontrôle exercé par les ovaires.", 3, "Sans ovaires, FSH et LH augmentent ; les œstrogènes les inhibent : rétrocontrôle négatif."),
+  ("Situation 1 : déduis le rôle des œstrogènes sur l'utérus.", 3, "Ils assurent le développement de l'utérus et de la muqueuse."),
+  ("Situation 2 : explique l'effet contraceptif de la pilule.", 3, "Rétrocontrôle négatif sur l'hypophyse : pas de pic de LH, pas d'ovulation."),
+  ("Situation 2 : cite deux autres méthodes de régulation des naissances et une méthode qui protège aussi des IST.", 3, "Méthodes naturelles, DIU, implant ; le préservatif protège des IST.")]))
+
+# ------------------------------------------------------------------ SVT Tle A et B (structure : restitution 6 pts, deux situations-problèmes de 6 pts, perfectionnement 2 pts)
+L.append(E("SVT", "Tle", "2 h", "Résoudre une situation relevant de la nutrition et de la santé (séries A et B).",
+ "Dans un centre de santé de Parakou, une infirmière constate beaucoup de cas de malnutrition chez les enfants de moins de cinq ans et veut conseiller les mères.",
+ "Partie I : Explique le rôle des principaux groupes d'aliments dans l'organisme. "
+ "Situation 1 : Document 1 : un enfant de 3 ans mange surtout de la pâte de maïs avec une sauce claire ; il est maigre, a le ventre gonflé et des cheveux décolorés. Son frère, nourri aussi de niébé, de poisson et de fruits, grandit normalement. "
+ "Situation 2 : Document 2 : besoin journalier d'un enfant de 3 ans : environ 1 300 kcal. La ration de l'enfant maigre apporte 700 kcal par jour.",
+ "Tu es invité(e) à traiter les consignes suivantes.",
+ [("Partie I : cite les groupes d'aliments et le rôle de chacun (énergétique, constructeur, protecteur).", 3, "Glucides et lipides : énergie ; protéines : construction ; vitamines et sels minéraux : protection et régulation ; eau."),
+  ("Partie I : explique pourquoi une alimentation doit être variée et équilibrée.", 3, "Aucun aliment ne contient tous les nutriments en bonne proportion."),
+  ("Situation 1 : compare les deux enfants et identifie le trouble de l'enfant maigre.", 3, "Carence en protéines (kwashiorkor) due à une ration pauvre en protéines animales ou végétales."),
+  ("Situation 1 : propose des repas équilibrés avec des aliments locaux.", 3, "Associer céréales, légumineuses, poisson ou œufs, légumes et fruits."),
+  ("Situation 2 : calcule le déficit énergétique de l'enfant et en déduis la conséquence.", 3, "1 300 - 700 = 600 kcal ; amaigrissement et retard de croissance."),
+  ("Situation 2 : donne trois conseils aux mères pour prévenir la malnutrition.", 3, "Allaitement exclusif six mois, diversification, hygiène des aliments, pesée régulière.")]))
+L.append(E("SVT", "Tle", "2 h", "Résoudre une situation relevant de la reproduction humaine et de la santé de la reproduction (séries A et B).",
+ "Lors d'une causerie éducative à Ouidah, des élèves demandent comment éviter les grossesses précoces et les infections sexuellement transmissibles.",
+ "Partie I : Décris la fécondation et les débuts du développement de l'embryon. "
+ "Situation 1 : Document 1 : dans une région, le nombre de grossesses chez les filles de moins de 18 ans est passé de 40 à 95 pour 1 000 en cinq ans, alors que l'usage du préservatif est faible. "
+ "Situation 2 : Document 2 : parmi les patients vus au centre de santé, beaucoup présentent des écoulements et des douleurs pelviennes et consultent tardivement.",
+ "Tu es invité(e) à traiter les consignes suivantes.",
+ [("Partie I : décris la fécondation et le trajet de l'œuf jusqu'à l'implantation.", 3, "Rencontre dans la trompe, fusion des gamètes, œuf, divisions, nidation dans l'utérus."),
+  ("Partie I : explique le rôle du placenta durant la grossesse.", 3, "Échanges de nutriments, de gaz et de déchets entre mère et fœtus ; barrière partielle et sécrétion hormonale."),
+  ("Situation 1 : exploite le document 1 et propose deux causes possibles de l'augmentation.", 3, "Hausse de 55 pour 1 000 ; manque d'information et d'accès aux moyens de contraception."),
+  ("Situation 1 : indique trois conséquences des grossesses précoces.", 3, "Risques médicaux, abandon scolaire, difficultés sociales et économiques."),
+  ("Situation 2 : cite deux IST et leurs conséquences en l'absence de traitement.", 3, "Gonococcie, syphilis, VIH ; stérilité, complications graves."),
+  ("Situation 2 : propose des mesures de prévention et d'accès aux soins.", 3, "Abstinence ou fidélité, préservatif, dépistage, consultation précoce.")]))
+L.append(E("SVT", "Tle", "2 h", "Résoudre une situation relevant des relations entre les êtres vivants et de la gestion de l'environnement (séries A et B).",
+ "Dans un village proche du lac Nokoué, les pêcheurs observent une baisse des prises de poisson et l'invasion du plan d'eau par la jacinthe d'eau.",
+ "Partie I : Définis écosystème, chaîne alimentaire et réseau trophique ; explique le rôle des producteurs et des décomposeurs. "
+ "Situation 1 : Document 1 : la jacinthe d'eau couvre 60 % de la surface du lac ; la lumière qui atteint le fond diminue et la quantité de dioxygène dissous chute de 7 à 2 mg/L. "
+ "Situation 2 : Document 2 : les rejets de déchets et d'engrais augmentent les nutriments dans l'eau ; le nombre de poissons capturés par pêcheur et par jour passe de 12 à 4.",
+ "Tu es invité(e) à traiter les consignes suivantes.",
+ [("Partie I : définis écosystème et réseau trophique.", 3, "Écosystème : biotope et biocénose en interaction ; réseau : ensemble de chaînes alimentaires liées."),
+  ("Partie I : explique le rôle des producteurs, des consommateurs et des décomposeurs.", 3, "Producteurs : photosynthèse ; consommateurs : transfert de matière ; décomposeurs : recyclage."),
+  ("Situation 1 : explique pourquoi la jacinthe fait baisser le dioxygène et la photosynthèse des algues.", 3, "Elle bloque la lumière et sa décomposition consomme du dioxygène."),
+  ("Situation 1 : propose deux méthodes de lutte contre la jacinthe d'eau.", 3, "Arrachage manuel et valorisation (compost, artisanat), lutte biologique contrôlée."),
+  ("Situation 2 : calcule la baisse des captures en pourcentage.", 3, "(12 - 4) / 12 = 66,7 %."),
+  ("Situation 2 : propose trois actions de gestion durable du lac.", 3, "Gestion des déchets, limitation des engrais, respect des périodes de repos biologique.")]))
+L.append(E("SVT", "Tle", "2 h", "Résoudre une situation relevant de l'immunité et de la vaccination (séries A et B).",
+ "À l'école de Sakété, une campagne de vaccination est annoncée. Des parents s'interrogent sur son utilité.",
+ "Partie I : Explique les réactions de défense de l'organisme contre un microbe (immunité non spécifique et spécifique). "
+ "Situation 1 : Document 1 : après une première injection d'anatoxine tétanique, les anticorps apparaissent au bout de dix jours en faible quantité ; après un rappel, ils apparaissent en trois jours en grande quantité et persistent plus longtemps. "
+ "Situation 2 : Document 2 : un enfant non vacciné se blesse avec un clou rouillé et présente des contractions musculaires.",
+ "Tu es invité(e) à traiter les consignes suivantes.",
+ [("Partie I : décris la phagocytose et son rôle.", 3, "Les phagocytes englobent et détruisent les microbes ; première ligne de défense."),
+  ("Partie I : explique le rôle des lymphocytes B et des anticorps.", 3, "Les lymphocytes B se transforment en plasmocytes sécréteurs d'anticorps qui neutralisent l'antigène."),
+  ("Situation 1 : compare les deux réponses du document 1 et conclus.", 3, "Réponse secondaire plus rapide, plus forte et plus durable : mémoire immunitaire."),
+  ("Situation 1 : explique le principe de la vaccination.", 3, "Préparer l'organisme avec un antigène inoffensif pour créer des cellules mémoire."),
+  ("Situation 2 : propose le traitement d'urgence à appliquer à l'enfant et justifie-le.", 3, "Sérothérapie (anticorps antitétaniques) pour une action immédiate."),
+  ("Situation 2 : donne la différence entre vaccin et sérum et deux arguments en faveur de la vaccination.", 3, "Vaccin : protection durable ; sérum : protection immédiate et brève ; vaccination protège l'individu et la communauté.")]))
+
 
 EPREUVES = L
 for _i, _e in enumerate(EPREUVES):

@@ -54,7 +54,7 @@ class T(unittest.TestCase):
 
     def test_epreuves_apc(self):
         import epreuves_apc as A
-        self.assertEqual(len(A.EPREUVES), 94)
+        self.assertEqual(len(A.EPREUVES), 106)
         for e in A.EPREUVES:
             self.assertEqual(e["total"], 20, (e["matiere"], e["niveau"]))
             self.assertGreaterEqual(len(e["items"]), 4)
