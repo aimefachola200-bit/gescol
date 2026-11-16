@@ -1,6 +1,6 @@
 {% extends "base.html" %}{% block titre %}Classes{% endblock %}
 {% block contenu %}
-{% set ORG = organisation_classes() if organisation_classes is defined else none %}
+{% set ORG = organisation_classes() if (organisation_classes is defined and not SECONDAIRE) else none %}
 <div class="entete">
   <div><h1>Classes</h1><p class="sous">{{ classes|length }} cours{% if ORG %} · <b>{{ ORG.compte.total }} classe(s) ouverte(s)</b> : {{ ORG.compte.simples }} simple(s), {{ ORG.compte.jumelees }} jumelée(s), {{ ORG.compte.multigrades }} multigrade(s){% endif %}</p></div>
   {% if peut('classes') %}<a class="btn" href="{{ url_for('classe_form') }}">+ Nouvelle classe</a>{% endif %}

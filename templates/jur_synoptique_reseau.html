@@ -11,7 +11,7 @@ table.t.reseau td.ups{font-size:12px;color:#344054}
     <p class="sous">{{ r.zones|length }} zone(s) · {{ r.nb_up }} UP · {{ r.nb_ecoles }} école(s) · {{ r.enseignants }} enseignant(s) transmis</p></div>
   <div class="actions"><a class="btn sec" href="{{ url_for('jur_synoptique_reseau_pdf') }}" target="_blank">{{ icone('document') }} PDF du réseau</a>
     {% if ep_existe('jur_zones') %}<a class="btn sec" href="{{ url_for('jur_zones') }}">Modifier les zones</a>{% endif %}
-    {% if ep_existe('jur_up') %}<a class="btn sec" href="{{ url_for('jur_up') }}">Unités pédagogiques</a>{% endif %}</div>
+    {% if ep_existe('jur_up') and not SECONDAIRE %}<a class="btn sec" href="{{ url_for('jur_up') }}">Unités pédagogiques</a>{% endif %}</div>
 </div>
 
 {% if ddemp %}

@@ -42,8 +42,9 @@
     {% if MENU_ENSEIGNANT is defined and MENU_ENSEIGNANT() %}{% include "_menu_enseignant.html" %}{# v1.14 : GESCOL Enseignant #}
     {% elif JURIDICTION %}{% include "_menu_juridiction.html" %}{% else %}
     {% set ENS = g.user.role == 'enseignant' %}{# périmètre de l'enseignant : ses classes, hors domaine du directeur (m_perimetre_enseignant) #}
-    {% if peut('synoptique') and ep_existe('synoptique_accueil') %}{{ lien('synoptique_accueil', "Tableau synoptique de l'école", ep.startswith('synoptique'), 'ecole') }}{% endif %}
+    {% if peut('synoptique') and ep_existe('synoptique_accueil') and not SECONDAIRE %}{{ lien('synoptique_accueil', "Tableau synoptique de l'école", ep.startswith('synoptique'), 'ecole') }}{% endif %}
     {% if not ENS %}{{ lien('accueil', 'Tableau de bord', ep=='accueil', 'accueil') }}{% endif %}
+    {{ lien('telechargements', 'Téléchargements (PDF et Word)', ep=='telechargements') }}
     {% if PUBLIQUE %}{% if g.user.role in ('fondateur','admin','directeur') %}{{ lien('directeur_tableau', 'Tableau de bord du directeur', ep.startswith('directeur_tableau'), 'graphique') }}{% endif %}
     {% elif g.user.role in ('fondateur','admin') %}{{ lien('fondateur_tableau', 'Tableau du fondateur', ep.startswith('fondateur'), 'graphique') }}{% endif %}
     {% if ENS and ep_existe('ma_classe') %}{{ lien('ma_classe', 'Ma classe', ep.startswith('ma_classe'), 'ecole') }}{% endif %}
@@ -72,7 +73,7 @@
       {% if SECONDAIRE and peut('epreuves') and ep_existe('ress_sec') %}{{ lien('ress_sec', "Ressources du secondaire (épreuves, exposés, révisions)", ep.startswith('ress_sec')) }}{% endif %}
       {% if peut('notes') %}{{ lien('notes_accueil', 'Notes par période (bulletins)', ep.startswith('notes') or ep=='resultats') }}{% endif %}
       {% if peut('synthese') %}{{ lien('synthese_accueil', 'Synthèse École / UP / CS', ep.startswith('synthese')) }}{% endif %}
-      {% if ep_existe('themes_up') %}{{ lien('themes_up', "Thèmes d'UP, conférences et formations", ep.startswith('themes_up')) }}{% endif %}
+      {% if ep_existe('themes_up') and not SECONDAIRE %}{{ lien('themes_up', "Thèmes d'UP, conférences et formations", ep.startswith('themes_up')) }}{% endif %}
       {% if peut('uascep') and ep_existe('uascep') %}{{ lien('uascep', "Bureaux de l'UASCEP", ep.startswith('uascep')) }}{% endif %}
       {{ lien('matieres', 'Matières et domaines', ep=='matieres') }}
     {% endcall %}

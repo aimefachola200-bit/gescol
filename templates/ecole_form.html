@@ -85,7 +85,7 @@
   <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
     <div style="flex:1;min-width:220px">
       <label class="choix"><input type="checkbox" name="griffe_actif" value="1" {{ 'checked' if e.griffe_actif is none or e.griffe_actif|int(1) }}> Apposer la griffe sur les documents signés</label>
-      <label for="g-l3">3e ligne (grade / qualité, facultatif)</label><input id="g-l3" name="griffe_ligne3" value="{{ e.griffe_ligne3 or '' }}" maxlength="60" placeholder="Instituteur, Conseiller pédagogique…">
+      <label for="g-l3">3e ligne (grade / qualité, facultatif)</label><input id="g-l3" name="griffe_ligne3" value="{{ e.griffe_ligne3 or '' }}" maxlength="60" placeholder="{{ 'Professeur certifié, Inspecteur pédagogique…' if SECONDAIRE else 'Instituteur, Conseiller pédagogique…' }}">
       <label>Couleur</label>
       <label class="choix"><input type="radio" name="griffe_couleur" value="" {{ 'checked' if e.griffe_couleur not in ('bleu', 'rouge') }}> Celle du cachet</label>
       <label class="choix"><input type="radio" name="griffe_couleur" value="bleu" {{ 'checked' if e.griffe_couleur=='bleu' }}> Bleu</label>

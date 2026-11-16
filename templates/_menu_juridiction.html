@@ -78,7 +78,7 @@
   {{ lien('jur_cp', 'Conseillers pédagogiques (visites, synthèses)', ep=='jur_cp') }}
   {% if not SECONDAIRE %}{{ lien('jur_up', 'Unités pédagogiques (UP)', ep.startswith('jur_up')) }}{% endif %}
   {% if ep_existe('uascep') %}{{ lien('uascep', "Bureaux de l'UASCEP", ep.startswith('uascep')) }}{% endif %}
-  {% if ep_existe('themes_up') %}{{ lien('themes_up', "Thèmes d'UP, conférences et formations", ep.startswith('themes_up')) }}{% endif %}
+  {% if ep_existe('themes_up') and not SECONDAIRE %}{{ lien('themes_up', "Thèmes d'UP, conférences et formations", ep.startswith('themes_up')) }}{% endif %}
   {% if ep_existe('calendrier_officiel') %}{{ lien('calendrier_officiel', 'Calendrier scolaire officiel', ep.startswith('calendrier_officiel')) }}{% endif %}
 {% endcall %}
 {% if ep_existe('jur_saisie') %}{% call groupe('jsaisie', 'Saisie manuelle (sans Excel)', ep.startswith('jur_saisie'), 'signature') %}

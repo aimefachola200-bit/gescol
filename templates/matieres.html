@@ -4,7 +4,7 @@
 <p class="sous">Coefficients et modes de calcul utilisés pour les moyennes. {% if not peut('parametres') %}Lecture seule.{% endif %}</p>
 {% set ro = not peut('parametres') %}
 <form method="post">
-{% for titre, liste in [('Maternelle', mat), ('Primaire', prim), ('Secondaire', sec)] %}
+{% for titre, liste in ([('Secondaire', sec)] if SECONDAIRE else [('Maternelle', mat), ('Primaire', prim), ('Secondaire', sec)]) %}
 <h2>{{ titre }}</h2>
 <div class="tw"><table class="t">
   <tr><th>Ordre</th><th>Code</th><th>Nom</th><th>Coef.</th><th>Mode de calcul</th><th class="c">Active</th></tr>
@@ -23,7 +23,7 @@
 {% if not ro %}
 <h2>Ajouter une matière</h2>
 <div class="carte filtres">
-  <select name="new_cycle"><option value="maternelle">Maternelle (domaine)</option><option value="primaire" selected>Primaire</option><option value="secondaire">Secondaire</option></select>
+  <select name="new_cycle">{% if not SECONDAIRE %}<option value="maternelle">Maternelle (domaine)</option><option value="primaire" selected>Primaire</option>{% endif %}<option value="secondaire" selected>Secondaire</option></select>
   <input name="new_code" placeholder="Code (ex. INFO)" style="width:130px">
   <input name="new_nom" placeholder="Nom de la matière" style="min-width:240px">
   <input name="new_coef" placeholder="Coef." style="width:80px">

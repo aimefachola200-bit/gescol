@@ -149,7 +149,13 @@ def enregistrer(app, H):
     def _vocabulaire(rep):
         try:
             if rep.mimetype == "text/html" and rep.status_code == 200 and not rep.direct_passthrough:
-                rep.set_data(habiller_html(rep.get_data(as_text=True), supervision))
+                h = habiller_html(rep.get_data(as_text=True), supervision)
+                try:
+                    import m_vocab_sec
+                    h = m_vocab_sec.adapter_html(h)       # v2.5.2 : le vocabulaire du primaire est retiré après l'habillage
+                except Exception:  # noqa: BLE001
+                    pass
+                rep.set_data(h)
         except Exception:  # noqa: BLE001 - l'habillage ne doit jamais casser une page
             pass
         return rep

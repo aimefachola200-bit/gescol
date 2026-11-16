@@ -209,9 +209,10 @@ def enregistrer(app, H):
     def niveaux_visibles():
         if config.EDITION == "ddemp":
             return [c for c, _ in NIVEAUX]
+        codes = [c for c, _ in NIVEAUX]
         if config.EDITION == "cs":
-            return ["ECOLE", "UP", "ZONE", "CS"]
-        return ["ECOLE", "UP", "ZONE"]
+            return [c for c in ["ECOLE", "UP", "ZONE", "CS"] if c in codes]
+        return [c for c in ["ECOLE", "UP", "ZONE"] if c in codes]
 
     def niveaux_ecriture():
         role = g.get("role_reel") or g.user["role"]     # v1.28 : rôle réel (CP, chef de service…) même sur une page d'école

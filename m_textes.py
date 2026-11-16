@@ -81,6 +81,9 @@ def enregistrer(app, H):
     @app.route("/textes-officiels")
     @H.connexion_requise()
     def textes_officiels():
+        import config
+        if config.secondaire():      # édition du secondaire : ni arrêtés du primaire, ni cahiers CI / CP
+            return render_template("textes_officiels.html", textes=[x for x in TEXTES if x.get("cycle") != "primaire"], cahiers=[], cp_lecons=[])
         return render_template("textes_officiels.html", textes=TEXTES, cahiers=CAHIERS, cp_lecons=__import__("cahier_cp_progression").LECONS)
 
     @app.route("/cahier-cp-francais.pdf")

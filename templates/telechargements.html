@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block titre %}Téléchargements{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Téléchargements</h1><p class="sous">Documents administratifs de l'année {{ annee }} : un clic pour le PDF (à imprimer, signer, cacheter) ou le Word (à modifier).</p></div></div>
+{% for groupe, docs in groupes.items() %}
+<h2>{{ groupe }}</h2>
+{% for d in docs %}
+<div class="carte" style="display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:space-between">
+  <div style="flex:1 1 260px"><b>{{ d.titre }}</b><p class="sous" style="margin:.2rem 0 0">{{ d.aide }}</p></div>
+  <div><a class="btn sec" href="{{ d.page }}">Ouvrir</a> <a class="btn" href="{{ d.pdf }}">Télécharger PDF</a> <a class="btn" href="{{ d.word }}">Télécharger Word</a></div>
+</div>
+{% endfor %}{% endfor %}
+{% if not groupes %}<p class="aide">Aucun document téléchargeable pour cette édition.</p>{% endif %}
+{% endblock %}
