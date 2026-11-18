@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% block titre %}Fiche pédagogique{% endblock %}
 {% block contenu %}
 {% if g.user %}<div class="filigrane" aria-hidden="true">{{ g.user.nom }}</div>{% endif %}
-{% if SECONDAIRE and ens_sec_actif() %}<form method="post" action="{{ url_for('ens_sec_copier', src='fiche', i=i) }}" class="noprint" style="display:inline"><button class="btn">Copier dans mes documents et modifier</button></form>{% endif %}
+{% if ens_sec_actif() %}<form method="post" action="{{ url_for('ens_sec_copier', src='fiche', i=i) }}" class="noprint" style="display:inline"><button class="btn">Copier dans mes documents et modifier</button></form>{% endif %}
 <div class="entete"><div><h1>Fiche pédagogique : {{ f.titre }}</h1><p class="aide">{{ f.matiere }} · {{ f.niveau }} · {{ f.duree }} · approche par les compétences (APC)</p></div><a class="btn sec" href="{{ url_for('ress_sec', vue='fiches') }}">← Fiches</a></div>
 <div class="carte">
 <table class="t"><tr><th>Établissement</th><td>{{ ident.ecole or '………………' }}</td><th>Année scolaire</th><td>{{ ident.annee }}</td></tr>

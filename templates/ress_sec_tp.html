@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block titre %}Fiche de TP{% endblock %}
+{% block contenu %}
+{% if ens_sec_actif() %}<form method="post" action="{{ url_for('ens_sec_copier', src='tp', i=i) }}" class="noprint" style="display:inline"><button class="btn">Copier dans mes documents et modifier</button></form>{% endif %}
+<div class="entete"><div><h1>{{ t.titre }}</h1><p class="aide">{{ t.matiere }} · {{ t.niveau }} · {{ t.filiere }} · durée {{ t.duree }}</p></div>
+<a class="btn sec" href="{{ url_for('ress_sec', vue='tp') }}">← TP</a></div>
+<div class="carte"><p style="text-align:center"><b>RÉPUBLIQUE DU BÉNIN</b><br>{{ ident.ecole or '………………………………' }} · Année scolaire {{ ident.annee }}</p>
+<h2>Objectif(s)</h2><p>{{ t.objectif }}</p><h2>Prérequis</h2><p>{{ t.prerequis }}</p>
+<h2>Matériel, outillage et matières d'œuvre</h2><p>{{ t.materiel }}</p>
+<h2>Consignes de sécurité</h2><p>{{ t.securite }}</p>
+<h2>Déroulement</h2><p style="white-space:pre-wrap">{{ t.deroulement }}</p>
+<h2>Évaluation (critères)</h2><p>{{ t.evaluation }}</p></div>
+{% endblock %}

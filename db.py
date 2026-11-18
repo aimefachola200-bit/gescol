@@ -354,6 +354,18 @@ CREATE TABLE IF NOT EXISTS affectations (           -- enseignants : classes (et
     UNIQUE(user_id, classe_id, matiere_id)
 );
 
+CREATE TABLE IF NOT EXISTS ens_mode (                  -- v2.8 : périmètre choisi par chaque enseignant (titulaire / professeur / les deux)
+    user_id INTEGER PRIMARY KEY,
+    mode TEXT NOT NULL DEFAULT 'titulaire'
+);
+
+CREATE TABLE IF NOT EXISTS signataires (
+    ecole_id INTEGER NOT NULL DEFAULT 1,
+    fonction TEXT NOT NULL,                         -- censeur, surveillant, econome, secretaire, comptable, chef_travaux, chef_exploitation
+    nom TEXT NOT NULL,
+    PRIMARY KEY (ecole_id, fonction)
+);
+
 CREATE TABLE IF NOT EXISTS signatures (
     cle TEXT PRIMARY KEY,                           -- ex. ecole:1:directeur, classe:3:titulaire, eleve:12
     image TEXT NOT NULL,                            -- image PNG en data URL
@@ -457,6 +469,33 @@ CREATE TABLE IF NOT EXISTS docs_sec (                -- v2.6 : fiches, devoirs e
     donnees TEXT NOT NULL DEFAULT '{}',             -- champs du document (JSON)
     source TEXT,                                    -- ex. fiche:12 (copié de la bibliothèque)
     cree_le TEXT DEFAULT CURRENT_TIMESTAMP,
+    maj_le TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS exposes_sec (             -- v2.7 : exposés proposés par un professeur du secondaire à une classe
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    classe_id INTEGER NOT NULL,
+    matiere_id INTEGER,
+    matiere TEXT NOT NULL DEFAULT '',
+    titre TEXT NOT NULL,
+    axes TEXT NOT NULL DEFAULT '',
+    consigne TEXT NOT NULL DEFAULT '',
+    remise TEXT NOT NULL DEFAULT '',
+    taille_max INTEGER NOT NULL DEFAULT 4,
+    ouvert INTEGER NOT NULL DEFAULT 1,
+    source TEXT,
+    cree_le TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS exposes_groupes (         -- un groupe d'élèves par exposé
+    id INTEGER PRIMARY KEY,
+    expose_id INTEGER NOT NULL,
+    eleve_ids TEXT NOT NULL DEFAULT '[]',            -- JSON : identifiants des élèves
+    contenu TEXT NOT NULL DEFAULT '{}',              -- JSON : plan, introduction, développement, conclusion, sources
+    statut TEXT NOT NULL DEFAULT 'brouillon',        -- brouillon | remis
+    note TEXT NOT NULL DEFAULT '',
+    appreciation TEXT NOT NULL DEFAULT '',
     maj_le TEXT DEFAULT CURRENT_TIMESTAMP
 );
 """

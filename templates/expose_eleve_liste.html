@@ -1,0 +1,8 @@
+{% extends "espace_eleve_base.html" %}{% block titre %}Mes exposés{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Mes exposés</h1><p class="sous">Les exposés proposés par tes professeurs.</p></div></div>
+{% if liste %}<div class="ee-tuiles">{% for x, gr in liste %}
+<a href="{{ url_for('eleve_expose', xid=x.id) }}"><b>{{ x.titre }}</b>{{ x.matiere }}{% if x.remise %} · à remettre le {{ x.remise }}{% endif %}<br>
+{% if gr %}{{ 'Remis' if gr.statut == 'remis' else 'Groupe formé : à rédiger' }}{% elif x.ouvert %}Forme ton groupe{% else %}Fermé{% endif %}</a>{% endfor %}</div>
+{% else %}<div class="carte"><p>Aucun exposé n'a encore été proposé à ta classe.</p></div>{% endif %}
+{% endblock %}

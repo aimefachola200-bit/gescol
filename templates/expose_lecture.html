@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block titre %}Exposé{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ x.titre }}</h1><p class="sous">{% for m in mem %}{{ m.nom }} {{ m.prenoms }}{% if not loop.last %}, {% endif %}{% endfor %} · {{ cl.nom }} · {{ 'Remis' if gr.statut == 'remis' else 'Brouillon' }}</p></div>
+<div class="actions"><a class="btn sec" href="{{ url_for('ens_sec_expose_garde', gid=gr.id) }}" target="_blank" rel="noopener">Page de garde</a>
+<a class="btn sec" href="{{ url_for('ens_sec_expose_groupe_doc', gid=gr.id, fmt='pdf') }}" target="_blank" rel="noopener">PDF</a>
+<a class="btn sec" href="{{ url_for('ens_sec_expose_groupe_doc', gid=gr.id, fmt='docx') }}">Word</a>
+<a class="btn sec" href="{{ url_for('ens_sec_expose', xid=x.id) }}">Retour</a></div></div>
+{% for cle, lib in S if c.get(cle) %}<div class="carte"><h3 style="margin-top:0">{{ lib }}</h3><p style="white-space:pre-wrap">{{ c[cle] }}</p></div>{% endfor %}
+<form method="post" action="{{ url_for('ens_sec_expose_noter', gid=gr.id) }}" class="carte"><h3 style="margin-top:0">Évaluation</h3>
+<label>Note <input name="note" value="{{ gr.note }}" style="width:80px"></label>
+<label><b>Appréciation</b><textarea name="appreciation" rows="2" style="width:100%">{{ gr.appreciation }}</textarea></label>
+<button class="btn">Enregistrer</button></form>
+{% if gr.statut == 'remis' %}<form method="post" action="{{ url_for('ens_sec_expose_noter', gid=gr.id) }}"><input type="hidden" name="action" value="rouvrir"><button class="btn sec">Rouvrir pour que le groupe le corrige</button></form>{% endif %}
+{% endblock %}

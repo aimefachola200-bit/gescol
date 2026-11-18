@@ -11,6 +11,7 @@ Sur Android, le navigateur intégré ne sait pas enregistrer une page imprimée 
 Routes : /exporter.pdf?page=/preparation/... et /exporter.docx?page=/preparation/... — la page est produite à nouveau
 avec les droits de la personne connectée (mêmes cookies), puis son contenu principal est converti.
 """
+import os
 import re
 import urllib.parse
 
@@ -18,6 +19,7 @@ from flask import Response, abort, g, request, url_for
 from werkzeug.test import EnvironBuilder
 
 import config
+import cachet
 import export_doc as E
 
 # pages qui reçoivent la barre (préfixes d'adresse) — v2.2 : toute la préparation et les épreuves, le guide
@@ -25,12 +27,12 @@ PREFIXES = ("/preparation", "/epreuves", "/aide/guide",
             # v2.2 : documents à garder ou à modifier (rapports, comptes rendus, notes de service, bilans, tableaux)
             "/rapports", "/communication", "/inspection", "/uascep", "/examens", "/examen-blanc", "/cep-blanc", "/pilotage",
             "/sport", "/sante-scolaire", "/patrimoine-materiel", "/visites", "/bilan-annuel", "/maitre-semaine", "/themes-up",
-            "/calendrier-scolaire", "/ressources-secondaire", "/ens-sec", "/budget-previsionnel", "/tableau-honneur", "/synthese", "/statistiques-evaluation", "/juridiction")
+            "/calendrier-scolaire", "/rapport-etablissement", "/ressources-secondaire", "/ens-sec", "/budget-previsionnel", "/tableau-honneur", "/synthese", "/statistiques-evaluation", "/juridiction")
 # v2.6 : documents sur lesquels la mention « Conception » n'apparaît pas (épreuves, devoirs, exposés) ; la mention reste sur les fiches
 SANS_CONCEPTEUR = ("/ens-sec/devoir", "/ens-sec/expose", "/ressources-secondaire/epreuve", "/ressources-secondaire/apc",
-                   "/ressources-secondaire/expose", "/epreuves")
+                   "/ressources-secondaire/expose", "/eleve/exposes", "/epreuves")
 # fiches de préparation : le nom du professeur titulaire est imprimé en filigrane
-AVEC_FILIGRANE = ("/ens-sec/fiche", "/ens-sec/tp", "/ressources-secondaire/fiche")
+AVEC_FILIGRANE = ("/ens-sec/fiche", "/ens-sec/tp", "/ressources-secondaire/fiche", "/ressources-secondaire/tp")
 # pages qui reçoivent aussi la barre (avant : seulement « Imprimer »)
 ENDPOINTS_EN_PLUS = {"impayes", "jur_tableau", "jur_fiches_tableaux", "jur_ecoles_struct", "jur_rubriques", "jur_cep_fiches",
                      "jur_infra", "jur_effectifs", "acces_parent"}
@@ -168,6 +170,34 @@ def enregistrer(app, H):
             pass
         return r
 
+    def resoudre_images(blocs):
+        """Logo, signatures numériques, griffes et cachets des pages exportées : rendus en PNG et intégrés au PDF / Word.
+        Seules les adresses autorisées (export_doc.RE_IMG) sont lues, jamais une adresse extérieure."""
+        import base64
+        for b in blocs:
+            if b.get("type") != "img":
+                continue
+            try:
+                u = urllib.parse.urlsplit(b["src"])
+                a = dict(urllib.parse.parse_qsl(u.query))
+                m_eid = re.match(r"^/ecoles/(\d+)/", u.path)
+                if u.path.startswith("/signatures/"):
+                    img = H.signature(urllib.parse.unquote(u.path[len("/signatures/"):-4]))
+                    b["png"] = base64.b64decode(img.split(",", 1)[1]) if img and img.startswith("data:image/png;base64,") else None
+                elif u.path.endswith("griffe.svg"):
+                    lignes, couleur, largeur = H.griffe_params(int(m_eid.group(1)) if m_eid else None, a)
+                    b["png"] = cachet.png_nom(lignes, couleur, largeur)
+                elif u.path == "/cachet.svg":
+                    b["png"] = cachet.png(*H.cachet_params(a))
+                elif u.path.endswith("logo.png") and m_eid:
+                    p = os.path.join(config.ECOLE_DIR, f"logo_{m_eid.group(1)}.png")
+                    p = p if os.path.exists(p) else os.path.join(config.ECOLE_DIR, "logo.png")
+                    b["png"] = open(p, "rb").read() if os.path.exists(p) else None
+            except Exception:  # noqa: BLE001 — une image absente ne doit jamais empêcher l'export
+                app.logger.exception("Image d'export")
+                b["png"] = None
+        return blocs
+
     @app.route("/exporter.<fmt>")
     @H.connexion_requise()
     def exporter_page(fmt):
@@ -176,7 +206,7 @@ def enregistrer(app, H):
         page = request.args.get("page") or "/"
         html = produire_page(page)
         titre = E.titre_page(html)
-        b = E.blocs(E.contenu_principal(html))
+        b = resoudre_images(E.blocs(E.contenu_principal(html)))
         ecole = (config.ECOLE.get("nom") or "").strip() if isinstance(getattr(config, "ECOLE", None), dict) else ""
         pied = f"{ecole + ' · ' if ecole else ''}{getattr(config, 'NOMS_APPLI', {}).get(config.EDITION, 'GESCOL') if hasattr(config, 'NOMS_APPLI') else 'GESCOL'} {config.VERSION} · Conception : {config.CONCEPTEUR} — +229 01 96 51 03 33"
         if page.split("?")[0].startswith(SANS_CONCEPTEUR):
@@ -185,4 +215,4 @@ def enregistrer(app, H):
         H.journal("export_" + fmt, page[:200])
         if fmt == "pdf":
             return reponse_fichier(E.pdf(b, titre, pied, fil), nom_fichier(titre, "pdf"), "application/pdf")
-        return reponse_fichier(E.docx(b, titre, pied), nom_fichier(titre, "docx"), E.KIT_DOCX)
+        return reponse_fichier(E.docx(b, titre, pied, fil), nom_fichier(titre, "docx"), E.KIT_DOCX)

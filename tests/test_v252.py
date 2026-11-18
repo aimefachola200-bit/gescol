@@ -53,12 +53,14 @@ class T(unittest.TestCase):
         self.assertTrue(any(s[0].startswith("carte-") for s in S.SCHEMAS))
 
     def test_epreuves_apc(self):
+        import agri_sec as AG
         import epreuves_apc as A
-        self.assertEqual(len(A.EPREUVES), 106)
+        base = [e for e in A.EPREUVES if not any(e is x for x in AG.EPREUVES_AGRI)]   # le lycée agricole ajoute ses épreuves à la liste
+        self.assertEqual(len(base), 106)
         for e in A.EPREUVES:
             self.assertEqual(e["total"], 20, (e["matiere"], e["niveau"]))
             self.assertGreaterEqual(len(e["items"]), 4)
-        self.assertEqual({e["niveau"] for e in A.EPREUVES}, {"6e", "5e", "4e", "3e", "Tle"})
+        self.assertEqual({e["niveau"] for e in base}, {"6e", "5e", "4e", "3e", "Tle"})
 
     def test_insignes_et_fichiers(self):
         for cle in I.INSIGNES:

@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block titre %}Exposé{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ 'Modifier l\'exposé' if d else 'Proposer un exposé à la classe' }}</h1><p class="sous">{{ cl.nom }}</p></div></div>
+<form method="post" class="carte">
+<label><b>Matière</b><input name="matiere" value="{{ v.matiere }}" style="width:100%"></label>
+<label><b>Thème de l'exposé</b><input name="titre" value="{{ v.titre }}" style="width:100%" required></label>
+<label><b>Axes de recherche</b><textarea name="axes" rows="3" style="width:100%">{{ v.axes }}</textarea></label>
+<label><b>Consigne / conseil aux élèves</b><textarea name="consigne" rows="3" style="width:100%">{{ v.consigne }}</textarea></label>
+<label><b>Date de remise</b> <input type="date" name="remise" value="{{ v.remise }}"></label>
+<label><b>Nombre maximum d'élèves par groupe</b> <input type="number" name="taille_max" min="1" max="10" value="{{ v.taille_max }}" style="width:70px"></label>
+{% if d %}<label><input type="checkbox" name="ouvert" value="1"{% if v.ouvert %} checked{% endif %}> Exposé ouvert (les élèves peuvent former un groupe)</label>{% endif %}
+<p><button class="btn">Enregistrer</button> <a class="btn sec" href="{{ url_for('ens_sec_cours', cid=cl.id, mid=mid or 0) }}">Annuler</a></p></form>
+{% endblock %}

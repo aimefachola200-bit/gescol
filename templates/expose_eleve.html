@@ -1,0 +1,24 @@
+{% extends "espace_eleve_base.html" %}{% block titre %}{{ x.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ x.titre }}</h1><p class="sous">{{ x.matiere }}{% if prof %} · {{ prof }}{% endif %}{% if x.remise %} · à remettre le {{ x.remise }}{% endif %}</p></div>
+<div class="actions"><a class="btn sec" href="{{ url_for('eleve_exposes') }}">Mes exposés</a></div></div>
+{% if x.axes or x.consigne %}<div class="carte">{% if x.axes %}<b>Axes de recherche</b><p style="white-space:pre-wrap">{{ x.axes }}</p>{% endif %}{% if x.consigne %}<b>Conseil du professeur</b><p style="white-space:pre-wrap">{{ x.consigne }}</p>{% endif %}</div>{% endif %}
+{% if not gr %}
+{% if x.ouvert %}<form method="post" class="carte"><h2 style="margin-top:0">Former mon groupe</h2>
+<p class="aide">Tu en fais partie automatiquement. Choisis tes camarades (au plus {{ x.taille_max }} élève(s) en tout) :</p>
+{% for e in libres %}<label style="display:block"><input type="checkbox" name="membres" value="{{ e.id }}"> {{ e.nom }} {{ e.prenoms }}</label>{% endfor %}
+<p><button class="btn">Créer le groupe</button></p></form>
+{% else %}<div class="carte"><p>Cet exposé est fermé.</p></div>{% endif %}
+{% else %}
+<div class="carte"><b>Mon groupe :</b> {% for m in mem %}{{ m.nom }} {{ m.prenoms }}{% if not loop.last %}, {% endif %}{% endfor %}
+<p>
+<a class="btn sec" href="{{ url_for('eleve_expose_garde', gid=gr.id) }}" target="_blank" rel="noopener">Page de garde</a>
+<a class="btn sec" href="{{ url_for('eleve_expose_doc', gid=gr.id, fmt='pdf') }}" target="_blank" rel="noopener">Exposé en PDF</a>
+<a class="btn sec" href="{{ url_for('eleve_expose_doc', gid=gr.id, fmt='docx') }}">Exposé en Word</a></p>
+{% if gr.note or gr.appreciation %}<p><b>Note :</b> {{ gr.note }} — {{ gr.appreciation }}</p>{% endif %}</div>
+<form method="post" action="{{ url_for('eleve_expose_enregistrer', gid=gr.id) }}" class="carte">
+{% if gr.statut == 'remis' %}<p><b>Exposé remis.</b> Demande à ton professeur de le rouvrir pour le modifier.</p>{% endif %}
+{% for cle, lib in S %}<label><b>{{ lib }}</b><textarea name="{{ cle }}" rows="{{ 3 if cle in ('plan','sources') else 7 }}" style="width:100%"{% if gr.statut == 'remis' %} readonly{% endif %}>{{ c.get(cle, '') }}</textarea></label>{% if guide.get(cle) and cle != 'plan' %}<details><summary>Guide de rédaction : {{ lib }}</summary><p style="white-space:pre-wrap">{{ guide[cle] }}</p></details>{% endif %}{% endfor %}
+{% if gr.statut != 'remis' %}<p><button class="btn sec" name="action" value="brouillon">Enregistrer le brouillon</button> <button class="btn" name="action" value="remettre" onclick="return confirm('Remettre l\'exposé au professeur ?')">Remettre à mon professeur</button></p>{% endif %}</form>
+{% endif %}
+{% endblock %}

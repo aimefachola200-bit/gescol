@@ -1149,28 +1149,61 @@ def enregistrer(app, H):
         H.journal("cep_photos_pdf", f"{cl['nom']} : {len(lignes)} photo(s)")
         return H.pdf_reponse(buf.getvalue(), f"photos_educmaster_{cl['nom'].replace(' ', '_')}.pdf")
 
+    def _ecrire_photos(z, cid, dossier=""):
+        """Ajoute au zip les photos d'une classe nommées numéro_NOM_Prénom.jpg ; renvoie (nb, [non exportés])."""
+        from PIL import Image
+        n, sans = 0, []
+        for l in photos_educmaster(cid):
+            if l["manque"] or not l["photo"]:
+                sans.append(f"{l['nom']} {l['prenoms']} : " + ("n° EducMaster manquant" if l["manque"] else "pas de photo"))
+                continue
+            im = Image.open(l["photo"]).convert("RGB")
+            b = io.BytesIO()
+            im.save(b, "JPEG", quality=90)
+            z.writestr(dossier + l["fichier"] + ".jpg", b.getvalue())
+            n += 1
+        return n, sans
+
+    def _zip_classe(cl):
+        import zipfile
+        out = io.BytesIO()
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_STORED) as z:
+            n, sans = _ecrire_photos(z, cl["id"])
+            if sans:
+                z.writestr("_non_exportes.txt", "Élèves non exportés :\r\n" + "\r\n".join(sans))
+        H.journal("photos_zip", f"{cl['nom']} : {n} photo(s)")
+        return Response(out.getvalue(), mimetype="application/zip",
+                        headers={"Content-Disposition": f"attachment; filename=photos_educmaster_{cl['nom'].replace(' ', '_')}.zip"})
+
     @app.route("/cep/classe/<int:cid>/photos-educmaster.zip")
     @H.connexion_requise("cep")
     def cep_photos_zip(cid):
+        return _zip_classe(_classe_cm2_ou_404(cid))
+
+    @app.route("/classes/<int:cid>/photos-renommees.zip")
+    @H.connexion_requise("documents")
+    def classe_photos_zip(cid):
+        """Primaire et secondaire, toute classe : un ZIP par classe, photos nommées numéro_NOM_Prénom.jpg."""
+        H.verifier_classe(cid)
+        return _zip_classe(H.classe_ou_404(cid))
+
+    @app.route("/classes/photos-renommees.zip")
+    @H.connexion_requise("documents")
+    def classes_photos_zip():
+        """Toutes les classes de l'enseignant ou de l'école : un seul ZIP, un dossier par classe."""
         import zipfile
-        from PIL import Image
-        cl = _classe_cm2_ou_404(cid)
-        out, n, sans = io.BytesIO(), 0, []
+        out, total = io.BytesIO(), 0
         with zipfile.ZipFile(out, "w", zipfile.ZIP_STORED) as z:
-            for l in photos_educmaster(cid):
-                if l["manque"] or not l["photo"]:
-                    sans.append(f"{l['nom']} {l['prenoms']} : " + ("n° EducMaster manquant" if l["manque"] else "pas de photo"))
-                    continue
-                im = Image.open(l["photo"]).convert("RGB")
-                b = io.BytesIO()
-                im.save(b, "JPEG", quality=90)
-                z.writestr(l["fichier"] + ".jpg", b.getvalue())
-                n += 1
-            if sans:
-                z.writestr("_non_exportes.txt", "Candidats non exportés :\r\n" + "\r\n".join(sans))
-        H.journal("cep_photos_zip", f"{cl['nom']} : {n} photo(s)")
+            rapport = []
+            for cl in H.classes_autorisees():
+                n, sans = _ecrire_photos(z, cl["id"], _net_nom(cl["nom"]) + "/")
+                total += n
+                rapport += [f"{cl['nom']} — {x}" for x in sans]
+            if rapport:
+                z.writestr("_non_exportes.txt", "Élèves non exportés :\r\n" + "\r\n".join(rapport))
+        H.journal("photos_zip_toutes", f"{total} photo(s)")
         return Response(out.getvalue(), mimetype="application/zip",
-                        headers={"Content-Disposition": f"attachment; filename=photos_educmaster_{cl['nom'].replace(' ', '_')}.zip"})
+                        headers={"Content-Disposition": "attachment; filename=photos_educmaster_toutes_les_classes.zip"})
 
     # ============================================================ 2. CARTE SCOLAIRE DU CANDIDAT
     CHAMPS_ELEVE = ("numero_table", "matricule_educmaster", "nip", "nom", "prenoms", "sexe", "date_naissance",

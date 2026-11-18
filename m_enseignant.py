@@ -29,6 +29,7 @@ import re
 from flask import Response, abort, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
+import ens_mode as EM
 from calcul import NIVEAUX_MATERNELLE, NIVEAUX_PRIMAIRE, NIVEAUX_SECONDAIRE
 
 NIVEAUX = NIVEAUX_MATERNELLE + NIVEAUX_PRIMAIRE + NIVEAUX_SECONDAIRE
@@ -352,7 +353,7 @@ def enregistrer(app, H):
         car = carriere_de(p["id"]) if p else {}
         return render_template("ens_tableau.html", classes=classes, p=p, car=car,
                                ecole=q("SELECT * FROM ecoles WHERE id=?", (H.eco(),), un=True),
-                               application=config.enseignant())
+                               application=config.enseignant(), prof=EM.prof_actif(), titulaire=EM.titulaire_actif())
 
     # ------------------------------------------------------------------ mon profil et mon école (application)
     @app.route("/enseignant/profil", methods=["GET", "POST"])
@@ -377,6 +378,37 @@ def enregistrer(app, H):
             flash("Profil et école enregistrés.", "success")
             return redirect(url_for("ens_tableau"))
         return render_template("ens_profil.html", f=v, **listes())
+
+    # ------------------------------------------------------------------ mon périmètre : titulaire de classe et/ou professeur (v2.8)
+    @app.route("/enseignant/perimetre", methods=["GET", "POST"])
+    @H.connexion_requise()
+    def ens_perimetre():
+        exiger_application()
+        if request.method == "POST":
+            if request.form.get("action") == "mode":
+                EM.definir(g.user["id"], request.form.get("mode"))
+                H.journal("enseignant_perimetre", EM.mode())
+                flash("Votre périmètre est enregistré.", "success")
+            elif request.form.get("action") == "matieres" and EM.prof_actif():
+                mes = {c["id"] for c in H.classes_autorisees() if c["niveau"] in NIVEAUX_SECONDAIRE}
+                ok = {m["id"] for m in q("SELECT id FROM matieres WHERE cycle='secondaire' AND actif=1")}
+                ex("DELETE FROM affectations WHERE user_id=? AND matiere_id IS NOT NULL", (g.user["id"],))
+                n = 0
+                for cle in request.form.getlist("cm"):
+                    try:
+                        cid, mid = (int(x) for x in cle.split("-"))
+                    except ValueError:
+                        continue
+                    if cid in mes and mid in ok:
+                        ex("INSERT OR IGNORE INTO affectations (user_id, classe_id, matiere_id) VALUES (?,?,?)", (g.user["id"], cid, mid))
+                        n += 1
+                H.journal("enseignant_perimetre", f"{n} classe(s) × matière(s)")
+                flash(f"{n} cours enregistré(s).", "success")
+            return redirect(url_for("ens_perimetre"))
+        sec = [c for c in H.classes_autorisees() if c["niveau"] in NIVEAUX_SECONDAIRE]
+        mats = q("SELECT id, nom FROM matieres WHERE cycle='secondaire' AND actif=1 ORDER BY ordre")
+        mes = {(a["classe_id"], a["matiere_id"]) for a in q("SELECT classe_id, matiere_id FROM affectations WHERE user_id=? AND matiere_id IS NOT NULL", (g.user["id"],))}
+        return render_template("ens_perimetre.html", modes=EM.MODES, mode=EM.mode(), classes=sec, matieres=mats, mes=mes)
 
     # ------------------------------------------------------------------ mes classes (application)
     @app.route("/enseignant/classes", methods=["GET", "POST"])

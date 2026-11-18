@@ -13,8 +13,15 @@
 <form method="post" action="{{ url_for('ens_sec_dupliquer', kind=d.kind, did=d.id) }}" style="display:inline"><button class="btn petit sec">Dupliquer</button></form>
 <form method="post" action="{{ url_for('ens_sec_supprimer', kind=d.kind, did=d.id) }}" style="display:inline" onsubmit="return confirm('Supprimer ce document ?')"><button class="btn petit danger">Supprimer</button></form></td></tr>{% endfor %}</table>
 {% else %}<p class="aide">Aucun document pour l'instant.</p>{% endif %}</div>
-{% if modeles or apc %}<div class="carte"><h2 style="margin-top:0">Modèles de la bibliothèque pour ce cours</h2>
+<div class="carte"><h2 style="margin-top:0">Exposés des élèves</h2>
+<p><a class="btn" href="{{ url_for('ens_sec_expose_nouveau', cid=cl.id, mid=mid) }}">+ Proposer un exposé à la classe</a></p>
+{% if exposes %}<table class="t"><tr><th>Thème</th><th>Groupes</th><th>Remise</th><th></th></tr>
+{% for x in exposes %}<tr><td><a href="{{ url_for('ens_sec_expose', xid=x.id) }}">{{ x.titre }}</a>{% if not x.ouvert %} <i>(fermé)</i>{% endif %}</td><td>{{ x.ng }}</td><td>{{ x.remise }}</td><td><a class="btn petit sec" href="{{ url_for('ens_sec_expose', xid=x.id) }}">Ouvrir</a></td></tr>{% endfor %}</table>{% endif %}
+{% if themes %}<details><summary>Thèmes de la bibliothèque pour cette classe ({{ themes|length }})</summary><table class="t">
+{% for i, e in themes %}<tr><td>{{ e[2] }}</td><td><a class="btn sec petit" href="{{ url_for('ress_sec_expose', i=i) }}">Voir développé</a> <a class="btn petit" href="{{ url_for('ens_sec_expose_nouveau', cid=cl.id, mid=mid, theme=i) }}">Proposer</a></td></tr>{% endfor %}</table></details>{% endif %}</div>
+{% if modeles or apc or tps %}<div class="carte"><h2 style="margin-top:0">Modèles de la bibliothèque pour ce cours</h2>
 <p class="aide">« Copier et modifier » place le modèle dans vos documents ; vous l'adaptez ensuite à votre classe.</p>
 <table class="t">{% for i, f in modeles %}<tr><td>Fiche</td><td>{{ f.titre }}</td><td><form method="post" action="{{ url_for('ens_sec_copier', src='fiche', i=i) }}"><input type="hidden" name="cid" value="{{ cl.id }}"><input type="hidden" name="mid" value="{{ mid }}"><button class="btn petit">Copier et modifier</button></form></td></tr>{% endfor %}
-{% for i, e in apc %}<tr><td>Devoir (APC)</td><td>{{ e.matiere }} {{ e.niveau }} — {{ e.situation[:80] }}…</td><td><form method="post" action="{{ url_for('ens_sec_copier', src='apc', i=i) }}"><input type="hidden" name="cid" value="{{ cl.id }}"><input type="hidden" name="mid" value="{{ mid }}"><button class="btn petit">Copier et modifier</button></form></td></tr>{% endfor %}</table></div>{% endif %}
+{% for i, e in apc %}<tr><td>{{ e.get('type') or 'Devoir (APC)' }}</td><td>{{ e.matiere }} {{ e.niveau }} — {{ e.situation[:80] }}…</td><td><form method="post" action="{{ url_for('ens_sec_copier', src='apc', i=i) }}"><input type="hidden" name="cid" value="{{ cl.id }}"><input type="hidden" name="mid" value="{{ mid }}"><button class="btn petit">Copier et modifier</button></form></td></tr>{% endfor %}
+{% for i, t in tps %}<tr><td>TP</td><td>{{ t.titre }} ({{ t.duree }})</td><td><form method="post" action="{{ url_for('ens_sec_copier', src='tp', i=i) }}"><input type="hidden" name="cid" value="{{ cl.id }}"><input type="hidden" name="mid" value="{{ mid }}"><button class="btn petit">Copier et modifier</button></form></td></tr>{% endfor %}</table></div>{% endif %}
 {% endblock %}

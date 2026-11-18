@@ -180,6 +180,10 @@ def jours_depuis_copie_externe():
 
 
 def enregistrer(app, H):
+    def retour():
+        """Page de retour des sauvegardes : celle de l'enseignant dans son application personnelle, sinon l'administration."""
+        return url_for("ens_sauvegarde") if config.enseignant() else url_for("en_ligne_page")
+
     from db import chemin_db, initialiser
 
     # ------------------------------------------------------------ réglages quand GESCOL est en ligne
@@ -334,7 +338,7 @@ def enregistrer(app, H):
                 H.ex("INSERT INTO parametres (cle, valeur) VALUES (?,?) ON CONFLICT(cle) DO UPDATE SET valeur=excluded.valeur", (cle, val))
             H.journal("sauvegarde_reglages", f"garder={garder} dossier={dest}")
             flash("Réglages des sauvegardes enregistrés.", "success")
-            return redirect(url_for("en_ligne_page"))
+            return redirect(retour())
         suivi = lire_suivi()
         return render_template("en_ligne.html", en_ligne=en_ligne(), hebergeur=hebergeur(),
                                adresse=(config.URL_PUBLIQUE or request.host_url.rstrip("/")),
@@ -367,7 +371,7 @@ def enregistrer(app, H):
             titre = nom
         else:
             flash("Choisissez une sauvegarde à vérifier.", "danger")
-            return redirect(url_for("en_ligne_page"))
+            return redirect(retour())
         H.journal("sauvegarde_verifiee", f"{titre} : {'ok' if ok else 'ECHEC'}")
         return render_template("en_ligne.html", en_ligne=en_ligne(), hebergeur=hebergeur(),
                                adresse=(config.URL_PUBLIQUE or request.host_url.rstrip("/")),
@@ -393,7 +397,7 @@ def enregistrer(app, H):
         creer_sauvegarde(chemin_db(), os.path.join(dossier_sauvegardes(), nom), "(sauvegarde manuelle)")
         H.journal("sauvegarde", nom)
         flash(f"Sauvegarde créée : {nom}.", "success")
-        return redirect(url_for("en_ligne_page"))
+        return redirect(retour())
 
     # ------------------------------------------------------------ restauration
     @app.route("/administration/restaurer", methods=["POST"])
@@ -402,24 +406,24 @@ def enregistrer(app, H):
         f = request.files.get("fichier")
         if not f or not f.filename.lower().endswith(".zip"):
             flash("Choisissez le fichier .zip téléchargé par « Télécharger une sauvegarde ».", "danger")
-            return redirect(url_for("en_ligne_page"))
+            return redirect(retour())
         if request.form.get("confirmation", "").strip().upper() != "RESTAURER":
             flash("Tapez RESTAURER pour confirmer : toutes les données actuelles seront remplacées.", "danger")
-            return redirect(url_for("en_ligne_page"))
+            return redirect(retour())
         donnees = f.read()
         ok, msgs, _infos = verifier_archive(donnees)
         if not ok:
             flash("Restauration refusée : " + " ".join(msgs), "danger")
-            return redirect(url_for("en_ligne_page"))
+            return redirect(retour())
         try:
             z = zipfile.ZipFile(io.BytesIO(donnees))
         except zipfile.BadZipFile:
             flash("Ce fichier n'est pas une sauvegarde GESCOL valide (zip illisible).", "danger")
-            return redirect(url_for("en_ligne_page"))
+            return redirect(retour())
         noms = z.namelist()
         if "gescol.db" not in noms or sum(i.file_size for i in z.infolist()) > 800 * 1024 * 1024:
             flash("Sauvegarde invalide : le fichier gescol.db est absent (ou l'archive est trop grosse).", "danger")
-            return redirect(url_for("en_ligne_page"))
+            return redirect(retour())
         fd, tmp = tempfile.mkstemp(suffix=".db")
         os.close(fd)
         try:
@@ -449,7 +453,7 @@ def enregistrer(app, H):
             src.close()
         except (ValueError, sqlite3.DatabaseError) as e:
             flash(f"Restauration refusée : {e}.", "danger")
-            return redirect(url_for("en_ligne_page"))
+            return redirect(retour())
         finally:
             os.remove(tmp)
         # fichiers (photos, logo, cachet, archives) : noms simples uniquement, jamais de chemin
@@ -471,3 +475,45 @@ def enregistrer(app, H):
     H.en_ligne = en_ligne
     H.creer_sauvegarde = creer_sauvegarde
     H.verifier_archive = verifier_archive
+
+    # ------------------------------------------------------------ v2.8 : sauvegarde et restauration dans l'application de l'enseignant
+    def exiger_app_enseignant():
+        if not config.enseignant() or g.user["role"] != "enseignant":
+            abort(404)
+
+    @app.route("/enseignant/sauvegarde")
+    @H.connexion_requise()
+    def ens_sauvegarde():
+        exiger_app_enseignant()
+        return render_template("ens_sauvegarde.html", sauvegardes=liste_sauvegardes(), suivi=lire_suivi(), jours_externe=jours_depuis_copie_externe())
+
+    @app.route("/enseignant/sauvegarde/telecharger", methods=["POST"])
+    @H.connexion_requise()
+    def ens_sauvegarde_telecharger():
+        """Sauvegarde à jour téléchargée aussitôt : à conserver hors du téléphone (courriel, clé USB, nuage)."""
+        exiger_app_enseignant()
+        return sauvegarde_un_clic.__wrapped__()
+
+    @app.route("/enseignant/sauvegarde/fichier/<nom>")
+    @H.connexion_requise()
+    def ens_sauvegarde_fichier(nom):
+        exiger_app_enseignant()
+        return sauvegarde_telecharger.__wrapped__(nom)
+
+    @app.route("/enseignant/sauvegarde/restaurer", methods=["POST"])
+    @H.connexion_requise()
+    def ens_sauvegarde_restaurer():
+        exiger_app_enseignant()
+        return restaurer.__wrapped__()
+
+    @app.route("/enseignant/sauvegarde/verifier", methods=["POST"])
+    @H.connexion_requise()
+    def ens_sauvegarde_verifier():
+        exiger_app_enseignant()
+        f = request.files.get("fichier")
+        if not f or not f.filename:
+            flash("Choisissez une sauvegarde à vérifier.", "danger")
+            return redirect(retour())
+        ok, msgs, infos = verifier_archive(f.read())
+        flash(("Sauvegarde valide : " if ok else "Sauvegarde refusée : ") + " ".join(msgs), "success" if ok else "danger")
+        return redirect(retour())

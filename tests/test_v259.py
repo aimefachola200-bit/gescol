@@ -41,6 +41,12 @@ t = PdfReader(io.BytesIO(r.data)).pages[0].extract_text(); assert "1236549879_FA
 r = c.get(f"/cep/classe/{cid}/photos-educmaster.zip"); z = zipfile.ZipFile(io.BytesIO(r.data))
 assert "1236549879_FACHOLA_Aimé.jpg" in z.namelist() or any(n.startswith("1236549879_FACHOLA_Aim") for n in z.namelist()), z.namelist()
 assert "_non_exportes.txt" in z.namelist()
+r = c.get(f"/classes/{cid}/photos-renommees.zip"); z = zipfile.ZipFile(io.BytesIO(r.data))
+assert any(n.startswith("1236549879_FACHOLA_Aim") for n in z.namelist()), z.namelist()      # toute classe, primaire ou secondaire
+r = c.get("/classes/photos-renommees.zip"); z = zipfile.ZipFile(io.BytesIO(r.data))
+assert any("/1236549879_FACHOLA_Aim" in n for n in z.namelist()), z.namelist()               # un dossier par classe
+assert "Photos de la classe" in c.get(f"/classes/{cid}").get_data(as_text=True)
+assert "Photos de toutes les classes" in c.get("/classes").get_data(as_text=True)
 assert "Photos EducMaster" in c.get(f"/cep?classe={cid}").get_data(as_text=True)
 print("OK")
 '''

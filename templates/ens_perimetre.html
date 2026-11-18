@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block titre %}Mon périmètre{% endblock %}
+{% block contenu %}
+<h1>Mon périmètre d'enseignant</h1>
+<p class="sous">Choisissez comment vous enseignez : vous pouvez changer à tout moment, vos documents sont conservés.</p>
+<form method="post" class="carte f"><input type="hidden" name="action" value="mode">
+{% for k, lib in modes %}<label style="display:block;margin:8px 0"><input type="radio" name="mode" value="{{ k }}" {{ 'checked' if mode==k }}> {{ lib }}</label>{% endfor %}
+<button class="btn">Enregistrer</button></form>
+{% if mode in ('professeur', 'les_deux') %}
+<h2>Mes matières par classe</h2>
+{% if not classes %}<p class="aide">Ajoutez d'abord vos classes du collège, du lycée ou de l'enseignement technique dans <a href="{{ url_for('ens_classes') }}">Mes classes</a> (niveaux 6ème à Terminale), puis revenez ici.</p>
+{% else %}
+<form method="post" class="carte"><input type="hidden" name="action" value="matieres">
+<div class="table-wrap"><table><tr><th>Matière</th>{% for c in classes %}<th>{{ c.nom }}</th>{% endfor %}</tr>
+{% for m in matieres %}<tr><td>{{ m.nom }}</td>{% for c in classes %}<td style="text-align:center"><input type="checkbox" name="cm" value="{{ c.id }}-{{ m.id }}" {{ 'checked' if (c.id, m.id) in mes }}></td>{% endfor %}</tr>{% endfor %}</table></div>
+<button class="btn" style="margin-top:10px">Enregistrer mes cours</button> <a class="btn sec" href="{{ url_for('ens_sec') }}">Ouvrir mes cours</a></form>
+{% endif %}{% endif %}
+{% endblock %}

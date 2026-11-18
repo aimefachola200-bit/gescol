@@ -45,6 +45,10 @@ STATUTS_ETABLISSEMENT = ["Public (collège d'enseignement général)", "Public (
 DOMAINES = ["Industriel (mécanique, électricité, froid…)", "Bâtiment et travaux publics", "Tertiaire (gestion, commerce, secrétariat)",
             "Informatique et numérique", "Agriculture et élevage", "Hôtellerie, restauration et tourisme", "Santé et action sociale",
             "Couture, mode et artisanat", "Autre"]
+SPECULATIONS = ["Maïs", "Manioc", "Igname", "Niébé", "Arachide", "Soja", "Riz", "Tomate", "Piment", "Gombo", "Légumes feuilles (amarante, grande morelle)",
+                "Oignon", "Chou", "Ananas", "Anacardier", "Palmier à huile", "Coton", "Verger (agrumes, mangue)", "Reboisement (teck, acacia…)", "Autre"]
+ESPECES_ANIMALES = ["Poulets de chair", "Poules pondeuses", "Pintades", "Lapins", "Porcins", "Caprins", "Ovins", "Bovins", "Aulacodes", "Poissons (tilapia, clarias)", "Abeilles", "Autre"]
+UNITES_AGRI = ["kg", "tonne", "sac", "litre", "tête", "plateau (30 œufs)", "m²", "are", "hectare", "unité"]
 DIPLOMES_ETP = ["CAP", "BEP", "BT", "DT", "Baccalauréat technique", "Certificat de qualification", "Autre"]
 CYCLE_ENT = ["1er cycle", "2nd cycle", "1er et 2nd cycles"]
 SEUIL_ADMIS, SEUIL_SECOND_TOUR = 10.0, 8.0
@@ -232,6 +236,13 @@ def enregistrer(app, H):
         except Exception:  # noqa: BLE001
             return []
 
+    def _table_ok(t):
+        try:
+            q(f"SELECT 1 FROM {t} LIMIT 1")
+            return True
+        except Exception:  # noqa: BLE001
+            return False
+
     def filieres():
         try:
             return [x["intitule"] for x in q("SELECT intitule FROM reg_sec_filieres WHERE portee=? ORDER BY intitule", (R.cle_portee("ecole"),))]
@@ -242,7 +253,13 @@ def enregistrer(app, H):
               "jours": JOURS, "examens": EXAMENS, "decisions": DECISIONS, "statuts_prof": STATUTS_PROF, "natures": NATURES,
               "sanctions": SANCTIONS, "centres": centres, "filieres": filieres, "periodes": lambda: list(H.config.PERIODES),
               "statuts_etab": STATUTS_ETABLISSEMENT, "domaines": DOMAINES, "diplomes_etp": DIPLOMES_ETP, "cycles_ent": CYCLE_ENT,
-              "etat": ["Bon", "Moyen", "À réparer", "Hors service"], "sexe": ["M", "F"]}
+              "etat": ["Bon", "Moyen", "À réparer", "Hors service"], "sexe": ["M", "F"],
+              "speculations": SPECULATIONS, "especes_animales": ESPECES_ANIMALES, "unites_agri": UNITES_AGRI,
+              "mouvements_agri": ["Entrée (achat, don, récolte)", "Sortie (consommation, travaux)", "Perte"],
+              "campagnes": lambda: [x["intitule"] for x in q("SELECT intitule FROM reg_sec_campagnes WHERE portee=? ORDER BY intitule DESC", (R.cle_portee("ecole"),))]
+              if _table_ok("reg_sec_campagnes") else [],
+              "parcelles": lambda: [x["nom"] for x in q("SELECT nom FROM reg_sec_parcelles WHERE portee=? ORDER BY nom", (R.cle_portee("ecole"),))]
+              if _table_ok("reg_sec_parcelles") else []}
     G = R.Groupe(app, H, "sec", "Établissement secondaire", "secondaire", ico="ecole",
                  ecriture_roles={"admin", "fondateur", "directeur", "secretaire", "responsable", "chef_service"},
                  sous_titre="Programme et coefficients, professeurs, conseils de classe, discipline, emplois du temps, examens BEPC / BAC, "
@@ -416,6 +433,58 @@ def enregistrer(app, H):
         fiches={"attestation": ("Attestation de stage", "valider-cercle", doc_stage)},
         colonnes=("eleve", "filiere", "entreprise", "tuteur", "dateDebut", "dateFin", "duree", "note"),
         defauts=lambda: dict(ent_ecole()), doc="Registre des stages")
+
+
+    # ================================================================== lycée agricole : ferme-école et exploitation
+    G.registre("campagnes", "Campagnes agricoles", [
+        ("intitule", "Campagne (ex. 2026-2027, grande saison pluvieuse)", "texte"), ("debut", "Début", "date"), ("fin", "Fin", "date"),
+        ("objectifs", "Objectifs de production", "long"), ("bilan", "Bilan de la campagne", "long")], unite="campagne", oblig="intitule",
+        ordre="debut DESC", portee="ecole", feuille="Campagnes", entite=True, niveaux=["ECOLE"], unique=("intitule",),
+        defauts=lambda: dict(ent_ecole()), doc="Campagnes agricoles de la ferme-école")
+    G.registre("parcelles", "Parcelles et champs-école", [
+        ("nom", "Parcelle / champ", "texte"), ("superficie", "Superficie (ares)", "decimal"), ("sol", "Type de sol", "texte"),
+        ("culture", "Culture en place", "choix:speculations"), ("campagne", "Campagne", "choix:campagnes"), ("classe", "Classe responsable", "liste:classes_sec"),
+        ("date_semis", "Date de semis / plantation", "date"), ("date_recolte", "Récolte prévue", "date"), ("etat", "État", "choix:etat"),
+        ("observations", "Observations", "long")], unite="parcelle", oblig="nom", ordre="nom", portee="ecole", feuille="Parcelles",
+        entite=True, niveaux=["ECOLE"], unique=("nom",), filtres=("culture", "campagne"), totaux=("superficie",),
+        defauts=lambda: dict(ent_ecole(), etat="Bon"), doc="Parcelles et champs-école")
+    G.registre("travaux_agri", "Cahier des travaux agricoles", [
+        ("date", "Date", "date"), ("parcelle", "Parcelle", "choix:parcelles"), ("travail", "Travail (labour, semis, sarclage, traitement, récolte…)", "texte"),
+        ("classe", "Classe", "liste:classes_sec"), ("intervenants", "Nombre d'élèves", "entier"), ("heures", "Durée (heures)", "decimal"),
+        ("intrants", "Intrants utilisés", "texte"), ("observations", "Observations", "long")], unite="travail", oblig="travail",
+        ordre="date DESC", portee="ecole", feuille="Travaux", entite=True, niveaux=["ECOLE"], filtres=("parcelle", "classe"), totaux=("heures",),
+        defauts=lambda: dict(ent_ecole()), doc="Cahier des travaux agricoles")
+    G.registre("cheptel", "Cheptel et élevages", [
+        ("lot", "Lot / bande / enclos", "texte"), ("espece", "Espèce", "choix:especes_animales"), ("effectif", "Effectif", "entier"),
+        ("date_mise", "Date de mise en place", "date"), ("poids_initial", "Poids moyen initial (kg)", "decimal"),
+        ("poids_actuel", "Poids moyen actuel (kg)", "decimal"), ("aliment_kg", "Aliment consommé (kg)", "decimal"), ("morts", "Mortalité (têtes)", "entier"),
+        ("classe", "Classe responsable", "liste:classes_sec"), ("etat", "État sanitaire", "choix:etat"), ("observations", "Observations", "long")],
+        unite="lot", oblig="lot", ordre="date_mise DESC", portee="ecole", feuille="Cheptel", entite=True, niveaux=["ECOLE"],
+        filtres=("espece", "etat"), totaux=("effectif", "morts"), defauts=lambda: dict(ent_ecole(), etat="Bon"), doc="Cheptel et élevages")
+    G.registre("sante_animale", "Santé animale (vaccinations et soins)", [
+        ("date", "Date", "date"), ("lot", "Lot", "texte"), ("espece", "Espèce", "choix:especes_animales"), ("acte", "Acte (vaccin, déparasitage, traitement)", "texte"),
+        ("produit", "Produit / vaccin", "texte"), ("effectif", "Effectif traité", "entier"), ("rappel", "Prochain rappel", "date"),
+        ("intervenant", "Intervenant (vétérinaire, enseignant)", "texte")], unite="acte", oblig="acte", ordre="date DESC", portee="ecole",
+        feuille="Santé animale", entite=True, niveaux=["ECOLE"], filtres=("espece",), totaux=("effectif",),
+        defauts=lambda: dict(ent_ecole()), doc="Registre de santé animale")
+    G.registre("intrants", "Intrants et stocks de la ferme", [
+        ("date", "Date", "date"), ("produit", "Produit (semences, engrais, aliments, produits phytosanitaires…)", "texte"),
+        ("mouvement", "Mouvement", "choix:mouvements_agri"), ("quantite", "Quantité", "decimal"), ("unite", "Unité", "choix:unites_agri"),
+        ("montant", "Montant (FCFA)", "entier"), ("observations", "Observations", "long")], unite="mouvement", oblig="produit", ordre="date DESC",
+        portee="ecole", feuille="Intrants", entite=True, niveaux=["ECOLE"], filtres=("mouvement",), totaux=("montant",),
+        defauts=lambda: dict(ent_ecole()), doc="Intrants et stocks")
+    G.registre("production", "Récoltes et ventes de la production", [
+        ("date", "Date", "date"), ("produit", "Produit", "texte"), ("campagne", "Campagne", "choix:campagnes"), ("quantite", "Quantité", "decimal"),
+        ("unite", "Unité", "choix:unites_agri"), ("vendu", "Quantité vendue", "decimal"), ("prix", "Prix unitaire (FCFA)", "entier"),
+        ("montant", "Montant encaissé (FCFA)", "entier"), ("acheteur", "Acheteur", "texte")], unite="opération", oblig="produit",
+        ordre="date DESC", portee="ecole", feuille="Production", entite=True, niveaux=["ECOLE"], filtres=("campagne",), totaux=("montant",),
+        defauts=lambda: dict(ent_ecole()), doc="Récoltes et ventes (recettes de la ferme-école)")
+    G.registre("materiel_agri", "Matériel et outillage agricoles", [
+        ("materiel", "Matériel (tracteur, motoculteur, pulvérisateur, houes…)", "texte"), ("quantite", "Quantité", "entier"),
+        ("etat", "État", "choix:etat"), ("date_acq", "Date d'acquisition", "date"), ("valeur", "Valeur (FCFA)", "entier"),
+        ("observations", "Observations", "long")], unite="matériel", oblig="materiel", ordre="materiel", portee="ecole",
+        feuille="Matériel agricole", entite=True, niveaux=["ECOLE"], filtres=("etat",), totaux=("quantite", "valeur"),
+        defauts=lambda: dict(ent_ecole(), etat="Bon"), doc="Matériel et outillage agricoles")
 
     # ================================================================== identité (pilotage et structures)
     G.registre("etablissement", "Identité de l'établissement", [

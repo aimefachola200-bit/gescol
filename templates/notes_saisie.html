@@ -23,7 +23,7 @@
 input.err{outline:2px solid #B42318!important;background:#FEE4E2!important;color:#B42318;font-weight:700}</style>
 {% endif %}
 {% if not eleves %}<div class="carte">Aucun élève inscrit dans cette classe.</div>{% else %}
-<form method="post" id="grille">
+<form method="post" id="grille" data-hors-ligne="Notes {{ cl.nom }}{% if per %} – {{ per }}{% endif %}">
 <div class="tw"><table class="t saisie">
   <tr><th class="sticky">Élève</th>
     {% for m in matieres %}<th class="v c" title="{{ m.nom }}">{{ m.nom }}{{ ' *' if m.mode_calcul=='exclu_2_3' and cl.cycle=='primaire' else '' }}{% if cl.cycle=='secondaire' and cl.niveau not in ['6ème','5ème'] %} (×{{ '%g'|format(m.coefficient) }}){% endif %}</th>{% endfor %}

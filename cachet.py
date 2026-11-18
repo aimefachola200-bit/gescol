@@ -273,3 +273,104 @@ def dessiner_nom(c, cx, cy, lignes, couleur="bleu", largeur=GRIFFE_LARGEUR, haut
 def hauteur_nom(lignes, largeur=GRIFFE_LARGEUR):
     """Hauteur (points) qu'occupera la griffe pour ces lignes et cette largeur."""
     return _mise_en_page_griffe(lignes, float(largeur))[1]
+
+
+# ---------------------------------------------------------------- rendus PNG (Word et PDF issus des pages)
+def _police_png(taille):
+    import os
+    from PIL import ImageFont
+    base = os.path.dirname(os.path.abspath(__file__))
+    for p in (os.path.join(base, "static", "fonts", "LiberationSerif-Bold.ttf"), "DejaVuSans-Bold.ttf"):
+        try:
+            return ImageFont.truetype(p, max(6, int(round(taille))))
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
+def _rvb(couleur):
+    h = COULEURS.get(couleur, couleur or COULEURS["bleu"]).lstrip("#")
+    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), 235)
+
+
+def png_nom(lignes, couleur="bleu", largeur=260):
+    """Griffe rectangulaire en PNG transparent (même composition que svg_nom)."""
+    import io
+    from PIL import Image, ImageDraw
+    S = 3
+    spec, h, pad = _mise_en_page_griffe(lignes, float(largeur))
+    L, H = int(largeur * S), int(h * S)
+    im = Image.new("RGBA", (L, H), (255, 255, 255, 0))
+    d = ImageDraw.Draw(im)
+    col = _rvb(couleur)
+    d.rectangle([2 * S, 2 * S, L - 2 * S, H - 2 * S], outline=col, width=int(2.4 * S))
+    m = int((1.6 + pad * 0.55) * S)
+    d.rectangle([m, m, L - m, H - m], outline=col, width=max(1, S))
+    h_texte = sum(s[2] * 1.3 for s in spec)
+    y = (h - h_texte) / 2
+    for t, _police, taille in spec:
+        f = _police_png(taille * S)
+        w = d.textlength(t, font=f)
+        if w > L - 2 * pad * S:
+            f = _police_png(taille * S * (L - 2 * pad * S) / w)
+            w = d.textlength(t, font=f)
+        y += taille * 1.3
+        d.text(((L - w) / 2, (y - taille * 0.3) * S), t, font=f, fill=col, anchor="ls")
+    out = io.BytesIO()
+    im.resize((int(largeur * 2), int(h * 2))).save(out, "PNG")
+    return out.getvalue()
+
+
+def png(sup="", inf="", centre="", couleur="bleu", taille=180):
+    """Cachet circulaire en PNG transparent (même composition que svg)."""
+    import io
+    from PIL import Image, ImageDraw
+    S = 3
+    T = int(taille * S)
+    r = taille / 2
+    rt, fs = r * 0.74, r * 0.17
+    col = _rvb(couleur)
+    im = Image.new("RGBA", (T, T), (255, 255, 255, 0))
+    d = ImageDraw.Draw(im)
+    for rayon, ep in ((r - 3, 3.2), (r - 8, 1.0), (r * 0.56, 1.4)):
+        d.ellipse([(r - rayon) * S, (r - rayon) * S, (r + rayon) * S, (r + rayon) * S], outline=col, width=max(1, int(ep * S)))
+
+    def lettre(ch, x, y, rot, t):
+        f = _police_png(t * S)
+        cote = int(t * S * 2)
+        tmp = Image.new("RGBA", (cote, cote), (255, 255, 255, 0))
+        ImageDraw.Draw(tmp).text((cote / 2, cote / 2), ch, font=f, fill=col, anchor="mm")
+        tmp = tmp.rotate(rot, resample=Image.BICUBIC)
+        im.paste(tmp, (int(x * S - cote / 2), int(y * S - cote / 2)), tmp)
+
+    def arc(texte, haut):
+        texte = (texte or "").upper()
+        if not texte:
+            return
+        t, angs = _angles(texte, rt, fs)
+        total, cumul = sum(angs), 0
+        for ch, pas in zip(texte, angs):
+            milieu = cumul + pas / 2
+            cumul += pas
+            a = (90 + total / 2 - milieu) if haut else (270 - total / 2 + milieu)
+            rot = (a - 90) if haut else (a - 270)
+            lettre(ch, r + rt * math.cos(math.radians(a)), r - rt * math.sin(math.radians(a)), rot, t)
+
+    arc(sup, True)
+    arc(inf, False)
+    for a in (0, 180):
+        x, rr = r + rt * math.cos(math.radians(a)), fs * 0.55
+        pts = []
+        for k in range(10):
+            ang = math.radians(-90 + 36 * k)
+            q_ = rr if k % 2 == 0 else rr * 0.42
+            pts.append(((x + q_ * math.cos(ang)) * S, (r + q_ * math.sin(ang)) * S))
+        d.polygon(pts, fill=col)
+    lignes = [l.strip() for l in (centre or "").upper().split("|") if l.strip()] or [""]
+    fc = _taille_centre(lignes, r)
+    y0 = r - (len(lignes) - 1) * fc * 0.6
+    for k, l in enumerate(lignes):
+        d.text((r * S, (y0 + k * fc * 1.2) * S), l, font=_police_png(fc * S), fill=col, anchor="mm")
+    out = io.BytesIO()
+    im.resize((int(taille * 2), int(taille * 2))).save(out, "PNG")
+    return out.getvalue()

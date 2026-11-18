@@ -7,7 +7,7 @@
 <div class="carte">
   <h2 style="margin-top:0">Identité</h2>
   <div class="ligne">
-    <div><label for="nom">Nom de l'école *</label><input id="nom" name="nom" required data-geo="ecole" value="{{ e.nom or '' }}" placeholder="EPP Akpakpa Centre / Groupe A"></div>
+    <div><label for="nom">Nom de l'école *</label><input id="nom" name="nom" required data-geo="ecole" list="dl-ecoles-ref" autocomplete="off" value="{{ e.nom or '' }}" placeholder="EPP Akpakpa Centre / Groupe A"></div>
     <div><label for="sigle">Sigle</label><input id="sigle" name="sigle" value="{{ e.sigle or '' }}" maxlength="15"></div>
     <div><label for="statut">Statut</label><select id="statut" name="statut">{% for s in ['Publique','Privée','Confessionnelle','Communautaire'] %}<option {{ 'selected' if e.statut==s }}>{{ s }}</option>{% endfor %}</select></div>
     <div><label for="ordre">Ordre d'enseignement</label><select id="ordre" name="ordre"><option value="">—</option>{% for o in ordres %}<option {{ 'selected' if e.ordre==o }}>{{ o }}</option>{% endfor %}</select></div>
@@ -105,7 +105,15 @@
 </div>
 <div class="actions"><button class="btn">Enregistrer</button><a class="btn sec" href="{{ url_for('ecoles') }}">Annuler</a></div>
 </form>
+<datalist id="dl-ecoles-ref"></datalist>
 <script>
+(function(){var f=document.querySelector('form.f'),dl=document.getElementById('dl-ecoles-ref'),t,res=[];
+f.nom.addEventListener('input',function(){clearTimeout(t);var v=f.nom.value.trim();if(v.length<3)return;
+t=setTimeout(function(){var p=new URLSearchParams({q:v,dep:f.departement.value,cs:f.cs.value});
+fetch('{{ url_for("referentiel_ecoles_chercher") }}?'+p).then(function(r){return r.json()}).then(function(l){res=l;dl.innerHTML='';
+l.forEach(function(e){var o=document.createElement('option');o.value=e.nom;o.label=e.commune+(e.cs?' · '+e.cs:'');dl.appendChild(o);});}).catch(function(){});},250);});
+f.nom.addEventListener('change',function(){var e=res.find(function(x){return x.nom===f.nom.value});if(!e)return;
+if(!f.departement.value)f.departement.value=e.departement;if(!f.commune.value)f.commune.value=e.commune;if(!f.cs.value&&e.cs)f.cs.value=e.cs;});})();
 (function(){var f=document.querySelector('form.f'),img=document.getElementById('apercu-cachet'),t;
 function maj(){clearTimeout(t);t=setTimeout(function(){var p=new URLSearchParams({sup:f.cachet_sup.value,inf:f.cachet_inf.value,centre:f.cachet_centre.value,couleur:f.querySelector('[name=cachet_couleur]:checked').value});img.src='{{ url_for("cachet_svg") }}?'+p;},250);}
 ['cachet_sup','cachet_inf','cachet_centre'].forEach(function(n){f[n].addEventListener('input',maj)});

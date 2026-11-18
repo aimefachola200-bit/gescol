@@ -64,3 +64,33 @@ def code(e, cs_nom=""):
 def compter(cs_nom, departement=None):
     s = ecoles_de_cs(cs_nom, departement, a_confirmer=True)
     return {"sures": sum(1 for e in s if e["sure"]), "a_confirmer": sum(1 for e in s if not e["sure"])}
+
+
+def chercher(texte, departement="", cs_nom="", limite=25):
+    """Suggestions de noms d'écoles (saisie assistée) : la fin du nom ou n'importe quel mot, limitées au département et à la CS si connus."""
+    D = donnees()
+    mots = [m for m in RV.cle(texte or "").split() if m]
+    if not mots or len((texte or "").strip()) < 3:
+        return []
+    i_cs = None
+    if cs_nom:
+        c = RV.cle(cs_nom)
+        i_cs = next((i for i, n in enumerate(D["cs"]) if RV.cle(n) == c), None)
+    out = []
+    for dep, communes in D["d"]:
+        if departement and RV.cle(dep) != RV.cle(departement):
+            continue
+        for com, arrs in communes:
+            cand = D["co"].get(dep + "|" + com, [])
+            for arr, lst in arrs:
+                for nom, t, an, ics in lst:
+                    cle = RV.cle(nom)
+                    if not all(m in cle for m in mots):
+                        continue
+                    if i_cs is not None and not (ics == i_cs or (ics == -1 and i_cs in cand)):
+                        continue
+                    cs = D["cs"][ics] if ics is not None and 0 <= ics < len(D["cs"]) else ""
+                    out.append({"nom": nom, "type": "EM" if t == "M" else "EP", "departement": dep, "commune": com, "arrondissement": arr, "cs": cs})
+                    if len(out) >= limite:
+                        return out
+    return out

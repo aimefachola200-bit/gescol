@@ -37,6 +37,7 @@ header.top.eleve{background:#5B2C83}
     <a href="{{ url_for('eleve_resultats') }}" class="{{ 'actif' if ep=='eleve_resultats' }}">Résultats et bulletins</a>
     <a href="{{ url_for('eleve_absences') }}" class="{{ 'actif' if ep=='eleve_absences' }}">Absences</a>
     <a href="{{ url_for('eleve_carte') }}" class="{{ 'actif' if ep=='eleve_carte' }}">Ma carte</a>
+    {% if SECONDAIRE and ep_existe('eleve_exposes') %}<a href="{{ url_for('eleve_exposes') }}" class="{{ 'actif' if ep.startswith('eleve_expose') }}">Mes exposés</a>{% endif %}
     <div class="user">{{ moi.prenoms }} {{ moi.nom }} · <a href="{{ url_for('eleve_mdp') }}">Mot de passe</a> · <a href="{{ url_for('eleve_logout') }}">Déconnexion</a></div>
     {% else %}
     <a href="{{ url_for('eleve_login') }}" class="{{ 'actif' if ep=='eleve_login' }}">Espace élève</a>
@@ -51,7 +52,7 @@ header.top.eleve{background:#5B2C83}
     {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
   {% endwith %}
   {% block contenu %}{% endblock %}
-  <footer class="credit">GESCOL {{ VERSION }} · {{ ECOLE.nom }} · Conception : {{ CONCEPTEUR }}</footer>
+  <footer class="credit">GESCOL {{ VERSION }} · {{ ECOLE.nom }}{% if not request.path.startswith("/eleve/exposes") %} · Conception : {{ CONCEPTEUR }}{% endif %}</footer>
 </main>
 </body>
 </html>

@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block titre %}{{ x.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ x.titre }}</h1><p class="sous">{{ x.matiere }} · {{ cl.nom }}{% if x.remise %} · à remettre le {{ x.remise }}{% endif %} · groupes de {{ x.taille_max }} au plus{% if not x.ouvert %} · <b>fermé</b>{% endif %}</p></div>
+<div class="actions"><a class="btn" href="{{ url_for('ens_sec_expose_modifier', xid=x.id) }}">Modifier</a>
+{% if x.source and x.source.startswith('theme:') %}<a class="btn sec" href="{{ url_for('ress_sec_expose', i=x.source[6:]|int) }}">Thème développé</a>{% endif %}
+<a class="btn sec" href="{{ url_for('ens_sec_cours', cid=cl.id, mid=x.matiere_id or 0) }}">Retour au cours</a>
+<form method="post" action="{{ url_for('ens_sec_expose_supprimer', xid=x.id) }}" style="display:inline" onsubmit="return confirm('Supprimer cet exposé et les travaux des groupes ?')"><button class="btn danger">Supprimer</button></form></div></div>
+{% if x.axes %}<div class="carte"><b>Axes de recherche</b><p style="white-space:pre-wrap">{{ x.axes }}</p>{% if x.consigne %}<b>Consigne</b><p style="white-space:pre-wrap">{{ x.consigne }}</p>{% endif %}</div>{% endif %}
+<div class="carte"><h2 style="margin-top:0">Groupes ({{ groupes|length }})</h2>
+{% if groupes %}<table class="t"><tr><th>Élèves</th><th>État</th><th>Note</th><th></th></tr>
+{% for r in groupes %}<tr><td>{% for m in r.membres %}{{ m.nom }} {{ m.prenoms }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+<td>{{ 'Remis' if r.statut == 'remis' else 'Brouillon' }}</td><td>{{ r.note }}</td>
+<td><a class="btn petit" href="{{ url_for('ens_sec_expose_groupe', gid=r.id) }}">Lire</a></td></tr>{% endfor %}</table>
+{% else %}<p class="aide">Aucun groupe pour l'instant : les élèves se rendent dans « Mes exposés » de leur espace.</p>{% endif %}</div>
+{% if sans %}<div class="carte"><b>Élèves sans groupe ({{ sans|length }})</b><p>{% for e in sans %}{{ e.nom }} {{ e.prenoms }}{% if not loop.last %} · {% endif %}{% endfor %}</p></div>{% endif %}
+{% endblock %}

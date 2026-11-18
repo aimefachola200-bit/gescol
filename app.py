@@ -32,6 +32,10 @@ ROLES = {
     "secretaire": "Secrétaire",
     "comptable": "Comptable",
     "enseignant": "Enseignant",
+    # v2.7 : administration d'un établissement secondaire / technique
+    "censeur": "Censeur / Directeur des études",
+    "surveillant": "Surveillant général",
+    "econome": "Intendant / Économe",
     # applications de la Circonscription scolaire et de la DDEMP
     "responsable": "Responsable (CCS / Directeur départemental)",
     "cp": "Conseiller pédagogique",
@@ -41,7 +45,8 @@ ROLES = {
     "observateur": "Observateur (niveau national, lecture seule)",
 }
 # rôles proposés selon l'application
-ROLES_ECOLE = ("fondateur", "admin", "directeur", "secretaire", "comptable", "enseignant")
+ROLES_ECOLE = ("fondateur", "admin", "directeur", "secretaire", "comptable", "enseignant") + (
+    ("censeur", "surveillant", "econome") if config.secondaire() else ())
 ROLES_JURIDICTION = ("admin", "responsable", "cp", "chef_service", "agent",
                      # v1.6 : comptes directeur / enseignant d'une école de la juridiction (école via
                      # utilisateurs.ecole_id, classes via affectations) – mêmes droits que dans GESCOL
@@ -112,6 +117,18 @@ DROITS = {
     # v1.22 : bureaux de l'UASCEP (écriture contrôlée par m_uascep selon l'édition et le rôle ; enseignant : lecture)
     "uascep": {"admin", "directeur", "secretaire", "enseignant", "responsable", "chef_service", "cp", "agent"},
 }
+# v2.7 : droits des fonctions de l'administration du secondaire et du technique, dérivés des rôles existants :
+#  - l'intendant / économe a la comptabilité du comptable ; le censeur les droits du directeur, hors finances, paramètres et écoles ;
+#  - le surveillant général a la vie scolaire (élèves, appel, registres, messages, affichage, parents, communication).
+_VIE_SCOLAIRE = {"eleves", "appel", "registre", "affichage", "parents", "communication", "maitre_semaine"}
+for _m, _r in DROITS.items():
+    if "comptable" in _r:
+        _r.add("econome")
+    if "directeur" in _r and _m not in FINANCES_HORS_CP | {"parametres", "ecoles", "carriere"}:
+        _r.add("censeur")
+    if _m in _VIE_SCOLAIRE:
+        _r.add("surveillant")
+DROITS["epreuves"] |= {"censeur"}
 # v1.14 : droits supplémentaires de l'enseignant dans SON application personnelle (GESCOL Enseignant)
 DROITS_ENSEIGNANT_AUTONOME = {"synoptique"}
 TYPES_DOCS = {
@@ -423,7 +440,7 @@ MODULES = ["m_performance",  # v1.33 : compression gzip (en premier : passe en d
            "m_juridiction", "a_transmission", "a_tableau", "a_cep", "a_personnel", "a_structure", "a_visites", "a_fiches",
            # v1.6 : tableau synoptique, vivres et stock, comité d'évaluation et épreuves (toutes éditions) ;
            # CS / DDEMP : divisions, unités pédagogiques, modules des écoles ouverts aux applications d'administration
-           "m_synoptique", "m_partage", "m_preparation", "m_prep_classes", "m_maternelle", "m_evalprep", "guide_utilisation", "m_export", "m_uascep", "m_stock_cantine", "m_magasins_cantine", "m_graphiques_accueil", "m_orientation", "m_annonces_personnel", "m_sec_supervision", "maj_auto", "m_ecoles_ref", "m_ressources_sec", "m_budget_ecole", "m_telechargements", "m_ens_sec", "m_insignes", "m_schemas", "m_textes", "m_vocab_sec", "m_epreuves", "m_calendrier_officiel", "m_themes_up", "a_divisions", "a_up", "a_integration", "a_synoptique", "a_tb_division",
+           "m_synoptique", "m_partage", "m_preparation", "m_prep_classes", "m_maternelle", "m_evalprep", "guide_utilisation", "m_export", "m_uascep", "m_stock_cantine", "m_magasins_cantine", "m_graphiques_accueil", "m_orientation", "m_annonces_personnel", "m_sec_supervision", "maj_auto", "m_ecoles_ref", "m_ressources_sec", "m_budget_ecole", "m_telechargements", "m_ens_sec", "m_exposes_sec", "m_signatures", "m_rapports_sec", "m_insignes", "m_schemas", "m_textes", "m_vocab_sec", "m_epreuves", "m_calendrier_officiel", "m_themes_up", "a_divisions", "a_up", "a_integration", "a_synoptique", "a_tb_division",
            # v1.7 : conseillers pédagogiques — programmation, journal des activités, bilans trimestriel et annuel
            "a_cp",
            # v1.8 : Ma classe, accueil par rôle, groupes de remédiation ; alertes de pilotage (CS / DDEMP)

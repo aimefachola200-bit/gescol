@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block titre %}Exposé développé{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ e[2] }}</h1><p class="aide">{{ e[0] }} · classes {{ e[1] }} · {{ c.mots }}</p></div>
+<div class="actions"><a class="btn sec" href="{{ url_for('ress_sec', vue='exposes') }}">← Thèmes</a></div></div>
+<div class="carte"><h2 style="margin-top:0">Plan détaillé</h2><ol style="list-style:none;padding-left:0">{% for p in c.plan %}<li>{{ p }}</li>{% endfor %}</ol></div>
+<div class="carte"><h2 style="margin-top:0">Introduction</h2><ul>{% for p in c.introduction %}<li>{{ p }}</li>{% endfor %}</ul></div>
+<div class="carte"><h2 style="margin-top:0">Développement</h2>{% for d in c.developpement %}<h3>{{ d.titre }}</h3><ul>{% for s in d.etapes %}<li>{{ s }}</li>{% endfor %}</ul>{% endfor %}</div>
+<div class="carte"><h2 style="margin-top:0">Conclusion</h2><ul>{% for p in c.conclusion %}<li>{{ p }}</li>{% endfor %}</ul></div>
+<div class="carte"><h2 style="margin-top:0">Sources à consulter</h2><ul>{% for p in c.sources %}<li>{{ p }}</li>{% endfor %}</ul></div>
+{% endblock %}

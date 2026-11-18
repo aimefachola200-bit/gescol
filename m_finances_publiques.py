@@ -98,7 +98,24 @@ def type_piece(contenu, ext):
 
 
 # ============================================================ module
+CATEGORIES_DEPENSES_SEC = [
+    "Restauration, internat et vivres", "Fournitures de bureau et scolaires", "Semences, plants et engrais", "Produits phytosanitaires et vétérinaires",
+    "Aliments du bétail, de la volaille et alevins", "Carburant et entretien des machines", "Matières d'œuvre et consommables d'atelier",
+    "Entretien et réparations", "Eau, électricité, téléphone et internet", "Examens et évaluations", "Transport et déplacements",
+    "Rémunération des vacataires et ouvriers", "Équipements et mobilier", "Cotisations et reversements (APE, UASCEP…)", "Autres dépenses",
+]
+ORIGINES_RECETTES_SEC = [
+    "Subvention de l'État", "Subvention de la commune", "Contributions des parents / APE", "Frais d'inscription et de réinscription",
+    "Frais d'examens et de compositions", "Vente de produits de l'exploitation", "Prestations d'ateliers et de travaux",
+    "Dons et partenaires", "Autres recettes",
+]
+
+
 def enregistrer(app, H):
+    import config as _cfg
+    if _cfg.secondaire():       # v2.7 : le secondaire et le technique n'ont ni cantine d'école primaire ni frais CEP : plan adapté
+        CATEGORIES_DEPENSES[:] = CATEGORIES_DEPENSES_SEC
+        ORIGINES_RECETTES[:] = ORIGINES_RECETTES_SEC
     q, ex, config = H.q, H.ex, H.config
 
     H.schema("""

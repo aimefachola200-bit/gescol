@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% block titre %}Budget prévisionnel{% endblock %}
 {% macro f(v) %}{{ m(v) if v else '' }}{% endmacro %}
 {% block contenu %}
-<div class="entete"><div><h1>Budget prévisionnel {{ annee }}</h1><p class="aide">Modèle officiel des EM / EPP : budget prévisionnel, puis compte rendu d'exécution. La subvention de l'État est comparée aux recettes déjà enregistrées.</p></div></div>
+<div class="entete"><div><h1>Budget prévisionnel {{ annee }}</h1><p class="aide">{% if SEC %}Budget de l'établissement (collège, lycée, enseignement technique, lycée agricole) : budget prévisionnel, puis compte rendu d'exécution.{% else %}Modèle officiel des EM / EPP : budget prévisionnel, puis compte rendu d'exécution.{% endif %} La subvention de l'État est comparée aux recettes déjà enregistrées.</p></div></div>
 <nav class="onglets">
  <a class="{{ 'actif' if vue=='saisie' }}" href="?vue=saisie">Saisie</a>
  <a class="{{ 'actif' if vue=='previsionnel' }}" href="?vue=previsionnel">Budget prévisionnel</a>
@@ -26,8 +26,9 @@
 <p class="actions"><button class="btn">Enregistrer</button></p></form>
 {% elif vue=='previsionnel' %}
 <div class="carte">
-<p style="text-align:center"><b>RÉPUBLIQUE DU BÉNIN</b><br>MINISTÈRE DES ENSEIGNEMENTS MATERNEL ET PRIMAIRE<br>DIRECTION DÉPARTEMENTALE DES ENSEIGNEMENTS MATERNEL ET PRIMAIRE DU {{ (ident.ddemp or '………')|upper }}<br>
+{% if SEC %}<p style="text-align:center"><b>RÉPUBLIQUE DU BÉNIN</b><br>MINISTÈRE DES ENSEIGNEMENTS SECONDAIRE, TECHNIQUE ET DE LA FORMATION PROFESSIONNELLE<br>ÉTABLISSEMENT : {{ ident.ecole or '………' }} · Année scolaire : {{ annee }}</p>{% else %}<p style="text-align:center"><b>RÉPUBLIQUE DU BÉNIN</b><br>MINISTÈRE DES ENSEIGNEMENTS MATERNEL ET PRIMAIRE<br>DIRECTION DÉPARTEMENTALE DES ENSEIGNEMENTS MATERNEL ET PRIMAIRE DU {{ (ident.ddemp or '………')|upper }}<br>
 CIRCONSCRIPTION SCOLAIRE : {{ ident.cs or '………' }} · Zone pédagogique n° {{ ident.zone or '……' }}<br>EM/EPP : {{ ident.ecole or '………' }} · Année scolaire : {{ annee }}</p>
+{% endif %}
 <h2 style="text-align:center">BUDGET PRÉVISIONNEL</h2>
 <h3>A – État des recettes</h3>
 <table class="t"><tr><th>Chapitre</th><th>Compte</th><th>Intitulé</th><th>Recettes inscrites</th><th>Total des chapitres</th><th>Observation</th></tr>
@@ -46,10 +47,10 @@ CIRCONSCRIPTION SCOLAIRE : {{ ident.cs or '………' }} · Zone pédagogique n�
 <table class="t"><tr><th>Recettes</th><th>Dépenses</th></tr><tr><td class="num">{{ m(pr_rt) }}</td><td class="num">{{ m(pr_dt) }}</td></tr></table>
 <p>{% if equilibre %}Le présent budget de l'exercice {{ annee }} est équilibré en recettes et en dépenses à la somme de : <b>{{ lettres(pr_rt) }}</b> francs CFA.{% else %}<b>Budget non équilibré : écart de {{ m((pr_rt - pr_dt)|abs) }} FCFA.</b>{% endif %}</p>
 <p>Fait à ……………………… le ……/……/……</p>
-<p>Ont signé : {{ ident.directeur_titre }} {{ ident.directeur_nom }} · Le Président de l'APE · {{ ident.ccs_titre }} {{ ident.ccs_nom }}</p></div>
+{% if SEC %}<p>Ont signé : {{ ident.directeur_titre or 'Le Directeur' }} {{ ident.directeur_nom }} · L'Intendant / L'Économe · Le Président de l'APE</p>{% else %}<p>Ont signé : {{ ident.directeur_titre }} {{ ident.directeur_nom }} · Le Président de l'APE · {{ ident.ccs_titre }} {{ ident.ccs_nom }}</p>{% endif %}</div>
 {% else %}
 <div class="carte"><h2 style="text-align:center">COMPTE RENDU D'EXÉCUTION DE BUDGET – Exercice {{ annee }}</h2>
-<p>EPP : {{ ident.ecole or '………' }} · Circonscription scolaire de : {{ ident.cs or '………' }}</p>
+<p>{% if SEC %}Établissement : {{ ident.ecole or '………' }}{% else %}EPP : {{ ident.ecole or '………' }} · Circonscription scolaire de : {{ ident.cs or '………' }}{% endif %}</p>
 <h3>A – Prévision des recettes</h3>
 <table class="t"><tr><th>Compte</th><th>Intitulé</th><th>Recettes prévues</th><th>Déjà enregistré</th><th>Observation</th></tr>
 {% for t,ch,c,i,g in RECETTES %}<tr><td>{{ c }}</td><td>{{ i }}</td><td class="num">{% if c=='I-1' %}{{ f(i1) }}{% else %}{{ f(prevu.get(('R',c))) }}{% endif %}</td><td class="num">{% if c in deja %}{{ m(deja[c]) }}{% endif %}</td><td>{{ obs.get(('R',c)) or '' }}</td></tr>{% endfor %}
@@ -60,6 +61,6 @@ CIRCONSCRIPTION SCOLAIRE : {{ ident.cs or '………' }} · Zone pédagogique n�
  {% if loop.first or DEPENSES[loop.index0-1][4] != g %}<tr><td colspan="7"><b>{{ g }}</b></td></tr>{% endif %}
  <tr><td>{{ ch }}</td><td>{{ c }}</td><td>{{ i }}</td><td class="num">{{ f(p) }}</td><td class="num">{{ f(e) }}</td><td class="num">{{ m(p - e) if (p or e) else '' }}</td><td class="num">{{ ((100 * e / p)|round(1)) ~ ' %' if p else '' }}</td></tr>{% endfor %}
 <tr><td colspan="3"><b>TOTAL</b></td><td class="num"><b>{{ m(pr_dt) }}</b></td><td class="num"><b>{{ m(ex_dt) }}</b></td><td class="num"><b>{{ m(pr_dt - ex_dt) }}</b></td><td class="num"><b>{{ ((100 * ex_dt / pr_dt)|round(1)) ~ ' %' if pr_dt else '' }}</b></td></tr></table>
-<p>Fait à ……………………… le ……/……/……</p><p>{{ ident.directeur_titre }} {{ ident.directeur_nom }} · Le Président de l'APE · {{ ident.ccs_titre }} {{ ident.ccs_nom }}</p></div>
+<p>Fait à ……………………… le ……/……/……</p><p>{% if SEC %}{{ ident.directeur_titre or 'Le Directeur' }} {{ ident.directeur_nom }} · L'Intendant / L'Économe · Le Président de l'APE{% else %}{{ ident.directeur_titre }} {{ ident.directeur_nom }} · Le Président de l'APE · {{ ident.ccs_titre }} {{ ident.ccs_nom }}{% endif %}</p></div>
 {% endif %}
 {% endblock %}

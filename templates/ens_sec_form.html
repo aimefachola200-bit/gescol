@@ -5,6 +5,7 @@
 <form method="post" class="carte">
 {% for cle, lib, t in champs %}<label><b>{{ lib }}</b>
 {% if t == 't' %}<select name="{{ cle }}">{% for x in TYPES %}<option{% if v.get(cle) == x %} selected{% endif %}>{{ x }}</option>{% endfor %}</select>
+{% elif t == 'v' %}<select name="{{ cle }}"><option value="">Aucun visa</option>{% for code, titre, lib in FONCTIONS %}<option value="{{ code }}"{% if v.get(cle) == code %} selected{% endif %}>{{ lib }}</option>{% endfor %}</select>
 {% elif t == 'z' %}<textarea name="{{ cle }}" rows="4" style="width:100%">{{ v.get(cle, '') }}</textarea>
 {% else %}<input name="{{ cle }}" value="{{ v.get(cle, '') }}" style="width:100%">{% endif %}</label>
 {% endfor %}

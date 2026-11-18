@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block titre %}Ma sauvegarde{% endblock %}
+{% block contenu %}
+<h1>Ma sauvegarde</h1>
+<p class="sous">Vos élèves, notes, fiches et documents sont sur cet appareil. Une copie régulière en dehors du téléphone ou de l'ordinateur vous protège en cas de perte, de panne ou de changement d'appareil.</p>
+<div class="carte">
+<form method="post" action="{{ url_for('ens_sauvegarde_telecharger') }}"><button class="btn">Télécharger une sauvegarde maintenant</button></form>
+<p class="aide">Envoyez ensuite le fichier .zip par courriel ou WhatsApp, ou copiez-le sur une clé USB. {% if jours_externe is not none %}Dernière copie hors de l'appareil : il y a {{ jours_externe }} jour(s).{% else %}Aucune copie hors de l'appareil pour le moment.{% endif %}</p></div>
+<h2>Restaurer une sauvegarde</h2>
+<form method="post" action="{{ url_for('ens_sauvegarde_restaurer') }}" enctype="multipart/form-data" class="carte f">
+<label>Fichier de sauvegarde (.zip)</label><input type="file" name="fichier" accept=".zip" required>
+<label>Tapez RESTAURER pour confirmer (les données actuelles seront remplacées ; un état « avant restauration » est conservé)</label><input name="confirmation" autocomplete="off">
+<button class="btn danger">Restaurer</button></form>
+<form method="post" action="{{ url_for('ens_sauvegarde_verifier') }}" enctype="multipart/form-data" class="carte f"><label>Vérifier un fichier sans le restaurer</label><input type="file" name="fichier" accept=".zip" required><button class="btn sec">Vérifier</button></form>
+<h2>Sauvegardes automatiques de cet appareil</h2>
+<div class="table-wrap"><table><tr><th>Fichier</th><th>Date</th><th>Taille</th><th></th></tr>
+{% for s in sauvegardes %}<tr><td>{{ s.nom }}</td><td>{{ s.date }}</td><td>{{ (s.taille / 1024)|round|int }} Ko</td><td><a class="btn sec petit" href="{{ url_for('ens_sauvegarde_fichier', nom=s.nom) }}">Télécharger</a></td></tr>{% else %}<tr><td colspan="4">Aucune pour le moment.</td></tr>{% endfor %}</table></div>
+{% endblock %}

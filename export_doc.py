@@ -25,6 +25,7 @@ _IGNORES = {"script", "style", "nav", "button", "select", "textarea", "form", "s
 _CLASSES_IGNOREES = {"no-print", "noprint", "ev-noprint", "actions", "retour-ligne", "btn", "btn-retour", "flash",
                      "export-barre", "filtres", "pagination", "onglets", "prep-onglets", "aide-sec", "bandeau"}
 _VIDES = {"br", "img", "hr", "input", "meta", "link", "col", "area", "base", "source", "wbr"}
+RE_IMG = re.compile(r"^/(signatures/[^?#/]+\.png|ecoles/(\d+/)?(griffe\.svg|logo\.png)(\?[^#]*)?|cachet\.svg(\?[^#]*)?)$")
 _TITRES = {"h1": 1, "h2": 2, "h3": 3, "h4": 4, "h5": 4, "h6": 4}
 
 
@@ -129,7 +130,10 @@ class _Analyse(HTMLParser):
             self.pile_style.append((tag, False, False, True))
         elif tag == "img":
             alt = a.get("alt")
-            if alt and len(alt) < 60 and self.cellule is not None:
+            if self.cellule is None and RE_IMG.match(a.get("src") or ""):
+                self._flush()                                   # logo, signature, cachet : intégrés aux exports
+                self.blocs.append({"type": "img", "src": a["src"], "alt": alt or ""})
+            elif alt and len(alt) < 60 and self.cellule is not None:
                 self._texte(alt)
 
     def handle_endtag(self, tag):
@@ -293,9 +297,55 @@ def _table_xml(lignes, taille=24):
     return f"<w:tbl>{tblpr}<w:tblGrid>{grille}</w:tblGrid>{''.join(lignes_xml)}</w:tbl><w:p/>"
 
 
-def docx(liste_blocs, titre="Document", pied=None):
+def _taille_image_mm(src):
+    if src.startswith("/signatures/"):
+        return 42
+    if "griffe" in src:
+        return 68
+    if "cachet" in src:
+        return 38
+    return 22                       # logo
+
+
+def _image_xml(rid, n, png, src):
+    from PIL import Image
+    w, h = Image.open(io.BytesIO(png)).size
+    cx = int(_taille_image_mm(src) * 36000)
+    cy = int(cx * h / max(w, 1))
+    return ('<w:p><w:pPr><w:spacing w:after="60"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">'
+            f'<wp:extent cx="{cx}" cy="{cy}"/><wp:docPr id="{n}" name="Image {n}"/>'
+            '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+            '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+            '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+            f'<pic:nvPicPr><pic:cNvPr id="{n}" name="image{n}.png"/><pic:cNvPicPr/></pic:nvPicPr>'
+            f'<pic:blipFill><a:blip r:embed="{rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+            f'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+            '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>')
+
+
+_FILIGRANE_VML = (
+    '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:v="urn:schemas-microsoft-com:vml" '
+    'xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word">'
+    '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr><w:r><w:pict>'
+    '<v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e">'
+    '<v:formulas><v:f eqn="sum #0 0 10800"/><v:f eqn="prod #0 2 1"/><v:f eqn="sum 21600 0 @1"/><v:f eqn="sum 0 0 @2"/>'
+    '<v:f eqn="sum 21600 0 @3"/><v:f eqn="if @0 @3 0"/><v:f eqn="if @0 21600 @1"/><v:f eqn="if @0 0 @2"/>'
+    '<v:f eqn="if @0 @4 21600"/><v:f eqn="mid @5 @6"/><v:f eqn="mid @8 @5"/><v:f eqn="mid @7 @8"/><v:f eqn="mid @6 @7"/>'
+    '<v:f eqn="sum @6 0 @5"/></v:formulas><v:path textpathok="t" o:connecttype="custom" o:connectlocs="@9,0;@10,10800;@11,21600;@12,10800" '
+    'o:connectangles="270,180,90,0"/><v:textpath on="t" fitshape="t"/><v:handles><v:h position="#0,bottomRight" xrange="6629,14971"/></v:handles>'
+    '<o:lock v:ext="edit" text="t" shapetype="t"/></v:shapetype>'
+    '<v:shape id="PowerPlusWaterMarkObject1" o:spid="_x0000_s2049" type="#_x0000_t136" '
+    'style="position:absolute;margin-left:0;margin-top:0;width:{larg}pt;height:{haut}pt;rotation:315;z-index:-251658752;'
+    'mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin" '
+    'o:allowincell="f" fillcolor="#d9d9d9" stroked="f"><v:fill opacity=".5"/>'
+    '<v:textpath style="font-family:&quot;Times New Roman&quot;;font-size:1pt" string="{txt}"/>'
+    '<w10:wrap anchorx="margin" anchory="margin"/></v:shape></w:pict></w:r></w:p></w:hdr>')
+
+
+def docx(liste_blocs, titre="Document", pied=None, filigrane=None):
     """Document Word (.docx) : Times New Roman 14 pt, titres en gras, tableaux bordés, en-têtes de tableau répétés."""
     corps = []
+    images = []
     deja_titre = any(b["type"] == "h" and b.get("niveau") == 1 for b in liste_blocs)
     if not deja_titre and titre:
         corps.append(_para_xml([(titre, True, False, False)], centre=True, taille=32))
@@ -310,6 +360,10 @@ def docx(liste_blocs, titre="Document", pied=None):
             if b.get("saut"):
                 corps.append('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
             corps.append(_table_xml(b["lignes"]))
+        elif b["type"] == "img":
+            if b.get("png"):
+                images.append(b["png"])
+                corps.append(_image_xml(f"rIdImg{len(images)}", len(images), b["png"], b["src"]))
         else:
             corps.append(_para_xml(b["runs"], saut=b.get("saut")))
     pied_xml = ""
@@ -325,11 +379,26 @@ def docx(liste_blocs, titre="Document", pied=None):
         rel_pied = ('<Relationship Id="rIdPied" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" '
                     'Target="footer1.xml"/>')
         ct_pied = '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>'
-    sect = (f'<w:sectPr>{pied_xml}<w:pgSz w:w="11906" w:h="16838"/>'
+    ent_xml = ""
+    if filigrane:                                                        # nom du professeur titulaire, en filigrane de chaque page
+        txt = _x(filigrane)[:60]
+        larg = min(470, max(180, 24 * len(txt)))
+        fichiers["word/header1.xml"] = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + \
+            _FILIGRANE_VML.replace("{txt}", txt).replace("{larg}", str(larg)).replace("{haut}", str(max(30, larg // max(len(txt), 6) * 2)))
+        ent_xml = '<w:headerReference w:type="default" r:id="rIdEnt"/>'
+        rel_pied += ('<Relationship Id="rIdEnt" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" '
+                     'Target="header1.xml"/>')
+        ct_pied += '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>'
+    for k, png in enumerate(images, 1):
+        fichiers[f"word/media/image{k}.png"] = png
+        rel_pied += (f'<Relationship Id="rIdImg{k}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
+                     f'Target="media/image{k}.png"/>')
+    sect = (f'<w:sectPr>{ent_xml}{pied_xml}<w:pgSz w:w="11906" w:h="16838"/>'
             '<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="454" w:gutter="0"/></w:sectPr>')
     document = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
                 '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
-                'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+                'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
+                'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
                 f"<w:body>{''.join(corps)}{sect}</w:body></w:document>")
     styles = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
               '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
@@ -348,7 +417,7 @@ def docx(liste_blocs, titre="Document", pied=None):
     types = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
              '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
              '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-             '<Default Extension="xml" ContentType="application/xml"/>'
+             '<Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/>'
              '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
              '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
              '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
@@ -447,6 +516,15 @@ def pdf(liste_blocs, titre="Document", pied=None, filigrane=None):
             t.setStyle(TableStyle(styles))
             histoire.append(t)
             histoire.append(Spacer(1, 6))
+        elif b["type"] == "img":
+            if b.get("png"):
+                from PIL import Image as _PI
+                from reportlab.platypus import Image as _RI
+                w0, h0 = _PI.open(io.BytesIO(b["png"])).size
+                wl = _taille_image_mm(b["src"]) * 2.835
+                im = _RI(io.BytesIO(b["png"]), width=wl, height=wl * h0 / max(w0, 1))
+                im.hAlign = "LEFT"
+                histoire.append(im)
         else:
             histoire.append(Paragraph(markup(b["runs"]), base))
     if not histoire:
@@ -480,6 +558,8 @@ def pdf(liste_blocs, titre="Document", pied=None, filigrane=None):
             if b["type"] == "table":
                 for l in b["lignes"]:
                     simple.append(Paragraph(_x(" | ".join(texte_runs(c["runs"]) for c in l)), cel))
+            elif b["type"] == "img":
+                continue
             else:
                 simple.append(Paragraph(markup(b["runs"]), base))
         out = io.BytesIO()

@@ -1,6 +1,6 @@
 {% extends "base.html" %}{% block titre %}{{ e.matiere }} – {{ e.niveau }}{% endblock %}
 {% block contenu %}
-{% if SECONDAIRE and ens_sec_actif() %}<form method="post" action="{{ url_for('ens_sec_copier', src='epreuve', i=e.id) }}" class="noprint" style="display:inline"><button class="btn">Copier dans mes documents et modifier</button></form>{% endif %}
+{% if ens_sec_actif() %}<form method="post" action="{{ url_for('ens_sec_copier', src='epreuve', i=e.id) }}" class="noprint" style="display:inline"><button class="btn">Copier dans mes documents et modifier</button></form>{% endif %}
 <div class="entete"><div><h1>{{ e.matiere }} – {{ e.niveau }}{% if e.serie %} (série {{ e.serie }}){% endif %}</h1>
 <p class="aide">{{ e.type }}{% if e.duree %} · Durée : {{ e.duree }}{% endif %}{% if e.periode %} · {{ e.periode }}{% endif %}</p></div>
 <a class="btn sec" href="{{ url_for('ress_sec') }}">← Ressources</a></div>

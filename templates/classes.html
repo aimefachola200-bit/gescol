@@ -3,7 +3,8 @@
 {% set ORG = organisation_classes() if (organisation_classes is defined and not SECONDAIRE) else none %}
 <div class="entete">
   <div><h1>Classes</h1><p class="sous">{{ classes|length }} cours{% if ORG %} · <b>{{ ORG.compte.total }} classe(s) ouverte(s)</b> : {{ ORG.compte.simples }} simple(s), {{ ORG.compte.jumelees }} jumelée(s), {{ ORG.compte.multigrades }} multigrade(s){% endif %}</p></div>
-  {% if peut('classes') %}<a class="btn" href="{{ url_for('classe_form') }}">+ Nouvelle classe</a>{% endif %}
+  <div class="actions">{% if peut('documents') %}<a class="btn sec" href="{{ url_for('classes_photos_zip') }}" title="Un dossier par classe, photos nommées numéro_NOM_Prénom.jpg">Photos de toutes les classes (ZIP)</a>{% endif %}
+  {% if peut('classes') %}<a class="btn" href="{{ url_for('classe_form') }}">+ Nouvelle classe</a>{% endif %}</div>
 </div>
 {% if ORG %}<p class="aide">Une classe jumelée (deux cours, ex. CI-CP) ou multigrade (trois cours ou plus, ex. CI-CE2-CM1) tenue dans une salle par un maître compte pour <b>une</b> classe ouverte. Gardez une ligne par cours (effectifs par cours), cochez les cours de la même classe puis « Regrouper ».</p>{% endif %}
 <form method="post" action="{{ url_for('classes_regrouper') if ORG and peut('classes') else '' }}">

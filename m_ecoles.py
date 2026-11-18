@@ -7,7 +7,7 @@ import base64
 import json
 import re
 
-from flask import Response, abort, flash, g, redirect, render_template, request, session, url_for
+from flask import Response, abort, flash, g, jsonify, redirect, render_template, request, session, url_for
 
 import cachet
 import referentiel_benin as RB
@@ -18,7 +18,7 @@ CHAMPS_ECOLE = ["nom", "sigle", "statut", "ordre", "departement", "cs", "up", "z
                 "griffe_actif", "griffe_ligne3", "griffe_couleur", "devise"]
 ORDRES = ["Maternelle", "Primaire", "Maternelle et primaire", "Secondaire (collège)", "Secondaire (collège et lycée)",
           "Complexe (maternelle, primaire, secondaire)", "Enseignement technique"]
-RE_CLE_SIGNATURE = re.compile(r"^(ecole:\d+:(directeur|admin|ccs)|classe:\d+:titulaire|eleve:\d+|parent:\d+|cep:\d+:chef"
+RE_CLE_SIGNATURE = re.compile(r"^(ecole:\d+:(directeur|admin|ccs|censeur|surveillant|econome|secretaire|comptable|chef_travaux|chef_exploitation)|classe:\d+:titulaire|eleve:\d+|parent:\d+|cep:\d+:chef"
                               r"|enseignant:\d+"      # v1.6 : signature personnelle d'un compte enseignant (utilisateurs.id)
                               r"|jur:(service|agent|cs):\d+|jur:structure:responsable)$")
 
@@ -232,6 +232,14 @@ def enregistrer(app, H):
         js = "window.CS_PAR_DEP=" + json.dumps(data, ensure_ascii=False) + ";"
         return Response(js, mimetype="application/javascript", headers={"Cache-Control": "max-age=86400"})
 
+    @app.route("/referentiel-ecoles/chercher")
+    @H.connexion_requise("ecoles")
+    def referentiel_ecoles_chercher():
+        """Saisie assistée du nom de l'école à partir de la liste des écoles du Bénin (9 217 écoles)."""
+        import referentiel_ecoles as RE
+        a = request.args
+        return jsonify(RE.chercher(a.get("q", ""), a.get("dep", ""), a.get("cs", "")))
+
     # ------------------------------------------------------------ écoles
     @app.route("/ecoles")
     @H.connexion_requise("ecoles")
@@ -410,34 +418,41 @@ def enregistrer(app, H):
             return Response(LE.svg(p, 800), mimetype="image/svg+xml", headers={"Content-Disposition": f"attachment; filename={nom}.svg"})
         return Response(LE.png(p, 800), mimetype="image/png", headers={"Content-Disposition": f"attachment; filename={nom}.png"})
 
+    def cachet_params(a):
+        e = g.get("ecole") or {}
+        return (a.get("sup", e["cachet_sup"] if e else ""), a.get("inf", e["cachet_inf"] if e else ""),
+                a.get("centre", e["cachet_centre"] if e else ""), a.get("couleur", e["cachet_couleur"] if e else "bleu"),
+                int(a.get("taille", 180)))
+
+    H.cachet_params = cachet_params
+
     @app.route("/cachet.svg")
     def cachet_svg():
         """Aperçu du cachet (paramètres dans l'adresse, ou école courante)."""
-        e = g.get("ecole") or {}
-        a = request.args
-        s = cachet.svg(a.get("sup", e["cachet_sup"] if e else ""), a.get("inf", e["cachet_inf"] if e else ""),
-                       a.get("centre", e["cachet_centre"] if e else ""), a.get("couleur", e["cachet_couleur"] if e else "bleu"),
-                       int(a.get("taille", 180)))
-        return Response(s, mimetype="image/svg+xml", headers={"Cache-Control": "no-cache"})
+        return Response(cachet.svg(*cachet_params(request.args)), mimetype="image/svg+xml", headers={"Cache-Control": "no-cache"})
 
-    @app.route("/ecoles/griffe.svg")
-    @app.route("/ecoles/<int:eid>/griffe.svg")
-    @H.connexion_requise()
-    def ecole_griffe_svg(eid=None):
-        """Aperçu de la griffe (cachet rectangulaire du nom) : école donnée ou courante ; les paramètres titre, nom,
-        ligne3 et couleur de l'adresse permettent l'aperçu instantané pendant la saisie."""
+    def griffe_params(eid, a):
+        """(lignes, couleur, largeur) de la griffe demandée : école donnée ou courante ; titre, nom, ligne3 et couleur de
+        l'adresse permettent l'aperçu instantané pendant la saisie."""
         e = q("SELECT * FROM ecoles WHERE id=?", (eid,), un=True) if eid else g.get("ecole")
         if eid and not e:
             abort(404)
-        a = request.args
         gr = griffe_de(e, ligne3=a.get("ligne3"), couleur=a.get("couleur"), titre=a.get("titre"), nom=a.get("nom")) \
             if (e is not None or a.get("nom")) else None
         if gr is None and a.get("nom"):
             gr = [a.get("titre") or "Le Directeur", a.get("nom"), a.get("ligne3") or ""], a.get("couleur") or "bleu"
         lignes, couleur = gr if gr else (["Le Directeur", "NOM Prénoms (à renseigner)"], "bleu")
         largeur = int(a.get("largeur") or 260) if (a.get("largeur") or "").isdigit() else 260
-        return Response(cachet.svg_nom(lignes, couleur, max(120, min(largeur, 600))), mimetype="image/svg+xml",
-                        headers={"Cache-Control": "no-cache"})
+        return lignes, couleur, max(120, min(largeur, 600))
+
+    H.griffe_params = griffe_params
+
+    @app.route("/ecoles/griffe.svg")
+    @app.route("/ecoles/<int:eid>/griffe.svg")
+    @H.connexion_requise()
+    def ecole_griffe_svg(eid=None):
+        lignes, couleur, largeur = griffe_params(eid, request.args)
+        return Response(cachet.svg_nom(lignes, couleur, largeur), mimetype="image/svg+xml", headers={"Cache-Control": "no-cache"})
 
     @app.route("/ecoles/<int:eid>/logo.png")
     @H.connexion_requise()

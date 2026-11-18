@@ -63,6 +63,69 @@ FILS = {("R", "I-1"): ["I-1-1", "I-1-2", "I-1-3"]}
 CORRESPOND = {"I-2": "Subvention de l'État", "I-3": "Subvention de la commune", "II-3": "Dons et partenaires (PAM, ONG…)"}
 CHAP_LIB = {"R": {"I": "Chapitre I – Recettes ordinaires", "II": "Chapitre II – Recettes extraordinaires", "III": "Chapitre III – Compte de régularisation"}}
 
+# ---- plan budgétaire des établissements secondaires et techniques (collèges, lycées, ETP, lycées agricoles)
+RECETTES_SEC = [
+    ("R", "I", "I-1", "Solde de l'exercice antérieur", "RECETTES ORDINAIRES"),
+    ("R", "I", "I-1-1", "Espèces en caisse", "RECETTES ORDINAIRES"),
+    ("R", "I", "I-1-2", "Avoirs en banque ou en CCP", "RECETTES ORDINAIRES"),
+    ("R", "I", "I-1-3", "Avoirs dans les autres institutions financières", "RECETTES ORDINAIRES"),
+    ("R", "I", "I-2", "Subvention de l'État", "RECETTES ORDINAIRES"),
+    ("R", "I", "I-3", "Participation des collectivités (commune)", "RECETTES ORDINAIRES"),
+    ("R", "I", "I-4", "Contributions des parents et cotisations APE", "RECETTES ORDINAIRES"),
+    ("R", "I", "I-5", "Frais d'inscription et de réinscription", "RECETTES ORDINAIRES"),
+    ("R", "I", "I-6", "Frais de scolarité (établissements privés)", "RECETTES ORDINAIRES"),
+    ("R", "II", "II-1", "Frais d'examens, de compositions et d'examens blancs", "RECETTES EXTRAORDINAIRES"),
+    ("R", "II", "II-2-1", "Vente de produits végétaux de l'exploitation", "RECETTES EXTRAORDINAIRES"),
+    ("R", "II", "II-2-2", "Vente de produits animaux (volaille, œufs, poissons, bétail)", "RECETTES EXTRAORDINAIRES"),
+    ("R", "II", "II-2-3", "Vente de produits transformés et prestations d'ateliers", "RECETTES EXTRAORDINAIRES"),
+    ("R", "II", "II-3", "Dons, legs et partenariats", "RECETTES EXTRAORDINAIRES"),
+    ("R", "II", "II-4", "Autres recettes", "RECETTES EXTRAORDINAIRES"),
+    ("R", "III", "III-1", "Produits sur exercice antérieur", "COMPTE DE RÉGULARISATION"),
+]
+DEPENSES_SEC = [
+    ("D", "I", "I-1", "Rémunération des vacataires et du personnel d'appui", "PERSONNEL"),
+    ("D", "I", "I-2", "Ouvriers agricoles, gardiens et agents d'entretien", "PERSONNEL"),
+    ("D", "II", "II-1", "Fournitures de bureau", "FOURNITURES"),
+    ("D", "II", "II-2", "Fournitures scolaires et reprographie", "FOURNITURES"),
+    ("D", "III", "III-1", "Semences, plants et engrais", "EXPLOITATION ET ATELIERS"),
+    ("D", "III", "III-2", "Produits phytosanitaires et produits vétérinaires", "EXPLOITATION ET ATELIERS"),
+    ("D", "III", "III-3", "Aliments du bétail et de la volaille, alevins", "EXPLOITATION ET ATELIERS"),
+    ("D", "III", "III-4", "Carburant, lubrifiants et entretien des machines", "EXPLOITATION ET ATELIERS"),
+    ("D", "III", "III-5", "Matières d'œuvre et consommables d'ateliers et de laboratoires", "EXPLOITATION ET ATELIERS"),
+    ("D", "IV", "IV-1", "Matériel pédagogique et didactique", "MATÉRIEL ET MOBILIER"),
+    ("D", "IV", "IV-2", "Matériel technique, outillage et petits outillages", "MATÉRIEL ET MOBILIER"),
+    ("D", "IV", "IV-3", "Mobilier scolaire et de bureau", "MATÉRIEL ET MOBILIER"),
+    ("D", "V", "V-1", "Équipements pédagogiques, de laboratoire et d'atelier", "ÉQUIPEMENTS"),
+    ("D", "V", "V-2", "Équipements sportifs et culturels", "ÉQUIPEMENTS"),
+    ("D", "V", "V-3", "Équipements sanitaires et de sécurité", "ÉQUIPEMENTS"),
+    ("D", "VI", "VI-1", "Eau", "CONSOMMATION DE SERVICES EXTÉRIEURS"),
+    ("D", "VI", "VI-2", "Électricité", "CONSOMMATION DE SERVICES EXTÉRIEURS"),
+    ("D", "VI", "VI-3", "Téléphone, internet et frais de poste", "CONSOMMATION DE SERVICES EXTÉRIEURS"),
+    ("D", "VI", "VI-4", "Frais bancaires et d'ouverture de compte", "CONSOMMATION DE SERVICES EXTÉRIEURS"),
+    ("D", "VII", "VII-1", "Déplacements et missions du personnel", "TRANSPORTS ET DÉPLACEMENTS"),
+    ("D", "VII", "VII-2", "Transport de matériel et de produits", "TRANSPORTS ET DÉPLACEMENTS"),
+    ("D", "VIII", "VIII-1", "Restauration, internat et vivres", "VIE SCOLAIRE"),
+    ("D", "VIII", "VIII-2", "Activités sportives, culturelles et sorties pédagogiques", "VIE SCOLAIRE"),
+    ("D", "VIII", "VIII-3", "Stages et visites d'entreprises", "VIE SCOLAIRE"),
+    ("D", "IX", "IX-1", "Entretien des bâtiments, des mobiliers et des espaces", "TRAVAUX D'ENTRETIEN"),
+    ("D", "IX", "IX-2", "Maintenance des équipements et du parc de machines", "TRAVAUX D'ENTRETIEN"),
+    ("D", "X", "X-1", "Organisation des examens et évaluations (BEPC, Bac, CAP, examens blancs)", "EXAMENS ET ÉVALUATIONS"),
+    ("D", "X", "X-2", "Reproduction des épreuves et des bulletins", "EXAMENS ET ÉVALUATIONS"),
+    ("D", "XI", "XI-1", "Cotisations et reversements (APE, UASCEP, mutuelle)", "DÉPENSES DE TRANSFERT"),
+    ("D", "XII", "XII-1", "Investissement", "INVESTISSEMENT"),
+    ("D", "XIII", "XIII-1", "Charges sur exercice antérieur (arriérés de dépenses)", "COMPTE DE RÉGULARISATION"),
+]
+CORRESPOND_SEC = {"I-2": "Subvention de l'État", "I-3": "Subvention de la commune", "I-4": "Contributions des parents / APE",
+                  "I-5": "Frais d'inscription et de réinscription", "II-3": "Dons et partenaires"}
+
+
+def plan():
+    """(RECETTES, DEPENSES, LIGNES, CORRESPOND) selon l'édition : modèle officiel EM/EPP, ou plan des établissements secondaires et techniques."""
+    if config.secondaire():
+        return RECETTES_SEC, DEPENSES_SEC, RECETTES_SEC + DEPENSES_SEC, CORRESPOND_SEC
+    return RECETTES, DEPENSES, LIGNES, CORRESPOND
+
+
 _U = ["zéro", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix", "onze", "douze", "treize", "quatorze", "quinze", "seize",
       "dix-sept", "dix-huit", "dix-neuf"]
 _D = ["", "", "vingt", "trente", "quarante", "cinquante", "soixante"]
@@ -113,13 +176,13 @@ def milliers(n):
     return f"{int(n or 0):,}".replace(",", " ")
 
 
-def totaux(valeurs, type_):
+def totaux(valeurs, type_, lignes=None):
     """valeurs {code: montant} -> ({chapitre: total}, total général). I-1 est la somme de ses trois sous-lignes."""
     v = dict(valeurs)
     if type_ == "R":
         v["I-1"] = sum(v.get(c, 0) for c in FILS[("R", "I-1")])
     par = {}
-    for t, ch, c, _i, _g in LIGNES:
+    for t, ch, c, _i, _g in (lignes or LIGNES):
         if t != type_ or c in FILS[("R", "I-1")] and False:
             continue
         if t == "R" and c in FILS[("R", "I-1")]:
@@ -143,7 +206,7 @@ def enregistrer(app, H):
     );""")
 
     def garde():
-        if config.secondaire() or config.juridiction() or getattr(H, "fp_operations", None) is None:
+        if config.juridiction() or getattr(H, "fp_operations", None) is None:
             abort(404)
 
     def lire(annee):
@@ -151,7 +214,7 @@ def enregistrer(app, H):
 
     def deja_enregistre(annee):
         out = {}
-        for code, origine in CORRESPOND.items():
+        for code, origine in plan()[3].items():
             r = q("SELECT COALESCE(SUM(montant),0) s FROM fp_recettes WHERE ecole_id=? AND annule=0 AND origine=?", (H.eco(), origine), un=True)
             out[code] = r["s"] if r else 0
         return out
@@ -160,6 +223,7 @@ def enregistrer(app, H):
     @H.connexion_requise("depenses")
     def budget_ecole():
         garde()
+        RECETTES, DEPENSES, LIGNES, _corr = plan()
         annee = config.ANNEE_ACTIVE
         if request.method == "POST":
             n = 0
@@ -182,10 +246,10 @@ def enregistrer(app, H):
         prevu = {k: v["prevu"] for k, v in r.items()}
         exec_ = {k: v["execute"] for k, v in r.items()}
         obs = {k: v["observation"] for k, v in r.items()}
-        pr_r, pr_rt = totaux({c: prevu.get(("R", c), 0) for t, _a, c, _i, _g in RECETTES}, "R")
-        pr_d, pr_dt = totaux({c: prevu.get(("D", c), 0) for t, _a, c, _i, _g in DEPENSES}, "D")
-        ex_d, ex_dt = totaux({c: exec_.get(("D", c), 0) for t, _a, c, _i, _g in DEPENSES}, "D")
+        pr_r, pr_rt = totaux({c: prevu.get(("R", c), 0) for t, _a, c, _i, _g in RECETTES}, "R", LIGNES)
+        pr_d, pr_dt = totaux({c: prevu.get(("D", c), 0) for t, _a, c, _i, _g in DEPENSES}, "D", LIGNES)
+        ex_d, ex_dt = totaux({c: exec_.get(("D", c), 0) for t, _a, c, _i, _g in DEPENSES}, "D", LIGNES)
         i1 = sum(prevu.get(("R", c), 0) for c in FILS[("R", "I-1")])
         return render_template("budget_ecole.html", vue=vue, annee=annee, RECETTES=RECETTES, DEPENSES=DEPENSES, prevu=prevu, exec_=exec_, obs=obs,
-                               pr_r=pr_r, pr_rt=pr_rt, pr_d=pr_d, pr_dt=pr_dt, ex_d=ex_d, ex_dt=ex_dt, i1=i1, deja=deja_enregistre(annee),
+                               SEC=config.secondaire(), pr_r=pr_r, pr_rt=pr_rt, pr_d=pr_d, pr_dt=pr_dt, ex_d=ex_d, ex_dt=ex_dt, i1=i1, deja=deja_enregistre(annee),
                                ident=H.identification(), lettres=en_lettres, m=milliers, equilibre=(pr_rt == pr_dt))

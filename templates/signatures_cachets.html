@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% import "_macros.html" as M %}{% block titre %}Signatures et cachets{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Signatures et cachets</h1><p class="sous">Chaque responsable dépose sa signature numérique ; la griffe de son nom se compose automatiquement.</p></div></div>
+<div class="carte"><h2 style="margin-top:0">Ma signature et ma griffe</h2>
+{{ M.signature(cle_moi, 'Ma signature') }}
+<p><img src="/ecoles/griffe.svg?titre=Le%20Professeur&nom={{ moi|urlencode }}&largeur=260" alt="Ma griffe" style="max-width:260px"></p>
+<p class="aide">Elles s'ajoutent à vos devoirs. Jamais de cachet sur les fiches de préparation : votre nom y figure en filigrane.</p></div>
+{% if classes %}<div class="carte"><h2 style="margin-top:0">Signature du professeur principal (par classe)</h2>
+{% for c in classes %}<div style="margin:6px 0"><b>{{ c.nom }}</b>{{ M.signature('classe:%d:titulaire' % c.id, 'Signature du titulaire de ' ~ c.nom) }}</div>{% endfor %}</div>{% endif %}
+{% if direction %}
+<form method="post" class="carte"><h2 style="margin-top:0">Noms des signataires</h2>
+<p class="aide">Le directeur / proviseur est lu dans « Mon école ». Renseignez les autres fonctions de l'établissement.</p>
+<table class="t"><tr><th>Fonction</th><th>Nom et prénoms</th></tr>
+{% for l in lignes if l.code != 'directeur' %}<tr><td>{{ l.lib }}</td><td><input name="nom_{{ l.code }}" value="{{ l.nom }}" style="width:100%"></td></tr>{% endfor %}</table>
+<p><button class="btn">Enregistrer les noms</button> <a class="btn sec" href="{{ url_for('ecoles') }}">Mon école (cachet rond, directeur)</a></p></form>
+{% for l in lignes %}<div class="carte"><h3 style="margin-top:0">{{ l.lib }}</h3>
+{% if l.griffe %}<img src="/ecoles/griffe.svg?titre={{ l.griffe.titre|urlencode }}&nom={{ l.griffe.nom|urlencode }}&ligne3={{ l.griffe.ligne3|urlencode }}&largeur=260" alt="Griffe" style="max-width:260px">
+{% else %}<p class="aide">Nom non renseigné{% if l.code == 'directeur' %} (voir « Mon école »){% endif %}.</p>{% endif %}
+{{ M.signature(l.cle, 'Signature : ' ~ l.lib) }}</div>{% endfor %}
+{% else %}<p class="aide">Les signatures de la direction, du censeur, du surveillant général, de l'intendant, du secrétaire et du comptable sont gérées par le directeur.</p>{% endif %}
+{% endblock %}

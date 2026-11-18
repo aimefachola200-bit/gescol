@@ -200,7 +200,7 @@
       {% if peut('cantine') %}{{ lien('cantine_accueil', 'Paiements de cantine', ep in ('cantine_accueil','cantine_classe')) }}
       {{ lien('cantine_impayes', 'Impayés de cantine', ep=='cantine_impayes') }}{% endif %}
       {% if peut('stock') and ep_existe('stock_accueil') %}{{ lien('stock_accueil', 'Vivres et stock de la cantine', ep.startswith('stock')) }}{% endif %}
-      {% if peut('depenses') %}{{ lien('depenses_accueil', 'Dépenses (fonds de cantine…)', ep.startswith('depense')) }}
+      {% if peut('depenses') %}{{ lien('depenses_accueil', ('Dépenses de l\'établissement' if SECONDAIRE else 'Dépenses (fonds de cantine…)'), ep.startswith('depense')) }}
       {{ lien('recettes_accueil', 'Subventions et recettes', ep.startswith('recette')) }}
       {% if ep_existe('budget_ecole') %}{{ lien('budget_ecole', 'Budget prévisionnel', ep.startswith('budget_ecole')) }}{% endif %}
       {% if not SECONDAIRE %}{{ lien('cep_frais', 'Frais de dossier CEP', ep.startswith('cep_frais')) }}{% endif %}{% endif %}
@@ -220,6 +220,7 @@
     {% endcall %}{% endif %}
     {% if PUBLIQUE %}
     {% call groupe('vie', "Vie de l'école", ep.startswith('maitre_semaine') or ep.startswith('visite') or ep.startswith('patrimoine') or ep.startswith('recensement') or ep.startswith('docs_enseignant') or ep.startswith('rapports'), 'ecole') %}
+      {% if SECONDAIRE and peut('recensement') and not ENS %}{{ lien('rapport_etablissement', "Situation statistique de l'établissement", ep=='rapport_etablissement') }}{% endif %}
       {% if peut('recensement') and not ENS %}{{ lien('recensement_accueil', "Carte d'identité de l'école (recensement, rapports)", ep.startswith('recensement')) }}{% endif %}
       {% if ENS and ep_existe('carriere_moi_fiche') %}{{ lien('carriere_moi_fiche', 'Ma fiche de carrière', ep.startswith('carriere')) }}{% endif %}
       {% if peut('maitre_semaine') %}{{ lien('maitre_semaine_accueil', 'Maître de semaine (journal)', ep.startswith('maitre_semaine')) }}{% endif %}
@@ -245,6 +246,7 @@
       {{ lien('educmaster_accueil', 'EducMaster (maternelle, primaire, secondaire)', ep.startswith('educmaster')) }}
       {{ lien('conversion_pdf', 'Conversion PDF → Excel / CSV', ep.startswith('conversion')) }}
     {% endcall %}{% endif %}
+    {% if ep_existe('signatures_cachets') %}{{ lien('signatures_cachets', 'Signatures et cachets', ep=='signatures_cachets') }}{% endif %}
     {% if peut('ecoles') and not peut('parametres') %}{{ lien('ecoles', 'Mon école (fiche, cachet)', ep.startswith('ecole'), 'ecole') }}{% endif %}
     {% if peut('secretariat') %}
     {% call groupe('sec', 'Secrétariat', ep in ('courrier','archives'), 'classeur') %}

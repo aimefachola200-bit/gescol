@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block titre %}Situation statistique{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Situation statistique de l'établissement</h1><p class="aide">{{ ECOLE.nom }} · année scolaire {{ ANNEE }}</p></div>
+<form method="get" class="noprint"><label>Résultats de la période :</label> <select name="periode" onchange="this.form.submit()">{% for p in periodes %}<option value="{{ loop.index }}" {{ 'selected' if loop.index==periode }}>{{ p }}</option>{% endfor %}</select></form></div>
+<h2>1. Effectifs par classe</h2>
+<table><tr><th>Classe</th><th>Niveau</th><th>Garçons</th><th>Filles</th><th>Total</th><th>Redoublants</th></tr>
+{% for l in lignes %}<tr><td>{{ l.nom }}</td><td>{{ l.niveau }}</td><td>{{ l.g }}</td><td>{{ l.f }}</td><td>{{ l.t }}</td><td>{{ l.r }}</td></tr>{% else %}<tr><td colspan="6">Aucune classe.</td></tr>{% endfor %}
+<tr><th colspan="2">Total général</th><th>{{ tot.g }}</th><th>{{ tot.f }}</th><th>{{ tot.t }}</th><th>{{ tot.r }}</th></tr></table>
+<h2>2. Personnel en activité</h2>
+<table><tr><th>Fonction</th><th>Hommes</th><th>Femmes</th><th>Total</th></tr>
+{% for p in personnel %}<tr><td>{{ p.fonction or 'Non précisée' }}</td><td>{{ p.h or 0 }}</td><td>{{ p.f or 0 }}</td><td>{{ p.t }}</td></tr>{% else %}<tr><td colspan="4">Aucun agent enregistré.</td></tr>{% endfor %}</table>
+<h2>3. Résultats par classe ({{ periodes[periode-1] if periodes|length >= periode else periode }})</h2>
+<table><tr><th>Classe</th><th>Effectif</th><th>Avec moyenne</th><th>Moyenne de classe</th><th>Plus forte</th><th>Plus faible</th><th>Admis</th><th>Taux de réussite (%)</th></tr>
+{% for r in resultats %}<tr><td>{{ r.nom }}</td><td>{{ r.effectif }}</td><td>{{ r.classes }}</td><td>{{ r.moyenne if r.moyenne is not none else '—' }}</td><td>{{ r.forte if r.forte is not none else '—' }}</td><td>{{ r.faible if r.faible is not none else '—' }}</td><td>{{ r.admis }}</td><td>{{ r.taux if r.taux is not none else '—' }}</td></tr>{% endfor %}</table>
+{% if ferme_t and (ferme or ferme_t.parcelles) %}<h2>4. Ferme-école</h2>
+<p>{{ ferme_t.parcelles }} parcelle(s), {{ ferme_t.ares }} ares cultivés ; recettes de la production : {{ '{:,}'.format(ferme_t.recettes|int).replace(',', ' ') }} F.</p>
+{% if ferme %}<table><tr><th>Espèce</th><th>Effectif</th><th>Mortalité (têtes)</th></tr>{% for f in ferme %}<tr><td>{{ f.espece }}</td><td>{{ f.effectif }}</td><td>{{ f.morts }}</td></tr>{% endfor %}</table>{% endif %}{% endif %}
+{% endblock %}

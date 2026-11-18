@@ -9,7 +9,9 @@ from datetime import datetime
 from flask import abort, flash, g, redirect, render_template, request, url_for
 
 import config
+import ens_mode as EM
 import epreuves_apc as AP
+import agri_sec as AGRI
 import fiches_sec as FS
 
 TYPES_DEVOIR = ["Devoir surveillé", "Devoir à la maison", "Interrogation écrite", "Composition", "Évaluation diagnostique", "Épreuve pratique"]
@@ -24,7 +26,8 @@ CHAMPS = {
     "devoir": ("Devoir / épreuve", [
         ("type", "Type", "t"), ("matiere", "Discipline", "l"), ("niveau", "Classe / niveau", "l"), ("duree", "Durée", "l"), ("total", "Barème total", "l"),
         ("titre", "Intitulé", "l"), ("competence", "Compétence évaluée", "z"), ("situation", "Situation", "z"), ("tache", "Tâche", "z"),
-        ("consignes", "Consignes (une par ligne : texte | points)", "z"), ("corrige", "Corrigé et barème détaillé", "z")]),
+        ("consignes", "Consignes (une par ligne : texte | points)", "z"), ("corrige", "Corrigé et barème détaillé", "z"),
+        ("visa", "Visa de l'administration (signature + griffe)", "v")]),
     "tp": ("Fiche de travaux pratiques (enseignement technique)", [
         ("filiere", "Filière / spécialité", "l"), ("matiere", "Discipline", "l"), ("niveau", "Classe / niveau", "l"), ("duree", "Durée", "l"),
         ("titre", "Titre du TP", "l"), ("objectif", "Objectif(s)", "z"), ("prerequis", "Prérequis", "z"), ("materiel", "Matériel, outillage et matières d'œuvre", "z"),
@@ -44,7 +47,7 @@ MATIERES_TECHNIQUES = [
     ("TECH_MECA", "Mécanique générale"), ("TECH_ELEC", "Électricité – Électronique"), ("TECH_BAT", "Bâtiment et travaux publics"),
     ("TECH_MENUI", "Menuiserie – Ébénisterie"), ("TECH_COMPTA", "Comptabilité et gestion"), ("TECH_SECR", "Techniques administratives et secrétariat"),
     ("TECH_INFO", "Informatique"), ("TECH_AGRI", "Agriculture – Élevage"), ("TECH_COUT", "Couture – Habillement"),
-    ("TECH_HOTEL", "Hôtellerie – Restauration"), ("TECH_EFS", "Économie familiale et sociale")]
+    ("TECH_HOTEL", "Hôtellerie – Restauration"), ("TECH_EFS", "Économie familiale et sociale")] + AGRI.MATIERES_AGRI
 
 
 def niv_biblio(niveau):
@@ -59,6 +62,11 @@ def meme_matiere(a, b):
     return bool(a) and n(a) == n(b)
 
 
+import m_signatures as MS
+
+AGRI.integrer()
+
+
 def enregistrer(app, H):
     from db import ex, q
 
@@ -66,7 +74,7 @@ def enregistrer(app, H):
 
     @app.before_request
     def assurer_matieres_techniques():
-        if fait["matieres"] or not config.secondaire() or request.endpoint in (None, "static"):
+        if fait["matieres"] or not (config.secondaire() or config.enseignant()) or request.endpoint in (None, "static"):
             return
         try:
             for ordre, (code, nom) in enumerate(MATIERES_TECHNIQUES, 100):
@@ -78,7 +86,7 @@ def enregistrer(app, H):
             pass
 
     def garde():
-        if not config.secondaire():
+        if not EM.prof_actif():
             abort(404)
 
     def moi():
@@ -94,6 +102,8 @@ def enregistrer(app, H):
             mats = q("SELECT * FROM matieres WHERE cycle='secondaire' AND actif=1 ORDER BY ordre")
             for a in q("SELECT a.classe_id, a.matiere_id, c.nom classe, c.niveau FROM affectations a JOIN classes c ON c.id=a.classe_id "
                        "WHERE a.user_id=? ORDER BY c.nom", (moi(),)):
+                if config.enseignant() and not a["matiere_id"]:
+                    continue   # application personnelle : le professeur désigne lui-même ses matières
                 if a["matiere_id"]:
                     m = q("SELECT nom FROM matieres WHERE id=?", (a["matiere_id"],), un=True)
                     res.append(dict(cid=a["classe_id"], mid=a["matiere_id"], classe=a["classe"], niveau=a["niveau"], matiere=m["nom"] if m else ""))
@@ -146,8 +156,14 @@ def enregistrer(app, H):
         mat = nom_matiere(mid)
         modeles = [(i, f) for i, f in enumerate(FS.FICHES) if meme_matiere(mat, f["matiere"]) and f["niveau"] == niv_biblio(cl["niveau"])][:12]
         apc = [(i, e) for i, e in enumerate(AP.EPREUVES) if meme_matiere(mat, e["matiere"]) and e["niveau"] == niv_biblio(cl["niveau"])][:12]
+        tps = [(i, t) for i, t in enumerate(AGRI.TP_LISTE) if meme_matiere(mat, t["matiere"]) and t["niveau"] == niv_biblio(cl["niveau"])]
         eff = q("SELECT COUNT(*) n FROM eleves WHERE classe_id=? AND statut='inscrit'", (cid,), un=True)["n"]
-        return render_template("ens_sec_cours.html", cl=cl, mid=mid, mat=mat, docs=docs, modeles=modeles, apc=apc, eff=eff, CH=CHAMPS)
+        from m_ressources_sec import _etendre
+        import ressources_secondaire as RS
+        themes = [(i, e) for i, e in enumerate(RS.EXPOSES) if meme_matiere(mat, e[0]) and niv_biblio(cl["niveau"]) in _etendre(e[1])][:15]
+        exposes = q("SELECT x.*, (SELECT COUNT(*) FROM exposes_groupes WHERE expose_id=x.id) ng FROM exposes_sec x WHERE x.classe_id=? AND x.matiere_id IS ? AND x.user_id=? ORDER BY x.id DESC",
+                    (cid, mid or None, moi()))
+        return render_template("ens_sec_cours.html", cl=cl, mid=mid, mat=mat, docs=docs, modeles=modeles, apc=apc, tps=tps, eff=eff, CH=CHAMPS, themes=themes, exposes=exposes)
 
     # ---------------------------------------------------------------- création / modification
     def formulaire(kind, d=None, cid=None, mid=None, pre=None):
@@ -167,7 +183,7 @@ def enregistrer(app, H):
             H.journal("ens_sec_" + kind, titre[:80])
             flash("Enregistré.", "success")
             return redirect(url_for("ens_sec_voir", kind=kind, did=did))
-        return render_template("ens_sec_form.html", kind=kind, nom=CHAMPS[kind][0], champs=CHAMPS[kind][1], v=v, d=d, cid=cid, mid=mid, TYPES=TYPES_DEVOIR)
+        return render_template("ens_sec_form.html", FONCTIONS=MS.FONCTIONS, kind=kind, nom=CHAMPS[kind][0], champs=CHAMPS[kind][1], v=v, d=d, cid=cid, mid=mid, TYPES=TYPES_DEVOIR)
 
     @app.route("/ens-sec/nouveau/<kind>", methods=["GET", "POST"])
     @H.connexion_requise("epreuves")
@@ -200,10 +216,16 @@ def enregistrer(app, H):
         v = valeurs(d)
         cl = H.classe_ou_404(d["classe_id"]) if d["classe_id"] else None
         prof = q("SELECT id, nom FROM utilisateurs WHERE id=?", (d["user_id"],), un=True)
-        sig = H.signature(f"enseignant:{d['user_id']}") if kind == "devoir" else None
+        sans_sig = request.args.get("sans_sig") == "1"
+        sig = H.signature(f"enseignant:{d['user_id']}") if not sans_sig else None
         griffe = None
-        if kind == "devoir" and prof:
+        if kind == "devoir" and prof and not sans_sig:
             griffe = {"titre": "Le Professeur", "nom": prof["nom"], "ligne3": v.get("matiere", "")}
+        visa = None
+        if kind == "devoir" and not sans_sig and v.get("visa") in MS.TITRES:
+            gv = H.griffe_fonction(v["visa"])
+            visa = {"cle": f"ecole:{H.eco()}:{v['visa']}", "griffe": gv, "titre": MS.TITRES[v["visa"]],
+                    "signe": bool(H.signature(f"ecole:{H.eco()}:{v['visa']}"))}
         consignes = []
         if kind == "devoir":
             for ligne in (v.get("consignes") or "").splitlines():
@@ -211,7 +233,8 @@ def enregistrer(app, H):
                     t, _, p = ligne.partition("|")
                     consignes.append((t.strip(), p.strip()))
         return render_template("ens_sec_doc.html", d=d, kind=kind, nom=CHAMPS[kind][0], champs=CHAMPS[kind][1], v=v, cl=cl, prof=prof,
-                               ident=H.identification(), sig=bool(sig), griffe=griffe, consignes=consignes,
+                               ident=H.identification(), sig=bool(sig), griffe=griffe, visa=visa, sans_sig=sans_sig,
+                               avec_sig=not sans_sig and (kind == "devoir" or bool(sig)), consignes=consignes,
                                filigrane=(prof["nom"] if kind != "devoir" and prof else ""))
 
     @app.route("/ens-sec/<kind>/<int:did>/dupliquer", methods=["POST"])
@@ -252,11 +275,13 @@ def enregistrer(app, H):
                     items = json.loads(items)
                 except ValueError:
                     items = []
-            kind, v = "devoir", {"type": "Devoir surveillé", "matiere": e["matiere"], "niveau": e["niveau"], "duree": e.get("duree", ""),
+            kind, v = "devoir", {"type": e.get("type", "Devoir surveillé"), "matiere": e["matiere"], "niveau": e["niveau"], "duree": e.get("duree", ""),
                                  "total": str(e.get("total", "20")), "titre": f"{e['matiere']} {e['niveau']}", "competence": e.get("competence", ""),
                                  "situation": e.get("situation", ""), "tache": e.get("tache", ""),
                                  "consignes": "\n".join(f"{x.get('consigne', '')} | {x.get('points', '')}" for x in items if isinstance(x, dict)),
-                                 "corrige": "\n".join(f"{n}. {x.get('corrige', '')}" for n, x in enumerate(items, 1) if isinstance(x, dict) and x.get("corrige"))}
+                                 "corrige": "\n".join(f"{n}. {x.get('correction') or x.get('corrige') or ''}" for n, x in enumerate(items, 1) if isinstance(x, dict) and (x.get("correction") or x.get("corrige")))}
+        elif src == "tp" and 0 <= i < len(AGRI.TP_LISTE):
+            kind, v = "tp", {k: AGRI.TP_LISTE[i].get(k, "") for k, _, _ in CHAMPS["tp"][1]}
         elif src == "epreuve":
             from m_ressources_sec import banque
             e = next((x for x in banque() if x["id"] == i), None)
@@ -272,4 +297,4 @@ def enregistrer(app, H):
         flash("Modèle copié dans vos documents : modifiez-le ci-dessous.", "success")
         return redirect(url_for("ens_sec_modifier", kind=kind, did=nid))
 
-    app.jinja_env.globals["ens_sec_actif"] = lambda: config.secondaire()
+    app.jinja_env.globals["ens_sec_actif"] = lambda: EM.prof_actif()

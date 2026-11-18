@@ -11,13 +11,17 @@
 <div class="flash info">Commencez par ajouter vos élèves : <a href="{{ url_for('eleve_form', classe=classes[0].id) if classes else url_for('ens_classes') }}">un par un</a> ou <a href="{{ url_for('eleves_import') }}">en important un fichier Excel</a>.</div>
 {% endif %}
 <div class="raccourcis">
+  {% if application %}<a href="{{ url_for('ens_perimetre') }}"><span class="ico" aria-hidden="true">{{ icone('boussole') }}</span><b>Mon périmètre</b><span class="d">titulaire de classe et/ou professeur</span></a>{% endif %}
+  {% if application %}<a href="{{ url_for('ens_sauvegarde') }}"><span class="ico" aria-hidden="true">{{ icone('document') }}</span><b>Ma sauvegarde</b><span class="d">copie de mes données, restauration</span></a>{% endif %}
+  {% if prof %}<a href="{{ url_for('ens_sec') }}"><span class="ico" aria-hidden="true">{{ icone('livre') }}</span><b>Mes cours (professeur)</b><span class="d">fiches, devoirs, TP, exposés par classe et matière</span></a>
+  <a href="{{ url_for('ress_sec') }}"><span class="ico" aria-hidden="true">{{ icone('document') }}</span><b>Bibliothèque pédagogique</b><span class="d">épreuves APC, TP, fiches, exposés, révisions</span></a>{% endif %}
   {% if ep_existe('listes_classe') %}<a href="{{ url_for('listes_classe') }}"><span class="ico" aria-hidden="true">{{ icone('liste') }}</span><b>Listes de classe</b><span class="d">mes classes : PDF, Excel, impression</span></a>{% endif %}
   <a href="{{ url_for('ma_classe') }}"><span class="ico" aria-hidden="true">{{ icone('ecole') }}</span><b>Ma classe</b><span class="d">appel du jour, élèves à suivre</span></a>
   {% if peut('appel') %}<a href="{{ url_for('appel_accueil') }}"><span class="ico" aria-hidden="true">{{ icone('valider') }}</span><b>Appel</b><span class="d">registre d'appel journalier</span></a>{% endif %}
   {% if peut('evaluations') %}<a href="{{ url_for('eval_accueil') }}"><span class="ico" aria-hidden="true">{{ icone('note') }}</span><b>Notes</b><span class="d">évaluations</span></a>{% endif %}
   {% if peut('notes') %}<a href="{{ url_for('notes_accueil') }}"><span class="ico" aria-hidden="true">{{ icone('graphique') }}</span><b>Bulletins</b><span class="d">notes par période</span></a>{% endif %}
   <a href="{{ url_for('synoptique_edt') }}"><span class="ico" aria-hidden="true">{{ icone('calendrier') }}</span><b>Emploi du temps</b><span class="d">{{ 'à tenir' if application else 'en consultation' }}</span></a>
-  <a href="{{ url_for('synoptique_planification') }}"><span class="ico" aria-hidden="true">{{ icone('boussole') }}</span><b>Planification annuelle</b><span class="d">par niveau</span></a>
+  {% if titulaire %}<a href="{{ url_for('synoptique_planification') }}"><span class="ico" aria-hidden="true">{{ icone('boussole') }}</span><b>Planification annuelle</b><span class="d">par niveau</span></a>{% endif %}
   <a href="{{ url_for('synoptique_planification_mensuelle') }}"><span class="ico" aria-hidden="true">{{ icone('calendrier') }}</span><b>Planification mensuelle</b><span class="d">de mes classes</span></a>
   {% if peut('preparation') and ep_existe('prep_accueil') %}<a href="{{ url_for('prep_accueil') }}"><span class="ico" aria-hidden="true">{{ icone('note') }}</span><b>Préparation de classe</b><span class="d">fiches APC, guides, programmes</span></a>{% endif %}
   <a href="{{ url_for('ens_certificats') }}"><span class="ico" aria-hidden="true">{{ icone('document') }}</span><b>Mes certificats</b><span class="d">PDF pré-remplis</span></a>

@@ -13,6 +13,7 @@ from datetime import date
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
 
+import agri_sec as AG  # noqa: E402
 import cahier_cp_progression as CP  # noqa: E402
 import cahiers_langues as CL  # noqa: E402
 import epreuves_apc as EA  # noqa: E402
@@ -24,7 +25,7 @@ import reperes as RE  # noqa: E402
 
 NIVEAUX = [("6e", "6e", "1er cycle"), ("5e", "5e", "1er cycle"), ("4e", "4e", "1er cycle"), ("3e", "3e", "1er cycle"),
            ("2nde", "2nde", "2nd cycle"), ("1ère", "1ère", "2nd cycle"), ("Tle", "Terminale", "2nd cycle")]
-MATIERES = ["Français", "Mathématiques", "Anglais", "Allemand", "Espagnol", "Physique-Chimie-Technologie", "SVT", "Histoire-Géographie", "Philosophie"]
+MATIERES = ["Français", "Mathématiques", "Anglais", "Allemand", "Espagnol", "Physique-Chimie-Technologie", "SVT", "Histoire-Géographie", "Philosophie"] + [m[1] for m in AG.MATIERES_AGRI]
 
 
 def _ecrire(dossier, nom, objet):
@@ -35,6 +36,7 @@ def _ecrire(dossier, nom, objet):
 
 
 def main(sortie):
+    AG.integrer()   # lycée agricole : épreuves, interrogations, devoirs et fiches ajoutés aux bibliothèques
     os.makedirs(sortie, exist_ok=True)
     fiches = [dict(f, id=f"sec-f{i + 1:03d}") for i, f in enumerate(FS.FICHES)]
     epreuves = []

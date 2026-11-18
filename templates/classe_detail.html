@@ -6,6 +6,7 @@
     {% if peut('eleves') and g.user.role != 'enseignant' %}<a class="btn" href="{{ url_for('eleve_form', classe=cl.id) }}">+ Inscrire dans cette classe</a>{% endif %}
     {% for p in PERIODES %}<a class="btn sec" href="{{ url_for('resultats', cid=cl.id, p=loop.index) }}">Résultats {{ p }}</a>{% endfor %}
     {% if cl.niveau == 'CM2' and peut('documents') %}<a class="btn sec" href="{{ url_for('liste_cep', cid=cl.id) }}">Liste CEP (CSV)</a>{% endif %}
+    {% if peut('documents') %}<a class="btn sec" href="{{ url_for('classe_photos_zip', cid=cl.id) }}" title="Un fichier par classe : photos nommées numéro_NOM_Prénom.jpg">Photos de la classe (ZIP renommées)</a>{% endif %}
   </div>
 </div>
 <div class="tw"><table class="t">

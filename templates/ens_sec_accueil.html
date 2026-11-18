@@ -2,7 +2,8 @@
 {% block contenu %}
 <div class="entete"><div><h1>Mes cours et documents</h1>
 <p class="sous">Vos classes et vos matières (enseignement général et technique) : fiches de préparation, devoirs et fiches de TP modifiables, avec votre signature.</p></div>
-<div class="actions"><a class="btn sec" href="{{ url_for('ress_sec', vue='fiches') }}">Bibliothèque : fiches, épreuves, exposés</a></div></div>
+<div class="actions"><a class="btn sec" href="{{ url_for('ress_sec', vue='fiches') }}">Bibliothèque : fiches, épreuves, exposés</a>
+<a class="btn sec" href="{{ url_for('signatures_cachets') }}">Ma signature et ma griffe</a></div></div>
 <div class="grille indicateurs">
 {% for k, c in CH.items() %}<div class="kpi"><div class="l">{{ c[0] }}</div><div class="v">{{ nbdocs.get(k, 0) }}</div><div class="d">créé(s) par vous</div></div>{% endfor %}
 </div>

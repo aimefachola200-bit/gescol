@@ -21,6 +21,7 @@
   <a href="{{ url_for('eleve_resultats') }}"><b>Résultats et bulletins</b>Tes moyennes, ton rang et tes bulletins PDF publiés par l'école.</a>
   <a href="{{ url_for('eleve_absences') }}"><b>Absences et retards</b>Le détail de tes absences depuis la rentrée.</a>
   <a href="{{ url_for('eleve_carte') }}"><b>Ma carte scolaire</b>Tes informations et ta carte d'élève à imprimer.</a>
+  {% if SECONDAIRE and ep_existe('eleve_exposes') %}<a href="{{ url_for('eleve_exposes') }}"><b>Mes exposés</b>Les exposés de tes professeurs : forme ton groupe, rédige et remets.</a>{% endif %}
   <a href="{{ url_for('eleve_mdp') }}"><b>Mot de passe</b>Changer ton mot de passe.</a>
 </div>
 {% endblock %}
