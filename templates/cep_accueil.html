@@ -13,6 +13,9 @@
   {% if cl %}<div class="actions">
     <a class="btn" href="{{ url_for('cep_fiches_classe_pdf', cid=cl.id) }}" target="_blank" rel="noopener">{{ icone('document') }} PDF de toute la classe</a>
     <a class="btn sec" href="{{ url_for('cep_candidats_excel', cid=cl.id) }}">{{ icone('graphique') }} Liste des candidats (Excel)</a>
+    <a class="btn sec" href="{{ url_for('cep_photos_excel', cid=cl.id) }}">{{ icone('graphique') }} Photos EducMaster (Excel)</a>
+    <a class="btn sec" href="{{ url_for('cep_photos_pdf', cid=cl.id) }}" target="_blank" rel="noopener">{{ icone('document') }} Photos EducMaster (PDF)</a>
+    <a class="btn sec" href="{{ url_for('cep_photos_zip', cid=cl.id) }}">{{ icone('document') }} Photos pour EducMaster (ZIP)</a>
   </div>{% endif %}
 </div>
 

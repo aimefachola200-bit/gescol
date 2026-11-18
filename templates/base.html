@@ -18,6 +18,7 @@
 <meta name="apple-mobile-web-app-title" content="{{ NOM_APPLI }}">
 <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/insignes/' ~ INSIGNE ~ '-icon-192.png') }}">
 <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/insignes/' ~ INSIGNE ~ '-apple-touch-icon.png') }}">
+<style>.filigrane{position:fixed;top:45%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:64px;font-weight:700;color:rgba(0,0,0,.06);white-space:nowrap;pointer-events:none;z-index:0}</style>
 </head>
 <body>
 {% set ep = request.endpoint or '' %}
@@ -70,6 +71,7 @@
       {{ lien('bilan_annuel', 'Bilan annuel et décision', ep.startswith('bilan')) }}{% endif %}
       {% if peut('epreuves') and ep_existe('schemas_accueil') %}{{ lien('schemas_accueil', "Schémas et cartes du Bénin", ep.startswith('schemas')) }}{% endif %}
       {% if peut('epreuves') and ep_existe('epreuves_accueil') %}{{ lien('epreuves_accueil', "Comité d'évaluation, épreuves et grilles", ep.startswith('epreuves')) }}{% endif %}
+      {% if SECONDAIRE and peut('epreuves') and ep_existe('ens_sec') %}{{ lien('ens_sec', "Mes cours et documents", ep.startswith('ens_sec')) }}{% endif %}
       {% if SECONDAIRE and peut('epreuves') and ep_existe('ress_sec') %}{{ lien('ress_sec', "Ressources du secondaire (épreuves, exposés, révisions)", ep.startswith('ress_sec')) }}{% endif %}
       {% if peut('notes') %}{{ lien('notes_accueil', 'Notes par période (bulletins)', ep.startswith('notes') or ep=='resultats') }}{% endif %}
       {% if peut('synthese') %}{{ lien('synthese_accueil', 'Synthèse École / UP / CS', ep.startswith('synthese')) }}{% endif %}
@@ -265,7 +267,7 @@
 {{ lien('guide_utilisation', "Guide d'utilisation", ep=='guide_utilisation', 'info') }}
     {% endif %}
   </nav>
-  <div class="lateral-pied aide">GESCOL {{ VERSION }}<br>Conception : {{ CONCEPTEUR }}</div>
+  <div class="lateral-pied aide">GESCOL {{ VERSION }}{% if not (SANS_CONCEPTEUR and request.path.startswith(SANS_CONCEPTEUR)) %}<br>Conception : {{ CONCEPTEUR }}{% endif %}</div>
 </aside>
 <div id="voile" class="voile" hidden></div>
 <div class="zone">
@@ -333,7 +335,7 @@
     <a class="btn petit" href="{{ EXPORT_BARRE.word }}" data-telechargement="docx">{{ icone('texte') }} Télécharger Word</a>
     <button type="button" class="btn sec petit" onclick="gescolImprimer()">{{ icone('imprimer') }} Imprimer</button></div>{% endif %}
   {% block contenu %}{% endblock %}
-  <footer class="credit">GESCOL {{ VERSION }} · Conception : {{ CONCEPTEUR }}</footer>
+  {% if not (SANS_CONCEPTEUR and request.path.startswith(SANS_CONCEPTEUR)) %}<footer class="credit">GESCOL {{ VERSION }} · Conception : {{ CONCEPTEUR }}</footer>{% endif %}
 </main>
 {% if g.user %}</div></div>{% endif %}
 <script>

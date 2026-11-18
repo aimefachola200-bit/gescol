@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% block titre %}Mes cours et documents{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Mes cours et documents</h1>
+<p class="sous">Vos classes et vos matières (enseignement général et technique) : fiches de préparation, devoirs et fiches de TP modifiables, avec votre signature.</p></div>
+<div class="actions"><a class="btn sec" href="{{ url_for('ress_sec', vue='fiches') }}">Bibliothèque : fiches, épreuves, exposés</a></div></div>
+<div class="grille indicateurs">
+{% for k, c in CH.items() %}<div class="kpi"><div class="l">{{ c[0] }}</div><div class="v">{{ nbdocs.get(k, 0) }}</div><div class="d">créé(s) par vous</div></div>{% endfor %}
+</div>
+{% if not cours %}<div class="carte"><p><b>Aucune classe ne vous est encore affectée.</b></p>
+<p class="aide">Demandez à l'administrateur (menu Utilisateurs) de vous affecter vos classes et vos matières. Vous pourrez alors ouvrir chaque cours ici.</p></div>
+{% else %}
+{% for cl in cours|groupby('classe') %}
+<div class="carte"><h2 style="margin-top:0">{{ cl.grouper }}</h2>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+{% for c in cl.list %}<a class="btn sec" href="{{ url_for('ens_sec_cours', cid=c.cid, mid=c.mid) }}">{{ c.matiere }}</a>{% endfor %}
+</div></div>
+{% endfor %}{% endif %}
+<p class="aide">Votre signature se règle dans « Mon espace ». Les documents que vous créez ici ne sont visibles que de vous et de la direction.</p>
+{% endblock %}

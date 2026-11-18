@@ -446,6 +446,19 @@ CREATE TABLE IF NOT EXISTS journal (
     details TEXT,
     cree_le TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS docs_sec (                -- v2.6 : fiches, devoirs et fiches de TP de l'enseignant du secondaire (modifiables)
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    kind TEXT NOT NULL,                             -- fiche | devoir | tp
+    classe_id INTEGER,
+    matiere_id INTEGER,
+    titre TEXT NOT NULL DEFAULT '',
+    donnees TEXT NOT NULL DEFAULT '{}',             -- champs du document (JSON)
+    source TEXT,                                    -- ex. fiche:12 (copié de la bibliothèque)
+    cree_le TEXT DEFAULT CURRENT_TIMESTAMP,
+    maj_le TEXT DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 # Référentiel repris de gescol_complet.py

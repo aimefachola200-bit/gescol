@@ -1019,6 +1019,159 @@ def enregistrer(app, H):
                                        f"École : {ecole_val('nom')} – Classe : {cl['nom']} – DDEMP : {p['ddemp']} – "
                                        f"CS : {p['cs']} – Centre : {p['centre']}"])
 
+    # ---- Photos pour la plateforme EducMaster : Excel, PDF et dossier ZIP (nom de fichier : numéro_NOM_Prénom) ----
+    def _net_nom(t, majuscules=False):
+        t = re.sub(r'[\\/:*?"<>|_]+', " ", (t or "").strip())
+        t = re.sub(r"\s+", "-", t.strip())
+        return t.upper() if majuscules else t
+
+    def photos_educmaster(cid):
+        """[{e, numero, nom, prenoms, fichier, photo, manque}] : un candidat par ligne (élèves inscrits de la classe)."""
+        res = []
+        for e in eleves_de(cid):
+            num = _net_nom(e["matricule_educmaster"])
+            nom, pre = _net_nom(e["nom"], True), _net_nom(e["prenoms"])
+            res.append({"e": e, "numero": e["matricule_educmaster"] or "", "nom": e["nom"] or "", "prenoms": e["prenoms"] or "",
+                        "fichier": f"{num or 'SANS-NUMERO'}_{nom}_{pre}", "photo": H.chemin_photo(e), "manque": not num})
+        return res
+
+    def _classe_cm2_ou_404(cid):
+        H.verifier_classe(cid)
+        cl = H.classe_ou_404(cid)
+        if cl["niveau"] != "CM2":
+            abort(404)
+        return cl
+
+    @app.route("/cep/classe/<int:cid>/photos-educmaster.xlsx")
+    @H.connexion_requise("cep")
+    def cep_photos_excel(cid):
+        from openpyxl import Workbook
+        from openpyxl.drawing.image import Image as XlImage
+        from openpyxl.styles import Alignment, Font, PatternFill
+        from PIL import Image
+        cl = _classe_cm2_ou_404(cid)
+        p = params_classe(cl)
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Photos EducMaster"
+        ws.append([f"PHOTOS DES CANDIDATS AU CEP – SESSION {p['session']} – {ecole_val('nom')} – {cl['nom']}"])
+        ws.append([])
+        ws.append(["Photo", "N° EducMaster", "Nom", "Prénoms", "Nom du fichier photo"])
+        for c in ws[3]:
+            c.font = Font(bold=True, color="FFFFFF")
+            c.fill = PatternFill("solid", fgColor="1F3864")
+            c.alignment = Alignment(horizontal="center", vertical="center")
+        ws["A1"].font = Font(bold=True, size=12)
+        for col, w in zip("ABCDE", (14, 18, 24, 30, 46)):
+            ws.column_dimensions[col].width = w
+        for i, l in enumerate(photos_educmaster(cid), 4):
+            ws.append(["", l["numero"], l["nom"].upper(), l["prenoms"], l["fichier"] + ".jpg"])
+            ws.row_dimensions[i].height = 64
+            for c in ws[i]:
+                c.alignment = Alignment(vertical="center", wrap_text=True)
+            if l["manque"]:
+                ws.cell(i, 2).value = "À COMPLÉTER"
+                ws.cell(i, 2).font = Font(bold=True, color="C00000")
+            if l["photo"]:
+                try:
+                    im = Image.open(l["photo"]).convert("RGB")
+                    im.thumbnail((160, 200))
+                    buf = io.BytesIO()
+                    im.save(buf, "JPEG", quality=85)
+                    buf.seek(0)
+                    x = XlImage(buf)
+                    x.width, x.height = 44, 56
+                    ws.add_image(x, f"A{i}")
+                except Exception:
+                    ws.cell(i, 1).value = "photo illisible"
+            else:
+                ws.cell(i, 1).value = "pas de photo"
+        ws.freeze_panes = "A4"
+        out = io.BytesIO()
+        wb.save(out)
+        H.journal("cep_photos_excel", cl["nom"])
+        return Response(out.getvalue(), mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        headers={"Content-Disposition": f"attachment; filename=photos_educmaster_{cl['nom'].replace(' ', '_')}.xlsx"})
+
+    @app.route("/cep/classe/<int:cid>/photos-educmaster.pdf")
+    @H.connexion_requise("cep")
+    def cep_photos_pdf(cid):
+        from reportlab.pdfgen import canvas as rl_canvas
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+        cl = _classe_cm2_ou_404(cid)
+        lignes = photos_educmaster(cid)
+        buf = io.BytesIO()
+        c = rl_canvas.Canvas(buf, pagesize=A4)
+        W, Hh = A4
+        cols, rows = 4, 5
+        cw, ch = (W - 24 * mm) / cols, (Hh - 40 * mm) / rows
+        pw, ph = 34 * mm, 42 * mm
+        titre = f"Photos des candidats au CEP – {ecole_val('nom')} – {cl['nom']}"
+        par_page = cols * rows
+        for n, l in enumerate(lignes):
+            k = n % par_page
+            if k == 0:
+                if n:
+                    c.showPage()
+                c.setFont("Helvetica-Bold", 10)
+                c.drawString(12 * mm, Hh - 14 * mm, titre)
+                c.setFont("Helvetica", 8)
+                c.drawRightString(W - 12 * mm, Hh - 14 * mm, f"Page {n // par_page + 1}")
+            x0 = 12 * mm + (k % cols) * cw
+            y0 = Hh - 24 * mm - (k // cols + 1) * ch
+            px, py = x0 + (cw - pw) / 2, y0 + 12 * mm
+            if l["photo"]:
+                try:
+                    c.drawImage(ImageReader(l["photo"]), px, py, pw, ph, preserveAspectRatio=True, anchor="c")
+                except Exception:
+                    l["photo"] = None
+            if not l["photo"]:
+                c.setStrokeColor(colors.grey)
+                c.rect(px, py, pw, ph)
+                c.setFont("Helvetica", 8)
+                c.drawCentredString(px + pw / 2, py + ph / 2, "pas de photo")
+            leg = l["fichier"].replace("SANS-NUMERO", "(n° manquant)")
+            taille = 8
+            while taille > 5.5 and stringWidth(leg, "Helvetica", taille) > cw - 2 * mm:
+                taille -= 0.5
+            c.setFillColor(colors.HexColor("#C00000") if l["manque"] else colors.black)
+            c.setFont("Helvetica", taille)
+            if stringWidth(leg, "Helvetica", taille) > cw - 2 * mm:       # très long : deux lignes, coupées sur « _ »
+                a, b = leg.rsplit("_", 1) if "_" in leg else (leg[:len(leg) // 2], leg[len(leg) // 2:])
+                c.drawCentredString(x0 + cw / 2, py - 4 * mm, a + "_")
+                c.drawCentredString(x0 + cw / 2, py - 7.5 * mm, b)
+            else:
+                c.drawCentredString(x0 + cw / 2, py - 5 * mm, leg)
+            c.setFillColor(colors.black)
+        if not lignes:
+            c.drawString(12 * mm, Hh - 30 * mm, "Aucun candidat dans cette classe.")
+        c.save()
+        H.journal("cep_photos_pdf", f"{cl['nom']} : {len(lignes)} photo(s)")
+        return H.pdf_reponse(buf.getvalue(), f"photos_educmaster_{cl['nom'].replace(' ', '_')}.pdf")
+
+    @app.route("/cep/classe/<int:cid>/photos-educmaster.zip")
+    @H.connexion_requise("cep")
+    def cep_photos_zip(cid):
+        import zipfile
+        from PIL import Image
+        cl = _classe_cm2_ou_404(cid)
+        out, n, sans = io.BytesIO(), 0, []
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_STORED) as z:
+            for l in photos_educmaster(cid):
+                if l["manque"] or not l["photo"]:
+                    sans.append(f"{l['nom']} {l['prenoms']} : " + ("n° EducMaster manquant" if l["manque"] else "pas de photo"))
+                    continue
+                im = Image.open(l["photo"]).convert("RGB")
+                b = io.BytesIO()
+                im.save(b, "JPEG", quality=90)
+                z.writestr(l["fichier"] + ".jpg", b.getvalue())
+                n += 1
+            if sans:
+                z.writestr("_non_exportes.txt", "Candidats non exportés :\r\n" + "\r\n".join(sans))
+        H.journal("cep_photos_zip", f"{cl['nom']} : {n} photo(s)")
+        return Response(out.getvalue(), mimetype="application/zip",
+                        headers={"Content-Disposition": f"attachment; filename=photos_educmaster_{cl['nom'].replace(' ', '_')}.zip"})
+
     # ============================================================ 2. CARTE SCOLAIRE DU CANDIDAT
     CHAMPS_ELEVE = ("numero_table", "matricule_educmaster", "nip", "nom", "prenoms", "sexe", "date_naissance",
                     "lieu_naissance", "centre_examen", "classe")

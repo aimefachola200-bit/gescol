@@ -25,7 +25,12 @@ PREFIXES = ("/preparation", "/epreuves", "/aide/guide",
             # v2.2 : documents à garder ou à modifier (rapports, comptes rendus, notes de service, bilans, tableaux)
             "/rapports", "/communication", "/inspection", "/uascep", "/examens", "/examen-blanc", "/cep-blanc", "/pilotage",
             "/sport", "/sante-scolaire", "/patrimoine-materiel", "/visites", "/bilan-annuel", "/maitre-semaine", "/themes-up",
-            "/calendrier-scolaire", "/ressources-secondaire", "/budget-previsionnel", "/tableau-honneur", "/synthese", "/statistiques-evaluation", "/juridiction")
+            "/calendrier-scolaire", "/ressources-secondaire", "/ens-sec", "/budget-previsionnel", "/tableau-honneur", "/synthese", "/statistiques-evaluation", "/juridiction")
+# v2.6 : documents sur lesquels la mention « Conception » n'apparaît pas (épreuves, devoirs, exposés) ; la mention reste sur les fiches
+SANS_CONCEPTEUR = ("/ens-sec/devoir", "/ens-sec/expose", "/ressources-secondaire/epreuve", "/ressources-secondaire/apc",
+                   "/ressources-secondaire/expose", "/epreuves")
+# fiches de préparation : le nom du professeur titulaire est imprimé en filigrane
+AVEC_FILIGRANE = ("/ens-sec/fiche", "/ens-sec/tp", "/ressources-secondaire/fiche")
 # pages qui reçoivent aussi la barre (avant : seulement « Imprimer »)
 ENDPOINTS_EN_PLUS = {"impayes", "jur_tableau", "jur_fiches_tableaux", "jur_ecoles_struct", "jur_rubriques", "jur_cep_fiches",
                      "jur_infra", "jur_effectifs", "acces_parent"}
@@ -118,6 +123,7 @@ def reponse_docx(contenu_html_ou_blocs, nom, titre="Document"):
 
 
 def enregistrer(app, H):
+    app.jinja_env.globals["SANS_CONCEPTEUR"] = SANS_CONCEPTEUR
     H.reponse_docx = reponse_docx
     H.reponse_fichier = reponse_fichier
 
@@ -173,7 +179,10 @@ def enregistrer(app, H):
         b = E.blocs(E.contenu_principal(html))
         ecole = (config.ECOLE.get("nom") or "").strip() if isinstance(getattr(config, "ECOLE", None), dict) else ""
         pied = f"{ecole + ' · ' if ecole else ''}{getattr(config, 'NOMS_APPLI', {}).get(config.EDITION, 'GESCOL') if hasattr(config, 'NOMS_APPLI') else 'GESCOL'} {config.VERSION} · Conception : {config.CONCEPTEUR} — +229 01 96 51 03 33"
+        if page.split("?")[0].startswith(SANS_CONCEPTEUR):
+            pied = pied.split(" · Conception")[0]
+        fil = (g.user["nom"] if g.get("user") and page.split("?")[0].startswith(AVEC_FILIGRANE) else None)
         H.journal("export_" + fmt, page[:200])
         if fmt == "pdf":
-            return reponse_fichier(E.pdf(b, titre, pied), nom_fichier(titre, "pdf"), "application/pdf")
+            return reponse_fichier(E.pdf(b, titre, pied, fil), nom_fichier(titre, "pdf"), "application/pdf")
         return reponse_fichier(E.docx(b, titre, pied), nom_fichier(titre, "docx"), E.KIT_DOCX)

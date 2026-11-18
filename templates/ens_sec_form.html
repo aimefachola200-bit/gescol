@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block titre %}{{ nom }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ 'Modifier' if d else 'Nouveau' }} : {{ nom|lower }}</h1></div>
+<div class="actions">{% if d %}<a class="btn sec" href="{{ url_for('ens_sec_voir', kind=kind, did=d.id) }}">Voir sans modifier</a>{% endif %}</div></div>
+<form method="post" class="carte">
+{% for cle, lib, t in champs %}<label><b>{{ lib }}</b>
+{% if t == 't' %}<select name="{{ cle }}">{% for x in TYPES %}<option{% if v.get(cle) == x %} selected{% endif %}>{{ x }}</option>{% endfor %}</select>
+{% elif t == 'z' %}<textarea name="{{ cle }}" rows="4" style="width:100%">{{ v.get(cle, '') }}</textarea>
+{% else %}<input name="{{ cle }}" value="{{ v.get(cle, '') }}" style="width:100%">{% endif %}</label>
+{% endfor %}
+<p><button class="btn">Enregistrer</button> <a class="btn sec" href="{{ url_for('ens_sec') }}">Annuler</a></p></form>
+{% endblock %}

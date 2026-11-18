@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% block titre %}{{ mat or 'Cours' }} — {{ cl.nom }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ mat }} — {{ cl.nom }}</h1>
+<p class="sous">{{ cl.niveau }} · {{ eff }} élève(s)</p></div>
+<div class="actions"><a class="btn sec" href="{{ url_for('ens_sec') }}">Mes cours</a>
+<a class="btn sec" href="/classes/{{ cl.id }}">Élèves de la classe</a><a class="btn sec" href="/notes">Notes</a><a class="btn sec" href="/appel">Appel</a></div></div>
+<div class="carte"><h2 style="margin-top:0">Créer un document pour ce cours</h2><div style="display:flex;flex-wrap:wrap;gap:8px">
+{% for k, c in CH.items() %}<a class="btn" href="{{ url_for('ens_sec_nouveau', kind=k, cid=cl.id, mid=mid) }}">+ {{ c[0] }}</a>{% endfor %}</div></div>
+<div class="carte"><h2 style="margin-top:0">Mes documents</h2>
+{% if docs %}<table class="t"><tr><th>Type</th><th>Titre</th><th>Modifié le</th><th></th></tr>
+{% for d in docs %}<tr><td>{{ CH[d.kind][0] }}</td><td><a href="{{ url_for('ens_sec_voir', kind=d.kind, did=d.id) }}">{{ d.titre }}</a></td><td>{{ d.maj_le[:16] }}</td>
+<td style="white-space:nowrap"><a class="btn petit sec" href="{{ url_for('ens_sec_modifier', kind=d.kind, did=d.id) }}">Modifier</a>
+<form method="post" action="{{ url_for('ens_sec_dupliquer', kind=d.kind, did=d.id) }}" style="display:inline"><button class="btn petit sec">Dupliquer</button></form>
+<form method="post" action="{{ url_for('ens_sec_supprimer', kind=d.kind, did=d.id) }}" style="display:inline" onsubmit="return confirm('Supprimer ce document ?')"><button class="btn petit danger">Supprimer</button></form></td></tr>{% endfor %}</table>
+{% else %}<p class="aide">Aucun document pour l'instant.</p>{% endif %}</div>
+{% if modeles or apc %}<div class="carte"><h2 style="margin-top:0">Modèles de la bibliothèque pour ce cours</h2>
+<p class="aide">« Copier et modifier » place le modèle dans vos documents ; vous l'adaptez ensuite à votre classe.</p>
+<table class="t">{% for i, f in modeles %}<tr><td>Fiche</td><td>{{ f.titre }}</td><td><form method="post" action="{{ url_for('ens_sec_copier', src='fiche', i=i) }}"><input type="hidden" name="cid" value="{{ cl.id }}"><input type="hidden" name="mid" value="{{ mid }}"><button class="btn petit">Copier et modifier</button></form></td></tr>{% endfor %}
+{% for i, e in apc %}<tr><td>Devoir (APC)</td><td>{{ e.matiere }} {{ e.niveau }} — {{ e.situation[:80] }}…</td><td><form method="post" action="{{ url_for('ens_sec_copier', src='apc', i=i) }}"><input type="hidden" name="cid" value="{{ cl.id }}"><input type="hidden" name="mid" value="{{ mid }}"><button class="btn petit">Copier et modifier</button></form></td></tr>{% endfor %}</table></div>{% endif %}
+{% endblock %}

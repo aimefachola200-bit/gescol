@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% block titre %}{{ d.titre }}{% endblock %}
+{% block contenu %}
+<style>
+.doc-ent{display:flex;gap:14px;align-items:center;border-bottom:2px solid #1F3864;padding-bottom:8px;margin-bottom:10px}
+.doc-ent img{max-height:70px;max-width:90px}.signatures{display:flex;justify-content:space-around;align-items:flex-end;margin-top:26px;gap:12px;flex-wrap:wrap}
+.signatures figure{margin:0;text-align:center;font-size:13px}.signatures img{max-height:90px}
+</style>
+{% if filigrane %}<div class="filigrane" aria-hidden="true">{{ filigrane }}</div>{% endif %}
+<div class="entete noprint"><div><h1>{{ nom }}</h1></div><div class="actions">
+<a class="btn" href="{{ url_for('ens_sec_modifier', kind=kind, did=d.id) }}">Modifier</a>
+<form method="post" action="{{ url_for('ens_sec_dupliquer', kind=kind, did=d.id) }}" style="display:inline"><button class="btn sec">Dupliquer</button></form>
+<a class="btn sec" href="{{ url_for('ens_sec') }}">Mes cours</a></div></div>
+<div class="carte" style="position:relative;z-index:1">
+<div class="doc-ent"><img src="{{ url_for('ecole_logo', eid=g.ecole.id) if g.get('ecole') else '' }}" alt="" onerror="this.style.display='none'">
+<div><b>{{ ident.ecole or '' }}</b><br>Année scolaire {{ ident.annee }}{% if cl %} · Classe : {{ cl.nom }}{% endif %}</div></div>
+<h2 style="text-align:center">{{ v.get('titre') or d.titre }}</h2>
+<table class="t"><tr><th>Professeur</th><td>{{ prof.nom if prof else '' }}</td><th>Discipline</th><td>{{ v.get('matiere','') }}</td></tr>
+<tr><th>Classe / niveau</th><td>{{ v.get('niveau','') }}</td><th>Durée</th><td>{{ v.get('duree','') }}</td></tr>
+{% if kind == 'devoir' %}<tr><th>Type</th><td>{{ v.get('type','') }}</td><th>Barème</th><td>/ {{ v.get('total','20') }}</td></tr>{% endif %}
+{% if kind == 'tp' %}<tr><th>Filière</th><td colspan="3">{{ v.get('filiere','') }}</td></tr>{% endif %}</table>
+{% for cle, lib, t in champs if cle not in ('titre','matiere','niveau','duree','type','total','filiere','consignes','corrige') and v.get(cle) %}
+<h3>{{ lib }}</h3><p style="white-space:pre-wrap">{{ v.get(cle) }}</p>{% endfor %}
+{% if kind == 'devoir' and consignes %}<h3>Consignes</h3><table class="t"><tr><th>N°</th><th>Consigne</th><th>Points</th></tr>
+{% for t, p in consignes %}<tr><td>{{ loop.index }}</td><td>{{ t }}</td><td>{{ p }}</td></tr>{% endfor %}</table>{% endif %}
+{% if kind == 'devoir' and v.get('corrige') %}<h3>Corrigé et barème détaillé</h3><p style="white-space:pre-wrap">{{ v.corrige }}</p>{% endif %}
+{% if kind == 'devoir' %}<div class="signatures"><figure>{% if sig %}<img src="/signatures/enseignant:{{ d.user_id }}.png" alt="Signature">{% endif %}<figcaption>Signature du professeur</figcaption></figure>
+{% if griffe %}<figure><img src="/ecoles/griffe.svg?titre={{ griffe.titre|urlencode }}&nom={{ griffe.nom|urlencode }}&ligne3={{ griffe.ligne3|urlencode }}&largeur=260" alt="Cachet du professeur"></figure>{% endif %}</div>
+{% elif kind == 'fiche' or kind == 'tp' %}<p class="aide">Visa du chef d'établissement : ………………………………</p>{% endif %}
+</div>
+{% endblock %}

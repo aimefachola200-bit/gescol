@@ -380,7 +380,7 @@ def html_vers_docx(html, titre="Document", pied=None):
 
 
 # ------------------------------------------------------------------ PDF
-def pdf(liste_blocs, titre="Document", pied=None):
+def pdf(liste_blocs, titre="Document", pied=None, filigrane=None):
     """Même contenu en PDF A4 : Times New Roman 14 pt (Liberation Serif), tableaux bordés, en-têtes répétés."""
     from reportlab.lib import colors
     from reportlab.lib.enums import TA_CENTER
@@ -454,6 +454,14 @@ def pdf(liste_blocs, titre="Document", pied=None):
 
     def page(c, doc):
         c.saveState()
+        if filigrane:                                   # nom du professeur titulaire, en gris très clair, derrière le texte
+            c.saveState()
+            c.setFillColor(colors.HexColor("#E6E6E6"))
+            c.setFont(f["gras"], 46 if len(filigrane) < 24 else 30)
+            c.translate(A4[0] / 2, A4[1] / 2)
+            c.rotate(45)
+            c.drawCentredString(0, 0, filigrane)
+            c.restoreState()
         c.setFont(f["normal"], 8)
         c.setFillColor(colors.HexColor("#666666"))
         c.drawRightString(A4[0] - 1.7 * cm, 1.0 * cm, f"Page {doc.page}")

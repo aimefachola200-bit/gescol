@@ -1,5 +1,6 @@
 {% extends "base.html" %}{% block titre %}Épreuve APC{% endblock %}
 {% block contenu %}
+{% if SECONDAIRE and ens_sec_actif() %}<form method="post" action="{{ url_for('ens_sec_copier', src='apc', i=request.view_args.i) }}" class="noprint" style="display:inline"><button class="btn">Copier dans mes documents et modifier</button></form>{% endif %}
 <div class="entete"><div><h1>{{ e.matiere }} · {{ e.niveau }}{{ ' · CORRIGÉ ET BARÈME' if corrige }}</h1><p class="aide">Épreuve conforme à l'approche par les compétences (APC) · durée {{ e.duree }} · notée sur 20</p></div>
  <div class="actions"><a class="btn sec" href="{{ url_for('ress_sec', vue='apc') }}">← Épreuves APC</a>
  {% if corrige %}<a class="btn sec" href="{{ url_for('ress_sec_apc', i=e.id) }}">Voir le sujet</a>{% else %}<a class="btn sec" href="{{ url_for('ress_sec_apc', i=e.id, corrige=1) }}">Voir le corrigé</a>{% endif %}</div></div>
