@@ -58,6 +58,8 @@
       <div><label for="p-ceapa">Année du CEAP</label><input id="p-ceapa" name="ceap_annee" inputmode="numeric" maxlength="4" value="{{ saisie.ceap_annee or '' }}"></div>
       <div><label for="p-cap">CAP</label><select id="p-cap" name="cap"><option value="">—</option><option value="oui" {{ 'selected' if saisie.cap=='oui' }}>Oui</option><option value="non" {{ 'selected' if saisie.cap=='non' }}>Non</option></select></div>
       <div><label for="p-capa">Année du CAP</label><input id="p-capa" name="cap_annee" inputmode="numeric" maxlength="4" value="{{ saisie.cap_annee or '' }}"></div>
+    <div><label for="p-dps">Diplôme professionnel du secondaire</label><select id="p-dps" name="dip_pro_sec"><option value="">—</option>{% for g, l in DIPLOMES_PRO_SEC %}<optgroup label="{{ g }}">{% for d in l %}<option {{ 'selected' if saisie.dip_pro_sec==d }}>{{ d }}</option>{% endfor %}</optgroup>{% endfor %}</select></div>
+    <div><label for="p-dpsa">Année du diplôme professionnel du secondaire</label><input id="p-dpsa" name="dip_pro_sec_annee" inputmode="numeric" maxlength="4" value="{{ saisie.dip_pro_sec_annee or '' }}"></div>
     </div>
     <div class="actions" style="margin-top:10px"><button class="btn">Envoyer au directeur</button></div>
   </form>

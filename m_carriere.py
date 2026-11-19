@@ -73,7 +73,14 @@ def departements_de(texte):
 
 DIPLOMES = ["CEP", "BEPC", "BAC", "DEUG", "DUT / BTS", "Licence", "Maîtrise", "Master", "Doctorat"]
 # champs que l'enseignant peut proposer lui-même (validés ensuite par le directeur)
-CHAMPS_ENSEIGNANT = ["diplome_academique", "diplome_academique_annee", "ceap", "ceap_annee", "cap", "cap_annee"]
+CHAMPS_ENSEIGNANT = ["diplome_academique", "diplome_academique_annee", "ceap", "ceap_annee", "cap", "cap_annee",
+                     "dip_pro_sec", "dip_pro_sec_annee"]
+# v2.7.1 : diplômes professionnels de l'enseignement secondaire, selon le niveau d'enseignement
+DIPLOMES_PRO_SEC = [("Secondaire, 1er cycle (6e à 3e)", ["BAPES"]),
+                    ("Secondaire, 2nd cycle (2nde à Tle)", ["CAPES"]),
+                    ("Enseignement technique et professionnel", ["CAPET", "CAEP / CAPET-LT"]),
+                    ("Autres diplômes professionnels", ["CAPEPS (éducation physique et sportive)", "CAPEN (écoles normales)",
+                                                         "Autre diplôme professionnel du secondaire"])]
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS personnel_carriere (
@@ -117,6 +124,7 @@ LIBELLES = {
     "date_service_ecole": "Prise de service dans l'école",
     "diplome_academique": "Diplôme académique le plus élevé", "diplome_academique_annee": "Année du diplôme académique",
     "ceap": "CEAP", "ceap_annee": "Année du CEAP", "cap": "CAP", "cap_annee": "Année du CAP",
+    "dip_pro_sec": "Diplôme professionnel du secondaire", "dip_pro_sec_annee": "Année du diplôme professionnel du secondaire",
     "visite_aptitude": "Visite d'aptitude", "visite_aptitude_note": "Note de la visite d'aptitude",
     "departement_servir": "Département(s) servi(s)", "visites_cp": "Visites de classe du CP",
     "visites_ccs": "Visites de classe du CCS", "participation_up": "Participation à l'UP (%)",
@@ -395,7 +403,8 @@ def lire_diplomes(form, err, auj=None):
     v = {"diplome_academique": str(form.get("diplome_academique") or "").strip()[:80]}
     for k in ("ceap", "cap"):
         v[k] = form.get(k) if form.get(k) in ("oui", "non") else ""
-    for k in ("diplome_academique_annee", "ceap_annee", "cap_annee"):
+    v["dip_pro_sec"] = str(form.get("dip_pro_sec") or "").strip()[:80]
+    for k in ("diplome_academique_annee", "ceap_annee", "cap_annee", "dip_pro_sec_annee"):
         brut = str(form.get(k) or "").strip()
         v[k] = None
         if brut:
@@ -476,6 +485,11 @@ def enregistrer(app, H):
     q, ex, config = H.q, H.ex, H.config
 
     H.schema(SCHEMA)
+    for _c, _t in (("dip_pro_sec", "TEXT"), ("dip_pro_sec_annee", "INTEGER")):
+        try:
+            H.ajouter_colonne("personnel_carriere", _c, _t)
+        except Exception:  # noqa: BLE001 — la table est créée juste après par SCHEMA dans certains ordres
+            pass
     H.ajouter_colonne("personnel", "nip", "TEXT")
     H.ajouter_colonne("personnel", "date_naissance", "TEXT")
     H.ajouter_colonne("personnel", "user_id", "INTEGER")
@@ -579,7 +593,7 @@ def enregistrer(app, H):
             lst = lignes_personnel(tous=True, user_id=g.user["id"], toutes_ecoles=True)
             return lst[0] if lst else None
         return dict(carriere_moi=carriere_moi, car_fmt_date=fmt_date, car_fmt_nombre=fmt_nombre,
-                    car_diplome_pro=diplome_pro, CAR_LIBELLES=LIBELLES, CAR_DIPLOMES=DIPLOMES)
+                    car_diplome_pro=diplome_pro, CAR_LIBELLES=LIBELLES, CAR_DIPLOMES=DIPLOMES, DIPLOMES_PRO_SEC=DIPLOMES_PRO_SEC)
 
     # ------------------------------------------------------------ liste « Gestion de carrière »
     FILTRES_ALERTE = {"retraite": "Départ à la retraite dans 2 ans ou moins", "aptitude": "Visite d'aptitude manquante",

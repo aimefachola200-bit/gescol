@@ -38,7 +38,9 @@ CATEGORIES = [("FE", "FE (fonctionnaire de l'État)"), ("ACDPE", "ACDPE (agent c
               ("ACDPCTD", "ACDPCTD (AME)"), ("Communautaire", "Enseignant communautaire"),
               ("Privé", "Enseignant du privé"), ("Autre", "Autre")]
 STATUTS = ["Titulaire", "Stagiaire", "Contractuel", "Vacataire", "Communautaire", "Enseignant du privé"]
-DIPLOMES_PRO = ["", "CEAP", "CAP", "CEAP et CAP", "Aucun"]
+DIPLOMES_PRO_PRIMAIRE = ["CEAP", "CAP", "CEAP et CAP"]
+DIPLOMES_PRO_SECONDAIRE = ["BAPES", "CAPES", "BAPES et CAPES", "CAPET", "CAPEPS", "CAPEN", "Autre diplôme professionnel du secondaire"]
+DIPLOMES_PRO = [""] + DIPLOMES_PRO_PRIMAIRE + DIPLOMES_PRO_SECONDAIRE + ["Aucun"]   # v2.7.1 : diplômes du secondaire
 NB_CLASSES = 4
 RE_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 RE_IDENT = re.compile(r"^[A-Za-z0-9._-]{3,40}$")
@@ -48,7 +50,7 @@ OUVERTS_AVANT = {"static", "ens_assistant", "ens_manifeste", "manifeste", "servi
 PROFIL = ("nom", "prenoms", "sexe", "nip", "matricule", "grade", "categorie", "statut", "date_naissance",
           "lieu_naissance", "telephone", "email", "date_prise_service", "date_service_ecole", "diplome_academique",
           "diplome_academique_annee", "diplome_pro", "diplome_pro_annee")
-ECOLE = ("ecole_nom", "secteur", "cs", "departement", "commune", "directeur_nom", "directeur_tel", "ecole_telephone",
+ECOLE = ("ecole_nom", "secteur", "cs", "departement", "commune", "arrondissement", "directeur_nom", "directeur_tel", "ecole_telephone",
          "ccs_nom")
 
 
@@ -149,9 +151,10 @@ def enregistrer(app, H):
         """École n° 1 de la base (fiche de l'école) et paramètres d'en-tête des documents."""
         statut = "Publique" if f["secteur"] == "publique" else "Privée"
         ex("""UPDATE ecoles SET nom=?, statut=?, cs=?, departement=?, commune=?, ville=COALESCE(NULLIF(?, ''), ville),
-              directeur_nom=?, directeur_tel=?, telephone=?, ccs_nom=? WHERE id=1""",
+              directeur_nom=?, directeur_tel=?, telephone=?, ccs_nom=?,
+              arrondissement=COALESCE(NULLIF(?, ''), arrondissement) WHERE id=1""",
            (f["ecole_nom"], statut, f["cs"], f["departement"], f["commune"], f["commune"], f["directeur_nom"],
-            f["directeur_tel"], f["ecole_telephone"], f["ccs_nom"]))
+            f["directeur_tel"], f["ecole_telephone"], f["ccs_nom"], f.get("arrondissement", "")))
         sigle = "".join(m[0] for m in re.findall(r"[A-Za-zÀ-ÿ]+", f["ecole_nom"]) if len(m) > 2)[:8].upper() or "EPP"
         for cle, val in (("ecole_nom", f["ecole_nom"]), ("ecole_directeur", f["directeur_nom"]),
                          ("ecole_telephone", f["ecole_telephone"]), ("ecole_ville", f["commune"]),
@@ -177,13 +180,16 @@ def enregistrer(app, H):
                    date_prise_service=f["date_prise_service"], date_service_ecole=f["date_service_ecole"],
                    diplome_academique=f["diplome_academique"],
                    diplome_academique_annee=int(f["diplome_academique_annee"]) if f["diplome_academique_annee"].isdigit() else None,
-                   ceap="oui" if "CEAP" in pro else ("non" if pro == "Aucun" else ""),
-                   cap="oui" if "CAP" in pro.replace("CEAP", "") else ("non" if pro == "Aucun" else ""),
+                   ceap="oui" if pro in ("CEAP", "CEAP et CAP") else ("non" if pro == "Aucun" else ""),
+                   cap="oui" if pro in ("CAP", "CEAP et CAP") else ("non" if pro == "Aucun" else ""),
+                   dip_pro_sec=pro if pro in DIPLOMES_PRO_SECONDAIRE else "",
                    maj=H.maintenant(), maj_par=uid)
         annee = int(f["diplome_pro_annee"]) if f["diplome_pro_annee"].isdigit() else None
-        if "CAP" in pro.replace("CEAP", ""):
+        if pro in DIPLOMES_PRO_SECONDAIRE:
+            car["dip_pro_sec_annee"] = annee
+        elif pro in ("CAP", "CEAP et CAP"):
             car["cap_annee"] = annee
-        elif "CEAP" in pro:
+        elif pro == "CEAP":
             car["ceap_annee"] = annee
         try:
             if q("SELECT 1 FROM personnel_carriere WHERE personnel_id=?", (pid,), un=True):
@@ -210,14 +216,15 @@ def enregistrer(app, H):
         p = dict(fiches[0]) if fiches else {}
         car = carriere_de(p["id"]) if p else {}
         e = q("SELECT * FROM ecoles WHERE id=1", un=True)
-        pro = " et ".join(x for x, k in (("CEAP", "ceap"), ("CAP", "cap")) if car.get(k) == "oui")
+        pro = car.get("dip_pro_sec") or " et ".join(x for x, k in (("CEAP", "ceap"), ("CAP", "cap")) if car.get(k) == "oui")
         v = {k: (p.get(k) or "") for k in ("nom", "prenoms", "sexe", "nip", "matricule",
                                            "date_naissance", "lieu_naissance", "telephone", "email")}
         v.update(statut=p.get("type_contrat") or "", grade=car.get("grade") or "", categorie=car.get("categorie") or "", date_prise_service=car.get("date_prise_service") or "",
                  date_service_ecole=car.get("date_service_ecole") or "", diplome_academique=car.get("diplome_academique") or "",
                  diplome_academique_annee=str(car.get("diplome_academique_annee") or ""),
                  diplome_pro=pro or ("Aucun" if car.get("cap") == "non" and car.get("ceap") == "non" else ""),
-                 diplome_pro_annee=str(car.get("cap_annee") or car.get("ceap_annee") or ""),
+                 diplome_pro_annee=str(car.get("dip_pro_sec_annee") or car.get("cap_annee") or car.get("ceap_annee") or ""),
+                 arrondissement=(e["arrondissement"] if e and "arrondissement" in e.keys() else "") or "",
                  ecole_nom=e["nom"] if e else "", secteur=config.SECTEUR_ENSEIGNANT, cs=(e["cs"] if e else "") or "",
                  departement=(e["departement"] if e else "") or "", commune=(e["commune"] if e else "") or "",
                  directeur_nom=(e["directeur_nom"] if e else "") or "", directeur_tel=(e["directeur_tel"] if e else "") or "",

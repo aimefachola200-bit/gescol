@@ -20,7 +20,12 @@
     <div><label for="diplome_academique">Diplôme académique</label><input id="diplome_academique" name="diplome_academique" value="{{ f.diplome_academique }}" placeholder="ex. BAC D, Licence"></div>
     <div><label for="diplome_academique_annee">Année</label><input id="diplome_academique_annee" name="diplome_academique_annee" value="{{ f.diplome_academique_annee }}" inputmode="numeric"></div>
     <div><label for="diplome_pro">Diplôme professionnel</label><select id="diplome_pro" name="diplome_pro">
-      {% for c in DIPLOMES_PRO %}<option value="{{ c }}" {{ 'selected' if f.diplome_pro==c }}>{{ c or '—' }}</option>{% endfor %}</select></div>
+      <option value="">—</option>
+      <optgroup label="Primaire">{% for c in ('CEAP', 'CAP', 'CEAP et CAP') %}<option value="{{ c }}" {{ 'selected' if f.diplome_pro==c }}>{{ c }}</option>{% endfor %}</optgroup>
+      <optgroup label="Secondaire, 1er cycle (6e à 3e)"><option value="BAPES" {{ 'selected' if f.diplome_pro=='BAPES' }}>BAPES</option></optgroup>
+      <optgroup label="Secondaire, 2nd cycle (2nde à Tle)"><option value="CAPES" {{ 'selected' if f.diplome_pro=='CAPES' }}>CAPES</option><option value="BAPES et CAPES" {{ 'selected' if f.diplome_pro=='BAPES et CAPES' }}>BAPES et CAPES</option></optgroup>
+      <optgroup label="Autres du secondaire">{% for c in ('CAPET', 'CAPEPS', 'CAPEN', 'Autre diplôme professionnel du secondaire') %}<option value="{{ c }}" {{ 'selected' if f.diplome_pro==c }}>{{ c }}</option>{% endfor %}</optgroup>
+      <option value="Aucun" {{ 'selected' if f.diplome_pro=='Aucun' }}>Aucun</option></select></div>
     <div><label for="diplome_pro_annee">Année</label><input id="diplome_pro_annee" name="diplome_pro_annee" value="{{ f.diplome_pro_annee }}" inputmode="numeric"></div>
     <div><label for="telephone">Téléphone</label><input id="telephone" name="telephone" value="{{ f.telephone }}" inputmode="tel"></div>
     <div><label for="email">E-mail</label><input id="email" type="email" name="email" value="{{ f.email }}"></div>
@@ -29,12 +34,14 @@
 <div class="carte">
   <h2 style="margin-top:0">{{ icone('ecole') }} Mon école</h2>
   <div class="grille-id">
-    <div><label for="ecole_nom">Nom de l'école *</label><input id="ecole_nom" name="ecole_nom" value="{{ f.ecole_nom }}" required placeholder="ex. EPP Akpakpa Centre"></div>
+    <div><label for="departement">DDEMP (département) *</label><input id="departement" name="departement" data-geo="departement" data-dep list="dl-deps" value="{{ f.departement }}" placeholder="Choisir ou saisir" autocomplete="off">
+      <datalist id="dl-deps">{% for d in DEPARTEMENTS %}<option value="{{ d }}">{% endfor %}</datalist></div>
+    <div><label for="commune">Commune</label><input id="commune" name="commune" data-geo="commune" value="{{ f.commune }}" placeholder="Choisir ou saisir" autocomplete="off"></div>
+    <div><label for="arrondissement">Arrondissement</label><input id="arrondissement" name="arrondissement" data-geo="arrondissement" value="{{ f.arrondissement }}" placeholder="Choisir ou saisir" autocomplete="off"></div>
+    <div><label for="ecole_nom">Nom de l'école *</label><input id="ecole_nom" name="ecole_nom" data-geo="ecole" autocomplete="off" value="{{ f.ecole_nom }}" required placeholder="Choisissez d'abord la commune, puis l'école"></div>
     <div><label for="secteur">Secteur *</label><select id="secteur" name="secteur" required>
       <option value="publique" {{ 'selected' if f.secteur!='privee' }}>Public</option><option value="privee" {{ 'selected' if f.secteur=='privee' }}>Privé</option></select></div>
-    <div><label for="cs">Circonscription scolaire (CS)</label><input id="cs" name="cs" value="{{ f.cs }}"></div>
-    <div><label for="departement">DDEMP (département)</label><input id="departement" name="departement" value="{{ f.departement }}"></div>
-    <div><label for="commune">Commune</label><input id="commune" name="commune" value="{{ f.commune }}"></div>
+    <div><label for="cs">Circonscription scolaire (CS) <span class="aide">— primaire seulement</span></label><input id="cs" name="cs" data-cs data-geo="cs" value="{{ f.cs }}" placeholder="Remplie avec l'école, ou à choisir" autocomplete="off"></div>
     <div><label for="directeur_nom">Directeur / directrice</label><input id="directeur_nom" name="directeur_nom" value="{{ f.directeur_nom }}"></div>
     <div><label for="directeur_tel">Téléphone du directeur</label><input id="directeur_tel" name="directeur_tel" value="{{ f.directeur_tel }}" inputmode="tel"></div>
     <div><label for="ecole_telephone">Téléphone de l'école</label><input id="ecole_telephone" name="ecole_telephone" value="{{ f.ecole_telephone }}" inputmode="tel"></div>

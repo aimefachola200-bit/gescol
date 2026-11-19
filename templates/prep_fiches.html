@@ -13,6 +13,12 @@
   <button class="btn sec petit">Filtrer</button> <a class="btn sec petit" href="{{ url_for('prep_fiches') }}">Effacer</a>
 </form>
 {% if semaine %}<div class="flash info">Fiches de la semaine pour <b>{{ semaine.classe.nom }}</b> d'après {{ 'la planification mensuelle (' ~ semaine.bornes[0] ~ ' → ' ~ semaine.bornes[1] ~ ')' if semaine.bornes else 'la planification annuelle (' ~ semaine.mois ~ ')' }}. <a href="{{ url_for('prep_semaine_pdf', classe=semaine.classe.id) }}" target="_blank">Tout télécharger (PDF)</a></div>{% endif %}
+{% if not (cours or mat or smat or sa or seance or q or statut or semaine) %}
+<div class="carte no-print"><h2 style="margin-top:0">Accès rapide : par cours et par matière</h2>
+  <p class="aide">Touchez une matière pour voir directement les fiches de ce cours ; le nombre de fiches est indiqué entre parenthèses.</p>
+  {% for c, ms in acces_rapide %}<p style="margin:6px 0"><b><a href="{{ url_for('prep_fiches', cours=c, classe=cid) }}">{{ PREP_COURS_LIB[c] }}</a></b> :
+    {% for m, n in ms %}<a class="btn sec petit" style="margin:2px" href="{{ url_for('prep_fiches', cours=c, matiere=m, classe=cid) }}">{{ prep_nom_matiere(m) }} ({{ n }})</a>{% endfor %}</p>{% endfor %}
+</div>{% endif %}
 <p class="sous">{{ total }} fiche(s){% if pages > 1 %} · page {{ page }} / {{ pages }}{% endif %}</p>
 {% if fiches %}{% set qs = request.query_string.decode() %}
 <div class="carte lot-telechargement no-print" data-lot="{{ url_for('prep_fiches_lot', fmt='FMT') }}{{ '?' ~ qs if qs else '' }}">
@@ -24,7 +30,7 @@
 </div>
 <div class="tw"><table class="t">
   <thead><tr><th class="no-print"><input type="checkbox" class="lot-tout" aria-label="Cocher toutes les fiches de la page"></th><th>Cours</th><th>Matière</th><th>Unité / SA / séance</th><th>Titre</th><th>Durée</th><th></th></tr></thead>
-  <tbody>{% for f in fiches %}<tr>
+  <tbody>{% set ns = namespace(c='', m='') %}{% for f in fiches %}{% if f.cours != ns.c or f.matiere != ns.m %}{% set ns.c = f.cours %}{% set ns.m = f.matiere %}<tr class="rupture"><th colspan="7" style="background:#eef3f8;text-align:left">{{ PREP_COURS_LIB[f.cours] or f.cours }} — {{ prep_nom_matiere(f.matiere) }}</th></tr>{% endif %}<tr>
     <td class="no-print"><input type="checkbox" class="lot-case" value="{{ f.id }}" aria-label="Choisir {{ f.titre }}"></td><td>{{ f.cours }}</td><td>{{ prep_nom_matiere(f.matiere) }}{% if f.sous_matiere %}<br><span class="aide">{{ f.sous_matiere }}</span>{% endif %}</td>
     <td>{{ f.unite or '' }}{% if f.sa %} · SA {{ f.sa }}{% endif %}{% if f.seance %} · S{{ f.seance }}{% endif %}</td>
     <td><a href="{{ url_for('prep_fiche', fid=f.id) }}{{ '?classe=' ~ cid if cid else '' }}">{{ f.titre }}</a>{% if f.statut == 'concue' %} <span class="badge att" title="Conçue selon l'APC — à valider par le conseiller pédagogique">conçue</span>{% endif %}</td>

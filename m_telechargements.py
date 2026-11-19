@@ -37,5 +37,6 @@ def enregistrer(app, H):
             groupes.setdefault(groupe, []).append({
                 "titre": titre, "aide": aide, "page": adresse,
                 "pdf": url_for("exporter_page", fmt="pdf", page=adresse),
-                "word": url_for("exporter_page", fmt="docx", page=adresse)})
+                "word": url_for("exporter_page", fmt="docx", page=adresse),
+                "excel": url_for("exporter_page", fmt="xlsx", page=adresse)})
         return render_template("telechargements.html", groupes=groupes, annee=config.ANNEE_ACTIVE)

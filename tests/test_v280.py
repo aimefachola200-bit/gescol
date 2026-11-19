@@ -24,9 +24,12 @@ d = dict(nom="Houngbo", prenoms="Afiavi Rosine", sexe="F", nip="1234567890", mat
          ccs_nom="KOTO Marc", identifiant="afiavi", mdp="motdepasse1", confirmation="motdepasse1", classe_nom_1="CM2 A", classe_niveau_1="CM2",
          classe_nom_2="2nde AGRI", classe_niveau_2="2nde")
 assert c.post("/enseignant/premier-lancement", data=d).status_code == 302
-# titulaire par défaut : pas de périmètre professeur
-assert c.get("/ens-sec").status_code == 404 and c.get("/ressources-secondaire").status_code == 404
+# v2.7.1 : sans choix enregistré, le mode est déduit des classes (CM2 + 2nde = les deux) ; on choisit « titulaire » explicitement
+assert c.get("/ens-sec").status_code == 200
+assert c.post("/enseignant/perimetre", data={"action": "mode", "mode": "titulaire"}).status_code == 302
+assert c.get("/ens-sec").status_code == 404 and c.get("/ressources-secondaire").status_code == 200      # bibliothèque ouverte à tous
 t = txt(c.get("/enseignant/tableau")); assert "Mon périmètre" in t and "Mes cours (professeur)" not in t and "<b>Planification annuelle</b>" in t
+assert "Bibliothèque pédagogique" in t
 # choix : professeur
 assert c.post("/enseignant/perimetre", data={"action": "mode", "mode": "professeur"}).status_code == 302
 t = txt(c.get("/enseignant/tableau")); assert "Mes cours (professeur)" in t and "<b>Planification annuelle</b>" not in t

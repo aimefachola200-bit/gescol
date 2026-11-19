@@ -298,3 +298,4 @@ def enregistrer(app, H):
         return redirect(url_for("ens_sec_modifier", kind=kind, did=nid))
 
     app.jinja_env.globals["ens_sec_actif"] = lambda: EM.prof_actif()
+    app.jinja_env.globals["bibliotheque_sec_ouverte"] = lambda: EM.bibliotheque_ouverte()

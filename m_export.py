@@ -93,7 +93,35 @@ def liens_barre():
     pdf = _avec_args(pdf_dedie, telecharger=1) if pdf_dedie else None
     word = _avec_args(word_dedie) if word_dedie else None
     return {"pdf": pdf or url_for("exporter_page", fmt="pdf", page=page),
-            "word": word or url_for("exporter_page", fmt="docx", page=page)}
+            "word": word or url_for("exporter_page", fmt="docx", page=page),
+            "excel": url_for("exporter_page", fmt="xlsx", page=page)}      # v2.7.1 : tableaux de la page dans un classeur Excel
+
+
+def classeur_de_page(blocs, titre):
+    """v2.7.1 — Excel : chaque tableau de la page devient une feuille (première ligne d'en-têtes) ; le texte de la page,
+    s'il n'y a aucun tableau, est rangé ligne par ligne dans la feuille « Texte »."""
+    import outils_xlsx
+    feuilles, n = [], 0
+    for b in blocs:
+        if b.get("type") != "table":
+            continue
+        lignes = []
+        for l in b["lignes"]:
+            ligne = []
+            for c in l:
+                ligne.append(E.texte_runs(c["runs"]).strip())
+                ligne.extend([""] * (c.get("colspan", 1) - 1))
+            lignes.append(ligne)
+        if not lignes:
+            continue
+        ncol = max(len(l) for l in lignes)
+        lignes = [l + [""] * (ncol - len(l)) for l in lignes]
+        n += 1
+        feuilles.append((f"Tableau {n}", lignes[0], lignes[1:], {"titre_haut": [titre]}))
+    if not feuilles:
+        texte = [[E.texte_runs(b["runs"]).strip()] for b in blocs if b.get("runs")]
+        feuilles.append(("Texte", ["Contenu de la page"], texte or [[""]], {"titre_haut": [titre]}))
+    return outils_xlsx.classeur(feuilles)
 
 
 def nom_fichier(titre, ext):
@@ -201,11 +229,14 @@ def enregistrer(app, H):
     @app.route("/exporter.<fmt>")
     @H.connexion_requise()
     def exporter_page(fmt):
-        if fmt not in ("pdf", "docx"):
+        if fmt not in ("pdf", "docx", "xlsx"):
             abort(404)
         page = request.args.get("page") or "/"
         html = produire_page(page)
         titre = E.titre_page(html)
+        if fmt == "xlsx":
+            return reponse_fichier(classeur_de_page(E.blocs(E.contenu_principal(html)), titre), nom_fichier(titre, "xlsx"),
+                                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         b = resoudre_images(E.blocs(E.contenu_principal(html)))
         ecole = (config.ECOLE.get("nom") or "").strip() if isinstance(getattr(config, "ECOLE", None), dict) else ""
         pied = f"{ecole + ' · ' if ecole else ''}{getattr(config, 'NOMS_APPLI', {}).get(config.EDITION, 'GESCOL') if hasattr(config, 'NOMS_APPLI') else 'GESCOL'} {config.VERSION} · Conception : {config.CONCEPTEUR} — +229 01 96 51 03 33"

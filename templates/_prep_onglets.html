@@ -15,6 +15,7 @@
   <a class="{{ 'actif' if onglet == 'resumes' }}" href="{{ url_for('prep_resumes') }}">Résumés</a>
   <a class="{{ 'actif' if onglet == 'revisions' }}" href="{{ url_for('prep_revisions') }}">Révisions d'éveil</a>
   <a class="{{ 'actif' if onglet == 'manuels' }}" href="{{ url_for('prep_manuels') }}">Manuels officiels</a>
+  {% if ep_existe('docs_peda') %}<a href="{{ url_for('docs_peda') }}">Documents pédagogiques (PDF)</a>{% endif %}
   <a class="{{ 'actif' if onglet == 'evaluations' }}" href="{{ url_for('prep_evaluations') }}">Évaluations et épreuves</a>
   <a class="{{ 'actif' if onglet == 'planif' }}" href="{{ url_for('prep_planif') }}">Planification et classeurs</a>
   <a class="{{ 'actif' if onglet == 'mes' }}" href="{{ url_for('prep_mes_fiches') }}">{{ 'Mes fiches' if g.user.role == 'enseignant' else 'Fiches des enseignants' }}</a>

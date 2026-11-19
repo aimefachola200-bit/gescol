@@ -32,6 +32,8 @@
     <div><label for="car-ceapa">Année du CEAP</label><input id="car-ceapa" name="ceap_annee" inputmode="numeric" maxlength="4" value="{{ car.ceap_annee or '' }}"></div>
     <div><label for="car-cap">CAP</label><select id="car-cap" name="cap"><option value="">—</option><option value="oui" {{ 'selected' if car.cap=='oui' }}>Oui</option><option value="non" {{ 'selected' if car.cap=='non' }}>Non</option></select></div>
     <div><label for="car-capa">Année du CAP</label><input id="car-capa" name="cap_annee" inputmode="numeric" maxlength="4" value="{{ car.cap_annee or '' }}"></div>
+    <div><label for="car-dps">Diplôme professionnel du secondaire</label><select id="car-dps" name="dip_pro_sec"><option value="">—</option>{% for g, l in DIPLOMES_PRO_SEC %}<optgroup label="{{ g }}">{% for d in l %}<option {{ 'selected' if car.dip_pro_sec==d }}>{{ d }}</option>{% endfor %}</optgroup>{% endfor %}</select></div>
+    <div><label for="car-dpsa">Année du diplôme professionnel du secondaire</label><input id="car-dpsa" name="dip_pro_sec_annee" inputmode="numeric" maxlength="4" value="{{ car.dip_pro_sec_annee or '' }}"></div>
   </div>
   <h3>Suivi pédagogique et évaluation</h3>
   <div class="ligne">

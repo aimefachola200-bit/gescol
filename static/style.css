@@ -315,3 +315,17 @@ ul.arbre li{margin:4px 0}
 /* insigne de l'application (v2.5.1) */
 .insigne{display:inline-grid;place-items:center;width:20px;height:20px;margin-left:6px;border-radius:50%;color:#fff;font-size:11px;font-weight:700;line-height:1;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15);flex:none}
 .insigne-carre{border-radius:6px}
+
+/* ---------- v2.7.1 : grilles de saisie sur téléphone — colonne des noms réduite, cases visibles ---------- */
+@media (max-width:700px){
+  table.saisie td.sticky,table.saisie th.sticky,table.saisie td.col-fixe,table.saisie th.col-fixe{
+    white-space:normal!important;width:84px;min-width:72px;max-width:88px;font-size:12px;line-height:1.15;overflow-wrap:anywhere;padding:4px 3px;box-shadow:1px 0 0 var(--bord)}
+  table.saisie td.sticky b,table.saisie td.col-fixe b{display:block}
+  table.saisie input{width:50px;padding:6px 2px;font-size:15px}
+  table.saisie select.appr{width:58px}
+  table.saisie input.obs{width:190px}
+  .np input.n{width:46px}
+  td.col-fixe,th.col-fixe,td.sticky,th.sticky{max-width:44vw}
+}
+@media (max-width:700px){ .tw table td.col-fixe,.tw table th.col-fixe{white-space:normal!important;font-size:13px;line-height:1.2;overflow-wrap:anywhere} }
+.grille-cartes{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}

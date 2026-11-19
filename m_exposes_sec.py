@@ -23,7 +23,7 @@ def enregistrer(app, H):
     from db import ex, q
 
     def garde():
-        if not EM.prof_actif():
+        if not EM.bibliotheque_ouverte():
             abort(404)
 
     def js(t, defaut):

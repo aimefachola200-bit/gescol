@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% block titre %}Documents pédagogiques{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>Documents pédagogiques</h1>
+  <p class="sous">Cahiers de l'apprenant, fichiers de résumés, d'exercices et d'évaluations, cahiers d'écriture et cahiers de révision (PDF), classés par niveau et par matière. Ils s'ouvrent et se téléchargent même sans Internet.</p></div></div>
+<form method="get" class="filtres no-print" style="margin:10px 0" aria-label="Filtres des documents">
+  <label>Niveau <select name="niveau"><option value="">Tous</option>{% for n in niveaux %}<option {{ 'selected' if n == niv }}>{{ n }}</option>{% endfor %}</select></label>
+  <label>Matière <select name="matiere"><option value="">Toutes</option>{% for m in matieres %}<option {{ 'selected' if m == mat }}>{{ m }}</option>{% endfor %}</select></label>
+  <label>Sorte de document <select name="famille"><option value="">Toutes</option>{% for f in familles %}<option {{ 'selected' if f == fam }}>{{ f }}</option>{% endfor %}</select></label>
+  <label>Recherche <input type="search" name="q" value="{{ q }}" placeholder="titre, matière…"></label>
+  <button class="btn sec petit">Filtrer</button> <a class="btn sec petit" href="{{ url_for('docs_peda') }}">Effacer</a>
+</form>
+<p class="sous">{{ total }} document(s)</p>
+{% for cle, docs in groupes %}
+<h2 style="margin:18px 0 6px">{{ cle }}</h2>
+<div class="grille-cartes">
+{% for d in docs %}<div class="carte"><b>{{ d.titre }}</b>
+  <p class="sous" style="margin:4px 0">{{ d.famille }} · {{ d.matiere }} · {{ d.pages }} pages{% if d.niveaux|length > 1 %} · {{ d.niveaux|join(', ') }}{% endif %}</p>
+  <p class="aide">{{ d.desc }}</p>
+  <p class="actions"><a class="btn petit" href="{{ url_for('static', filename=d.chemin) }}" target="_blank" rel="noopener">Ouvrir le PDF</a>
+    <a class="btn sec petit" href="{{ url_for('static', filename=d.chemin) }}" download>Télécharger</a></p></div>{% endfor %}
+</div>{% endfor %}
+{% if not groupes %}<div class="carte"><p class="aide">Aucun document ne correspond à ce filtre.</p></div>{% endif %}
+{% endblock %}

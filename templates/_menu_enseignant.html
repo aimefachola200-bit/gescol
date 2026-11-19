@@ -30,6 +30,14 @@
   {{ lien('prep_mes_fiches', 'Mes fiches', ep.startswith('prep_ma') or ep=='prep_mes_fiches') }}
   {{ lien('prep_resumes', 'Résumés — l’essentiel à retenir', ep in ('prep_resumes', 'prep_resume')) }}
   {{ lien('prep_manquants', 'Fiches et guides manquants', ep=='prep_manquants') }}
+  {% if ep_existe('docs_peda') %}{{ lien('docs_peda', 'Documents pédagogiques (cahiers, fichiers PDF)', ep=='docs_peda') }}{% endif %}
+{% endcall %}{% endif %}
+{% if APP_ENS and ep_existe('ress_sec') %}{# v2.7.1 : documents pédagogiques et fiches du secondaire #}
+{% call groupe('ens_sec', 'Documents pédagogiques (secondaire)', ep.startswith('ens_sec') or ep.startswith('ress_sec') or ep.startswith('exposes_sec') or ep=='ens_perimetre', 'livre') %}
+  {{ lien('ress_sec', 'Bibliothèque : épreuves, fiches, exposés, TP', ep.startswith('ress_sec')) }}
+  {% if ep_existe('docs_peda') %}{{ lien('docs_peda', 'Cahiers de révision Terminale (PDF)', ep=='docs_peda') }}{% endif %}
+  {% if ens_sec_actif() and ep_existe('ens_sec') %}{{ lien('ens_sec', 'Mes cours et documents (professeur)', ep.startswith('ens_sec')) }}{% endif %}
+  {% if ep_existe('ens_perimetre') %}{{ lien('ens_perimetre', 'Mon périmètre (titulaire / professeur)', ep=='ens_perimetre') }}{% endif %}
 {% endcall %}{% endif %}
 {% call groupe('ens_off', 'Textes officiels', ep.startswith('calendrier_officiel') or ep.startswith('synoptique_reglement') or ep.startswith('themes_up'), 'livre') %}
   {{ lien('calendrier_officiel', 'Calendrier scolaire officiel (MEMP)', ep.startswith('calendrier_officiel')) }}

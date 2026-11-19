@@ -1870,10 +1870,22 @@ def enregistrer(app, H):
         statut = a.get("statut") or ""
         cid = a.get("classe", type=int)
         liste, semaine = fiches_demandees(a)
+        # v2.7.1 : classées par cours, puis matière, puis SA et séance (regroupement visible dans la liste)
+        _oc = {c: i for i, c in enumerate(COURS)}
+        _om = {m: i for i, m in enumerate(ORDRE_MAT)}
+        if not semaine:
+            liste = sorted(liste, key=lambda f: (_oc.get(f.get("cours"), 99), _om.get(f.get("matiere"), 99),
+                                                 f.get("sa") or 0, f.get("seance") or 0))
         page = max(1, a.get("page", 1, type=int))
         total = len(liste)
         smats = sorted({f.get("sous_matiere") for f in fiches_filtrees(cours or None, mat or None) if f.get("sous_matiere")})
-        return render_template("prep_fiches.html", fiches=liste[(page - 1) * PAR_PAGE: page * PAR_PAGE], total=total, page=page,
+        # accès rapide : nombre de fiches par cours et par matière
+        acces = {}
+        for f in fiches_filtrees(None, None):
+            acces.setdefault(f.get("cours"), {}).setdefault(f.get("matiere"), 0)
+            acces[f.get("cours")][f.get("matiere")] += 1
+        acces_rapide = [(c, [(m, acces[c][m]) for m in ORDRE_MAT if m in acces[c]]) for c in COURS if c in acces]
+        return render_template("prep_fiches.html", acces_rapide=acces_rapide, fiches=liste[(page - 1) * PAR_PAGE: page * PAR_PAGE], total=total, page=page,
                                pages=(total + PAR_PAGE - 1) // PAR_PAGE, cours=cours, mat=mat, smat=smat, sa=sa, seance=seance, q=texte,
                                statut=statut, smats=smats, COURS=COURS, MATS=ORDRE_MAT, classes=classes(), cid=cid, semaine=semaine)
 

@@ -27,7 +27,7 @@ def banque():
 
 def enregistrer(app, H):
     def garde():
-        if not EM.prof_actif():
+        if not EM.bibliotheque_ouverte():
             abort(404)
 
     @app.route("/ressources-secondaire")
@@ -51,6 +51,7 @@ def enregistrer(app, H):
             mats = sorted({t["matiere"] for t in AGRI.TP_LISTE})
         elif vue == "fiches":
             lignes = [(i, f) for i, f in enumerate(FS.FICHES) if (not mat or f["matiere"] == mat) and (not niv or f["niveau"] == niv) and (not qs or qs in (f["titre"] + f["matiere"]).lower())]
+            lignes.sort(key=lambda x: (x[1]["matiere"], x[1]["niveau"]))        # v2.7.1 : regroupées par matière puis par classe
             mats = sorted({f["matiere"] for f in FS.FICHES})
         else:
             vue = "epreuves"

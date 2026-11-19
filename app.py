@@ -440,7 +440,7 @@ MODULES = ["m_performance",  # v1.33 : compression gzip (en premier : passe en d
            "m_juridiction", "a_transmission", "a_tableau", "a_cep", "a_personnel", "a_structure", "a_visites", "a_fiches",
            # v1.6 : tableau synoptique, vivres et stock, comité d'évaluation et épreuves (toutes éditions) ;
            # CS / DDEMP : divisions, unités pédagogiques, modules des écoles ouverts aux applications d'administration
-           "m_synoptique", "m_partage", "m_preparation", "m_prep_classes", "m_maternelle", "m_evalprep", "guide_utilisation", "m_export", "m_uascep", "m_stock_cantine", "m_magasins_cantine", "m_graphiques_accueil", "m_orientation", "m_annonces_personnel", "m_sec_supervision", "maj_auto", "m_ecoles_ref", "m_ressources_sec", "m_budget_ecole", "m_telechargements", "m_ens_sec", "m_exposes_sec", "m_signatures", "m_rapports_sec", "m_insignes", "m_schemas", "m_textes", "m_vocab_sec", "m_epreuves", "m_calendrier_officiel", "m_themes_up", "a_divisions", "a_up", "a_integration", "a_synoptique", "a_tb_division",
+           "m_synoptique", "m_partage", "m_preparation", "m_prep_classes", "m_maternelle", "m_evalprep", "guide_utilisation", "m_export", "m_uascep", "m_stock_cantine", "m_magasins_cantine", "m_graphiques_accueil", "m_orientation", "m_annonces_personnel", "m_sec_supervision", "maj_auto", "m_ecoles_ref", "m_ressources_sec", "m_budget_ecole", "m_telechargements", "m_ens_sec", "m_exposes_sec", "m_signatures", "m_rapports_sec", "m_docs_peda", "m_insignes", "m_schemas", "m_textes", "m_vocab_sec", "m_epreuves", "m_calendrier_officiel", "m_themes_up", "a_divisions", "a_up", "a_integration", "a_synoptique", "a_tb_division",
            # v1.7 : conseillers pédagogiques — programmation, journal des activités, bilans trimestriel et annuel
            "a_cp",
            # v1.8 : Ma classe, accueil par rôle, groupes de remédiation ; alertes de pilotage (CS / DDEMP)
@@ -534,7 +534,8 @@ def create_app(test_config=None):
         else:
             fichier = ""
         responsable = g.user["role"] in ("fondateur", "admin", "directeur", "responsable", "chef_service")
-        if not (responsable or config.AUTONOME or "android" in ua):
+        installee = bool(getattr(sys, "frozen", False)) or config.AUTONOME     # v2.7.1 : application installée
+        if not (responsable or installee or "android" in ua):
             return None
         return {"depot": config.DEPOT_MAJ, "fichier": fichier}
 
