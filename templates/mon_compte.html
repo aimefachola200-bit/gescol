@@ -3,6 +3,16 @@
 <h1>Mon compte</h1>
 <p class="sous">{{ g.user.nom }} – identifiant « {{ g.user.identifiant }} » – {{ ROLES[g.user.role] }}</p>
 <div class="carte" style="max-width:460px">
+  <h2 style="margin-top:0">Changer mon identifiant</h2>
+  <p class="aide">L'identifiant de départ qui vous a été remis peut être remplacé par un identifiant personnel (3 à 30 caractères : lettres sans accent, chiffres, point, tiret). Votre mot de passe ne change pas.</p>
+  <form method="post" class="f">
+    <input type="hidden" name="action" value="identifiant">
+    <label>Nouvel identifiant</label><input name="identifiant" required minlength="3" maxlength="30" pattern="[A-Za-z0-9][A-Za-z0-9._\-]{2,29}" autocomplete="username" value="{{ g.user.identifiant }}">
+    <label>Mot de passe actuel</label><input type="password" name="mdp" required autocomplete="current-password">
+    <p><button class="btn">Changer l'identifiant</button></p>
+  </form>
+</div>
+<div class="carte" style="max-width:460px">
   <h2 style="margin-top:0">Changer le mot de passe</h2>
   <form method="post" class="f">
     <label>Mot de passe actuel</label><input type="password" name="ancien" required>

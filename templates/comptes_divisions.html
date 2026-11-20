@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block titre %}Comptes des divisions{% endblock %}
+{% block contenu %}
+<h1>Comptes des divisions / services</h1>
+{% if crees %}
+<p class="aide"><b>À noter maintenant :</b> les mots de passe provisoires ne seront plus affichés. Chaque responsable se connecte avec son identifiant de départ, puis change son mot de passe (et, s'il le souhaite, son identifiant) dans « Mon compte ». Il n'accède qu'à l'espace de sa division.</p>
+<table class="tab"><tr><th>Division / service</th><th>Identifiant</th><th>Mot de passe provisoire</th></tr>
+{% for c in crees %}<tr><td>{{ c.division }}</td><td><b>{{ c.identifiant }}</b></td><td><code>{{ c.mdp }}</code></td></tr>{% endfor %}</table>
+<p class="no-print"><button class="btn" onclick="window.print()">Imprimer la liste</button> <a class="btn sec" href="{{ url_for('utilisateurs') }}">Retour aux utilisateurs</a></p>
+{% else %}
+<p>Toutes les divisions ont déjà un compte. <a href="{{ url_for('utilisateurs') }}">Retour aux utilisateurs</a></p>
+{% endif %}
+{% endblock %}

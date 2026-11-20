@@ -503,6 +503,24 @@
   }
   function initMaj() {
     var b = $('#bandeau-maj'); if (!b || !window.fetch) return;
+    var ap = $('#maj-appliquer');
+    if (ap) ap.addEventListener('click', function () {
+      ap.disabled = true;
+      fetch('/maj/appliquer', { method: 'POST', credentials: 'same-origin' }).then(function (r) { return r.json(); })
+        .then(function (j) { ap.textContent = j.message || 'Fermeture…'; }).catch(function () { ap.textContent = 'Fermeture…'; });
+    });
+    // v2.7.2 : application installée -> la mise à jour se télécharge d'elle-même ; le lien de téléchargement (APK / installateur)
+    // ne sert qu'en cas d'échec (pas d'Internet, dépôt injoignable)
+    if (b.dataset.auto === '1') {
+      fetch('/maj/verifier', { method: 'POST', credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+        if (j && /prête|à jour/.test(j.resultat || '')) { initMajAuto(); return; }
+        initMajLien(b);
+      }).catch(function () { initMajLien(b); });
+      return;
+    }
+    initMajLien(b);
+  }
+  function initMajLien(b) {
     var depot = b.dataset.depot, actuelle = b.dataset.version, cache = {};
     try { cache = JSON.parse(localStorage.getItem('gescol-maj') || '{}'); } catch (_) {}
     function afficher(tag) {

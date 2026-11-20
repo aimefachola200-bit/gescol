@@ -20,7 +20,8 @@ FAM_ECRIT = "Cahier d'écriture"
 FAM_REV = "Cahier de révision (Terminale)"
 FAM_REV_COLL = "Fichier de révision (4e et 3e, préparation au BEPC)"
 FAM_REV_CEP = "Fiches de révision (CEP)"
-FAMILLES = [FAM_APPR, FAM_FICHIER, FAM_ECRIT, FAM_REV_CEP, FAM_REV_COLL, FAM_REV]
+FAM_FICHES_EPS = "Fiches de préparation (EPS)"
+FAMILLES = [FAM_APPR, FAM_FICHIER, FAM_ECRIT, FAM_FICHES_EPS, FAM_REV_CEP, FAM_REV_COLL, FAM_REV]
 
 # (fichier, titre, cycle, niveaux, matière, famille, pages, description)
 DOCS = [
@@ -48,6 +49,9 @@ DOCS = [
     ("revision_francais_4e_3e.pdf", "Fichier de révision de Français — 4e et 3e", "secondaire", ["4e", "3e"], "Français", FAM_REV_COLL, 185, ""),
     ("revision_histgeo_4e_3e.pdf", "Fichier de révision d'Histoire-Géographie — 4e et 3e", "secondaire", ["4e", "3e"], "Histoire-Géographie", FAM_REV_COLL, 124, ""),
     ("revision_pct_4e_3e.pdf", "Fichier de révision de Physique-Chimie-Technologie — 4e et 3e", "secondaire", ["4e", "3e"], "PCT", FAM_REV_COLL, 105, ""),
+    ("fiches_eps_cp_sa10_sa13.pdf", "Fiches de préparation d'EPS — CP, SA 10 à SA 13", "primaire", ["CP"], "EPS", FAM_FICHES_EPS, 38,
+     "Jeux de corde (SA 10), réaliser une tâche sans contact corporel (SA 11), s'opposer à un adversaire (SA 12), jouer contre plusieurs adversaires (SA 13) : séances prêtes à utiliser."),
+    ("revision_allemand_4e_3e.pdf", "Fichier de révision d'Allemand — 4e et 3e", "secondaire", ["4e", "3e"], "Allemand", FAM_REV_COLL, 106, ""),
     ("revision_anglais_4e_3e.pdf", "Fichier de révision d'Anglais — 4e et 3e", "secondaire", ["4e", "3e"], "Anglais", FAM_REV_COLL, 86, ""),
     ("revision_svt_4e_3e.pdf", "Fichier de révision de SVT — 4e et 3e", "secondaire", ["4e", "3e"], "SVT", FAM_REV_COLL, 95, ""),
     ("revision_francais_tle_ab.pdf", "Français — Terminales A et B", "secondaire", ["Tle A", "Tle B"], "Français", FAM_REV, 76, ""),

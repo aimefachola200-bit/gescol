@@ -537,7 +537,7 @@ def create_app(test_config=None):
         installee = bool(getattr(sys, "frozen", False)) or config.AUTONOME     # v2.7.1 : application installée
         if not (responsable or installee or "android" in ua):
             return None
-        return {"depot": config.DEPOT_MAJ, "fichier": fichier}
+        return {"depot": config.DEPOT_MAJ, "fichier": fichier, "auto": installee}
 
     @app.errorhandler(403)
     def interdit(_e):
@@ -615,6 +615,24 @@ def create_app(test_config=None):
     @app.route("/mon-compte", methods=["GET", "POST"])
     @connexion_requise()
     def mon_compte():
+        if request.method == "POST" and request.form.get("action") == "identifiant":
+            # v2.7.2 : chaque utilisateur peut remplacer l'identifiant de départ qui lui a été remis
+            import re as _re
+            nv = (request.form.get("identifiant") or "").strip().lower()
+            if not check_password_hash(g.user["mdp_hash"], request.form.get("mdp", "")):
+                flash("Mot de passe incorrect : l'identifiant n'a pas été changé.", "danger")
+            elif not _re.fullmatch(r"[a-z0-9][a-z0-9._-]{2,29}", nv):
+                flash("Identifiant : 3 à 30 caractères (lettres sans accent, chiffres, point, tiret, tiret bas).", "danger")
+            elif nv == g.user["identifiant"]:
+                flash("C'est déjà votre identifiant.", "warning")
+            elif q("SELECT 1 FROM utilisateurs WHERE identifiant=? AND id<>?", (nv, g.user["id"]), un=True):
+                flash("Cet identifiant est déjà pris : choisissez-en un autre.", "danger")
+            else:
+                ancien_id = g.user["identifiant"]
+                ex("UPDATE utilisateurs SET identifiant=? WHERE id=?", (nv, g.user["id"]))
+                journal("changement_identifiant", f"{ancien_id} -> {nv}")
+                flash(f"Identifiant modifié : connectez-vous désormais avec « {nv} ».", "success")
+            return redirect(url_for("mon_compte"))
         if request.method == "POST":
             ancien, nouveau, conf = (request.form.get(k, "") for k in ("ancien", "nouveau", "confirmation"))
             if not check_password_hash(g.user["mdp_hash"], ancien):
@@ -1342,6 +1360,34 @@ def create_app(test_config=None):
     def service_code_saisi(divisions):
         code = (request.form.get("service_code") or "").strip()
         return code if code and any(d["code"] == code for d in divisions) else None
+
+    @app.route("/utilisateurs/comptes-divisions", methods=["POST"])
+    @connexion_requise("parametres")
+    def comptes_divisions():
+        """v2.7.2 : un compte « chef de division / de service » par division (identifiant de départ + mot de passe provisoire),
+        limité à l'espace de sa division (utilisateurs.service_code). Les divisions déjà pourvues sont laissées telles quelles."""
+        import re as _re
+        import secrets as _sec
+        divisions = divisions_comptes()
+        if not divisions:
+            abort(404)
+        alphabet = "abcdefghjkmnpqrstuvwxyz23456789"
+        crees = []
+        for d in divisions:
+            if q("SELECT 1 FROM utilisateurs WHERE role='chef_service' AND service_code=?", (d["code"],), un=True):
+                continue
+            base = _re.sub(r"[^a-z0-9]+", "", (d.get("sigle") or d["code"]).lower()) or "division"
+            ident, k = base, 1
+            while q("SELECT 1 FROM utilisateurs WHERE identifiant=?", (ident,), un=True):
+                k += 1
+                ident = f"{base}{k}"
+            mdp = "".join(_sec.choice(alphabet) for _ in range(7)) + str(_sec.randbelow(10))
+            uid = ex("INSERT INTO utilisateurs (identifiant, nom, role, mdp_hash, doit_changer_mdp) VALUES (?,?,?,?,1)",
+                     (ident, "Chef " + (d.get("nom") or d["code"]), "chef_service", generate_password_hash(mdp)))
+            ex("UPDATE utilisateurs SET service_code=? WHERE id=?", (d["code"], uid))
+            journal("utilisateur_cree", f"{ident} (chef_service, division {d['code']})")
+            crees.append({"division": f"{d.get('sigle') or d['code'].upper()} – {d.get('nom', '')}", "identifiant": ident, "mdp": mdp})
+        return render_template("comptes_divisions.html", crees=crees)
 
     @app.route("/utilisateurs", methods=["GET", "POST"])
     @connexion_requise("parametres")

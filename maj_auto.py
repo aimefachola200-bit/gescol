@@ -142,6 +142,17 @@ def enregistrer(app, H):
     def maj_etat():
         return jsonify(etat())
 
+    @app.route("/maj/appliquer", methods=["POST"])
+    @H.connexion_requise()
+    def maj_appliquer():
+        """v2.7.2 : sur Android on ne ferme pas une application comme sur PC. Ce bouton ferme le processus (la mise à jour prête
+        s'active à la réouverture). Uniquement pour une application installée et une mise à jour déjà téléchargée."""
+        e = etat()
+        if not e["pret"] or not (getattr(sys, "frozen", False) or config.AUTONOME):
+            return jsonify(ok=False, message="Aucune mise à jour prête à appliquer."), 400
+        threading.Timer(1.5, lambda: os._exit(0)).start()
+        return jsonify(ok=True, message="L'application se ferme : rouvrez-la.")
+
     @app.route("/maj/verifier", methods=["POST"])
     @H.connexion_requise()
     def maj_verifier():

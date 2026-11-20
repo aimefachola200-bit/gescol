@@ -65,7 +65,7 @@ else:
         assert "118 circonscriptions" not in t and 'data-cs' not in t
 for f in os.listdir(os.path.join(os.getcwd(), "static", "documents_pedagogiques")):
     assert f.endswith(".pdf")
-assert len(os.listdir(os.path.join(os.getcwd(), "static", "documents_pedagogiques"))) == 25
+assert len(os.listdir(os.path.join(os.getcwd(), "static", "documents_pedagogiques"))) == 27
 print("OK")
 '''
 

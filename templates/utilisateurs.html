@@ -41,6 +41,7 @@
 </table></div>
 
 <h2>Nouveau compte</h2>
+{% if divisions %}<form method="post" action="{{ url_for('comptes_divisions') }}" data-confirmer="Créer un compte pour chaque division qui n'en a pas encore ?" class="no-print" style="margin:0 0 10px"><button class="btn sec">Créer un compte par division (identifiant de départ)</button></form>{% endif %}
 <div class="carte">
 <form method="post" class="f">
   <input type="hidden" name="action" value="creer">
@@ -49,7 +50,7 @@
     <div><label>Identifiant</label><input name="identifiant" required placeholder="ex. secretariat"></div>
     <div><label>Rôle</label><select name="role">{% for k,v in ROLES_EDITION.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
     <div><label>Mot de passe provisoire</label><input name="mdp" required minlength="8"></div>
-    {% if divisions %}<div><label>Division / service (chef de service, agent)</label><select name="service_code">
+{% if divisions %}<div><label>Division / service (chef de service, agent)</label><select name="service_code">
       <option value="">— toute l'application —</option>
       {% for d in divisions %}<option value="{{ d.code }}">{{ d.sigle or d.code|upper }} – {{ d.nom }}</option>{% endfor %}</select></div>{% endif %}
   </div>

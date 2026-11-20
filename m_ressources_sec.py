@@ -19,7 +19,9 @@ AGRI.integrer()   # épreuves, fiches, exposés et révisions du lycée agricole
 def banque():
     global _BANQUE
     if _BANQUE is None:
-        p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "banque_secondaire.json")
+        import pdfs
+        # v2.7.2 : sur Android, static/ est recopié hors du dossier des modules (dossier web) : on le cherche comme les autres fichiers
+        p = pdfs.fichier_static("banque_secondaire.json") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "banque_secondaire.json")
         with open(p, encoding="utf-8") as f:
             _BANQUE = json.load(f)["epreuves"]
     return _BANQUE
