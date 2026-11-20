@@ -275,6 +275,11 @@ jobs:
 
   page:
     # Page de téléchargement : https://<compte>.github.io/<depot>/ (Settings > Pages > Source : GitHub Actions)
+    # v2.7.3 : publiée une seule fois par version (tag v*), sinon les fabrications « main » et « tag » se disputaient la page
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     needs: publier
     runs-on: ubuntu-latest
     permissions:
