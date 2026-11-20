@@ -15,4 +15,16 @@
   </form>
   <p class="aide">Garde ton mot de passe secret. En cas d'oubli, l'école peut te remettre un nouveau code provisoire.</p>
 </div>
+{% if not moi.doit_changer %}
+<div class="login carte">
+  <h2>Mon identifiant</h2>
+  <p class="aide">Ton matricule est ton identifiant de départ. Tu peux choisir un identifiant personnel ; le matricule continue de fonctionner.</p>
+  <form method="post" class="f">
+    <input type="hidden" name="action" value="identifiant">
+    <label>Identifiant personnel</label><input name="identifiant" required minlength="3" maxlength="30" value="{{ moi.identifiant or '' }}" autocomplete="username">
+    <label>Mot de passe actuel</label><input type="password" name="mdp" required autocomplete="current-password">
+    <p><button class="btn" style="width:100%">Enregistrer l'identifiant</button></p>
+  </form>
+</div>
+{% endif %}
 {% endblock %}

@@ -243,6 +243,38 @@ def police_serif():
         _SERIF.update(normal="Times-Roman", gras="Times-Bold", italique="Times-Italic", gras_italique="Times-BoldItalic", nom="Times-Roman")
     return _SERIF
 
+_CURSIVE = {}
+
+
+def police_cursive():
+    """v2.7.3 — Écriture cursive (« ~~texte~~ » dans les fiches) : cherche une police script déjà présente sur l'appareil
+    (Windows : Segoe Script, Ink Free, Lucida Handwriting ; Android : Dancing Script ; Linux : polices « Script »).
+    Rien n'est installé ni livré. Renvoie le nom de la police enregistrée dans reportlab, ou None (le texte est alors mis
+    en italique)."""
+    if "nom" in _CURSIVE:
+        return _CURSIVE["nom"]
+    _CURSIVE["nom"] = None
+    cand = [r"C:\Windows\Fonts\segoesc.ttf", r"C:\Windows\Fonts\Inkfree.ttf", r"C:\Windows\Fonts\LHANDW.TTF",
+            r"C:\Windows\Fonts\BRUSHSCI.TTF", "/system/fonts/DancingScript-Regular.ttf", "/system/fonts/CutiveMono.ttf",
+            "/usr/share/fonts/truetype/dancing-script/DancingScript-Regular.ttf",
+            "/usr/share/fonts/truetype/google-fonts/DancingScript-Regular.ttf"]
+    cand = [c for c in cand if "CutiveMono" not in c]
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        for f in cand:
+            if os.path.exists(f):
+                try:
+                    pdfmetrics.registerFont(TTFont("GescolCursive", f))
+                    _CURSIVE["nom"] = "GescolCursive"
+                    break
+                except Exception:  # noqa: BLE001 — police illisible : suivante
+                    continue
+    except Exception:  # noqa: BLE001
+        pass
+    return _CURSIVE["nom"]
+
+
 def image_officielle(nom):
     """« armoiries » ou « memp » (static/docs_enseignant_<nom>.png), mise en cache (seulement si trouvée)."""
     if _OFFICIELLES.get(nom) is None:

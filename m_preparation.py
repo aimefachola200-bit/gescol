@@ -568,6 +568,8 @@ def txt_html(t):
     """Texte de fiche (« **gras** », sauts de ligne, puces) -> HTML échappé."""
     s = _html.escape(str(t or ""))
     s = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", s, flags=re.S)
+    s = re.sub(r"\^\^(.+?)\^\^", r"<i>\1</i>", s, flags=re.S)                       # v2.7.3 : italique
+    s = re.sub(r"~~(.+?)~~", r'<i class="cursif">\1</i>', s, flags=re.S)               # v2.7.3 : cursive
     return s.replace("\n", "<br>")
 
 
@@ -575,6 +577,11 @@ def txt_pdf(t):
     s = str(t or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     s = s.replace("\u25aa", "•").replace("\u2610", "□")   # glyphes absents de Helvetica
     s = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", s, flags=re.S)
+    s = re.sub(r"\^\^(.+?)\^\^", r"<i>\1</i>", s, flags=re.S)                       # v2.7.3 : italique
+    if "~~" in s:                                                                         # v2.7.3 : cursive (police de l'appareil, sinon italique)
+        import pdfs
+        pc = pdfs.police_cursive()
+        s = re.sub(r"~~(.+?)~~", (r'<font name="%s">\1</font>' % pc) if pc else r"<i>\1</i>", s, flags=re.S)
     return s.replace("\n", "<br/>")
 
 

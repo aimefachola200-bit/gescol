@@ -61,3 +61,60 @@ print("OK")
     env = dict(os.environ, PREFIXE_SCRIPT=pref)
     r = subprocess.run([sys.executable, "-c", script], cwd=racine, env=env, capture_output=True, text=True, timeout=180)
     assert "OK" in r.stdout, r.stdout + r.stderr
+
+
+def test_identifiant_parent_et_eleve():
+    """Parents et élèves : identifiant de départ (téléphone / matricule) + identifiant personnel au choix."""
+    import subprocess, sys
+    racine = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    pref = "GESCOL" if os.path.exists(os.path.join(racine, "GESCOL_PUBLIC.md")) else "SCOLARIS"
+    script = r'''
+import os, sys, tempfile
+P = os.environ["PREFIXE_SCRIPT"]
+os.environ[P + "_DATA"] = tempfile.mkdtemp(); os.environ[P + "_SANS_PRECHARGEMENT"] = "1"
+sys.path.insert(0, os.getcwd())
+from app import app, ex, q
+from werkzeug.security import generate_password_hash as gh
+import config
+app.config["TESTING"] = True
+ctx = app.app_context(); ctx.push()
+cl = ex("INSERT INTO classes (nom, niveau, frais_scolarite, ecole_id) VALUES ('CM1 T','CM1',50000,1)")
+pid = ex("INSERT INTO parents (nom, telephone, mdp_hash, doit_changer_mdp, cree_le) VALUES ('P','22901970000',?,0,'2026-01-01')", (gh("secret1"),))
+eid = ex("INSERT INTO eleves (nom, prenoms, sexe, date_naissance, classe_id, statut, matricule, date_inscription, annee, mdp_hash) VALUES ('K','A','F','2014-01-01',?, 'inscrit','MX9','2026-09-15',?,?)", (cl, config.ANNEE_ACTIVE, gh("secret2")))
+ex("INSERT INTO comptes_eleves (eleve_id, doit_changer, actif) VALUES (?,0,1)", (eid,))
+c = app.test_client(); assert c.post("/parent/connexion", data={"telephone": "01970000", "mdp": "secret1"}).status_code in (200, 302)
+c = app.test_client(); c.post("/parent/connexion", data={"telephone": "0197000000", "mdp": "secret1"})
+with c.session_transaction() as s: s["pid"] = pid
+c.post("/parent/mot-de-passe", data={"action": "identifiant", "identifiant": "mama.ama", "mdp": "secret1"})
+assert q("SELECT identifiant FROM parents WHERE id=?", (pid,))[0]["identifiant"] == "mama.ama"
+c2 = app.test_client(); r = c2.post("/parent/connexion", data={"telephone": "Mama.Ama", "mdp": "secret1"}); assert r.status_code == 302, r.status_code
+ce = app.test_client()
+with ce.session_transaction() as s: s["eid_eleve"] = eid
+ce.post("/eleve/mot-de-passe", data={"action": "identifiant", "identifiant": "ama.k", "mdp": "secret2"})
+assert q("SELECT identifiant FROM eleves WHERE id=?", (eid,))[0]["identifiant"] == "ama.k"
+c3 = app.test_client(); assert c3.post("/eleve/connexion", data={"identifiant": "AMA.K", "mdp": "secret2"}).status_code == 302
+c4 = app.test_client(); assert c4.post("/eleve/connexion", data={"identifiant": "MX9", "mdp": "secret2"}).status_code == 302
+print("OK")
+'''
+    env = dict(os.environ, PREFIXE_SCRIPT=pref)
+    r = subprocess.run([sys.executable, "-c", script], cwd=racine, env=env, capture_output=True, text=True, timeout=180)
+    assert "OK" in r.stdout, r.stdout + r.stderr[-1500:]
+
+
+def test_ecritures_fiches():
+    """Gras / italique / cursive dans les fiches : balises ajoutées, texte existant inchangé, PDF valide."""
+    import sys
+    racine = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, racine)
+    import m_preparation as P
+    assert P.txt_html("a **b** ^^c^^ ~~d~~") == 'a <b>b</b> <i>c</i> <i class="cursif">d</i>'
+    assert P.txt_html("5*3 et http://x") == "5*3 et http://x"            # texte existant inchangé
+    s = P.txt_pdf("a **b** ^^c^^ ~~d~~")
+    assert "<b>b</b>" in s and "<i>c</i>" in s and ("d</font>" in s or "<i>d</i>" in s)
+    from reportlab.platypus import Paragraph
+    from reportlab.lib.styles import ParagraphStyle
+    Paragraph(s, ParagraphStyle("x")).wrap(400, 100)                      # balisage accepté par reportlab
+    for js in ("gescol.js", "scolaris.js"):
+        f = os.path.join(racine, "static", js)
+        if os.path.exists(f):
+            assert "initEcriture" in open(f, encoding="utf-8").read()

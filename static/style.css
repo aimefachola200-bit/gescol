@@ -329,3 +329,8 @@ ul.arbre li{margin:4px 0}
 }
 @media (max-width:700px){ .tw table td.col-fixe,.tw table th.col-fixe{white-space:normal!important;font-size:13px;line-height:1.2;overflow-wrap:anywhere} }
 .grille-cartes{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+
+/* v2.7.3 — écritures des fiches */
+.cursif{font-family:"Segoe Script","Ink Free","Brush Script MT","Lucida Handwriting","Dancing Script",cursive;font-style:normal}
+.ecr-barre{display:flex;gap:4px;margin:2px 0 3px;flex-wrap:wrap}
+.ecr-barre .btn{padding:1px 8px;min-width:30px}

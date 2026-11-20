@@ -21,14 +21,14 @@
   {% for k, lib in CHAMPS %}
   <label class="bloc">{{ lib }}{% if k == 'titre' %} *{% endif %}
     {% if k in ('titre','intitule','sous_matiere','unite','duree') %}<input type="text" name="{{ k }}" value="{{ d[k] or '' }}" {{ 'required' if k == 'titre' }} maxlength="300">
-    {% else %}<textarea name="{{ k }}" rows="{{ 3 if k in ('cd','ct','strategies','materiel') else 4 }}">{{ d[k] or '' }}</textarea>{% endif %}</label>
+    {% else %}<textarea class="ecriture" name="{{ k }}" rows="{{ 3 if k in ('cd','ct','strategies','materiel') else 4 }}">{{ d[k] or '' }}</textarea>{% endif %}</label>
   {% endfor %}
   <h3>Déroulement (phases × activités × résultats attendus)</h3>
   <p class="aide">« **texte** » s'imprime en gras ; une ligne par consigne. Laissez une ligne vide pour la retirer.</p>
   <div class="tw"><table class="t prep-deroul"><thead><tr><th>Phase / étape</th><th>Activités de l'enseignant(e) et des apprenant(e)s</th><th>Résultats attendus</th></tr></thead><tbody>
   {% set lignes = d.deroulement or [] %}
   {% for i in range(MAX) %}{% set l = (lignes[i] if i < lignes|length else ['','','']) %}
-  <tr class="{{ 'prep-vide' if i >= lignes|length and i > lignes|length + 1 }}"><td><textarea name="ph_{{ i }}" rows="3">{{ l[0] }}</textarea></td><td><textarea name="ac_{{ i }}" rows="6">{{ l[1] if l|length > 1 else '' }}</textarea></td><td><textarea name="re_{{ i }}" rows="3">{{ l[2] if l|length > 2 else '' }}</textarea></td></tr>{% endfor %}
+  <tr class="{{ 'prep-vide' if i >= lignes|length and i > lignes|length + 1 }}"><td><textarea class="ecriture" name="ph_{{ i }}" rows="3">{{ l[0] }}</textarea></td><td><textarea class="ecriture" name="ac_{{ i }}" rows="6">{{ l[1] if l|length > 1 else '' }}</textarea></td><td><textarea class="ecriture" name="re_{{ i }}" rows="3">{{ l[2] if l|length > 2 else '' }}</textarea></td></tr>{% endfor %}
   </tbody></table></div>
   <p><button type="button" class="btn sec petit" onclick="var r=document.querySelector('tr.prep-vide');if(r)r.classList.remove('prep-vide')">+ Ajouter une ligne</button></p>
   <p class="actions"><button class="btn">Enregistrer</button> <a class="btn sec" href="{{ url_for('prep_mes_fiches') if nouveau else url_for('prep_ma_fiche', mid=d.id) }}">Annuler</a></p>

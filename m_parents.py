@@ -373,6 +373,10 @@ def enregistrer(app, H):
                 flash("Trop de tentatives. Réessayez dans 15 minutes.", "danger")
                 return render_template("parent_login.html"), 429
             p = q("SELECT * FROM parents WHERE telephone=?", (tel,), un=True) if tel else None
+            ident = (request.form.get("telephone") or "").strip().lower()[:30]
+            if not p and ident:   # v2.7.2 : identifiant personnel choisi par le parent
+                p = q("SELECT * FROM parents WHERE identifiant=?", (ident,), un=True)
+                cle = f"{ident}|{request.remote_addr}"
             if p and p["actif"] and check_password_hash(p["mdp_hash"], request.form.get("mdp", "")):
                 session.pop("uid", None)
                 session["pid"] = p["id"]
@@ -392,6 +396,19 @@ def enregistrer(app, H):
     @app.route("/parent/mot-de-passe", methods=["GET", "POST"])
     @parent_requis
     def parent_mdp():
+        if request.method == "POST" and request.form.get("action") == "identifiant":
+            import re as _re
+            nv = (request.form.get("identifiant") or "").strip().lower()
+            if not check_password_hash(g.parent["mdp_hash"], request.form.get("mdp", "")):
+                flash("Mot de passe incorrect : l'identifiant n'a pas été changé.", "danger")
+            elif not _re.fullmatch(r"(?=.*[a-z])[a-z0-9][a-z0-9._-]{2,29}", nv):
+                flash("Identifiant : 3 à 30 caractères, avec au moins une lettre (sans accent), chiffres, point, tiret.", "danger")
+            elif q("SELECT 1 FROM parents WHERE identifiant=? AND id<>?", (nv, g.parent["id"]), un=True):
+                flash("Cet identifiant est déjà pris : choisissez-en un autre.", "danger")
+            else:
+                ex("UPDATE parents SET identifiant=? WHERE id=?", (nv, g.parent["id"]))
+                flash(f"Identifiant enregistré : vous pouvez vous connecter avec « {nv} » ou avec votre numéro.", "success")
+            return redirect(url_for("parent_mdp"))
         if request.method == "POST":
             ancien, nouveau, conf = (request.form.get(k, "") for k in ("ancien", "nouveau", "confirmation"))
             if not check_password_hash(g.parent["mdp_hash"], ancien):

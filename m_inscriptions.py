@@ -695,8 +695,9 @@ def enregistrer(app, H):
                 return render_template("espace_eleve_login.html"), 429
             e = q("""SELECT e.*, c.ecole_id FROM eleves e JOIN comptes_eleves k ON k.eleve_id=e.id AND k.actif=1
                      LEFT JOIN classes c ON c.id=e.classe_id
-                     WHERE e.matricule=? COLLATE NOCASE AND e.statut='inscrit' AND e.mdp_hash IS NOT NULL""",
-                  (ident,), un=True) if ident else None
+                     WHERE (e.matricule=? COLLATE NOCASE OR e.identifiant=? COLLATE NOCASE)
+                     AND e.statut='inscrit' AND e.mdp_hash IS NOT NULL""",
+                  (ident, ident), un=True) if ident else None
             if e and check_password_hash(e["mdp_hash"], request.form.get("mdp", "")):
                 session.pop("uid", None)
                 session.pop("pid", None)
@@ -720,6 +721,19 @@ def enregistrer(app, H):
     @app.route("/eleve/mot-de-passe", methods=["GET", "POST"])
     @eleve_requis
     def eleve_mdp():
+        if request.method == "POST" and request.form.get("action") == "identifiant":
+            import re as _re
+            nv = (request.form.get("identifiant") or "").strip().lower()
+            if not check_password_hash(moi()["mdp_hash"], request.form.get("mdp", "")):
+                flash("Mot de passe incorrect : l'identifiant n'a pas été changé.", "danger")
+            elif not _re.fullmatch(r"[a-z0-9][a-z0-9._-]{2,29}", nv):
+                flash("Identifiant : 3 à 30 caractères (lettres sans accent, chiffres, point, tiret).", "danger")
+            elif q("SELECT 1 FROM eleves WHERE (identifiant=? OR lower(matricule)=?) AND id<>?", (nv, nv, moi()["id"]), un=True):
+                flash("Cet identifiant est déjà pris : choisis-en un autre.", "danger")
+            else:
+                ex("UPDATE eleves SET identifiant=? WHERE id=?", (nv, moi()["id"]))
+                flash(f"Identifiant enregistré : tu peux te connecter avec « {nv} » ou avec ton matricule.", "success")
+            return redirect(url_for("eleve_mdp"))
         if request.method == "POST":
             ancien, nouveau, conf = (request.form.get(k, "") for k in ("ancien", "nouveau", "confirmation"))
             if not check_password_hash(moi()["mdp_hash"], ancien):

@@ -615,6 +615,8 @@ def migrer(db):
         ("eleves", "annees_scolarite", "INTEGER"),
         ("eleves", "redoublant", "INTEGER DEFAULT 0"),
         ("eleves", "mdp_hash", "TEXT"),
+        ("eleves", "identifiant", "TEXT"),      # v2.7.2 : identifiant personnel choisi par l'élève (sinon : matricule)
+        ("parents", "identifiant", "TEXT"),     # v2.7.2 : identifiant personnel choisi par le parent (sinon : téléphone)
     ]
     # v1.3 : le nom de classe n'est plus unique pour toute l'installation (deux écoles peuvent avoir un « CM2 »)
     sql_classes = (db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='classes'").fetchone() or [""])[0]

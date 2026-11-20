@@ -501,6 +501,39 @@
       var o = $('#bandeau-maj'); if (o) o.hidden = true; o && o.setAttribute('data-masque', '1');
     }).catch(function () {});
   }
+  // v2.7.3 — « Écriture » : barre Gras / Italique / Cursive / Normal au-dessus des zones de saisie des fiches.
+  // Le texte déjà saisi n'est pas modifié ; la mise en forme s'applique à la sélection (**gras**, ^^italique^^, ~~cursive~~).
+  function initEcriture(racine) {
+    $$('textarea.ecriture', racine).forEach(function (ta) {
+      if (ta.dataset.ecr) return; ta.dataset.ecr = '1';
+      var b = document.createElement('div'); b.className = 'ecr-barre no-print';
+      function envelopper(m) {
+        var d = ta.selectionStart, f = ta.selectionEnd, v = ta.value, sel = v.slice(d, f);
+        if (!sel) { toast('Sélectionnez d’abord le texte à mettre en forme.', false); return; }
+        ta.value = v.slice(0, d) + m + sel + m + v.slice(f);
+        ta.focus(); ta.setSelectionRange(d, f + 2 * m.length);
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      function normal() {
+        var d = ta.selectionStart, f = ta.selectionEnd, sel = ta.value.slice(d, f);
+        if (!sel) { toast('Sélectionnez d’abord le texte à remettre en écriture normale.', false); return; }
+        var s2 = sel.replace(/\*\*|\^\^|~~/g, '');
+        ta.value = ta.value.slice(0, d) + s2 + ta.value.slice(f);
+        ta.focus(); ta.setSelectionRange(d, d + s2.length);
+      }
+      [['G', '**', 'Gras', 'font-weight:700'], ['I', '^^', 'Italique', 'font-style:italic'],
+       ['Cursive', '~~', 'Écriture cursive', 'font-family:"Segoe Script","Brush Script MT","Lucida Handwriting",cursive'],
+       ['Normal', '', 'Écriture normale (retire la mise en forme de la sélection)', '']].forEach(function (x) {
+        var t = document.createElement('button'); t.type = 'button'; t.className = 'btn petit sec'; t.textContent = x[0];
+        t.title = x[2]; if (x[3]) t.style.cssText = x[3];
+        t.addEventListener('mousedown', function (e) { e.preventDefault(); });
+        t.addEventListener('click', function () { if (x[1]) envelopper(x[1]); else normal(); });
+        b.appendChild(t);
+      });
+      ta.parentNode.insertBefore(b, ta);
+    });
+  }
+
   function initMaj() {
     var b = $('#bandeau-maj'); if (!b || !window.fetch) return;
     var ap = $('#maj-appliquer');
@@ -695,6 +728,7 @@
     $$('[data-coches]', racine).forEach(initCoches);
     $$('input[type=password]', racine).forEach(initOeil);
     $$('form[data-hors-ligne]', racine).forEach(initHorsLigne);
+    initEcriture(racine);
     fixerEntetes(racine);
     if (racine === document) { majFile(); viderFile(); initMaj(); initMajAuto();
       var fa = $('#file-attente'); if (fa) fa.addEventListener('click', function (e) { e.preventDefault(); toast('Envoi des saisies en attente…', true); viderFile(); }); }

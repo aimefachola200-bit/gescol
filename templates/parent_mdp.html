@@ -10,4 +10,16 @@
     <p><button class="btn" style="width:100%">Enregistrer</button></p>
   </form>
 </div>
+{% if not g.parent.doit_changer_mdp %}
+<div class="login carte">
+  <h2>Mon identifiant</h2>
+  <p class="aide">Votre numéro de téléphone est votre identifiant de départ. Vous pouvez choisir un identifiant personnel (au moins une lettre) ; le numéro continue de fonctionner.</p>
+  <form method="post" class="f">
+    <input type="hidden" name="action" value="identifiant">
+    <label>Identifiant personnel</label><input name="identifiant" required minlength="3" maxlength="30" value="{{ g.parent.identifiant or '' }}" autocomplete="username">
+    <label>Mot de passe actuel</label><input type="password" name="mdp" required autocomplete="current-password">
+    <p><button class="btn" style="width:100%">Enregistrer l'identifiant</button></p>
+  </form>
+</div>
+{% endif %}
 {% endblock %}
