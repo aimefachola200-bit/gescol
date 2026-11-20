@@ -54,6 +54,17 @@ def _noter(r, **k):
     amorcage._ecrire(os.path.join(r, "etat.json"), e)
 
 
+def menage(r, garder):
+    """Supprime les anciennes versions téléchargées. v2.7.4 : JAMAIS la version en cours d'utilisation (ses pages et ses fichiers
+    servent encore l'application ouverte : la supprimer provoquait « TemplateNotFound » jusqu'au redémarrage) ni celle qui
+    est marquée active ; elle disparaît au nettoyage suivant, une fois l'application relancée sur la nouvelle version."""
+    protegees = {str(garder), str(amorcage.version_active() or ""), str(config.VERSION),
+                 str(amorcage._lire(os.path.join(r, "actif.json")).get("version") or "")}
+    for d in os.listdir(r):
+        if os.path.isdir(os.path.join(r, d)) and d not in protegees and not d.startswith("tmp"):
+            shutil.rmtree(os.path.join(r, d), ignore_errors=True)
+
+
 def verifier():
     """Une vérification complète. Retourne un texte d'état (utile pour les tests et le bouton « Vérifier »)."""
     if not _verrou.acquire(blocking=False):
@@ -107,9 +118,7 @@ def verifier():
             shutil.rmtree(final, ignore_errors=True)
             os.replace(dest, final)
             amorcage._ecrire(os.path.join(r, "actif.json"), {"version": v, "essais": 0})
-            for d in os.listdir(r):                                      # ménage : anciennes versions
-                if os.path.isdir(os.path.join(r, d)) and d not in (v,) and not d.startswith("tmp"):
-                    shutil.rmtree(os.path.join(r, d), ignore_errors=True)
+            menage(r, v)
             return "prête"
         finally:
             shutil.rmtree(tmp, ignore_errors=True)

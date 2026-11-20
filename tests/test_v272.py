@@ -118,3 +118,24 @@ def test_ecritures_fiches():
         f = os.path.join(racine, "static", js)
         if os.path.exists(f):
             assert "initEcriture" in open(f, encoding="utf-8").read()
+
+
+def test_menage_garde_la_version_en_cours(tmp_path):
+    """v2.7.4 : le ménage des mises à jour ne supprime jamais le dossier de la version en cours d'utilisation."""
+    import sys
+    racine = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, racine)
+    import amorcage
+    import config
+    import maj_auto
+    for v in ("1.0.0", config.VERSION, "9.9.9", "9.9.8"):
+        (tmp_path / v / "web" / "templates").mkdir(parents=True)
+        (tmp_path / v / "web" / "templates" / "login.html").write_text("x")
+    amorcage._etat["actif"] = config.VERSION
+    try:
+        maj_auto.menage(str(tmp_path), "9.9.9")
+    finally:
+        amorcage._etat["actif"] = None
+    assert (tmp_path / config.VERSION / "web" / "templates" / "login.html").exists()   # en cours : conservée
+    assert (tmp_path / "9.9.9").exists()                                                 # nouvelle : conservée
+    assert not (tmp_path / "1.0.0").exists() and not (tmp_path / "9.9.8").exists()      # anciennes : supprimées

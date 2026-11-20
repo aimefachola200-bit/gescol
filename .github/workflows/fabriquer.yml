@@ -11,7 +11,7 @@ on:
     tags: ["v*"]
 
 env:
-  VERSION: "2.7.3"
+  VERSION: "2.7.4"
 
 jobs:
   tests:
@@ -275,7 +275,7 @@ jobs:
 
   page:
     # Page de téléchargement : https://<compte>.github.io/<depot>/ (Settings > Pages > Source : GitHub Actions)
-    # v2.7.3 : publiée une seule fois par version (tag v*), sinon les fabrications « main » et « tag » se disputaient la page
+    # v2.7.4 : publiée une seule fois par version (tag v*), sinon les fabrications « main » et « tag » se disputaient la page
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     concurrency:
       group: pages
