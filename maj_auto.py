@@ -65,9 +65,9 @@ def menage(r, garder):
             shutil.rmtree(os.path.join(r, d), ignore_errors=True)
 
 
-def verifier():
+def verifier(attendre=0):
     """Une vérification complète. Retourne un texte d'état (utile pour les tests et le bouton « Vérifier »)."""
-    if not _verrou.acquire(blocking=False):
+    if not _verrou.acquire(blocking=attendre > 0, timeout=attendre if attendre > 0 else -1):
         return "déjà en cours"
     try:
         r = racine()
@@ -166,7 +166,7 @@ def enregistrer(app, H):
     @H.connexion_requise()
     def maj_verifier():
         try:
-            res = verifier()
+            res = verifier(attendre=90)      # v2.7.5 : attend la vérification de fond au lieu de renoncer
         except Exception as e:  # noqa: BLE001
-            res = "Impossible de vérifier (" + e.__class__.__name__ + ") : connexion Internet nécessaire."
+            res = "Impossible de vérifier (" + e.__class__.__name__ + " : " + str(e)[:100] + ") : connexion Internet nécessaire."
         return jsonify(dict(etat(), resultat=res))

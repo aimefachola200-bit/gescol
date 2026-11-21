@@ -4,16 +4,23 @@
   <label>Cours <select name="cours"><option value="">Tous</option>{% for c in COURS %}<option value="{{ c }}" {{ 'selected' if c == cours }}>{{ PREP_COURS_LIB[c] }}</option>{% endfor %}</select></label>
   <label>Matière <select name="matiere"><option value="">Toutes</option>{% for m in MATS %}<option value="{{ m }}" {{ 'selected' if m == mat }}>{{ prep_nom_matiere(m) }}</option>{% endfor %}</select></label>
   <label>Sous-matière <select name="smat"><option value="">Toutes</option>{% for s in smats %}<option value="{{ s }}" {{ 'selected' if s == smat }}>{{ s }}</option>{% endfor %}</select></label>
+  <label data-pour="francais">Unité n° <input type="number" name="unite" min="1" max="99" value="{{ unite or '' }}" style="width:5em" inputmode="numeric"></label>
+  <label data-pour="maths">Dossier n° <input type="number" name="dossier" min="1" max="99" value="{{ dossier or '' }}" style="width:5em" inputmode="numeric"></label>
   <label>SA n° <input type="number" name="sa" min="1" max="99" value="{{ sa or '' }}" style="width:5em" inputmode="numeric"></label>
-  <label>Séance n° <input type="number" name="seance" min="1" max="99" value="{{ seance or '' }}" style="width:5em" inputmode="numeric"></label>
+  <label data-pour="es est eps">Séquence n° <input type="number" name="seq" min="1" max="99" value="{{ seq or '' }}" style="width:5em" inputmode="numeric"></label>
+  <label data-pour="ea">Projet <input type="text" name="projet" value="{{ projet or '' }}" placeholder="n° ou mot" style="width:7em"></label>
+  <label data-pour="francais maths dg">Séance n° <input type="number" name="seance" min="1" max="99" value="{{ seance or '' }}" style="width:5em" inputmode="numeric"></label>
   <label>Origine <select name="statut"><option value="">Toutes</option><option value="source" {{ 'selected' if statut == 'source' }}>Fiches fournies</option><option value="concue" {{ 'selected' if statut == 'concue' }}>Conçues (à valider)</option></select></label>
   <label>Recherche <input type="search" name="q" value="{{ q }}" placeholder="titre, thème, contenu…"></label>
   {% if classes %}<label>Classe <select name="classe"><option value="">—</option>{% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if c.id == cid }}>{{ c.nom }}</option>{% endfor %}</select></label>
   <label class="case"><input type="checkbox" name="semaine" value="1" {{ 'checked' if semaine }}> de la semaine (planification)</label>{% endif %}
   <button class="btn sec petit">Filtrer</button> <a class="btn sec petit" href="{{ url_for('prep_fiches') }}">Effacer</a>
 </form>
+<script>(function(){var f=document.querySelector('form[aria-label="Filtres des fiches"]');if(!f)return;var m=f.elements.matiere;
+function maj(){var v=m.value;f.querySelectorAll('[data-pour]').forEach(function(l){var ok=!v||l.getAttribute('data-pour').split(' ').indexOf(v)>=0;l.style.display=ok?'':'none';if(!ok){var i=l.querySelector('input');if(i)i.value='';}});}
+m.addEventListener('change',maj);maj();})();</script>
 {% if semaine %}<div class="flash info">Fiches de la semaine pour <b>{{ semaine.classe.nom }}</b> d'après {{ 'la planification mensuelle (' ~ semaine.bornes[0] ~ ' → ' ~ semaine.bornes[1] ~ ')' if semaine.bornes else 'la planification annuelle (' ~ semaine.mois ~ ')' }}. <a href="{{ url_for('prep_semaine_pdf', classe=semaine.classe.id) }}" target="_blank">Tout télécharger (PDF)</a></div>{% endif %}
-{% if not (cours or mat or smat or sa or seance or q or statut or semaine) %}
+{% if not (cours or mat or smat or sa or seance or q or statut or semaine or unite or dossier or seq or projet) %}
 <div class="carte no-print"><h2 style="margin-top:0">Accès rapide : par cours et par matière</h2>
   <p class="aide">Touchez une matière pour voir directement les fiches de ce cours ; le nombre de fiches est indiqué entre parenthèses.</p>
   {% for c, ms in acces_rapide %}<p style="margin:6px 0"><b><a href="{{ url_for('prep_fiches', cours=c, classe=cid) }}">{{ PREP_COURS_LIB[c] }}</a></b> :

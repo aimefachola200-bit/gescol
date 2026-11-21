@@ -139,3 +139,13 @@ def test_menage_garde_la_version_en_cours(tmp_path):
     assert (tmp_path / config.VERSION / "web" / "templates" / "login.html").exists()   # en cours : conservée
     assert (tmp_path / "9.9.9").exists()                                                 # nouvelle : conservée
     assert not (tmp_path / "1.0.0").exists() and not (tmp_path / "9.9.8").exists()      # anciennes : supprimées
+
+
+def test_filtres_fiches_par_matiere():
+    import m_preparation as mp
+    fr = mp.fiches_filtrees(matiere="francais", unite=3)
+    assert fr and all(mp._num_apres(r"unit[ée]", f) == 3 for f in fr)
+    ma = mp.fiches_filtrees(matiere="maths", dossier=2)
+    assert ma and all(mp._num_apres(r"dossier", f) == 2 for f in ma)
+    assert len(mp.fiches_filtrees(matiere="maths", dossier=2, sa=1)) <= len(ma)
+    assert mp.fiches_filtrees(matiere="ea", projet="zzzzintrouvable") == []

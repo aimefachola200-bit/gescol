@@ -503,8 +503,33 @@ def num_unite(f):
     return int(m.group(1)) if m else None
 
 
-def fiches_filtrees(cours=None, matiere=None, smat=None, sa=None, seance=None, texte=None, statut=None):
+def _texte_fiche(f):
+    return " ".join(str(f.get(k) or "") for k in ("unite", "intitule", "titre", "sous_matiere", "contenus"))
+
+
+def _num_apres(mot, f):
+    """Numéro qui suit un mot (« Unité n°3 », « Dossier N°2 », « Séquence 4 ») dans l'unité, le titre ou les contenus de la fiche."""
+    m = re.search(mot + r"\s*(?:n\s*[°o]\s*)?(\d+)", _texte_fiche(f), re.I)
+    return int(m.group(1)) if m else None
+
+
+def fiches_filtrees(cours=None, matiere=None, smat=None, sa=None, seance=None, texte=None, statut=None,
+                    unite=None, dossier=None, seq=None, projet=None):
+    """v2.7.5 : filtres propres à chaque matière — Unité (français), Dossier (mathématiques), Séquence (ES, EST, EPS), Projet (EA).
+    Les fiches fournies ne portent pas ces numéros dans un champ à part : ils sont lus dans l'intitulé de l'unité, le titre et les contenus."""
     out = corpus()["fiches"]
+    if unite:
+        out = [f for f in out if _num_apres(r"unit[ée]", f) == unite]
+    if dossier:
+        out = [f for f in out if _num_apres(r"dossier", f) == dossier]
+    if seq:
+        out = [f for f in out if _num_apres(r"s[ée]quence", f) == seq]
+    if projet:
+        pj = _sans_accent(projet).strip()
+        if pj.isdigit():
+            out = [f for f in out if _num_apres(r"projet", f) == int(pj)]
+        elif pj:
+            out = [f for f in out if "projet" in _sans_accent(_texte_fiche(f)) and pj in _sans_accent(_texte_fiche(f))]
     if cours:
         out = [f for f in out if f["cours"] == cours]
     if matiere:
@@ -1802,6 +1827,8 @@ def enregistrer(app, H):
         texte = (a.get("q") or "").strip()
         statut = a.get("statut") or ""
         cid = a.get("classe", type=int)
+        unite, dossier, seq = a.get("unite", type=int), a.get("dossier", type=int), a.get("seq", type=int)
+        projet = (a.get("projet") or "").strip()
         semaine = None
         if a.get("semaine") and cid:
             cl = next((c for c in classes() if c["id"] == cid), None)
@@ -1815,7 +1842,8 @@ def enregistrer(app, H):
             else:
                 liste = []
         else:
-            liste = fiches_filtrees(cours or None, mat or None, smat or None, sa, seance, texte or None, statut or None)
+            liste = fiches_filtrees(cours or None, mat or None, smat or None, sa, seance, texte or None, statut or None,
+                                    unite=unite, dossier=dossier, seq=seq, projet=projet or None)
         return liste, semaine
 
     LOT_MAX = 120
@@ -1894,6 +1922,7 @@ def enregistrer(app, H):
         acces_rapide = [(c, [(m, acces[c][m]) for m in ORDRE_MAT if m in acces[c]]) for c in COURS if c in acces]
         return render_template("prep_fiches.html", acces_rapide=acces_rapide, fiches=liste[(page - 1) * PAR_PAGE: page * PAR_PAGE], total=total, page=page,
                                pages=(total + PAR_PAGE - 1) // PAR_PAGE, cours=cours, mat=mat, smat=smat, sa=sa, seance=seance, q=texte,
+                               unite=a.get("unite", type=int), dossier=a.get("dossier", type=int), seq=a.get("seq", type=int), projet=(a.get("projet") or "").strip(),
                                statut=statut, smats=smats, COURS=COURS, MATS=ORDRE_MAT, classes=classes(), cid=cid, semaine=semaine)
 
     @app.route("/preparation/fiches/<fid>")

@@ -547,13 +547,13 @@
     if (b.dataset.auto === '1') {
       fetch('/maj/verifier', { method: 'POST', credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
         if (j && /prête|à jour/.test(j.resultat || '')) { initMajAuto(); return; }
-        initMajLien(b);
-      }).catch(function () { initMajLien(b); });
+        initMajLien(b, j && j.resultat);
+      }).catch(function () { initMajLien(b, 'réponse impossible'); });
       return;
     }
     initMajLien(b);
   }
-  function initMajLien(b) {
+  function initMajLien(b, raison) {
     var depot = b.dataset.depot, actuelle = b.dataset.version, cache = {};
     try { cache = JSON.parse(localStorage.getItem('gescol-maj') || '{}'); } catch (_) {}
     function afficher(tag) {
@@ -562,6 +562,7 @@
       var f = b.dataset.fichier, lien = 'https://github.com/' + depot + '/releases/' + (f ? 'latest/download/' + f : 'latest');
       $('.maj-v', b).textContent = tag.replace(/^v/i, '');
       $('.maj-lien', b).href = lien;
+      var rz = $('.maj-raison', b); if (rz && raison) rz.textContent = 'Mise à jour automatique impossible pour le moment : ' + raison;
       b.hidden = false;
       $('.maj-plus-tard', b).addEventListener('click', function () { b.hidden = true; try { localStorage.setItem('gescol-maj-ignore', tag); } catch (_) {} });
     }

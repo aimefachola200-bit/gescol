@@ -314,7 +314,7 @@
 <a id="file-attente" class="bandeau attente" href="#" hidden title="Saisies faites sans connexion : touchez pour les envoyer maintenant">{{ icone('sablier') }} <b class="fa-n">0</b> saisie(s) gardée(s) sur cet appareil, en attente d'envoi au serveur — toucher pour envoyer</a>
 {% if MAJ %}<div id="bandeau-maj" class="bandeau maj" hidden data-depot="{{ MAJ.depot }}" data-version="{{ VERSION }}" data-fichier="{{ MAJ.fichier }}" data-auto="{{ 1 if MAJ.auto else 0 }}">
   <span>{{ icone('nouveau') }} Nouvelle version <b class="maj-v"></b> de GESCOL disponible (installée : {{ VERSION }}). Installez-la par-dessus l'ancienne : vos données sont conservées.</span>
-  <a class="btn petit maj-lien" href="#" target="_blank" rel="noopener">Télécharger la mise à jour</a>
+  <a class="btn petit maj-lien" href="#" target="_blank" rel="noopener">Télécharger la mise à jour</a> <small class="maj-raison" style="display:block;opacity:.8"></small>
   <button class="btn sec petit maj-plus-tard" type="button">Plus tard</button>
 </div>
 <div id="bandeau-maj-auto" class="bandeau maj" hidden>
