@@ -461,6 +461,8 @@ MODULES = ["m_performance",  # v1.33 : compression gzip (en premier : passe en d
            "m_communication", "m_sante_scolaire",
            # v1.27 : inspection et formation (grille APC, recommandations, animations), patrimoine et matériel, examens (CEP) et concours
            "m_inspection", "m_patrimoine_pvs", "m_examens",
+           # v2.8 : cahier de matériel (enseignant, école, mouvements, besoins et dotations)
+           "m_cahier_materiel",
            # v1.28 : examen blanc du CEP, modèle commun (CS Pobè)
            "m_examen_blanc",
            # v2.3 : territoire et suivi administratif (fiche de rentrée, courrier, présence du personnel, discipline,

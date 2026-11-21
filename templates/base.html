@@ -121,6 +121,13 @@
       <a href="{{ url_for('reg_page', gcle='sante', rcle='filles') }}">Gescolation des filles</a>
       {{ lien('sante_scolaire_absences', 'Absences et décrochage', ep=='sante_scolaire_absences') }}
     {% endcall %}{% endif %}
+    {% if peut('materiel_cahier') and ep_existe('materiel_accueil') %}{# v2.8 : cahier de matériel #}
+    {% call groupe('materiel', 'Cahier de matériel', ep.startswith('materiel_') or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'materiel'), 'patrimoine') %}
+      <a href="{{ url_for('reg_page', gcle='materiel', rcle='enseignant') }}">Cahier de l'enseignant</a>
+      <a href="{{ url_for('reg_page', gcle='materiel', rcle='inventaire') }}">Matériel de l'école</a>
+      <a href="{{ url_for('reg_page', gcle='materiel', rcle='mouvements') }}">Mouvements</a>
+      <a href="{{ url_for('reg_page', gcle='materiel', rcle='dotations') }}">Besoins et dotations</a>
+    {% endcall %}{% endif %}
     {% if peut('secondaire') and ep_existe('sec_synoptique') and a_secondaire() %}{# v2.4 : établissement secondaire (visible si l'école a des classes de 6ème à Tle) #}
     {% call groupe('secondaire', 'Établissement secondaire', ep.startswith('sec_') or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'sec'), 'ecole') %}
       {{ lien('sec_synoptique', 'Tableau synoptique', ep=='sec_synoptique') }}
