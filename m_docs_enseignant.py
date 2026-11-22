@@ -78,6 +78,12 @@ DOCS = {
     "prise_service_dir": dict(famille="cert_agent", cible="agent", qr=True,
                               titre="Certificat de prise de service (délivré par le directeur)",
                               desc="Le directeur certifie la prise de service de l'agent affecté à l'école."),
+    "presence_poste_prive": dict(famille="cert_agent", cible="agent", qr=True,
+                                 titre="Certificat de présence au poste (école privée, délivré par le directeur)",
+                                 desc="Le directeur d'une école privée atteste la présence au poste de l'enseignant(e) : contrat, fonction, période."),
+    "prise_service_prive": dict(famille="cert_agent", cible="agent", qr=True,
+                                titre="Certificat de prise de service (école privée, délivré par le directeur)",
+                                desc="Enseignant(e) recruté(e) par une école privée : contrat, diplôme, fonction, date de prise de service."),
     "prise_en_charge": dict(famille="cert_agent", cible="agent", qr=True,
                             titre="Certificat de prise en charge (hospitalisation)",
                             desc="Admission des fonctionnaires et assimilés : indice, budget, catégorie."),
@@ -288,6 +294,13 @@ SECTIONS = {
     "prise_service_dir": [("Signataire", ["ref", "soussigne", "directeur_titre", "ecole", "localite"]),
                           ("Agent", ["civilite", "nip", "nom_prenoms", "grade", "matricule", "affecte_a", "acte",
                                      "acte_date", "fonction", "date_effective", "fait_a", "fait_le"])],
+    "presence_poste_prive": [("Signataire", ["ref", "soussigne", "directeur_titre", "ecole", "localite"]),
+                             ("Agent", ["civilite", "nip", "nom_prenoms", "date_naissance", "lieu_naissance",
+                                        "diplome_recrutement", "contrat_initial", "en_service_a", "fonction", "depuis",
+                                        "jusqu_au", "fait_a", "fait_le"])],
+    "prise_service_prive": [("Signataire", ["ref", "soussigne", "directeur_titre", "ecole", "localite"]),
+                            ("Agent", ["civilite", "nip", "nom_prenoms", "diplome_recrutement", "contrat_initial",
+                                       "affecte_a", "fonction", "nb_classes", "date_effective", "fait_a", "fait_le"])],
     "prise_en_charge": [("En-tête", ["departement", "cs", "ref", "ccs_nom"]),
                         ("Malade", ["nip", "nom_prenoms", "profession", "en_service_a", "indice", "budget",
                                     "categorie_hosp", "fait_a", "fait_le"])],
@@ -1078,6 +1091,29 @@ CERTIFICATS = {
                [C("_affecte", "Affecté(e)"), T(" à l'école "), V("affecte_a")]] + ACTE + [
             [T("en qualité de :"), V("fonction")],
             [T("a effectivement pris service le"), D("date_effective")]]),
+    "presence_poste_prive": dict(
+        titre="CERTIFICAT DE PRESENCE AU POSTE", cadre="epais", pas=27.5, sig=("dir",),
+        corps=[[T("Je soussigné (e) "), V("soussigne")],
+               [T("Direct"), S("_suf_dir", 32, "n"), T(" de l'Ecole Privée "), V("ecole", 1), T(" de :"),
+                V("localite", 0.6)], LIGNE_NIP,
+               [T("Atteste que "), C("civilite", "Mr ou Mme", "b"), T(" "), V("nom_prenoms")],
+               [C("_ne", "Né (e)"), T(" le "), D("date_naissance", 0.55), T(" à "), V("lieu_naissance", 0.45)],
+               [T("Titulaire du diplôme :"), V("diplome_recrutement", 1)],
+               [T("Recruté(e) suivant le contrat N° :"), V("contrat_initial", 1)],
+               [T("Est en service à "), V("en_service_a")],
+               [T("En qualité de (Fonction) "), V("fonction")],
+               [T("Depuis le "), D("depuis", 0.8), T(" jusqu'à ce jour "), D("jusqu_au", 0.8)]]),
+    "prise_service_prive": dict(
+        titre="CERTIFICAT DE PRISE DE SERVICE", cadre="epais", pas=27.5, sig=("dir",),
+        corps=[[T("Je soussigné (e)"), V("soussigne")],
+               [T("Direct"), S("_suf_dir", 32, "n"), T(" de l'Ecole Privée"), V("ecole", 1), T(" de :"),
+                V("localite", 0.6)], LIGNE_NIP,
+               [T("Certifie que "), C("civilite", "Mr ou Mme"), T(" "), V("nom_prenoms")],
+               [T("Titulaire du diplôme :"), V("diplome_recrutement", 1)],
+               [T("Recruté(e) par l'école suivant le contrat N° :"), V("contrat_initial", 1)],
+               [C("_affecte", "Affecté(e)"), T(" à l'école "), V("affecte_a")],
+               [T("en qualité de :"), V("fonction", 1), T("de"), V("nb_classes", 0.22), T("classe(s)")],
+               [T("a effectivement pris service le"), D("date_effective")]]),
     "prise_en_charge": dict(
         titre="CERTIFICAT DE PRISE EN CHARGE", cadre="aucun", pas=24.5, sig=("ccs",),
         corps=[LIGNE_NIP,
@@ -1164,7 +1200,7 @@ def dessiner_certificat_agent(c, doc, v, opt):
             texte_ajuste(c, x1, H_PAGE - 105, x2 - x1, ref, "Times-Roman", 9)
         else:
             ligne(c, x1, H_PAGE - 105, 520, [T("SO N°"), V("_x", 0.2)] + (
-                [T("EPP/EM"), V("_x", 1)] if doc in ("presence_poste_dir", "prise_service_dir") else []) + [
+                [T("EPP/EM"), V("_x", 1)] if doc in ("presence_poste_dir", "prise_service_dir", "prise_service_prive", "presence_poste_prive") else []) + [
                 T("/CS-"), V("_x", 0.3), T("/DDEMP-"), V("_x", 0.15), T("/SP")], {}, fam, 9)
         haut = {"double": 126, "arrondi": 124, "epais": 126}[spec["cadre"]]
         larg = {"double": (87, 514), "arrondi": (103, 526), "epais": (108, 497)}[spec["cadre"]]
@@ -1725,7 +1761,7 @@ def enregistrer(app, H):
         # certificats du personnel
         prise_ecole = v.pop("_prise_ecole", "")
         nb_classes = q("SELECT COUNT(*) n FROM classes WHERE ecole_id=?", (H.eco(),), un=True)["n"]
-        par_dir = doc in ("presence_poste_dir", "prise_service_dir")
+        par_dir = doc in ("presence_poste_dir", "prise_service_dir", "prise_service_prive", "presence_poste_prive")
         ref = (f"SO N° ……/{ea['ecole']}/CS-{cs}/DDEMP-{dep}/SP" if par_dir
                else f"SO N° ……/CS-{cs}/DDEMP-{dep}/SP")
         if doc == "prise_en_charge":

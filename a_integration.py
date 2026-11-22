@@ -118,6 +118,7 @@ PREFIXES_EP_COMMUNS = ("listes_classe", "sport_", "pilotage", "reg_", "liaison_"
 # adresses accessibles sans école ouverte (structure, administration, connexion, fichiers, espaces publics et API) :
 # toute autre adresse est une page de module d'école et demande une école ouverte (page « Choisissez une école »)
 PREFIXES_STRUCTURE = (
+    "/cahier-materiel/synthese",   # v2.8.3 : synthèse du matériel des écoles de la juridiction
     "/listes-classe",   # v2.3.3 : listes de classe (école → cours → classe) au niveau de la structure
     "/juridiction", "/login", "/logout", "/static", "/verifier", "/parametres", "/utilisateurs", "/journal",
     "/administration", "/ecoles", "/sauvegarde", "/mon-compte", "/demandes-ecoles", "/communication/reglages",

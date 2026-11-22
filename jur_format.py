@@ -42,6 +42,7 @@ SECTIONS DE L'ÉCOLE (toutes facultatives) :
   "recensement": {"primaire": {"annee", "valeurs": {cle_champ: valeur}}, "maternelle": {...}}
   "rapports":    {"rentree-ep" | "fin-ep" | "rentree-em" | "fin-em": {"annee", "valeurs": {...}}}
   "patrimoine":  dict (H.patrimoine_synthese)
+  "materiel":    {"annee", "articles", "quantite", "valeur", "a_reparer", "besoin", "recu", "par_categorie": {categorie: {"articles", "quantite", "valeur"}}}
   "cantine":     {"existe": bool, "beneficiaires": int, "montant_annee": int}
   "pilotage":    {"evaluations": [{"type", "numero", "libelle", "niveau", "classes", "composes_g", "composes_f",
                                    "reussis_g", "reussis_f"}], "abandons": [g, f], "transferts": [g, f],
@@ -67,7 +68,7 @@ TYPES_ECOLE = {"EP": "École primaire", "EM": "École maternelle", "EE": "Espace
                "CEG": "Collège d'enseignement général", "LYC": "Lycée", "ETP": "Établissement technique et professionnel"}
 SECTEURS = {"public": "Public", "prive": "Privé"}
 SECTIONS_ECOLE = ("effectifs", "personnel", "visites", "cep", "recensement", "rapports", "patrimoine", "cantine",
-                  "pilotage", "secondaire")   # v2.4.7 : section du secondaire (effectifs, examens…)   # v1.25 : évaluations (réussite G / F), abandons, transferts, sport, santé (m_pilotage)
+                  "pilotage", "secondaire", "materiel")   # v2.4.7 : section du secondaire (effectifs, examens…)   # v1.25 : évaluations (réussite G / F), abandons, transferts, sport, santé (m_pilotage)
 SECTIONS_CS = ("agents", "visites", "cep", "structure", "frais_releves", "cp_bilans")  # v1.7 : bilans des CP
 CATEGORIES = {"FE": "FE (fonctionnaire de l'État)", "ACDPE": "ACDPE", "ACDPCTD": "ACDPCTD (AME)",
               "PRIVE": "Enseignant du privé", "AUTRE": "Autre"}

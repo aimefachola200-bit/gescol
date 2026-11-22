@@ -716,5 +716,5 @@ def enregistrer(app, H):
 NOMS_SECTIONS = {"effectifs": "Effectifs des élèves", "personnel": "Personnel", "visites": "Visites de classe",
                  "cep": "CEP (candidats, résultats)", "recensement": "Fiches de recensement",
                  "rapports": "Rapports de rentrée / fin d'année", "patrimoine": "Patrimoine et infrastructures",
-                 "cantine": "Cantine scolaire", "pilotage": "Pilotage (évaluations, abandons, sport, santé)",
+                 "cantine": "Cantine scolaire", "materiel": "Cahier de matériel", "pilotage": "Pilotage (évaluations, abandons, sport, santé)",
                  "secondaire": "Secondaire (classes, séries, examens)"}

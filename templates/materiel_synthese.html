@@ -1,0 +1,15 @@
+{# v2.8.3 — synthèse du cahier de matériel des écoles de la juridiction (CS / DDEMP) #}
+{% extends "base.html" %}{% block titre %}Synthèse du matériel — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">Synthèse des cahiers de matériel reçus des écoles — année {{ annee }}</p></div></div>
+{% include "_onglets_groupe.html" %}
+<p class="aide">{{ nb_recues }} école(s) sur {{ lignes|length }} ont transmis leur cahier de matériel (rubrique « Matériel » de la transmission à la circonscription).</p>
+<div class="tw"><table class="t"><tr><th>Catégorie</th><th>Articles</th><th>Quantité</th><th>Valeur (FCFA)</th></tr>
+{% for c, v in cats %}<tr><td>{{ c }}</td><td class="num">{{ v.articles }}</td><td class="num">{{ v.quantite }}</td><td class="num">{{ '{:,}'.format(v.valeur).replace(',', ' ') }}</td></tr>{% else %}<tr><td colspan="4">Aucune donnée reçue.</td></tr>{% endfor %}
+<tr><th>Total</th><th class="num">{{ tot.articles }}</th><th class="num">{{ tot.quantite }}</th><th class="num">{{ '{:,}'.format(tot.valeur).replace(',', ' ') }}</th></tr></table></div>
+<h2>Par école</h2>
+<div class="tw"><table class="t"><tr>{% if ddemp %}<th>CS</th>{% endif %}<th>École</th><th>Articles</th><th>Quantité</th><th>Valeur (FCFA)</th><th>À réparer / hors service</th><th>Demandé</th><th>Reçu</th></tr>
+{% for l in lignes %}<tr>{% if ddemp %}<td>{{ l.e.cs_nom }}</td>{% endif %}<td>{{ l.e.nom }}</td>
+{% if l.d %}<td class="num">{{ l.d.articles }}</td><td class="num">{{ l.d.quantite }}</td><td class="num">{{ '{:,}'.format(l.d.valeur or 0).replace(',', ' ') }}</td><td class="num">{{ l.d.a_reparer }}</td><td class="num">{{ l.d.besoin }}</td><td class="num">{{ l.d.recu }}</td>
+{% else %}<td colspan="6"><span class="aide">Pas encore transmis</span></td>{% endif %}</tr>{% endfor %}</table></div>
+{% endblock %}

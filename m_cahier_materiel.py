@@ -85,6 +85,53 @@ def enregistrer(app, H):
         signataires=lambda _l: sig("Le responsable"), doc="Besoins et dotations en matériel",
         aide="À l'école : ce que vous demandez et recevez. À la CS et à la DDEMP : une ligne par école ou par structure (rubrique « École concernée »).")
 
+    # ---- synthèse du cahier de matériel : l'école l'envoie avec sa transmission, la CS / DDEMP la regroupe
+    def section_materiel(annee=None):
+        annee = annee or H.config.ANNEE_ACTIVE
+        p = R.cle_portee("ecole")
+        lignes = [dict(x) for x in H.q("SELECT categorie, quantite, valeur, etat FROM reg_materiel_inventaire WHERE portee=? AND annee=?", (p, annee))]
+        if not lignes:
+            return None, "Cahier de matériel de l'école vide (menu Cahier de matériel)."
+        out = {"annee": annee, "articles": 0, "quantite": 0, "valeur": 0, "a_reparer": 0, "besoin": 0, "recu": 0, "par_categorie": {}}
+        for x in lignes:
+            qte, val = int(x.get("quantite") or 0), int(x.get("valeur") or 0)
+            c = out["par_categorie"].setdefault(x.get("categorie") or "Autre", {"articles": 0, "quantite": 0, "valeur": 0})
+            c["articles"] += 1; c["quantite"] += qte; c["valeur"] += val
+            out["articles"] += 1; out["quantite"] += qte; out["valeur"] += val
+            if x.get("etat") in ("À réparer", "Hors service"):
+                out["a_reparer"] += qte
+        for d in H.q("SELECT demande, recue FROM reg_materiel_dotations WHERE portee=? AND annee=?", (R.cle_portee("structure"), annee)):
+            out["besoin"] += int(d["demande"] or 0); out["recu"] += int(d["recue"] or 0)
+        return out, None
+    if not hasattr(H, "sections_extra"):
+        H.sections_extra = {}
+    H.sections_extra["materiel"] = section_materiel
+
+    @app.route("/cahier-materiel/synthese")
+    @H.connexion_requise("materiel_cahier")
+    def materiel_synthese():
+        from flask import render_template, request
+        import json as _json
+        if not H.config.juridiction():
+            return redirect(url_for("materiel_accueil"))
+        annee = request.args.get("annee") or H.config.ANNEE_ACTIVE
+        lignes, tot, cats = [], {"articles": 0, "quantite": 0, "valeur": 0, "a_reparer": 0, "besoin": 0, "recu": 0}, {}
+        sec = H.jur_sections("materiel", annee)
+        for e in H.jur_ecoles():
+            d = sec.get(e["id"])
+            lignes.append({"e": dict(e), "d": d})
+            if d:
+                for k in tot:
+                    tot[k] += int(d.get(k) or 0)
+                for c, v in (d.get("par_categorie") or {}).items():
+                    z = cats.setdefault(c, {"articles": 0, "quantite": 0, "valeur": 0})
+                    for k in z:
+                        z[k] += int(v.get(k) or 0)
+        lignes.sort(key=lambda l: ((l["e"].get("cs_nom") or ""), l["e"]["nom"]))
+        return render_template("materiel_synthese.html", G=G, ep_actif="materiel_synthese", lignes=lignes, tot=tot, cats=sorted(cats.items()),
+                               annee=annee, nb_recues=sum(1 for l in lignes if l["d"]), ddemp=H.config.EDITION == "ddemp")
+    G.page("materiel_synthese", "Synthèse des écoles", apres=False)
+
     @app.route("/cahier-materiel")
     @H.connexion_requise("materiel_cahier")
     def materiel_accueil():
