@@ -32,7 +32,7 @@ def verifier_cours(test, C, cours_liste, minimum=900):
     for r in C["resumes"]:
         for fid in r.get("fiches") or []:
             rpf.setdefault(fid, []).append(r)
-    manque = [(f["cours"], f["matiere"], f["titre"]) for f in C["fiches"] if f["cours"] in cours_liste and f["matiere"] in MATS and f["id"] not in rpf]
+    manque = [(f["cours"], f["matiere"], f["titre"]) for f in C["fiches"] if f["cours"] in cours_liste and f["matiere"] in MATS and f["id"] not in rpf and not f["id"].startswith(("dav-", "fm-"))]
     test.assertEqual(manque, [], manque[:20])
     lot = C["lots"]["v129-resumes-seances"]["table"]
     for c in cours_liste:

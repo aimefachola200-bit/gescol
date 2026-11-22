@@ -1,6 +1,6 @@
 # GESCOL — Guide d'utilisation (LISEZ-MOI)
 
-Version 2.8.1. 
+Version 2.8.2. 
 
 **Mises à jour automatiques** : quand l'appareil a Internet, l'application télécharge seule les nouveautés. Un bandeau « La mise à jour est déjà téléchargée » apparaît : fermez puis rouvrez l'application, c'est tout (pas de réinstallation, données conservées).
 Ce guide explique, en quelques étapes simples, comment utiliser chaque partie de l'application. Chaque rubrique indique pour qui elle est utile.

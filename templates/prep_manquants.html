@@ -2,6 +2,21 @@
 {% block contenu %}{% set onglet = 'manquants' %}{% include "_prep_onglets.html" %}
 <h2>Fiches et guides manquants</h2>
 <p class="aide">Comparaison entre la planification annuelle officielle (SA prévues par cours et matière) et les fiches et guides des documents fournis. Les fiches et guides ajoutés pour combler les manques portent la mention : <b>{{ mention }}</b></p>
+<h3>Couverture actuelle par cours et par matière</h3>
+<p class="aide">Calculée en direct sur les fiches disponibles{% if inv_fm %} (dont {{ inv_fm.ajoutees.values()|sum }} fiches CM2 ajoutées le {{ inv_fm.date }}){% endif %}. Une case « SA sans fiche » indique une situation d'apprentissage prévue au programme et sans aucune fiche : c'est ce qu'il reste à compléter. Les cases à 0 fiche sont signalées.</p>
+<div class="tw"><table class="t">
+  <thead><tr><th>Cours</th><th>Matière</th><th>Fiches</th><th>dont ajoutées</th><th>SA prévues</th><th>SA sans fiche</th><th></th></tr></thead>
+  <tbody>{% for l in direct %}<tr>
+    <td>{{ l.cours }}</td><td>{{ prep_nom_matiere(l.matiere) }}</td>
+    <td>{% if l.n %}{{ l.n }}{% else %}<span class="badge ko">0</span>{% endif %}</td><td>{{ l.ajout or '—' }}</td>
+    <td>{{ l.sa_prevues|join(', ') if l.sa_prevues else '—' }}</td>
+    <td>{% if l.sa_sans %}<span class="badge ko">{{ l.sa_sans|join(', ') }}</span>{% elif l.sa_prevues %}<span class="badge ok">aucune</span>{% else %}—{% endif %}</td>
+    <td>{% if l.n %}<a class="btn sec petit" href="{{ url_for('prep_fiches', cours=l.cours, matiere=l.matiere) }}">Voir</a>{% endif %}</td>
+  </tr>{% endfor %}</tbody></table></div>
+<details><summary>Détail par rubrique (sous-matière)</summary>
+<div class="tw"><table class="t"><thead><tr><th>Cours</th><th>Matière</th><th>Rubrique</th><th>Fiches</th></tr></thead><tbody>
+{% for (c, m), d in sous.items()|sort %}{% for sm, n in d.items()|sort %}<tr><td>{{ c }}</td><td>{{ prep_nom_matiere(m) }}</td><td>{{ sm }}</td><td>{{ n }}</td></tr>{% endfor %}{% endfor %}
+</tbody></table></div></details>
 {% for titre, lignes in [('Après les fiches et guides conçus', apres), ('Avant (documents fournis seuls)', avant)] %}
 <h3>{{ titre }}</h3>
 <div class="tw"><table class="t">

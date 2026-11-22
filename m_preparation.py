@@ -2179,7 +2179,43 @@ def enregistrer(app, H):
             if not f["id"].startswith(("cm1i-", "l2c-", "cp22-", "lot3-")):      # inventaires (CM1, lot 2, CP, lot 3) : résumés dans leurs tableaux
                 par.setdefault((f["cours"], f["matiere"]), []).append(f)
         guides_c = [x for x in C["guides"] if x.get("statut") == "concu"]
-        return render_template("prep_manquants.html", avant=m.get("avant", []), apres=m.get("apres", []), par=par,
+        # v2.8.1 : couverture en direct (fiches actuelles du corpus, y compris les ajouts), par cours et par matière
+        prevues = {}
+        for p in C.get("programmes") or []:
+            if p.get("type") in ("sa", "unite") and p.get("num") not in (None, ""):
+                try:
+                    prevues.setdefault((p["cours"], p["matiere"]), set()).add(int(p["num"]))
+                except (TypeError, ValueError):
+                    pass
+        cases = {}
+        for f in C["fiches"]:
+            k = (f.get("cours"), f.get("matiere"))
+            d = cases.setdefault(k, {"n": 0, "sa": set(), "unites": set(), "ajout": 0})
+            d["n"] += 1
+            if f.get("sa"):
+                try:
+                    d["sa"].add(int(f["sa"]))
+                except (TypeError, ValueError):
+                    pass
+            if f.get("unite"):
+                d["unites"].add(str(f["unite"]))
+            if str(f.get("id", "")).startswith(("dav-", "fm-")):
+                d["ajout"] += 1
+        direct = []
+        for c_ in COURS:
+            for m_ in ORDRE_MAT:
+                d = cases.get((c_, m_))
+                pv = sorted(prevues.get((c_, m_), set()))
+                if not d and not pv:
+                    continue
+                d = d or {"n": 0, "sa": set(), "unites": set(), "ajout": 0}
+                direct.append({"cours": c_, "matiere": m_, "n": d["n"], "sa_avec": sorted(d["sa"]), "sa_prevues": pv,
+                               "sa_sans": [x for x in pv if x not in d["sa"]], "ajout": d["ajout"]})
+        sous = {}
+        for f in C["fiches"]:
+            sous.setdefault((f.get("cours"), f.get("matiere")), {}).setdefault(f.get("sous_matiere") or "—", 0)
+            sous[(f.get("cours"), f.get("matiere"))][f.get("sous_matiere") or "—"] += 1
+        return render_template("prep_manquants.html", direct=direct, sous=sous, inv_fm=C.get("inventaire_fm"), avant=m.get("avant", []), apres=m.get("apres", []), par=par,
                                guides_c=guides_c, mention=m.get("mention", ""), inv=C.get("inventaire_cm1"),
                                nb_resumes=len(C.get("resumes") or []), lots=C.get("lots") or {}, doublons=C.get("doublons") or [])
 
