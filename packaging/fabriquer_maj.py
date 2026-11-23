@@ -43,7 +43,15 @@ def main():
         ajouter_dossier(z, os.path.join(RACINE, "templates"), "web/templates")
         ajouter_dossier(z, os.path.join(RACINE, "static"), "web/static")
     h = hashlib.sha256(open(zp, "rb").read()).hexdigest()
-    info = {"version": version(), "sha256": h, "taille": os.path.getsize(zp)}
+    # v2.9.2 : liste des fichiers (empreinte + taille) : l'application ne télécharge que ceux qui ont changé
+    fichiers = {}
+    with zipfile.ZipFile(zp) as z:
+        for i in z.infolist():
+            if not i.is_dir():
+                fichiers[i.filename] = [hashlib.sha256(z.read(i)).hexdigest(), i.file_size]
+    man = json.dumps({"version": version(), "fichiers": fichiers}, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    open(os.path.join(SORTIE, "MAJ-MANIFESTE.json"), "wb").write(man)
+    info = {"version": version(), "sha256": h, "taille": os.path.getsize(zp), "manifeste": hashlib.sha256(man).hexdigest()}
     json.dump(info, open(os.path.join(SORTIE, "MAJ-CODE.json"), "w"), indent=1)
     print(info)
 

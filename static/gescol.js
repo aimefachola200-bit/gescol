@@ -562,7 +562,7 @@
       var f = b.dataset.fichier, lien = 'https://github.com/' + depot + '/releases/' + (f ? 'latest/download/' + f : 'latest');
       $('.maj-v', b).textContent = tag.replace(/^v/i, '');
       $('.maj-lien', b).href = lien;
-      var rz = $('.maj-raison', b); if (rz && raison) rz.textContent = 'Mise à jour automatique impossible pour le moment : ' + raison;
+      var rz = $('.maj-raison', b); if (rz && raison) rz.textContent = (/en cours/.test(raison) ? 'Mise à jour automatique : ' : 'Mise à jour automatique impossible pour le moment : ') + raison;
       b.hidden = false;
       $('.maj-plus-tard', b).addEventListener('click', function () { b.hidden = true; try { localStorage.setItem('gescol-maj-ignore', tag); } catch (_) {} });
     }
