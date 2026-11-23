@@ -5,6 +5,7 @@ Tous les jours (et à chaque lancement), l'application regarde sur GitHub si une
 Si oui, elle la télécharge, la contrôle (empreinte SHA-256, chemins, syntaxe) et la prépare. Elle s'active au
 prochain lancement ; un bandeau l'indique. Rien n'est téléchargé sans Internet : l'essai est simplement repris plus tard."""
 import hashlib
+import http.client
 import json
 import os
 import shutil
@@ -12,6 +13,7 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.error
 import urllib.request
 import zipfile
 
@@ -27,10 +29,12 @@ def _url(fichier):
     return f"https://github.com/{config.DEPOT_MAJ}/releases/latest/download/{fichier}"
 
 
-def _http(url, tmax=20):
+def _http(url, tmax=20, plus=None):
     if not url.startswith("https://github.com/"):
         raise ValueError("adresse refusée")
     req = urllib.request.Request(url, headers={"User-Agent": config.VERSION and "GESCOL-maj/" + config.VERSION})
+    for k, v in (plus or {}).items():
+        req.add_header(k, v)
     return urllib.request.urlopen(req, timeout=tmax)
 
 
@@ -65,6 +69,46 @@ def menage(r, garder):
             shutil.rmtree(os.path.join(r, d), ignore_errors=True)
 
 
+def _telecharger(zf, sha):
+    """Télécharge MAJ-CODE.zip vers zf : jusqu'à 4 essais, reprise là où le téléchargement s'est arrêté,
+    départ à zéro si l'empreinte SHA-256 ne correspond pas (fichier abîmé en route)."""
+    derniere = ValueError("téléchargement impossible")
+    for essai in range(4):
+        if essai:
+            time.sleep(3 * essai)
+        try:
+            n0 = os.path.getsize(zf) if os.path.isfile(zf) else 0
+            rep = _http(_url("MAJ-CODE.zip"), 60, {"Range": "bytes=%d-" % n0}) if n0 else _http(_url("MAJ-CODE.zip"), 60)
+            with rep:
+                if n0 and getattr(rep, "status", 200) != 206:
+                    n0 = 0                                              # le serveur n'a pas accepté la reprise
+                n = n0
+                with open(zf, "ab" if n0 else "wb") as f:
+                    while True:
+                        b = rep.read(65536)
+                        if not b:
+                            break
+                        n += len(b)
+                        if n > TAILLE_MAX:
+                            raise ValueError("fichier trop gros")
+                        f.write(b)
+            h = hashlib.sha256()
+            with open(zf, "rb") as f:
+                for b in iter(lambda: f.read(65536), b""):
+                    h.update(b)
+            if h.hexdigest() == sha:
+                return
+            os.remove(zf)                                               # abîmé : on recommence de zéro
+            derniere = ValueError("empreinte différente : téléchargement rejeté (après " + str(essai + 1) + " essai(s))")
+        except urllib.error.HTTPError as e:
+            if e.code == 416 and os.path.isfile(zf):
+                os.remove(zf)
+            derniere = e
+        except (OSError, http.client.HTTPException) as e:              # coupure réseau : on garde le début et on reprend
+            derniere = e
+    raise derniere
+
+
 def verifier(attendre=0):
     """Une vérification complète. Retourne un texte d'état (utile pour les tests et le bouton « Vérifier »)."""
     if not _verrou.acquire(blocking=attendre > 0, timeout=attendre if attendre > 0 else -1):
@@ -87,19 +131,7 @@ def verifier(attendre=0):
         tmp = tempfile.mkdtemp(dir=r)
         try:
             zf = os.path.join(tmp, "maj.zip")
-            h, n = hashlib.sha256(), 0
-            with _http(_url("MAJ-CODE.zip"), 60) as rep, open(zf, "wb") as f:
-                while True:
-                    b = rep.read(65536)
-                    if not b:
-                        break
-                    n += len(b)
-                    if n > TAILLE_MAX:
-                        raise ValueError("fichier trop gros")
-                    h.update(b)
-                    f.write(b)
-            if h.hexdigest() != str(info.get("sha256", "")).lower():
-                raise ValueError("empreinte différente : téléchargement rejeté")
+            _telecharger(zf, str(info.get("sha256", "")).lower())
             dest = os.path.join(tmp, "x")
             with zipfile.ZipFile(zf) as z:
                 for m in z.namelist():
