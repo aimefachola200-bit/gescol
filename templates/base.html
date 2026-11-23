@@ -64,6 +64,7 @@
     {% endcall %}
     {% call groupe('eval', 'Évaluations', ep.startswith('notes') or ep.startswith('eval') or ep.startswith('epreuves') or ep.startswith('themes_up') or ep in ('resultats','matieres') or ep.startswith('bilan') or ep.startswith('honneur') or ep.startswith('synthese') or ep.startswith('orientation'), 'modifier') %}
       {% if peut('evaluations') %}{{ lien('eval_accueil', 'Saisie des notes (évaluations)', ep.startswith('eval_') and ep not in ('eval_statistiques','eval_analyse')) }}
+      {% if peut('cahier_notes') and ep_existe('cnotes_accueil') %}{{ lien('cnotes_accueil', 'Cahier de notes (classe)', ep.startswith('cnotes')) }}{% endif %}
       {{ lien('eval_statistiques', 'Statistiques', ep=='eval_statistiques') }}
       {{ lien('eval_analyse', 'Analyse et rapport', ep=='eval_analyse') }}
       {{ lien('honneur_accueil', "Tableau d'honneur", ep.startswith('honneur')) }}

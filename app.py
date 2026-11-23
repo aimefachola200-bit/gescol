@@ -463,6 +463,8 @@ MODULES = ["m_performance",  # v1.33 : compression gzip (en premier : passe en d
            "m_inspection", "m_patrimoine_pvs", "m_examens",
            # v2.8 : cahier de matériel (enseignant, école, mouvements, besoins et dotations)
            "m_cahier_materiel",
+           # v2.9 : cahier de notes de l'enseignant (notes de la classe, évaluation par évaluation)
+           "m_cahier_notes",
            # v1.28 : examen blanc du CEP, modèle commun (CS Pobè)
            "m_examen_blanc",
            # v2.3 : territoire et suivi administratif (fiche de rentrée, courrier, présence du personnel, discipline,

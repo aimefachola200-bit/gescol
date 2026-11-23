@@ -1,0 +1,74 @@
+{# v2.9 — cahier de notes de l'enseignant : notes de la classe, évaluation par évaluation #}
+{% extends "base.html" %}{% block titre %}Cahier de notes{% endblock %}
+{% import "_macros.html" as M with context %}
+{% block contenu %}
+<div class="entete">
+  <div><h1>Cahier de notes</h1>
+  <p class="sous">Les notes de la classe, évaluation par évaluation · année {{ ANNEE }}</p></div>
+  {% if cl %}<div class="actions"><a class="btn sec" href="{{ url_for('cnotes_export', classe=cl.id, matiere=mid, evaluation=evid) }}">Excel</a>
+    <a class="btn sec" href="{{ url_for('eval_accueil', classe=cl.id) }}">Saisir les notes</a></div>{% endif %}
+</div>
+{% if not classes %}
+<div class="carte">Aucune classe ne vous est accessible. Demandez à l'administrateur de créer les classes ou de vous affecter à une classe.</div>
+{% else %}
+{% call M.choix_classe(classes, cid) %}
+  {% if cl %}<label>Évaluation<br><select name="evaluation" onchange="this.form.submit()">
+    <option value="0">Toutes les évaluations (synthèse)</option>
+    {% for ev in (evaluations or []) %}<option value="{{ ev.id }}" {{ 'selected' if ev.id == evid }}>{{ ev.titre }}</option>{% endfor %}
+  </select></label>
+  <label>Matière<br><select name="matiere" onchange="this.form.submit()">
+    <option value="0">Toutes matières (moyenne)</option>
+    {% for m in matieres %}<option value="{{ m.id }}" {{ 'selected' if m.id == mid }}>{{ m.nom }}</option>{% endfor %}
+  </select></label>{% endif %}
+{% endcall %}
+{% if not cl %}
+<div class="carte"><p>Choisissez une classe pour ouvrir son cahier de notes.</p></div>
+{% elif cycle == 'maternelle' %}
+<div class="carte">En maternelle, le suivi se fait par appréciations (A, ECA, NA) et non par notes : voir « Saisie des notes (évaluations) ».</div>
+{% elif f %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Évaluation</div><div class="v">{{ f.ev.titre }}</div><div class="d">{{ f.ev.libelle }}{% if f.ev.date %} · {{ date_fr(f.ev.date) }}{% endif %}</div></div>
+  <div class="kpi"><div class="l">Ont composé</div><div class="v">{{ f.nb_composes }}/{{ f.lignes|length }}</div><div class="d">seuil : {{ f.seuil }}/{{ f.mats|length }} matières à 10 et plus</div></div>
+  <div class="kpi"><div class="l">{{ 'Taux de maîtrise' if cycle == 'primaire' else 'Taux de réussite' }}</div><div class="v">{{ (virgule(f.taux_maitrise, 1) ~ ' %') if f.taux_maitrise is not none else '—' }}</div><div class="d">{{ cl.nom }}</div></div>
+</div>
+<div class="tw"><table class="t">
+  <thead><tr><th class="c">N°</th><th>Nom et prénoms</th><th class="c">Sexe</th>{% for m in f.mats %}<th class="c">{{ m.nom }}</th>{% endfor %}
+    <th class="c">Moyenne</th><th class="c">≥ 10</th><th class="c">Décision</th><th class="c">Rang</th></tr></thead>
+  <tbody>{% for l in f.lignes %}<tr><td class="c">{{ loop.index }}</td><td>{{ l.eleve.nom }} {{ l.eleve.prenoms }}</td><td class="c">{{ l.eleve.sexe }}</td>
+    {% for m in f.mats %}{% set v = l.notes.get(m.id) %}<td class="c">{% if m.id in l.dispenses %}D{% elif v is none %}<span class="aide">—</span>{% else %}{{ virgule(v) }}{% endif %}</td>{% endfor %}
+    <td class="c"><b>{{ virgule(l.moyenne) if l.moyenne is not none else '—' }}</b></td><td class="c">{{ l.reussies if l.compose else '—' }}</td>
+    <td class="c">{{ l.decision }}</td><td class="c">{{ l.rang_texte }}</td></tr>
+  {% else %}<tr><td colspan="{{ f.mats|length + 7 }}">Aucun élève inscrit dans cette classe.</td></tr>{% endfor %}</tbody>
+  <tfoot>
+    <tr><th colspan="3">Moyenne de la matière</th>{% for s in f.fstats %}<th class="c">{{ virgule(s.moy) or '—' }}</th>{% endfor %}<th colspan="4"></th></tr>
+    <tr><th colspan="3">Notes à 10 et plus</th>{% for s in f.fstats %}<th class="c">{{ (virgule(s.taux, 1) ~ ' %') if s.taux is not none else '—' }}</th>{% endfor %}<th colspan="4"></th></tr>
+  </tfoot>
+</table></div>
+<p class="aide">{% if cycle == 'primaire' %}Maîtrise : au moins 10/20 dans {{ f.seuil }} matière(s) sur {{ f.mats|length }}. La moyenne sert au classement.{% else %}Réussite : moyenne de 10/20 et plus.{% endif %} D = dispensé.</p>
+{% elif not colonnes %}
+<div class="carte">Aucune évaluation{% if matiere %} avec la matière « {{ matiere.nom }} »{% endif %} dans cette classe pour l'année {{ ANNEE }}. Créez une évaluation puis saisissez les notes dans « Saisie des notes (évaluations) ».</div>
+{% else %}
+<div class="grille indicateurs">
+  <div class="kpi"><div class="l">Classe</div><div class="v">{{ cl.nom }}</div><div class="d">{{ cl.niveau }}</div></div>
+  <div class="kpi"><div class="l">Matière</div><div class="v">{{ matiere.nom if matiere else 'Toutes' }}</div><div class="d">{{ colonnes|length }} évaluation(s)</div></div>
+  <div class="kpi"><div class="l">Moyenne de la classe</div><div class="v">{{ virgule(moy_classe) or '—' }}</div><div class="d">{% if taux_classe is not none %}{{ virgule(taux_classe, 1) }} % ont 10 et plus{% endif %}</div></div>
+</div>
+<div class="tw"><table class="t">
+  <thead><tr><th class="c">N°</th><th>Nom et prénoms</th><th class="c">Sexe</th>
+    {% for ev in colonnes %}<th class="c" title="{{ ev.titre }}">{{ ev.libelle }}</th>{% endfor %}
+    <th class="c">Moyenne</th><th class="c">Rang</th></tr></thead>
+  <tbody>
+  {% for r in rows %}<tr><td class="c">{{ loop.index }}</td><td>{{ r.eleve.nom }} {{ r.eleve.prenoms }}</td><td class="c">{{ r.eleve.sexe }}</td>
+    {% for c in r.cells %}<td class="c">{% if c is none %}<span class="aide">—</span>{% elif c == 'D' %}D{% else %}{{ virgule(c) }}{% endif %}</td>{% endfor %}
+    <td class="c"><b>{{ virgule(r.moy) if r.moy is not none else '—' }}</b></td><td class="c">{{ r.rang_txt or '—' }}</td></tr>
+  {% else %}<tr><td colspan="{{ colonnes|length + 5 }}">Aucun élève inscrit dans cette classe.</td></tr>{% endfor %}
+  </tbody>
+  <tfoot>
+    <tr><th colspan="3">Moyenne de la classe</th>{% for s in stats %}<th class="c">{{ virgule(s.moy) or '—' }}</th>{% endfor %}<th class="c">{{ virgule(moy_classe) or '—' }}</th><th></th></tr>
+    <tr><th colspan="3">Notes à 10 et plus</th>{% for s in stats %}<th class="c">{{ (virgule(s.taux, 1) ~ ' %') if s.taux is not none else '—' }}</th>{% endfor %}<th class="c">{{ (virgule(taux_classe, 1) ~ ' %') if taux_classe is not none else '—' }}</th><th></th></tr>
+  </tfoot>
+</table></div>
+<p class="aide">D = dispensé · « — » = pas de note · la moyenne de l'élève est celle de ses évaluations pour la matière affichée.</p>
+{% endif %}
+{% endif %}
+{% endblock %}
