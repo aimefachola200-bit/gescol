@@ -2085,6 +2085,9 @@ def enregistrer(app, H):
             H.journal("prep_fiche_modifiee", n["titre"][:120])
             noter_fiche(mid, n["titre"], dict({k: n[k] for k in CLES_TEXTE + ["deroulement"]}, _titre=n["titre"]), "modification")
             flash("Fiche modifiée.", "success")
+            if d.get("cours") and NIVEAU_COURS.get(cl["niveau"]) and d["cours"] != NIVEAU_COURS.get(cl["niveau"]):
+                flash(f"Attention : la fiche passe du cours {d['cours']} au cours {NIVEAU_COURS.get(cl['niveau'])}. "
+                      "Vérifiez la matière, la SA, la séance et les contenus : ils suivent le programme du nouveau cours.", "warning")
             return redirect(url_for("prep_ma_fiche", mid=mid))
         if modif and d["user_id"] == g.user["id"]:
             return render_template("prep_form.html", d=d, classes=classes(), CHAMPS=CHAMPS, MATS=ORDRE_MAT, nouveau=False, MAX=MAX_LIGNES)

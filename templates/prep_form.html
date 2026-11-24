@@ -11,8 +11,9 @@
 {% if d.source_id and not d.source_id.startswith('modele:') %}<p class="aide">Adaptée de la fiche « <a href="{{ url_for('prep_fiche', fid=d.source_id) }}">{{ d.source_id }}</a> » de la bibliothèque.</p>{% endif %}
 <form method="post" class="carte prep-form" action="{{ url_for('prep_preparer') if nouveau else url_for('prep_ma_fiche', mid=d.id) }}">
   <input type="hidden" name="source_id" value="{{ d.source_id or '' }}">
+  <p id="avert-cours" class="aide" hidden style="background:#fff3cd;border:1px solid #e0b400;padding:6px 10px;border-radius:6px">Classe changée : vérifiez la matière, la SA, la séance et le contenu de la fiche, ils suivent le programme du nouveau cours.</p>
   <div class="grille-form">
-    <label>Classe <select name="classe" required>{% for c in classes %}<option value="{{ c.id }}" {{ 'selected' if c.id == d.classe_id }}>{{ c.nom }} ({{ c.niveau }})</option>{% endfor %}</select></label>
+    <label>Classe <select name="classe" required>{% for c in classes %}<option value="{{ c.id }}" data-niv="{{ c.niveau }}" {{ 'selected' if c.id == d.classe_id }}>{{ c.nom }} ({{ c.niveau }})</option>{% endfor %}</select></label>
     <label>Date de la séance <input type="date" name="date_seance" value="{{ d.date_seance or '' }}"></label>
     <label>Matière <select name="matiere">{% for m in MATS %}<option value="{{ m }}" {{ 'selected' if m == d.matiere }}>{{ prep_nom_matiere(m) }}</option>{% endfor %}</select></label>
     <label>SA n° <input type="number" name="sa" min="1" max="99" value="{{ d.sa or '' }}" inputmode="numeric"></label>
@@ -33,4 +34,35 @@
   <p><button type="button" class="btn sec petit" onclick="var r=document.querySelector('tr.prep-vide');if(r)r.classList.remove('prep-vide')">+ Ajouter une ligne</button></p>
   <p class="actions"><button class="btn">Enregistrer</button> <a class="btn sec" href="{{ url_for('prep_mes_fiches') if nouveau else url_for('prep_ma_fiche', mid=d.id) }}">Annuler</a></p>
 </form>
+<script>
+/* v2.9.3 : garde-fou. Changer de classe (donc de programme : CE1, CM2...) alors que la fiche est rédigée demande confirmation ; quitter la page avec du texte non enregistré aussi. */
+(function () {
+  var f = document.querySelector("form.prep-form");
+  if (!f) return;
+  var s = f.querySelector("select[name=classe]");
+  var modifie = false, envoi = false, cur = s ? s.selectedIndex : 0;
+  function niv(i) { return s.options[i] ? (s.options[i].getAttribute("data-niv") || "") : ""; }
+  function rempli() {
+    var n = 0;
+    f.querySelectorAll("textarea, input[type=text]").forEach(function (e) { if ((e.value || "").trim()) n++; });
+    return n > 1;
+  }
+  f.addEventListener("input", function () { modifie = true; });
+  f.addEventListener("submit", function () { envoi = true; });
+  window.addEventListener("beforeunload", function (e) {
+    if (modifie && !envoi && rempli()) { e.preventDefault(); e.returnValue = ""; }
+  });
+  if (!s) return;
+  s.addEventListener("change", function () {
+    if (niv(s.selectedIndex) !== niv(cur) && rempli()) {
+      var ok = confirm("Attention : vous passez de la classe « " + s.options[cur].text + " » à « " + s.options[s.selectedIndex].text + " ».\n\nLe programme, les SA et les séances ne sont pas les mêmes d'un cours à l'autre : la fiche déjà rédigée risque de ne plus correspondre.\n\nContinuer le changement de classe ?");
+      if (!ok) { s.selectedIndex = cur; return; }
+      var a = document.getElementById("avert-cours");
+      if (a) a.hidden = false;
+    }
+    cur = s.selectedIndex;
+    modifie = true;
+  });
+})();
+</script>
 {% endblock %}
