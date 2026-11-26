@@ -129,6 +129,12 @@
       <a href="{{ url_for('reg_page', gcle='materiel', rcle='mouvements') }}">Mouvements</a>
       <a href="{{ url_for('reg_page', gcle='materiel', rcle='dotations') }}">Besoins et dotations</a>
     {% endcall %}{% endif %}
+    {% if peut('zone_desheritee') and ep_existe('zone_accueil') %}{# v2.9.4 : zone déshéritée #}
+    {% call groupe('zone', 'Zone déshéritée', ep.startswith('zone_') or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'zone'), 'patrimoine') %}
+      {{ lien('zone_liste', 'Liste par école', ep=='zone_liste') }}
+      <a href="{{ url_for('reg_page', gcle='zone', rcle='agents') }}">Agents</a>
+      <a href="{{ url_for('reg_page', gcle='zone', rcle='baremes') }}">Montants par couleur</a>
+    {% endcall %}{% endif %}
     {% if peut('secondaire') and ep_existe('sec_synoptique') and a_secondaire() %}{# v2.4 : établissement secondaire (visible si l'école a des classes de 6ème à Tle) #}
     {% call groupe('secondaire', 'Établissement secondaire', ep.startswith('sec_') or (ep.startswith('reg_') and request.view_args and request.view_args.get('gcle') == 'sec'), 'ecole') %}
       {{ lien('sec_synoptique', 'Tableau synoptique', ep=='sec_synoptique') }}

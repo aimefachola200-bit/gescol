@@ -330,6 +330,17 @@ ul.arbre li{margin:4px 0}
 @media (max-width:700px){ .tw table td.col-fixe,.tw table th.col-fixe{white-space:normal!important;font-size:13px;line-height:1.2;overflow-wrap:anywhere} }
 .grille-cartes{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
 
+/* ---------- v2.9.4 : ergonomie tablette — champs de choix (classe, élève, rang, licence…) jamais écrasés ; tableaux sans clignotement ---------- */
+.filtres>label,.barre-doc>label,.mat-filtres>label{flex:0 1 auto;min-width:min(100%,13em)}
+.filtres label select,.barre-doc label select,.mat-filtres label select,
+.filtres label input:not([type=checkbox]):not([type=radio]):not([type=date]):not([type=number]){width:100%;min-width:min(100%,12em)}
+.filtres>select,.barre-doc>select{width:auto;min-width:min(100%,12em)}
+.grille-id{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+.grille-id select,.grille-id input:not([type=checkbox]):not([type=radio]){min-width:0;width:100%}
+.tw{scrollbar-gutter:stable;overflow-anchor:none}
+.tw>table.t th:first-child,.tw>table.t td:first-child{min-width:6em}
+
+
 /* v2.7.3 — écritures des fiches */
 .cursif{font-family:"Segoe Script","Ink Free","Brush Script MT","Lucida Handwriting","Dancing Script",cursive;font-style:normal}
 .ecr-barre{display:flex;gap:4px;margin:2px 0 3px;flex-wrap:wrap}

@@ -545,10 +545,10 @@
     // v2.7.2 : application installée -> la mise à jour se télécharge d'elle-même ; le lien de téléchargement (APK / installateur)
     // ne sert qu'en cas d'échec (pas d'Internet, dépôt injoignable)
     if (b.dataset.auto === '1') {
-      fetch('/maj/verifier', { method: 'POST', credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      fetch('/maj/verifier', { method: 'POST', credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : { resultat: 'erreur du serveur (code ' + r.status + ')' }; }).then(function (j) {
         if (j && /prête|à jour/.test(j.resultat || '')) { initMajAuto(); return; }
         initMajLien(b, j && j.resultat);
-      }).catch(function () { initMajLien(b, 'réponse impossible'); });
+      }).catch(function (e) { initMajLien(b, 'réponse impossible (' + ((e && e.name) || 'erreur') + ' : ' + String((e && e.message) || '').slice(0, 80) + ')'); });
       return;
     }
     initMajLien(b);

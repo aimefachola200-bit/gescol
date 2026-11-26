@@ -378,4 +378,11 @@ def enregistrer(app, H):
             res = verifier(attendre=15)      # v2.9.2 : si un téléchargement est en cours, on indique son avancement
         except Exception as e:  # noqa: BLE001
             res = "Impossible de vérifier (" + e.__class__.__name__ + " : " + str(e)[:100] + ") : connexion Internet nécessaire."
-        return jsonify(dict(etat(), resultat=res))
+        try:                                                  # v2.9.4 : on garde le dernier résultat (etat.json) pour le diagnostic
+            _noter(racine(), dernier=str(res)[:200], dernier_le=time.time())
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            return jsonify(dict(etat(), resultat=res))
+        except Exception as e:  # noqa: BLE001
+            return jsonify(resultat="état illisible (" + e.__class__.__name__ + " : " + str(e)[:100] + ")")

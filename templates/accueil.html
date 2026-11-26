@@ -48,7 +48,7 @@
 
 <h2>Effectifs par classe</h2>
 {% if par_classe %}
-<div class="tw"><table class="t">
+<div class="tw tw-libre"><table class="t">
   <tr><th>Classe</th><th>Niveau</th><th class="num">Effectif</th><th class="num">Filles</th><th class="num">Garçons</th></tr>
   {% for c in par_classe %}
   <tr><td><a href="{{ url_for('classe_detail', cid=c.id) }}">{{ c.nom }}</a></td><td>{{ c.niveau }}</td>

@@ -1,0 +1,19 @@
+{# v2.9.4 — Zone déshéritée : liste par école, nombre d'ayants droit en bas de chaque école, total général #}
+{% extends "base.html" %}{% block titre %}Liste par école — {{ G.titre }}{% endblock %}
+{% block contenu %}
+<div class="entete"><div><h1>{{ icone(G.ico, 26) }} {{ G.titre }}</h1><p class="sous">Liste par école — année {{ annee }}</p></div>
+<div class="actions"><a class="btn" href="{{ url_for('zone_pdf', annee=annee, couleur=couleur, ecole=ecole) }}">PDF</a>
+<a class="btn" href="{{ url_for('zone_xlsx', annee=annee, couleur=couleur, ecole=ecole) }}">Excel</a></div></div>
+{% include "_onglets_groupe.html" %}
+<form method="get" class="filtres"><label>Couleur <select name="couleur" onchange="this.form.submit()"><option value="">Toutes</option>
+{% for c in couleurs %}<option {{ 'selected' if c == couleur }}>{{ c }}</option>{% endfor %}</select></label>
+<label>École <select name="ecole" onchange="this.form.submit()"><option value="">Toutes</option>
+{% for e in ecoles %}<option {{ 'selected' if e == ecole }}>{{ e }}</option>{% endfor %}</select></label></form>
+{% for g in grp %}
+<h2>École : {{ g.ecole }}</h2>
+<div class="tw"><table class="t"><tr><th>N°</th>{% for c in colonnes %}<th>{{ c }}</th>{% endfor %}</tr>
+{% for x in g.agents %}{% set l = ligne(loop.index, x) %}<tr>{% for v in l %}<td{% if loop.index in (8, 9) %} class="num"{% endif %}>{% if loop.index in (8, 9) %}{{ fcfa(v) }}{% else %}{{ v }}{% endif %}</td>{% endfor %}</tr>{% endfor %}
+<tr><th colspan="3">Nombre d'ayants droit : {{ g.n }}</th><th colspan="5"></th><th class="num">{{ fcfa(g.rendement) }}</th><th class="num">{{ fcfa(g.prime) }}</th><th colspan="5"></th></tr></table></div>
+{% else %}<p class="aide">Aucun agent enregistré. Ajoutez-les dans l'onglet « Agents » ou importez le fichier Excel.</p>{% endfor %}
+{% if grp %}<p><b>Total général : {{ tot.n }} ayant(s) droit dans {{ tot.ecoles }} école(s) — rendement / gratification {{ fcfa(tot.rendement) }} — prime de zone {{ fcfa(tot.prime) }}</b></p>{% endif %}
+{% endblock %}
