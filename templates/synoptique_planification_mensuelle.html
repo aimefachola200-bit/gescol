@@ -16,6 +16,7 @@
   <div class="actions">
     {% if ecrire_pm %}
     <a class="btn" href="{{ url_for('synoptique_planification_mensuelle_form', cid=cl.id, mois=mois) }}">{% if existe %}{{ icone('modifier') }} Modifier{% else %}+ Ajouter{% endif %}</a>
+    <form method="post" action="{{ url_for('synoptique_planification_mensuelle_annuelle', cid=cl.id, mois=mois) }}" style="display:inline" onsubmit="return confirm('Remplir {{ mois_lib }} depuis la planification annuelle du {{ cl.niveau }}{% if existe %} (la grille actuelle sera remplacée){% endif %} ? Vous pourrez ensuite tout modifier.')"><button class="btn">Remplir depuis l\'annuelle</button></form>
     {% if precedent %}<form method="post" action="{{ url_for('synoptique_planification_mensuelle_dupliquer', cid=cl.id, mois=mois) }}" style="display:inline" onsubmit="return confirm('Copier la planification de {{ precedent.mois_lib }} vers {{ mois_lib }}{% if existe %} (la grille actuelle sera remplacée){% endif %} ?')"><button class="btn sec">⧉ Dupliquer {{ precedent.mois_lib }}</button></form>{% endif %}
     {% if existe %}
     <form method="post" action="{{ url_for('synoptique_planification_mensuelle_reinit', cid=cl.id, mois=mois) }}" style="display:inline" onsubmit="return confirm('Remettre les gabarits du modèle officiel dans toutes les cases de {{ mois_lib }} ?')"><button class="btn sec">Réinitialiser</button></form>

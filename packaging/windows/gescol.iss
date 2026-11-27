@@ -4,7 +4,7 @@
 ;   -> GESCOL-Public-Installation-x.y.z.exe (dossier, données, port 5001 et raccourcis séparés)
 
 #ifndef Version
-  #define Version "2.9.4"
+  #define Version "2.9.5"
 #endif
 #ifndef Edition
   #define Edition "privee"

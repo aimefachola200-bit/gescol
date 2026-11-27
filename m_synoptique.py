@@ -646,6 +646,89 @@ def normaliser_contenu_pm(contenu):
     return out
 
 
+# ---- v2.9.5 : planification mensuelle préremplie depuis la planification annuelle du cours (modifiable ensuite)
+LIEN_PM_ANNUELLE = {"maths": "maths", "es_morale": "es_morale", "es_civisme": "es_civisme", "es_histoire": "es_histoire",
+                    "es_geographie": "es_geographie", "est": "est", "eps": "eps", "ea_chant": "ea_chant",
+                    "ea_poesie": "ea_poesie", "ea_dessin": "ea_dessin", "ea_contes": "ea_conte", "ea_couture": "ea_couture"}
+_RE_SEQ = re.compile(r"SA\s*(\d+)\s*:?\s*S[ée]q\.?\s*(\d+)(?:\s*(?:-|à|a|–)\s*(?:S[ée]q\.?\s*)?(\d+))?", re.I)
+
+
+def ligne_annuelle_du_mois(lignes, mois):
+    """Ligne de la planification annuelle (liste de dicts) qui correspond au mois « AAAA-MM »."""
+    try:
+        nom = MOIS_LIB[int(mois[5:7]) - 1]
+    except (ValueError, IndexError, TypeError):
+        return None
+    return next((l for l in lignes if (l.get("mois") or "").strip().lower() == nom), None)
+
+
+def _grouper_seq(items):
+    """[(SA, séq)] consécutives -> « SA3 Séq2-4 SA5 Séq1 »."""
+    out, i = [], 0
+    while i < len(items):
+        sa, a = items[i]
+        j = i
+        while j + 1 < len(items) and items[j + 1][0] == sa and items[j + 1][1] == items[j][1] + 1:
+            j += 1
+        b = items[j][1]
+        out.append(f"SA{sa} Séq{a}" + (f"-{b}" if b != a else ""))
+        i = j + 1
+    return " ".join(out)
+
+
+def repartir_sequences(texte, nb_semaines):
+    """Répartit une case annuelle (« SA1 Séq2-5 », « SA3 Séq2 SA5 Séq1 »…) sur les semaines du mois.
+    Retourne une liste de nb_semaines chaînes ; si le texte n'a pas la forme « SA… Séq… », il est placé tel quel
+    en 1re semaine (l'enseignant l'adapte)."""
+    nb = max(1, nb_semaines)
+    texte = (texte or "").strip()
+    cases = [""] * NB_SEMAINES_PM
+    if not texte:
+        return cases
+    items = []
+    reste = _RE_SEQ.sub("", texte).strip(" :;,-–")
+    for m in _RE_SEQ.finditer(texte):
+        sa, a = int(m.group(1)), int(m.group(2))
+        b = int(m.group(3)) if m.group(3) else a
+        if b < a or b - a > 60:
+            b = a
+        items += [(sa, k) for k in range(a, b + 1)]
+    if not items or reste:
+        cases[0] = texte
+        return cases
+    n = len(items)
+    for w in range(min(nb, n)):
+        lot = items[w * n // min(nb, n):(w + 1) * n // min(nb, n)]
+        cases[w] = _grouper_seq(lot)
+    return cases
+
+
+def unites_francais(texte):
+    """« U2 à 3 » -> (2, 3) ; « U1 » -> (1, 1) ; None si aucun numéro."""
+    nums = [int(x) for x in re.findall(r"\d+", texte or "")]
+    return (nums[0], nums[-1]) if nums else None
+
+
+def contenu_pm_depuis_annuelle(ligne, semaines):
+    """Grille mensuelle préremplie à partir de la ligne du mois de la planification annuelle du cours."""
+    contenu = contenu_pm_defaut()
+    if not ligne:
+        return contenu
+    nb = sum(1 for s in semaines if s.get("du")) or NB_SEMAINES_PM
+    for code, cle in LIEN_PM_ANNUELLE.items():
+        txt = ligne.get(cle) or ""
+        if txt.strip():
+            contenu[code] = repartir_sequences(txt, nb)
+    u = unites_francais(ligne.get("francais"))
+    if u:
+        moitie = max(1, (nb + 1) // 2)
+        for code, _ch, _l1, _l2, gab in LIGNES_PM:
+            if code.startswith("fr_") and gab and "U" in gab:
+                contenu[code] = [gab.replace("U…", f"U{u[0] if w < moitie else u[1]} ", 1).replace("U..", f"U{u[0] if w < moitie else u[1]} ", 1)
+                                 for w in range(NB_SEMAINES_PM)]
+    return contenu
+
+
 def fmt_jma(iso):
     """« 2026-10-05 » -> « 05/10/2026 » (chaîne inchangée si ce n'est pas une date ISO)."""
     try:
@@ -1380,6 +1463,26 @@ def enregistrer(app, H):
         enregistrer_pm(cl, mois, pm_vierge(mois), "planification mensuelle réinitialisée (gabarits)")
         flash(f"Grille {cl['nom']} — {mois_libelle(mois)} réinitialisée avec les gabarits du modèle officiel.", "success")
         return retour_pm(cl, mois)
+
+    @app.route(PM + "/<int:cid>/<mois>/depuis-annuelle", methods=["POST"])
+    @H.connexion_requise()
+    def synoptique_planification_mensuelle_annuelle(cid, mois):
+        """v2.9.5 — préremplit le mois depuis la planification annuelle du cours de la classe (modifiable ensuite)."""
+        cl = classe_pm_ou_404(cid)
+        mois_pm_ou_404(mois)
+        ecriture_pm(cl)
+        niveau = (cl.get("niveau") or "").lower()
+        ligne = ligne_annuelle_du_mois(planification(niveau)["lignes"], mois) if niveau in NIVEAUX_LIB else None
+        if not ligne:
+            flash(f"La planification annuelle du {cl['niveau']} n'a pas de ligne pour {mois_libelle(mois)}.", "danger")
+            return retour_pm(cl, mois)
+        sem = semaines_du_mois(mois)
+        prec = pm_row(cid, mois)
+        d = {"semaines": sem, "contenu": contenu_pm_depuis_annuelle(ligne, sem),
+             "titulaire_visa": prec["titulaire_visa"] if prec else "", "directeur_visa": prec["directeur_visa"] if prec else ""}
+        enregistrer_pm(cl, mois, d, "planification mensuelle remplie depuis la planification annuelle")
+        flash(f"{mois_libelle(mois)} rempli depuis la planification annuelle du {cl['niveau']} : adaptez les cases à votre progression.", "success")
+        return redirect(url_for("synoptique_planification_mensuelle_form", cid=cid, mois=mois))
 
     # ---- PDF (modèle officiel, 1 page paysage)
     def pdf_pm(cl, d):
